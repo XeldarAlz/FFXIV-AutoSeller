@@ -175,7 +175,7 @@ internal sealed class ListingTable
         var state = listing.UnitPrice < floor ? ListingState.BelowFloor
             : history.IsInPriceWar(inputs.NowUtc, inputs.Pricing.PriceWarDropCount, inputs.Pricing.PriceWarWindow) ? ListingState.PriceWar
             : undercut ? ListingState.Undercut
-            : known ? ListingState.Lowest
+            : known && world.LowestListing >= listing.UnitPrice ? ListingState.Lowest
             : ListingState.NoData;
         var competitor = undercut ? mark.WorldLowest : known && world.LowestListing > listing.UnitPrice ? world.LowestListing : 0;
         return new ListingRow(

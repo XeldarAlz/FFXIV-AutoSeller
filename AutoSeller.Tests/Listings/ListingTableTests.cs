@@ -34,23 +34,34 @@ public sealed class ListingTableTests
     }
 
     [Fact]
-    public void AWorldLowestAtOneOfOurOwnPricesIsNotACompetitor()
+    public void AWorldLowestAtOneOfOurOwnPricesIsNotACompetitorAndHidesTheNextSeller()
     {
         var table = ListingTable.Build(Inputs(MainCharacter(MarketAt(Alpha, OreListing(0)), MarketAt(Beta, OreListing(1, WorldLowest)))));
 
-        Assert.Equal(ListingState.Lowest, Single(table, Alpha, 0).State);
+        Assert.Equal(ListingState.NoData, Single(table, Alpha, 0).State);
+        Assert.Equal(0u, Single(table, Alpha, 0).CompetitorPrice);
         Assert.Equal(ListingState.Lowest, Single(table, Beta, 1).State);
         Assert.Equal(0u, Single(table, Beta, 1).CompetitorPrice);
     }
 
     [Fact]
-    public void DataOlderThanTheLastRepriceDoesNotMarkTheListing()
+    public void AListingUnderTheWorldsLowestIsLowest()
+    {
+        var row = Single(ListingTable.Build(Inputs(MainCharacter(MarketAt(Alpha, OreListing(0, WorldLowest - 30))))), Alpha, 0);
+
+        Assert.Equal(ListingState.Lowest, row.State);
+        Assert.Equal(WorldLowest, row.CompetitorPrice);
+    }
+
+    [Fact]
+    public void DataOlderThanTheLastRepriceLeavesALowerPriceUnknown()
     {
         var main = MainCharacter(MarketAt(Alpha, OreListing(0))) with { Reprices = Repriced(Alpha, 0, new RepriceEntry(Now.AddMinutes(-10), [])) };
 
         var row = Single(ListingTable.Build(Inputs(main)), Alpha, 0);
 
-        Assert.Equal(ListingState.Lowest, row.State);
+        Assert.Equal(ListingState.NoData, row.State);
+        Assert.Equal(0u, row.CompetitorPrice);
         Assert.True(row.HasRepriced);
         Assert.Equal(Now.AddMinutes(-10), row.LastRepriceUtc);
     }
