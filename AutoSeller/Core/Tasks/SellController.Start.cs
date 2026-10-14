@@ -1,4 +1,3 @@
-using AutoSeller.Core.AutoRetainer.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Localization;
@@ -12,8 +11,6 @@ namespace AutoSeller.Core.Tasks;
 
 internal sealed partial class SellController
 {
-    private static readonly AutoRetainerStatus autoRetainerUnread = new(AutoRetainerState.Missing, false);
-
     public StartBlock Start()
     {
         if (session is { Ended: true } ended)
@@ -47,7 +44,7 @@ internal sealed partial class SellController
             Svc.Condition[ConditionFlag.InCombat],
             Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
             Svc.Condition[ConditionFlag.TradeOpen],
-            autoRetainerUnread,
+            plugin.AutoRetainer.ProbeNow(),
             journalBlocks,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
@@ -63,6 +60,24 @@ internal sealed partial class SellController
             RunLog.Info("Start: the stopped run is still closing its retainer windows; the new run waits for it.");
         }
 
+        var runId = Guid.NewGuid();
+        if (!plugin.Suppression.Claim(runId))
+        {
+            return Refuse(StartBlock.AutoRetainerNotHeld, "AutoRetainer could not be held back");
+        }
+
+        block = Authorize(runId, configuration);
+        if (block != StartBlock.None)
+        {
+            plugin.Suppression.Release(runId);
+        }
+
+        return block;
+    }
+
+    private StartBlock Authorize(Guid runId, Configuration configuration)
+    {
+        var ledger = plugin.Ledger;
         var nowUtc = DateTime.UtcNow;
         if (plugin.Plan.Capture(nowUtc) is not { } input)
         {
@@ -75,7 +90,7 @@ internal sealed partial class SellController
         var dryRun = configuration.DryRun;
         var approvals = Approvals.Collect(edits, markets, authorized.AsSpan(), input.PlayerApprovals.AsSpan());
         var problem = SellAuthorization.TryCreate(
-            Guid.NewGuid(),
+            runId,
             input.CharacterContentId,
             input.HomeWorldId,
             authorized,

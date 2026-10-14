@@ -97,6 +97,7 @@ internal static partial class L
         public static readonly LocString BlockInCutscene = new("run.block.inCutscene", "Wait until the cutscene is over.");
         public static readonly LocString BlockTrading = new("run.block.trading", "Finish or cancel the trade first.");
         public static readonly LocString BlockAutoRetainerBusy = new("run.block.autoRetainerBusy", "AutoRetainer is busy; wait until it is done.");
+        public static readonly LocString BlockAutoRetainerNotHeld = new("run.block.autoRetainerNotHeld", "AutoRetainer could not be held back for the run; try again, or reload AutoRetainer if this keeps happening.");
         public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");

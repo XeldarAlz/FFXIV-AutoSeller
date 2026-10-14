@@ -65,6 +65,7 @@ public sealed class Plugin : IDalamudPlugin
     internal ListingsBook Listings { get; }
     internal AutoRetainerIpc AutoRetainer { get; }
     internal MarketbuddyIpc Marketbuddy { get; }
+    internal AutoRetainerSuppression Suppression { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -94,6 +95,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(AutoRetainer.Dispose);
             Marketbuddy = new MarketbuddyIpc();
             completed.Push(Marketbuddy.Dispose);
+            Suppression = new AutoRetainerSuppression(AutoRetainer);
+            completed.Push(Suppression.ReleaseAny);
 
             History = new RunHistory(PluginInterface.ConfigDirectory.FullName);
             completed.Push(History.Dispose);
@@ -168,6 +171,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Controller.Shutdown();
+        Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
         PluginInterface.UiBuilder.Draw -= OnDraw;

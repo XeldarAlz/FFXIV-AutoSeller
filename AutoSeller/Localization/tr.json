@@ -281,6 +281,7 @@
   "run.block.inCutscene": "Ara sahne bitene kadar bekleyin.",
   "run.block.trading": "Önce takası tamamlayın ya da iptal edin.",
   "run.block.autoRetainerBusy": "AutoRetainer meşgul; bitirmesini bekleyin.",
+  "run.block.autoRetainerNotHeld": "AutoRetainer çalıştırma süresince durdurulamadı; tekrar deneyin, sürerse AutoRetainer'ı yeniden yükleyin.",
   "run.block.unresolvedJournal": "Önceki bir turdan kalan bir ilan değişikliği henüz netleşmedi; önce Satış sayfasındaki soruyu yanıtlayın.",
   "run.block.gatesClosed": "Eklenti yüklenirken pazar kontrolleri başarısız oldu, bu yüzden bu oturumda fiyatlar okunamıyor. Ayrıntılar konsolda.",
   "run.block.noRules": "Önce Kurallar sayfasında satış listesine bir eşya ya da bir kategori kuralı ekleyin.",

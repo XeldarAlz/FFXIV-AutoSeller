@@ -281,6 +281,7 @@
   "run.block.inCutscene": "Espere a cena terminar.",
   "run.block.trading": "Conclua ou cancele a troca primeiro.",
   "run.block.autoRetainerBusy": "O AutoRetainer está ocupado; espere até ele terminar.",
+  "run.block.autoRetainerNotHeld": "Não foi possível segurar o AutoRetainer durante a execução; tente de novo ou recarregue o AutoRetainer se isso continuar.",
   "run.block.unresolvedJournal": "Uma mudança de anúncio de uma rodada anterior ainda não foi resolvida; responda primeiro à pergunta na página Vender.",
   "run.block.gatesClosed": "As verificações do mercado falharam ao carregar o plugin, então os preços não podem ser lidos nesta sessão. O console tem os detalhes.",
   "run.block.noRules": "Adicione primeiro um item à lista de venda ou uma regra de categoria na página Regras.",

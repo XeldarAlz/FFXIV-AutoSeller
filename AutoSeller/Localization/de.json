@@ -281,6 +281,7 @@
   "run.block.inCutscene": "Warte, bis die Zwischensequenz vorbei ist.",
   "run.block.trading": "Schließe den Handel zuerst ab oder brich ihn ab.",
   "run.block.autoRetainerBusy": "AutoRetainer ist beschäftigt; warte, bis er fertig ist.",
+  "run.block.autoRetainerNotHeld": "AutoRetainer konnte für den Lauf nicht zurückgehalten werden; versuche es erneut oder lade AutoRetainer neu, wenn das wieder passiert.",
   "run.block.unresolvedJournal": "Eine Angebotsänderung aus einem früheren Lauf ist noch nicht geklärt; beantworte zuerst die Frage auf der Seite Verkaufen.",
   "run.block.gatesClosed": "Die Marktprüfungen sind beim Laden des Plugins fehlgeschlagen, daher können in dieser Sitzung keine Preise gelesen werden. Die Konsole enthält die Details.",
   "run.block.noRules": "Füge zuerst auf der Seite Regeln einen Gegenstand zur Verkaufsliste oder eine Kategorieregel hinzu.",
