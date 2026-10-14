@@ -84,7 +84,7 @@ internal sealed unsafe class RetainerReader
     public bool TryGetOpenRetainer(out RetainerInfo retainer)
     {
         retainer = default;
-        if (!Available)
+        if (!Available || !CanReadRoster)
         {
             return false;
         }
