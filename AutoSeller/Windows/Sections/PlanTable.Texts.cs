@@ -13,7 +13,7 @@ namespace AutoSeller.Windows.Sections;
 
 internal sealed partial class PlanTable
 {
-    private const int MaximumBadges = 5;
+    private const int MaximumBadges = 6;
 
     private readonly StringBuilder tooltip = new();
     private readonly string[] badgeLabels = new string[MaximumBadges];
@@ -172,6 +172,11 @@ internal sealed partial class PlanTable
             Add(ref count, Loc.T(L.Plan.BadgeApproved), Styling.AccentMint);
         }
 
+        if (row.IsUndercut)
+        {
+            Add(ref count, Loc.T(L.Plan.BadgeUndercut, Formatting.RelativeTime(row.UndercutDataUtc)), Styling.AccentRose);
+        }
+
         text.Badges = count == 0 ? [] : badgeLabels.AsSpan(0, count).ToArray();
         text.BadgeColors = count == 0 ? [] : badgeColors.AsSpan(0, count).ToArray();
     }
@@ -196,6 +201,11 @@ internal sealed partial class PlanTable
         if (evidence.CompetitorPrice > 0)
         {
             tooltip.Append('\n').Append(Loc.T(L.Plan.TipCompetitor, PlanLabels.Gil(evidence.CompetitorPrice)));
+        }
+
+        if (row.IsUndercut)
+        {
+            tooltip.Append('\n').Append(Loc.T(L.Plan.TipUndercut, PlanLabels.Gil(row.UndercutPrice), Formatting.RelativeTime(row.UndercutDataUtc)));
         }
 
         var currentPrice = decision?.CurrentPrice ?? row.CurrentPrice;

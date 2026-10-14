@@ -165,13 +165,13 @@ internal sealed class ListingTable
         ListingInputs inputs)
     {
         var history = reprices.EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
-        var world = WorldOf(references, listing.Key);
+        var world = MarketEstimate.WorldOf(references, listing.Key);
         var known = MarketEstimate.IsKnown(world, listing.Key, inputs.NowUtc);
         var reference = ReferenceSnapshot.ReferenceFor(references, inputs.HomeWorldId, listing.Key, null, inputs.NowUtc);
         var usable = ReferenceSelector.IsUsable(reference, listing.Key, inputs.NowUtc) ? reference : default;
         var vendorPrice = facts.TryGetValue(listing.ItemId, out var item) ? item.VendorPrice : 0;
         var floor = FloorCalculator.Calculate(PricingRule.For(inputs.Rules, listing.Key, out _).Floor, vendorPrice, usable, inputs.Pricing.MinimumReferenceRatioPercent);
-        var undercut = TryFindMark(marks, snapshot.RetainerId, listing, out var mark);
+        var undercut = UndercutWatch.TryFind(marks.AsSpan(), snapshot.RetainerId, listing.Slot, listing.Key, out var mark);
         var state = listing.UnitPrice < floor ? ListingState.BelowFloor
             : history.IsInPriceWar(inputs.NowUtc, inputs.Pricing.PriceWarDropCount, inputs.Pricing.PriceWarWindow) ? ListingState.PriceWar
             : undercut ? ListingState.Undercut
@@ -208,14 +208,7 @@ internal sealed class ListingTable
 
     private static ImmutableArray<WatchMark> UndercutMarks(ListingInputs inputs, ReferenceSnapshot? references, RepriceHistory[] histories)
     {
-        if (references is null)
-        {
-            return [];
-        }
-
-        var ours = new List<WatchedListing>();
-        var world = new List<WorldListing>();
-        var seen = new HashSet<ItemKey>();
+        var scan = new UndercutScan(references, inputs.NowUtc);
         for (var characterIndex = 0; characterIndex < inputs.Characters.Length; characterIndex++)
         {
             var record = inputs.Characters[characterIndex];
@@ -227,51 +220,13 @@ internal sealed class ListingTable
             var snapshots = record.Snapshots.IsDefault ? [] : record.Snapshots;
             for (var snapshotIndex = 0; snapshotIndex < snapshots.Length; snapshotIndex++)
             {
-                var snapshot = snapshots[snapshotIndex];
-                if (snapshot is null)
+                if (snapshots[snapshotIndex] is { } snapshot)
                 {
-                    continue;
-                }
-
-                for (var slotIndex = 0; slotIndex < snapshot.Slots.Length; slotIndex++)
-                {
-                    var listing = snapshot.Slots[slotIndex];
-                    var history = histories[characterIndex].EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
-                    ours.Add(new WatchedListing(snapshot.RetainerId, listing.Slot, listing.Key, listing.UnitPrice, default, history.LastRepriceUtc));
-                    var lowest = WorldOf(references, listing.Key);
-                    if (seen.Add(listing.Key) && MarketEstimate.IsKnown(lowest, listing.Key, inputs.NowUtc))
-                    {
-                        world.Add(new WorldListing(listing.Key, lowest.LowestListing, lowest.UpdatedAtUtc));
-                    }
+                    scan.Add(snapshot, histories[characterIndex]);
                 }
             }
         }
 
-        return UndercutWatch.Mark(ours.ToArray(), world.ToArray(), [], inputs.NowUtc);
-    }
-
-    private static ReferencePrice WorldOf(ReferenceSnapshot? references, ItemKey item)
-    {
-        if (references is null || !references.Table.TryGet(item.ItemId, out var reference))
-        {
-            return default;
-        }
-
-        return reference.World(item.IsHq);
-    }
-
-    private static bool TryFindMark(ImmutableArray<WatchMark> marks, ulong retainerId, in ListingSlot listing, out WatchMark mark)
-    {
-        for (var index = 0; index < marks.Length; index++)
-        {
-            if (marks[index].RetainerId == retainerId && marks[index].Slot == listing.Slot && marks[index].Item == listing.Key)
-            {
-                mark = marks[index];
-                return true;
-            }
-        }
-
-        mark = default;
-        return false;
+        return scan.Mark();
     }
 }

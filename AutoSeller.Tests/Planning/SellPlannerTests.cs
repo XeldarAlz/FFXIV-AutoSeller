@@ -147,6 +147,33 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void AListingUniversalisShowsUndercutCarriesTheMarkWithTheDataTime()
+    {
+        var row = Row(Build(Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)])), listingKey);
+
+        Assert.True(row.IsUndercut);
+        Assert.Equal(WorldLowest, row.UndercutPrice);
+        Assert.Equal(Now.AddHours(-1), row.UndercutDataUtc);
+    }
+
+    [Fact]
+    public void DataOlderThanTheLastRepriceOrALowestPriceOfOursMarksNothing()
+    {
+        var repriced = new RepriceEntry(Now - TimeSpan.FromMinutes(30), []);
+        var afterTheData = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]) with
+        {
+            Reprices = [new KeyValuePair<RepriceKey, RepriceEntry>(new RepriceKey(Alpha, 0, NormalOre), repriced)],
+        };
+        var lowest = OreListing(1, WorldLowest);
+
+        var ours = Build(Input([OreRule()], [MarketAt(Alpha, listedAtReference, lowest), MarketAt(Beta)]));
+
+        Assert.False(Row(Build(afterTheData), listingKey).IsUndercut);
+        Assert.False(Row(ours, listingKey).IsUndercut);
+        Assert.False(Row(ours, PlanRowKey.ForListing(Alpha, lowest)).IsUndercut);
+    }
+
+    [Fact]
     public void ARecentRepriceKeepsTheListingWithTheCooldownLeft()
     {
         var repriced = new RepriceEntry(Now - TimeSpan.FromMinutes(30), []);

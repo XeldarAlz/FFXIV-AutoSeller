@@ -39,6 +39,8 @@ internal static class SellPlanner
         private readonly RunPlan runPlan;
         private readonly ImmutableArray<StockSlot> stock;
         private readonly ImmutableArray<ApprovedPrice> approved;
+        private readonly ReferenceSnapshot? homeReferences;
+        private readonly ImmutableArray<WatchMark> undercuts;
         private readonly Dictionary<uint, ItemFacts> listingFacts = [];
         private readonly RepriceHistory reprices;
         private readonly Dictionary<ItemKey, List<uint>> ownPrices = [];
@@ -62,6 +64,8 @@ internal static class SellPlanner
             }
 
             reprices = RepriceHistory.Restore(input.Reprices.AsSpan());
+            homeReferences = ReferenceSnapshot.ForHomeWorld(input.References, input.HomeWorldId);
+            undercuts = UndercutsOf(input.Markets.AsSpan());
             CollectOwnPrices();
         }
 
@@ -173,7 +177,8 @@ internal static class SellPlanner
             var edits = (excluded ? PlanRowEdits.Excluded : PlanRowEdits.None)
                 | (input.Edits.TryGetPrice(key, out _) ? PlanRowEdits.PriceSet : PlanRowEdits.None)
                 | (ApprovedPrice.TryFindLatest(input.PlayerApprovals.AsSpan(), retainerId, listing, out _) ? PlanRowEdits.Approved : PlanRowEdits.None);
-            return new PlanRow(key, retainerId, RunRowKind.Listing, SlotSource.Bags, listing.Quantity, listing.UnitPrice, decision, Usable(reference, listing.Key), duty, AllocationReason.Assigned, MoveOutcome.None, 0, edits, cooldownLeft);
+            UndercutWatch.TryFind(undercuts.AsSpan(), retainerId, listing.Slot, listing.Key, out var undercut);
+            return new PlanRow(key, retainerId, RunRowKind.Listing, SlotSource.Bags, listing.Quantity, listing.UnitPrice, decision, Usable(reference, listing.Key), duty, AllocationReason.Assigned, MoveOutcome.None, 0, edits, cooldownLeft, undercut.WorldLowest, undercut.DataUploadedAtUtc);
         }
 
         private void AddLot(in AllocationLot lot, ulong retainerId, AllocationReason placement, MoveOutcome move)
@@ -201,7 +206,7 @@ internal static class SellPlanner
             var edits = (input.Edits.IsExcluded(lot.Row) ? PlanRowEdits.Excluded : PlanRowEdits.None)
                 | (input.Edits.TryGetMove(lot.Row, out _) ? PlanRowEdits.Moved : PlanRowEdits.None)
                 | (input.Edits.TryGetPrice(lot.Row, out _) ? PlanRowEdits.PriceSet : PlanRowEdits.None);
-            var row = new PlanRow(lot.Row, retainerId, RunRowKind.Lot, held.Slot.Source, lot.Quantity, 0, decision, Usable(reference, lot.Item), ListingDuty.Due, placement, move, lot.BoundRetainerId, edits, TimeSpan.Zero);
+            var row = new PlanRow(lot.Row, retainerId, RunRowKind.Lot, held.Slot.Source, lot.Quantity, 0, decision, Usable(reference, lot.Item), ListingDuty.Due, placement, move, lot.BoundRetainerId, edits, TimeSpan.Zero, 0, default);
             rows.Add(row);
             editTargets.Add(row.EditTarget);
             if (row.Searches)
@@ -210,21 +215,22 @@ internal static class SellPlanner
             }
         }
 
-        private CompetitorSnapshot Estimate(ItemKey item)
+        private ImmutableArray<WatchMark> UndercutsOf(ReadOnlySpan<RetainerSnapshot> markets)
         {
-            var world = WorldReference(item);
-            var own = ownPrices.TryGetValue(item, out var prices) ? prices.ToArray() : [];
-            return MarketEstimate.For(item, world, own, input.HomeWorldId, input.NowUtc);
-        }
-
-        private ReferencePrice WorldReference(ItemKey item)
-        {
-            if (ReferenceSnapshot.ForHomeWorld(input.References, input.HomeWorldId) is not { } current || !current.Table.TryGet(item.ItemId, out var reference))
+            var scan = new UndercutScan(homeReferences, input.NowUtc);
+            for (var index = 0; index < markets.Length; index++)
             {
-                return default;
+                scan.Add(markets[index], reprices);
             }
 
-            return reference.World(item.IsHq);
+            return scan.Mark();
+        }
+
+        private CompetitorSnapshot Estimate(ItemKey item)
+        {
+            var world = MarketEstimate.WorldOf(homeReferences, item);
+            var own = ownPrices.TryGetValue(item, out var prices) ? prices.ToArray() : [];
+            return MarketEstimate.For(item, world, own, input.HomeWorldId, input.NowUtc);
         }
 
         private Decision Kept(uint price, DecisionReason reason, ItemKey item, uint vendorPrice, in ReferencePrice reference)

@@ -101,6 +101,7 @@ internal static partial class L
         public static readonly LocString BadgeMoved = new("plan.badge.moved", "Moved");
         public static readonly LocString BadgePriceSet = new("plan.badge.priceSet", "Your price");
         public static readonly LocString BadgeApproved = new("plan.badge.approved", "Approved");
+        public static readonly LocString BadgeUndercut = new("plan.badge.undercut", "Undercut {0}");
 
         public static readonly LocString MenuButton = new("plan.menu.button", "Edit this row");
         public static readonly LocString MenuExclude = new("plan.menu.exclude", "Leave out of the run");
@@ -122,6 +123,7 @@ internal static partial class L
 
         public static readonly LocString TipFloor = new("plan.tip.floor", "Floor: {0}");
         public static readonly LocString TipCompetitor = new("plan.tip.competitor", "Lowest other seller: {0}");
+        public static readonly LocString TipUndercut = new("plan.tip.undercut", "Universalis shows another seller at {0} ({1})");
         public static readonly LocString TipProposed = new("plan.tip.proposed", "Proposed: {0}");
         public static readonly LocString TipReference = new("plan.tip.reference", "Reference: {0} from {1}");
         public static readonly LocString TipSourceWorld = new("plan.tip.sourceWorld", "your world");

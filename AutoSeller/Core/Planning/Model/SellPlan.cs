@@ -32,7 +32,9 @@ internal readonly record struct PlanRow(
     MoveOutcome Move,
     ulong BoundRetainerId,
     PlanRowEdits Edits,
-    TimeSpan CooldownLeft)
+    TimeSpan CooldownLeft,
+    uint UndercutPrice,
+    DateTime UndercutDataUtc)
 {
     public const ulong Unplaced = 0;
 
@@ -45,6 +47,8 @@ internal readonly record struct PlanRow(
     public bool IsPlaced => RetainerId != Unplaced;
 
     public ListingSlot Listing => new((byte)Key.Slot, Key.ItemId, Key.IsHq, Quantity, CurrentPrice);
+
+    public bool IsUndercut => UndercutPrice > 0;
 
     public bool NeedsApproval => IsListing && Decision.Reason == DecisionReason.OverStepLimit && Decision.ProposedPrice > 0;
 

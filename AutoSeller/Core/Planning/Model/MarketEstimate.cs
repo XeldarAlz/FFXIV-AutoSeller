@@ -1,5 +1,6 @@
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Planning.Model;
@@ -17,6 +18,16 @@ internal static class MarketEstimate
         }
 
         return Snapshot(item.ItemId, worldId, nowUtc, new CompetitorListing(0, 0, 0, item.ItemId, item.IsHq, world.LowestListing, EstimatedQuantity, false, false));
+    }
+
+    public static ReferencePrice WorldOf(ReferenceSnapshot? homeReferences, ItemKey item)
+    {
+        if (homeReferences is null || !homeReferences.Table.TryGet(item.ItemId, out var reference))
+        {
+            return default;
+        }
+
+        return reference.World(item.IsHq);
     }
 
     public static bool IsKnown(in ReferencePrice world, ItemKey item, DateTime nowUtc)
