@@ -77,9 +77,15 @@ internal static class PriceDecision
             return DecidePlayerPrice(current, target.Price, floor, evidence);
         }
 
-        if (CallsForDrop(target, current, marketPrice))
+        var drops = CallsForDrop(target, current, marketPrice);
+        if (target.Price < floor && (drops || current < floor))
         {
-            return DecideDrop(input, current, target, floor, evidence);
+            return BelowFloor(input, current, target.Price, evidence);
+        }
+
+        if (drops)
+        {
+            return DecideDrop(input, current, target, evidence);
         }
 
         if (target.Price > current)
@@ -90,14 +96,9 @@ internal static class PriceDecision
         return Keep(current, current, StayReason(target.Reason), evidence);
     }
 
-    private static Decision DecideDrop(in PriceDecisionInput input, uint current, PriceTarget target, uint floor, in DecisionEvidence evidence)
+    private static Decision DecideDrop(in PriceDecisionInput input, uint current, PriceTarget target, in DecisionEvidence evidence)
     {
         var settings = input.Settings;
-        if (target.Price < floor)
-        {
-            return BelowFloor(input, current, target.Price, evidence);
-        }
-
         if (input.History.IsInPriceWar(input.NowUtc, settings.PriceWarDropCount, settings.PriceWarWindow))
         {
             return Keep(current, target.Price, DecisionReason.PriceWar, evidence);
@@ -131,20 +132,18 @@ internal static class PriceDecision
     {
         var settings = input.Settings;
         var followsRule = input.Rule.FixedPrice > 0;
-        if (!followsRule && !(settings.RaisePrices && IsBeyondRaiseGap(current, marketPrice, settings.RaiseGapPercent)))
+        var belowFloor = current < floor;
+        var raised = Math.Max(floor, Math.Min(target.Price, RaiseLimit(current, settings.MaximumRaisePercent)));
+        if (!followsRule && !FollowsTheMarketUp(settings, current, marketPrice, belowFloor))
         {
-            return Keep(current, current, DecisionReason.AlreadyLowest, evidence);
+            return belowFloor
+                ? Keep(current, raised, DecisionReason.BelowFloorKept, evidence)
+                : Keep(current, current, DecisionReason.AlreadyLowest, evidence);
         }
 
-        var raised = Math.Min(target.Price, RaiseLimit(current, settings.MaximumRaisePercent));
         if (raised <= current)
         {
             return Keep(current, current, StayReason(target.Reason), evidence);
-        }
-
-        if (raised < floor)
-        {
-            return Keep(current, raised, DecisionReason.BelowFloorKept, evidence);
         }
 
         if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
@@ -249,6 +248,11 @@ internal static class PriceDecision
     {
         var drop = Gil.SaturatingAdd(current, -(long)target);
         return PriceMath.ExceedsRatio(drop, current, stepLimitPercent, PriceMath.PercentScale);
+    }
+
+    private static bool FollowsTheMarketUp(PricingSettings settings, uint current, uint marketPrice, bool belowFloor)
+    {
+        return settings.RaisePrices && (belowFloor || IsBeyondRaiseGap(current, marketPrice, settings.RaiseGapPercent));
     }
 
     private static bool IsBeyondRaiseGap(uint current, uint marketPrice, int raiseGapPercent)

@@ -169,6 +169,59 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void ListingBelowTheFloorRisesToTheFloorPastTheMaximumRaise()
+    {
+        var input = Existing(300, Snapshot(Competitors(1_000, 1_010)), FreshReference);
+
+        AssertDecision(Decide(input), SellAction.RepriceUp, ReferenceFloor, ReferenceFloor, DecisionReason.RaisedToMarket);
+        AssertDecision(Decide(input with { Settings = ReturnBelowFloor, BelowFloorDuration = TimeSpan.FromDays(10) }), SellAction.RepriceUp, ReferenceFloor, ReferenceFloor, DecisionReason.RaisedToMarket);
+    }
+
+    [Fact]
+    public void ListingBelowTheFloorRisesToTheMarketInsideTheRaiseGap()
+    {
+        var decision = Decide(Existing(480, Snapshot(Competitors(520)), FreshReference));
+
+        AssertDecision(decision, SellAction.RepriceUp, 519, 519, DecisionReason.RaisedToMarket);
+    }
+
+    [Fact]
+    public void ListingBelowTheFloorStaysWhileRaisingIsOff()
+    {
+        var input = Existing(300, Snapshot(Competitors(1_000)), FreshReference) with { Settings = new PricingSettings { RaisePrices = false } };
+
+        AssertDecision(Decide(input), SellAction.Keep, 300, ReferenceFloor, DecisionReason.BelowFloorKept);
+    }
+
+    [Fact]
+    public void ListingBelowTheFloorWaitsForTheCooldownBeforeRising()
+    {
+        var input = Existing(300, Snapshot(Competitors(1_000)), FreshReference) with { History = RepricedAgo(TimeSpan.FromHours(1)) };
+
+        AssertDecision(Decide(input), SellAction.Keep, 300, ReferenceFloor, DecisionReason.Cooldown);
+    }
+
+    [Fact]
+    public void LowestListingBelowTheFloorIsKeptWhileTheMarketIsBelowTheFloor()
+    {
+        var decision = Decide(Existing(400, Snapshot(Competitors(420)), FreshReference));
+
+        AssertDecision(decision, SellAction.Keep, 400, 419, DecisionReason.BelowFloorKept);
+    }
+
+    [Fact]
+    public void LowestListingBelowTheFloorReturnsAfterThreeDaysWhenTheOptionIsOn()
+    {
+        var input = Existing(400, Snapshot(Competitors(420)), FreshReference) with
+        {
+            Settings = ReturnBelowFloor,
+            BelowFloorDuration = TimeSpan.FromDays(10),
+        };
+
+        AssertDecision(Decide(input), SellAction.Return, 400, 419, DecisionReason.BelowFloorReturned);
+    }
+
+    [Fact]
     public void RecentRepriceHoldsTheListingUntilTheCooldownEnds()
     {
         var input = Existing(1_100, Snapshot(Competitors(1_000)), FreshReference);

@@ -171,10 +171,43 @@ public sealed class PriceDecisionPropertyTests
             }
 
             checkedCases++;
-            Assert.False(decision.Action is SellAction.RepriceDown or SellAction.Return, $"case {caseIndex}: {decision} from {listing.UnitPrice}");
+            Assert.False(decision.Action == SellAction.RepriceDown, $"case {caseIndex}: {decision} from {listing.UnitPrice}");
+            Assert.False(
+                decision.Action == SellAction.Return && listing.UnitPrice >= decision.Evidence.Floor,
+                $"case {caseIndex}: {decision} returned from {listing.UnitPrice} at or above the floor");
         }
 
         Assert.True(checkedCases >= MinimumCoverage, $"only {checkedCases} lowest listings");
+    }
+
+    [Fact]
+    public void ListingBelowTheFloorIsNeverReportedAsSettled()
+    {
+        var random = new Random(7_013);
+        var belowFloor = 0;
+        var lifted = 0;
+        for (var caseIndex = 0; caseIndex < CaseCount; caseIndex++)
+        {
+            var input = RandomInput(random);
+            var decision = PriceDecision.Decide(input);
+            if (input.CurrentListing is not { } listing || listing.UnitPrice >= decision.Evidence.Floor)
+            {
+                continue;
+            }
+
+            belowFloor++;
+            if (decision.Action == SellAction.RepriceUp)
+            {
+                lifted++;
+            }
+
+            Assert.False(
+                decision.Action == SellAction.Keep && !IsBelowFloorKeepReason(decision.Reason),
+                $"case {caseIndex}: {decision} from {listing.UnitPrice} under floor {decision.Evidence.Floor}");
+        }
+
+        Assert.True(belowFloor >= MinimumCoverage, $"only {belowFloor} listings below the floor");
+        Assert.True(lifted >= MinimumCoverage, $"only {lifted} listings lifted from below the floor");
     }
 
     [Fact]
@@ -280,9 +313,9 @@ public sealed class PriceDecisionPropertyTests
 
             raises++;
             var current = input.CurrentListing!.Value.UnitPrice;
-            var raisedShare = (long)decision.Price * PriceMath.PercentScale;
+            var highestRaise = (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent) / PriceMath.PercentScale;
             Assert.True(decision.Price > current);
-            Assert.True(raisedShare <= (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent), $"case {caseIndex}: {decision} from {current}");
+            Assert.True(decision.Price <= Math.Max(highestRaise, decision.Evidence.Floor), $"case {caseIndex}: {decision} from {current}");
         }
 
         Assert.True(raises >= MinimumCoverage, $"only {raises} raises");
@@ -528,6 +561,14 @@ public sealed class PriceDecisionPropertyTests
         }
 
         return lowest;
+    }
+
+    private static bool IsBelowFloorKeepReason(DecisionReason reason)
+    {
+        return reason is DecisionReason.BelowFloorKept
+            or DecisionReason.Cooldown
+            or DecisionReason.UnknownCompetition
+            or DecisionReason.NoPriceData;
     }
 
     private static bool Writes(SellAction action)
