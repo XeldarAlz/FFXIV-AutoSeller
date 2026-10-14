@@ -95,20 +95,20 @@ internal sealed class UniversalisClient : IDisposable
         for (var attempt = 1; ; attempt++)
         {
             var reply = await AttemptAsync(path, cancellationToken).ConfigureAwait(false);
-            if (!reply.Retryable || attempt == RetryPolicy.MaximumAttempts)
+            if (!reply.Retryable)
             {
                 return reply;
             }
 
-            if (!RetryPolicy.TryGetDelay(reply.RetryAfter, attempt, jitter(), out var wait))
+            var patient = RetryPolicy.TryGetDelay(reply.RetryAfter, attempt, jitter(), out var wait);
+            if (!patient || reply.Failure == UniversalisFailure.RateLimited)
             {
                 throttle.PauseFor(wait);
-                return reply;
             }
 
-            if (reply.Failure == UniversalisFailure.RateLimited)
+            if (!patient || attempt == RetryPolicy.MaximumAttempts)
             {
-                throttle.PauseFor(wait);
+                return reply;
             }
 
             await delay(wait, cancellationToken).ConfigureAwait(false);

@@ -223,6 +223,46 @@ public sealed class UniversalisClientTests
     }
 
     [Fact]
+    public async Task ARateLimitOnTheLastAttemptStillHoldsTheNextRequest()
+    {
+        var clock = new ManualClock();
+        var handler = new ScriptedHandler(
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 5),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 5),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 5),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 5),
+            _ => Respond(HttpStatusCode.OK, Read(TaxFixture)));
+        using var client = NewClient(handler, clock);
+
+        var references = await client.FetchReferencesAsync(PhoenixChunk(), CancellationToken.None);
+        var rates = await client.FetchTaxRatesAsync("Phoenix", CancellationToken.None);
+
+        Assert.Equal(UniversalisFailure.RateLimited, references.Failure);
+        Assert.False(rates.Failed);
+        Assert.Equal(RetryPolicy.MaximumAttempts + 1, handler.Requests.Count);
+        Assert.Equal([TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)], clock.Delays);
+    }
+
+    [Fact]
+    public async Task ALongRateLimitOnTheLastAttemptStillRefusesTheNextRequest()
+    {
+        var handler = new ScriptedHandler(
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 1),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 1),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 1),
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 3600),
+            _ => Respond(HttpStatusCode.OK, Read(TaxFixture)));
+        using var client = NewClient(handler, new ManualClock());
+
+        var references = await client.FetchReferencesAsync(PhoenixChunk(), CancellationToken.None);
+        var rates = await client.FetchTaxRatesAsync("Phoenix", CancellationToken.None);
+
+        Assert.Equal(UniversalisFailure.RateLimited, references.Failure);
+        Assert.Equal(UniversalisFailure.ServerPaused, rates.Failure);
+        Assert.Equal(RetryPolicy.MaximumAttempts, handler.Requests.Count);
+    }
+
+    [Fact]
     public async Task ServerErrorsAreRetriedABoundedNumberOfTimes()
     {
         var handler = new ScriptedHandler(_ => Respond(HttpStatusCode.ServiceUnavailable));
