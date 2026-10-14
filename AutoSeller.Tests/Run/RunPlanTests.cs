@@ -20,7 +20,7 @@ public sealed class RunPlanTests
     [Fact]
     public void EveryLotGoesToARetainerWhoseMarketWasRead()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), []);
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), [], []);
 
         Assert.Equal(2, plan.Allocation.Assignments.Length);
         Assert.Equal(2, plan.AssignedTo(Alpha).Length + plan.AssignedTo(Beta).Length);
@@ -30,7 +30,7 @@ public sealed class RunPlanTests
     [Fact]
     public void ARetainerWithNoMarketReadGetsNothing()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Beta)], Handled(), []);
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Beta)], Handled(), [], []);
 
         Assert.Empty(plan.AssignedTo(Alpha));
         Assert.Equal(2, plan.AssignedTo(Beta).Length);
@@ -39,10 +39,10 @@ public sealed class RunPlanTests
     [Fact]
     public void AHandledLotIsNotPlacedAgain()
     {
-        var first = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), []);
+        var first = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), [], []);
         var done = first.Allocation.Assignments[0].Lot.Row;
 
-        var again = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(done), []);
+        var again = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(done), [], []);
 
         Assert.Single(again.Allocation.Assignments);
         Assert.NotEqual(done, again.Allocation.Assignments[0].Lot.Row);
@@ -51,7 +51,7 @@ public sealed class RunPlanTests
     [Fact]
     public void AListingAlreadyUpCountsTowardTheListingsToKeepUp()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha, OreListing()), Market(Beta)], Handled(), []);
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha, OreListing()), Market(Beta)], Handled(), [], []);
 
         Assert.Single(plan.Allocation.Assignments);
     }
@@ -59,7 +59,7 @@ public sealed class RunPlanTests
     [Fact]
     public void ALotIsValuedAtItsReferencePrice()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule()), [Market(Alpha)], Handled(), []);
+        var plan = RunPlanner.Build(Inputs(OreRule()), [Market(Alpha)], Handled(), [], []);
 
         Assert.Equal((long)OreReference * LotQuantity, plan.Allocation.Assignments[0].Lot.EstimatedValue);
     }
@@ -69,12 +69,12 @@ public sealed class RunPlanTests
     {
         var inputs = Inputs(OreRule(listingsToKeepUp: 2), [beta, alpha]);
         RetainerSnapshot[] markets = [Market(Beta, FullBut(1)), Market(Alpha)];
-        var atBeta = RunPlanner.Build(inputs, markets, Handled(), []);
+        var atBeta = RunPlanner.Build(inputs, markets, Handled(), [], []);
         var doneAtBeta = Assert.Single(atBeta.AssignedTo(Beta)).Lot.Row;
         var leftForAlpha = Assert.Single(atBeta.AssignedTo(Alpha)).Lot.Row;
 
-        var atAlpha = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), [Beta]);
-        var withoutProgress = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), []);
+        var atAlpha = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), [Beta], []);
+        var withoutProgress = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), [], []);
 
         Assert.Equal(leftForAlpha, Assert.Single(atAlpha.AssignedTo(Alpha)).Lot.Row);
         Assert.Empty(atAlpha.AssignedTo(Beta));
@@ -84,7 +84,7 @@ public sealed class RunPlanTests
     [Fact]
     public void ASettledRetainerGetsNoLot()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), [Alpha, Beta]);
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), [Alpha, Beta], []);
 
         Assert.Empty(plan.Allocation.Assignments);
         Assert.Equal(2, plan.Allocation.Overflow.Length);

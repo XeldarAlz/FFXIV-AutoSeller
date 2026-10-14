@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
@@ -6,11 +7,15 @@ namespace AutoSeller.Core.Tasks.Model;
 internal sealed class ListedStock
 {
     private readonly Dictionary<StockAddress, uint> listed = [];
+    private readonly List<ItemKey> lots = [];
+
+    public ReadOnlySpan<ItemKey> Lots => CollectionsMarshal.AsSpan(lots);
 
     public void Add(uint container, ushort slot, ItemKey item, uint quantity)
     {
         var address = new StockAddress(container, slot, item);
         listed[address] = listed.GetValueOrDefault(address) + quantity;
+        lots.Add(item);
     }
 
     public SlotFacts Remaining(in SlotFacts planned)

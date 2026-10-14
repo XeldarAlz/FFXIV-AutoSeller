@@ -46,9 +46,9 @@ internal sealed class RunPlan
 
 internal static class RunPlanner
 {
-    public static RunPlan Build(RunPlanInputs inputs, ReadOnlySpan<RetainerSnapshot> markets, IReadOnlySet<PlanRowKey> handled, ReadOnlySpan<ulong> settledRetainers)
+    public static RunPlan Build(RunPlanInputs inputs, ReadOnlySpan<RetainerSnapshot> markets, IReadOnlySet<PlanRowKey> handled, ReadOnlySpan<ulong> settledRetainers, ReadOnlySpan<ItemKey> listedThisRun)
     {
-        var listed = ListingCounts.From(markets);
+        var listed = ListingCounts.From(markets).Without(listedThisRun);
         var lots = LotPlanner.Plan(inputs.Stock, inputs.Rules, listed, QuantityBounds.Unread, inputs.FreeBagSlots);
         var allocation = SlotAllocator.Allocate(new AllocationRequest
         {

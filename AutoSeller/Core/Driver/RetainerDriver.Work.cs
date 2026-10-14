@@ -136,7 +136,7 @@ internal sealed partial class RetainerDriver
         while (replanning)
         {
             replanning = false;
-            var plan = RunPlanner.Build(session.PlanInputs, plugin.Characters.Current?.SnapshotArray() ?? [], session.Handled, session.Visits.SettledIdsOf(session.Retainers.AsSpan()));
+            var plan = RunPlanner.Build(session.PlanInputs, plugin.Characters.Current?.SnapshotArray() ?? [], session.Handled, session.Visits.SettledIdsOf(session.Retainers.AsSpan()), session.Listed.Lots);
             var assigned = plan.AssignedTo(retainer.RetainerId);
             Diag($"Driver: {plan.Lots.Lots.Length} lot(s) planned, {plan.Allocation.Assignments.Length} placed, {plan.Allocation.Overflow.Length} left over; {assigned.Length} for {retainer.Name}, which has {freeSlots} free slot(s).");
             for (var index = 0; index < assigned.Length; index++)
