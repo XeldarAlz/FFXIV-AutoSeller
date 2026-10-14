@@ -8,6 +8,18 @@ namespace AutoSeller.Core.Rules.Model;
 internal readonly record struct QuantityBounds(uint Minimum, uint Maximum)
 {
     public static QuantityBounds Unread => new(1, uint.MaxValue);
+
+    public uint Smallest => Math.Max(1u, Minimum);
+}
+
+internal readonly record struct LotSplit(uint Quantity, uint FullLots, uint Remainder)
+{
+    public uint LotCount => Remainder == 0 ? FullLots : FullLots + 1;
+
+    public uint QuantityOf(uint lotIndex)
+    {
+        return lotIndex < FullLots ? Quantity : Remainder;
+    }
 }
 
 internal enum LotHold : byte
@@ -84,22 +96,33 @@ internal static class LotPlanner
         };
     }
 
-    public static uint LotQuantity(uint available, uint lotSize, uint stackSize, QuantityBounds bounds)
+    public static LotSplit Split(uint available, uint lotSize, uint stackSize, QuantityBounds bounds)
     {
-        var largest = Math.Min(stackSize, bounds.Maximum);
-        var quantity = lotSize == 0 ? Math.Min(available, largest) : Math.Min(lotSize, largest);
-        return quantity >= Math.Max(1u, bounds.Minimum) ? quantity : 0;
-    }
-
-    public static uint LotCount(uint available, uint lotSize, uint stackSize, QuantityBounds bounds)
-    {
-        var quantity = LotQuantity(available, lotSize, stackSize, bounds);
-        if (quantity == 0 || available < quantity)
+        if (lotSize > 0)
         {
-            return 0;
+            var quantity = FixedLotQuantity(lotSize, stackSize, bounds);
+            return quantity == 0 ? default : new LotSplit(quantity, available / quantity, 0);
         }
 
-        return lotSize == 0 ? 1 : available / quantity;
+        var largest = Math.Min(stackSize, bounds.Maximum);
+        if (available <= largest)
+        {
+            return available >= bounds.Smallest ? new LotSplit(available, 1, 0) : default;
+        }
+
+        if (largest < bounds.Smallest)
+        {
+            return default;
+        }
+
+        var remainder = available % largest;
+        return new LotSplit(largest, available / largest, remainder >= bounds.Smallest ? remainder : 0);
+    }
+
+    public static uint FixedLotQuantity(uint lotSize, uint stackSize, QuantityBounds bounds)
+    {
+        var quantity = Math.Min(lotSize, Math.Min(stackSize, bounds.Maximum));
+        return quantity >= bounds.Smallest ? quantity : 0;
     }
 
     private static void PlanGroup(in GroupContext context, List<int> group, HashSet<uint> plannedUniqueItems, ref int bagRoom)
@@ -113,15 +136,15 @@ internal static class LotPlanner
         }
 
         ReserveKeep(context, group);
-        var lotCounts = new uint[group.Count];
+        var splits = new LotSplit[group.Count];
         uint totalLots = 0;
         for (var position = 0; position < group.Count; position++)
         {
             var stockIndex = group[position];
             var slot = context.Stock[stockIndex].Slot;
             var free = slot.Quantity - context.Outcomes[stockIndex].KeptQuantity;
-            lotCounts[position] = LotCount(free, context.Terms.LotSize, item.StackSize, context.Bounds);
-            totalLots += lotCounts[position];
+            splits[position] = Split(free, context.Terms.LotSize, item.StackSize, context.Bounds);
+            totalLots += splits[position].LotCount;
         }
 
         if (totalLots == 0)
@@ -137,7 +160,8 @@ internal static class LotPlanner
             var stockIndex = group[position];
             var outcome = context.Outcomes[stockIndex];
             var slot = outcome.Slot;
-            if (lotCounts[position] == 0)
+            var split = splits[position];
+            if (split.LotCount == 0)
             {
                 var hold = outcome.KeptQuantity == slot.Quantity ? LotHold.KeptInBags : LotHold.BelowLotSize;
                 context.Outcomes[stockIndex] = outcome with { Hold = hold };
@@ -161,16 +185,15 @@ internal static class LotPlanner
                 bagRoom--;
             }
 
-            var taken = Math.Min(lotCounts[position], remaining);
+            var taken = Math.Min(split.LotCount, remaining);
             remaining -= taken;
-            var quantity = LotQuantity(slot.Quantity - outcome.KeptQuantity, context.Terms.LotSize, item.StackSize, context.Bounds);
             for (var lotIndex = 0u; lotIndex < taken; lotIndex++)
             {
                 var row = new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, (ushort)lotIndex, slot.ItemId, slot.IsHq);
-                context.Lots.Add(new PlannedLot(row, slot.Source, quantity, context.Terms.PreferredRetainerId, listingsToKeepUp));
+                context.Lots.Add(new PlannedLot(row, slot.Source, split.QuantityOf(lotIndex), context.Terms.PreferredRetainerId, listingsToKeepUp));
             }
 
-            var partial = taken < lotCounts[position] ? LotHold.ListingsToKeepUpReached : LotHold.None;
+            var partial = taken < split.LotCount ? LotHold.ListingsToKeepUpReached : LotHold.None;
             context.Outcomes[stockIndex] = outcome with { Hold = partial, LotCount = (ushort)taken };
             if (item.IsUnique)
             {

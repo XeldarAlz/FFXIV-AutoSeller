@@ -64,7 +64,33 @@ public sealed class LotPlannerTests
 
         var plan = LotPlanner.Plan(stock, rules, ListingCounts.Empty, new QuantityBounds(1, 50), 0);
 
-        Assert.Equal(new uint[] { 50, 50 }, Quantities(plan));
+        Assert.Equal(new uint[] { 50, 50, 30 }, Quantities(plan));
+    }
+
+    [Fact]
+    public void WholeStackAboveTheSellWindowMaximumIsListedInPieces()
+    {
+        var crystals = ImmutableArray.Create(Stock(In(SlotSource.Crystals, Ore, 999), Material(stackSize: 9_999)));
+
+        var plan = LotPlanner.Plan(crystals, BookSelling(SellRule(listingsToKeepUp: 5)), ListingCounts.Empty, new QuantityBounds(1, 99), 0);
+
+        Assert.Equal(new uint[] { 99, 99, 99, 99, 99 }, Quantities(plan));
+        Assert.Equal(LotHold.ListingsToKeepUpReached, plan.Slots[0].Hold);
+    }
+
+    [Theory]
+    [InlineData(999u, 1u, new uint[] { 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 9 })]
+    [InlineData(250u, 10u, new uint[] { 99, 99, 52 })]
+    [InlineData(203u, 10u, new uint[] { 99, 99 })]
+    [InlineData(99u, 10u, new uint[] { 99 })]
+    public void WholeStackPiecesKeepARemainderOnlyWhenTheMinimumAllowsIt(uint owned, uint minimum, uint[] expected)
+    {
+        var crystals = ImmutableArray.Create(Stock(In(SlotSource.Crystals, Ore, owned), Material(stackSize: 9_999)));
+
+        var plan = LotPlanner.Plan(crystals, BookSelling(SellRule()), ListingCounts.Empty, new QuantityBounds(minimum, 99), 0);
+
+        Assert.Equal(expected, Quantities(plan));
+        Assert.Equal(LotHold.None, plan.Slots[0].Hold);
     }
 
     [Fact]
@@ -85,9 +111,14 @@ public sealed class LotPlannerTests
     [InlineData(40u, 0u, 0u, 999u, 1u)]
     [InlineData(0u, 0u, 0u, 999u, 0u)]
     [InlineData(10u, 0u, 0u, 0u, 0u)]
+    [InlineData(999u, 0u, 0u, 99u, 11u)]
+    [InlineData(990u, 0u, 0u, 99u, 10u)]
+    [InlineData(203u, 10u, 0u, 99u, 2u)]
+    [InlineData(5u, 10u, 0u, 99u, 0u)]
+    [InlineData(500u, 100u, 0u, 99u, 0u)]
     public void LotCountFollowsTheLotSizeAndBounds(uint available, uint minimum, uint lotSize, uint maximum, uint expected)
     {
-        Assert.Equal(expected, LotPlanner.LotCount(available, lotSize, 999, new QuantityBounds(minimum, maximum)));
+        Assert.Equal(expected, LotPlanner.Split(available, lotSize, 999, new QuantityBounds(minimum, maximum)).LotCount);
     }
 
     [Fact]
