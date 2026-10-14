@@ -78,6 +78,7 @@ public sealed class RunJournalTests : IDisposable
         Assert.Equal(new RunCaps(5, 6, 7_000), restored.Caps);
         Assert.Equal(RulesHash, restored.RulesHash);
         Assert.Equal(PricingHash, restored.PricingHash);
+        Assert.Equal(PlanEditsHash, restored.PlanEditsHash);
         Assert.Equal(StepLimitPercent, restored.StepLimitPercent);
         Assert.True(restored.DryRun);
     }

@@ -32,6 +32,8 @@ internal sealed record RunAuthorized : JournalEvent
 
     public required ulong PricingHash { get; init; }
 
+    public required ulong PlanEditsHash { get; init; }
+
     public required int StepLimitPercent { get; init; }
 
     public required RunCaps Caps { get; init; }

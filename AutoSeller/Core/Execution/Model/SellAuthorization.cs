@@ -40,6 +40,8 @@ internal sealed class SellAuthorization
 
     public required ulong PricingHash { get; init; }
 
+    public required ulong PlanEditsHash { get; init; }
+
     public required int StepLimitPercent { get; init; }
 
     public required RunCaps Caps { get; init; }
@@ -59,6 +61,7 @@ internal sealed class SellAuthorization
         ImmutableArray<ulong> retainerIds,
         ulong rulesHash,
         ulong pricingHash,
+        ulong planEditsHash,
         int stepLimitPercent,
         RunCaps caps,
         bool dryRun,
@@ -91,6 +94,7 @@ internal sealed class SellAuthorization
             RetainerIds = ImmutableCollectionsMarshal.AsImmutableArray(frozenRetainers),
             RulesHash = rulesHash,
             PricingHash = pricingHash,
+            PlanEditsHash = planEditsHash,
             StepLimitPercent = stepLimitPercent,
             Caps = caps,
             DryRun = dryRun,
@@ -110,6 +114,7 @@ internal sealed class SellAuthorization
             recorded.RetainerIds,
             recorded.RulesHash,
             recorded.PricingHash,
+            recorded.PlanEditsHash,
             recorded.StepLimitPercent,
             recorded.Caps,
             recorded.DryRun,
@@ -131,6 +136,7 @@ internal sealed class SellAuthorization
             RetainerIds = RetainerIds,
             RulesHash = RulesHash,
             PricingHash = PricingHash,
+            PlanEditsHash = PlanEditsHash,
             StepLimitPercent = StepLimitPercent,
             Caps = Caps,
             DryRun = DryRun,

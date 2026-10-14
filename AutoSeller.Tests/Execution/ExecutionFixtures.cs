@@ -29,6 +29,7 @@ internal static class ExecutionFixtures
     public const int StepLimitPercent = 25;
     public const ulong RulesHash = 0x1234;
     public const ulong PricingHash = 0x5678;
+    public const ulong PlanEditsHash = 0x9ABC;
 
     public static readonly Guid RunId = new("6f1c2a4e-0d5b-4a8e-9a37-2f6a1b3c4d5e");
     public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
@@ -43,6 +44,7 @@ internal static class ExecutionFixtures
             [SecondRetainer, FirstRetainer],
             RulesHash,
             PricingHash,
+            PlanEditsHash,
             StepLimitPercent,
             caps ?? RunCaps.Default,
             dryRun,

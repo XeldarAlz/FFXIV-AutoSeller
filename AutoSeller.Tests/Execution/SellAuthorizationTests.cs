@@ -107,6 +107,7 @@ public sealed class SellAuthorizationTests
         Assert.Equal(authorization.ApprovedPrices.AsSpan().ToArray(), restored.ApprovedPrices.AsSpan().ToArray());
         Assert.Equal(authorization.RulesHash, restored.RulesHash);
         Assert.Equal(authorization.PricingHash, restored.PricingHash);
+        Assert.Equal(authorization.PlanEditsHash, restored.PlanEditsHash);
         Assert.Equal(authorization.StepLimitPercent, restored.StepLimitPercent);
         Assert.Equal(authorization.Caps, restored.Caps);
         Assert.Equal(authorization.PolicyVersion, restored.PolicyVersion);
@@ -187,6 +188,7 @@ public sealed class SellAuthorizationTests
             retainers ?? [FirstRetainer, SecondRetainer],
             RulesHash,
             PricingHash,
+            PlanEditsHash,
             stepLimitPercent,
             caps ?? RunCaps.Default,
             false,
