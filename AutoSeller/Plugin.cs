@@ -110,7 +110,7 @@ public sealed class Plugin : IDalamudPlugin
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
             OwnSellers = new OwnSellersProvider(Retainers, Characters);
-            Bags = new BagReader(static _ => false);
+            Bags = new BagReader(AutoRetainer.IsItemProtected);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
             Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller?.RunInput);

@@ -95,7 +95,12 @@ internal static class PlanLabels
             return Loc.T(FailedReason(decision));
         }
 
-        return decision.Refused ? Loc.T(L.Plan.SkipRefused) : WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);
+        if (decision.Refused)
+        {
+            return Loc.T(decision.Guard == SaleRejection.ItemProtected ? L.Rules.ReasonProtected : L.Plan.SkipRefused);
+        }
+
+        return WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);
     }
 
     public static string RowReason(in PlanRow row)
