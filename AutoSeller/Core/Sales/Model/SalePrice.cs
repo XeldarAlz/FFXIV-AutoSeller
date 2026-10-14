@@ -11,6 +11,12 @@ internal enum SalePriceMeaning : byte
 internal static class SalePrice
 {
     public const int MannequinSellerTaxPercent = 0;
+    public const uint MaximumUnitPrice = 999_999_999;
+
+    public static bool IsListableUnitPrice(uint unitPrice)
+    {
+        return unitPrice is >= 1 and <= MaximumUnitPrice;
+    }
 
     public static uint ToUnitPrice(uint price, uint quantity, SalePriceMeaning meaning)
     {

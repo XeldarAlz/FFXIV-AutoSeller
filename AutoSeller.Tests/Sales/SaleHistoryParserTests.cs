@@ -14,7 +14,7 @@ public sealed class SaleHistoryParserTests
     }
 
     [Fact]
-    public void FixtureRecordsParseIntoConfirmedSalesAndEmptyRecordsAreSkipped()
+    public void FixtureRecordsParseIntoConfirmedSalesAndEmptyOrOversizedRecordsAreSkipped()
     {
         Assert.True(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
 
@@ -39,6 +39,15 @@ public sealed class SaleHistoryParserTests
         Assert.Equal(120_000u, highQuality.UnitPrice);
         Assert.Equal(new DateTime(2026, 10, 13, 21, 5, 40, DateTimeKind.Utc), highQuality.SoldAtUtc);
         Assert.Equal(114_000, highQuality.NetGil);
+    }
+
+    [Fact]
+    public void RecordPricedAboveTheHighestListablePriceIsSkipped()
+    {
+        Assert.True(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
+
+        Assert.DoesNotContain(sales, sale => sale.ItemId == MythriteIngot);
+        Assert.All(sales, sale => Assert.InRange(sale.UnitPrice, 1u, SalePrice.MaximumUnitPrice));
     }
 
     [Fact]

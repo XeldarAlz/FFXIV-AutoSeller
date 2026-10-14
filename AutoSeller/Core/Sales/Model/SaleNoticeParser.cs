@@ -37,7 +37,7 @@ internal static class SaleNoticeParser
         var isHq = rawItemId > SaleNoticeLayout.HighQualityItemIdOffset;
         var itemId = isHq ? rawItemId - SaleNoticeLayout.HighQualityItemIdOffset : rawItemId;
         var unitPrice = SalePrice.ToUnitPrice((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning);
-        if (unitPrice == 0)
+        if (!SalePrice.IsListableUnitPrice(unitPrice) || netGil > SalePrice.ToGross((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning))
         {
             return false;
         }

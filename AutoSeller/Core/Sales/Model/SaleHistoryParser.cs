@@ -34,7 +34,7 @@ internal static class SaleHistoryParser
         var soldAtSeconds = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.SoldAtUnixSecondsOffset..]);
         var quantity = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.QuantityOffset..]);
         var unitPrice = SalePrice.ToUnitPrice(price, quantity, SaleHistoryLayout.PriceMeaning);
-        if (itemId == 0 || quantity == 0 || unitPrice == 0 || soldAtSeconds == 0)
+        if (itemId == 0 || quantity == 0 || soldAtSeconds == 0 || !SalePrice.IsListableUnitPrice(unitPrice))
         {
             sale = default;
             return false;

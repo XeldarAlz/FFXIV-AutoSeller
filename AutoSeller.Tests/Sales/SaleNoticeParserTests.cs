@@ -26,6 +26,14 @@ public sealed class SaleNoticeParserTests
     }
 
     [Fact]
+    public void HighestListablePriceIsAccepted()
+    {
+        Assert.True(SaleNoticeParser.TryRead(SingleNotice, [Gridania, (int)DarksteelOre, 0, 999_999_999, 949_999_999], out var notice));
+
+        Assert.Equal(999_999_999u, notice.UnitPrice);
+    }
+
+    [Fact]
     public void HighQualityItemIdIsDecoded()
     {
         Assert.True(SaleNoticeParser.TryRead(StackNotice, [Gridania, 1_000_000 + (int)MythriteIngot, 2, 4_000, 7_600], out var notice));
@@ -45,6 +53,10 @@ public sealed class SaleNoticeParserTests
     [InlineData(745u, new[] { 2, 5057, 10, 0, 1900 })]
     [InlineData(745u, new[] { 2, 5057, 10, 200, -1 })]
     [InlineData(748u, new[] { 2, 5057, 1, 200 })]
+    [InlineData(745u, new[] { 2, 5057, 10, 1_000_000_000, 1900 })]
+    [InlineData(748u, new[] { 2, 5057, 0, 1_500_000_000, 1900 })]
+    [InlineData(745u, new[] { 2, 5057, 10, 200, 2001 })]
+    [InlineData(748u, new[] { 2, 5057, 0, 200, 201 })]
     public void MalformedNoticesAreRefused(uint logMessageId, int[] parameters)
     {
         Assert.False(SaleNoticeParser.TryRead(logMessageId, parameters, out var notice));
