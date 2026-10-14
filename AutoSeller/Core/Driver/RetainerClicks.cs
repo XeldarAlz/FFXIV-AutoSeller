@@ -8,6 +8,7 @@ using ECommons.GameFunctions;
 using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Driver;
@@ -33,6 +34,7 @@ internal static unsafe class RetainerClicks
     private const string CloseRetainerListThrottleKey = "AutoSeller.Retainer.CloseRetainerList";
     private const string DeclinePromptThrottleKey = "AutoSeller.Retainer.DeclinePrompt";
     private const string CloseWindowThrottleKey = "AutoSeller.Retainer.CloseWindow";
+    private const string SetQuantityThrottleKey = "AutoSeller.Retainer.SetQuantity";
 
     public static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
     public static readonly string SelectStringAddon = ChainWindows.NameOf(ChainWindow.SelectString);
@@ -43,9 +45,10 @@ internal static unsafe class RetainerClicks
     public static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
     public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
 
-    public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
+    private static uint reportedOwner;
+    private static ushort reportedSellList;
 
-    public static bool IsPresent(string addonName) => GenericHelpers.TryGetAddonByName<AtkUnitBase>(addonName, out _);
+    public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
 
     public static bool InteractWithBell(IGameObject bell)
     {
@@ -79,9 +82,9 @@ internal static unsafe class RetainerClicks
 
     public static bool ProgressTalk() => NpcInteraction.ProgressTalk(TalkThrottleKey);
 
-    public static bool OpenSellList(int entry) => ChooseMenuEntry(entry, OpenSellListThrottleKey);
+    public static bool OpenSellList(int entry, in PromptText expected) => NpcInteraction.SelectEntryShowing(entry, expected, OpenSellListThrottleKey);
 
-    public static bool Quit(int entry) => ChooseMenuEntry(entry, QuitThrottleKey);
+    public static bool Quit(int entry, in PromptText expected) => NpcInteraction.SelectEntryShowing(entry, expected, QuitThrottleKey);
 
     public static bool OpenListingMenu(int row)
     {
@@ -102,13 +105,26 @@ internal static unsafe class RetainerClicks
             return false;
         }
 
+        ReportContextOwner();
         var entries = new AddonMaster.ContextMenu(menu).Entries;
-        if (entry < 0 || entry >= entries.Length || !entries[entry].Select())
+        if (entry < 0 || entry >= entries.Length)
         {
             return false;
         }
 
-        RunLog.Info($"Retainer: choosing context menu entry {entry}, '{entries[entry].Text}'.");
+        var text = entries[entry].Text;
+        if (!RetainerMenuText.IsAdjustPrice(text))
+        {
+            RunLog.Warning($"Retainer: context menu entry {entry} reads '{text}', not Adjust Price; nothing chosen.");
+            return false;
+        }
+
+        if (!entries[entry].Select())
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: choosing context menu entry {entry}, '{text}'.");
         return true;
     }
 
@@ -150,21 +166,31 @@ internal static unsafe class RetainerClicks
 
     public static bool DeclinePrompt() => NpcInteraction.AnswerNo(DeclinePromptThrottleKey);
 
-    private static bool ChooseMenuEntry(int entry, string throttleKey)
+    public static bool SetQuantity(int quantity)
     {
-        if (!NpcInteraction.TryGetReadyAddon(SelectStringAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(SellWindowAddon, out var sellWindow) || !EzThrottler.Throttle(SetQuantityThrottleKey, ClickThrottleMs))
         {
             return false;
         }
 
-        if (entry < 0 || entry >= new AddonMaster.SelectString(menu).EntryCount)
-        {
-            return false;
-        }
-
-        RunLog.Info($"Retainer: choosing retainer menu entry {entry}.");
-        Callback.Fire(menu, true, entry);
+        RunLog.Info($"Retainer: setting the sell window's quantity to {quantity}.");
+        new AddonMaster.RetainerSell(sellWindow).Quantity = quantity;
         return true;
+    }
+
+    private static void ReportContextOwner()
+    {
+        var agent = AgentContext.Instance();
+        var owner = agent == null ? 0u : agent->OwnerAddon;
+        var sellListId = NpcInteraction.TryGetReadyAddon(SellListAddon, out var sellList) ? sellList->Id : (ushort)0;
+        if (owner == reportedOwner && sellListId == reportedSellList)
+        {
+            return;
+        }
+
+        reportedOwner = owner;
+        reportedSellList = sellListId;
+        RunLog.Info($"Retainer: the open context menu belongs to addon {owner}; the sell list is addon {sellListId}.");
     }
 
     private static bool Close(string addonName, string throttleKey)

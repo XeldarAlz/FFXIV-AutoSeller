@@ -1,5 +1,6 @@
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
+using AutoSeller.Core.Tasks.Model;
 using Dalamud.Bindings.ImGui;
 using System.Numerics;
 

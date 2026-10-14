@@ -18,6 +18,7 @@ internal sealed class SellRunSession
         PlanInputs = planInputs;
         Review = review;
         Visits = new RetainerVisits(planInputs.Retainers.Length);
+        Values = new ValueBook(authorization.Caps);
     }
 
     public SellAuthorization Authorization { get; }
@@ -32,27 +33,37 @@ internal sealed class SellRunSession
 
     public RetainerVisits Visits { get; }
 
+    public ValueBook Values { get; }
+
     public IReadOnlySet<PlanRowKey> Handled => handled;
 
     public ReadOnlySpan<RunDecision> Decisions => CollectionsMarshal.AsSpan(decisions);
 
-    public RunPhase Phase { get; private set; } = RunPhase.Preparing;
+    public RunState State { get; private set; } = RunState.Authorizing;
 
     public string Status { get; private set; } = string.Empty;
 
     public int Revision { get; private set; }
 
+    public int CurrentRetainer { get; private set; } = RetainerVisits.NoRetainer;
+
+    public PlanRowKey CurrentRow { get; private set; }
+
     public bool PauseRequested { get; set; }
 
     public bool StopRequested { get; private set; }
 
-    public bool PausedAtBoundary { get; set; }
+    public bool HoldRequested => PauseRequested || StopRequested;
+
+    public bool PausedAtBoundary { get; private set; }
+
+    public PauseReason PausedFor { get; private set; } = PauseReason.None;
 
     public bool ReferencesRead { get; set; }
 
-    public bool DidWork { get; set; }
+    public bool DidWork { get; private set; }
 
-    public RunEnd End { get; private set; } = RunEnd.None;
+    public bool Ended => State.IsFinal();
 
     public NeedsPlayerReason NeedsPlayer { get; private set; } = NeedsPlayerReason.None;
 
@@ -62,15 +73,33 @@ internal sealed class SellRunSession
 
     public RunTally Tally => RunTally.Of(Decisions);
 
-    public void Show(RunPhase phase, string status)
+    public void Show(RunState state, string status)
     {
-        if (phase == Phase && string.Equals(status, Status, StringComparison.Ordinal))
+        if (state == State && string.Equals(status, Status, StringComparison.Ordinal))
         {
             return;
         }
 
-        Phase = phase;
+        State = state;
         Status = status;
+        Revision++;
+    }
+
+    public void Enter(RunState state)
+    {
+        if (state == State)
+        {
+            return;
+        }
+
+        State = state;
+        Revision++;
+    }
+
+    public void WorkOn(int retainerIndex, PlanRowKey row)
+    {
+        CurrentRetainer = retainerIndex;
+        CurrentRow = row;
         Revision++;
     }
 
@@ -82,15 +111,36 @@ internal sealed class SellRunSession
         Revision++;
     }
 
+    public void HoldAtBoundary(PauseReason reason)
+    {
+        PausedAtBoundary = true;
+        PausedFor = reason;
+        Revision++;
+    }
+
+    public void Relaunch()
+    {
+        PauseRequested = false;
+        PausedAtBoundary = false;
+        PausedFor = PauseReason.None;
+        State = RunState.Preflight;
+        Revision++;
+    }
+
     public void RequestStop()
     {
         StopRequested = true;
         Revision++;
     }
 
-    public void Conclude(RunEnd end)
+    public void Conclude(RunState final)
     {
-        End = end;
+        if (!final.IsFinal())
+        {
+            throw new ArgumentOutOfRangeException(nameof(final), final, "A run ends in a final state.");
+        }
+
+        State = final;
         Revision++;
     }
 
@@ -98,27 +148,24 @@ internal sealed class SellRunSession
     {
         Failure = failure;
         FailureRestartable = restartable;
-        End = RunEnd.Failed;
-        Revision++;
+        Conclude(RunState.Failed);
     }
 
     public void ClearFault()
     {
-        if (End != RunEnd.Failed)
+        if (State != RunState.Failed)
         {
             return;
         }
 
         Failure = string.Empty;
         FailureRestartable = false;
-        End = RunEnd.None;
-        Revision++;
+        Enter(RunState.Preflight);
     }
 
     public void NeedPlayer(NeedsPlayerReason reason)
     {
         NeedsPlayer = reason;
-        End = RunEnd.NeedsPlayer;
-        Revision++;
+        Conclude(RunState.NeedsPlayer);
     }
 }

@@ -1,7 +1,7 @@
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Localization;
-using AutoSeller.Core.Tasks;
 using AutoSeller.Core.Tasks.Model;
 using AutoSeller.Core.Travel;
 using AutoSeller.Core.Travel.Model;
@@ -33,7 +33,7 @@ internal sealed partial class RetainerDriver
             return new Stop(DriverHalt.BellNotReached, "no summoning bell in reach");
         }
 
-        session.Show(RunPhase.Selling, Loc.T(L.Run.StatusOpeningBell));
+        session.Show(RunState.AtBell, Loc.T(L.Run.StatusOpeningBell));
         engaged = true;
         var opened = await Step(ChainStep.Opens(ChainWindow.RetainerList, RetainerListOpenMs, ChainWindow.Talk), () => RetainerClicks.InteractWithBell(bellObject), RetainerClicks.ProgressTalk);
         return opened.End switch
@@ -48,7 +48,8 @@ internal sealed partial class RetainerDriver
     private async Task<Visit> VisitRetainer(int index)
     {
         var retainer = session.Retainers[index];
-        session.Show(RunPhase.Selling, Loc.T(L.Run.StatusRetainer, index + 1, session.Retainers.Length, retainer.Name));
+        session.WorkOn(index, default);
+        session.Show(RunState.OpeningRetainer, Loc.T(L.Run.StatusRetainer, index + 1, session.Retainers.Length, retainer.Name));
         var names = RetainerReads.RetainerNames();
         var row = PromptText.From(retainer.Name).FirstMatchIn(names);
         if (row == PromptText.NoMatch)
@@ -73,20 +74,17 @@ internal sealed partial class RetainerDriver
             return new Visit(stop, false);
         }
 
-        session.Show(RunPhase.Selling, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
+        session.Show(RunState.ReadingMarket, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
         var market = await ReadMarket(retainer);
         if (market is null)
         {
             return new Visit(new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read"), false);
         }
 
-        var finished = true;
-        stop = await WorkListings(retainer, market);
-        finished &= !session.PausedAtBoundary;
-        if (!stop.Halted && finished && !CancelToken.IsCancellationRequested)
+        stop = await WorkListings(index, retainer, market);
+        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
         {
-            stop = await WorkLots(retainer, market);
-            finished &= !session.PausedAtBoundary;
+            stop = await WorkLots(index, retainer, market);
         }
 
         if (stop.Halted || CancelToken.IsCancellationRequested)
@@ -94,12 +92,14 @@ internal sealed partial class RetainerDriver
             return new Visit(stop, false);
         }
 
+        var finished = !session.PausedAtBoundary;
         stop = await LeaveRetainer(retainer);
         return new Visit(stop, finished && !stop.Halted);
     }
 
     private async Task<Stop> OpenSellList(RunRetainer retainer)
     {
+        session.Enter(RunState.OpeningSellList);
         var entries = NpcInteraction.SelectStringEntries();
         var sellText = RetainerMenuText.SellFromInventory();
         ReportMenu(entries);
@@ -114,7 +114,7 @@ internal sealed partial class RetainerDriver
             return new Stop(DriverHalt.MenuEntryNotFound, $"the sell entry is not among [{string.Join(" | ", entries)}]");
         }
 
-        var opened = await Step(ChainStep.Opens(ChainWindow.RetainerSellList, SellListOpenMs, RetainerBackdrop), () => RetainerClicks.OpenSellList(entry));
+        var opened = await Step(ChainStep.Opens(ChainWindow.RetainerSellList, SellListOpenMs, RetainerBackdrop), () => RetainerClicks.OpenSellList(entry, sellText));
         return Failed(opened, DriverHalt.SellListDidNotOpen, $"the sell list of {retainer.Name} did not open");
     }
 
@@ -125,11 +125,17 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> LeaveRetainer(RunRetainer retainer)
     {
-        session.Show(RunPhase.Selling, Loc.T(L.Run.StatusLeaving, retainer.Name));
-        var menu = await Step(ChainStep.Opens(ChainWindow.SelectString, MenuReturnMs, SellListBackdrop | ChainWindow.Talk), RetainerClicks.CloseSellList, RetainerClicks.ProgressTalk);
+        session.Show(RunState.ClosingSellList, Loc.T(L.Run.StatusLeaving, retainer.Name));
+        var closed = await Step(ChainStep.Closes(ChainWindow.RetainerSellList, MenuReturnMs, RetainerBackdrop | ChainWindow.Talk), RetainerClicks.CloseSellList, RetainerClicks.ProgressTalk);
+        if (!closed.Succeeded)
+        {
+            return Failed(closed, DriverHalt.WindowsDidNotClose, $"the sell list of {retainer.Name} did not close");
+        }
+
+        var menu = await Watch(ChainStep.Opens(ChainWindow.SelectString, MenuReturnMs, ChainWindow.RetainerList | ChainWindow.Talk), RetainerClicks.ProgressTalk);
         if (!menu.Succeeded)
         {
-            return Failed(menu, DriverHalt.WindowsDidNotClose, $"the sell list of {retainer.Name} did not close back to its menu");
+            return Failed(menu, DriverHalt.WindowsDidNotClose, $"the menu of {retainer.Name} did not come back after the sell list");
         }
 
         return await QuitRetainer();
@@ -137,6 +143,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> QuitRetainer()
     {
+        session.Enter(RunState.ClosingRetainer);
         var quitText = RetainerMenuText.Quit();
         if (!quitText.IsKnown)
         {
@@ -150,13 +157,60 @@ internal sealed partial class RetainerDriver
             return new Stop(DriverHalt.WindowsDidNotClose, $"the quit entry is not among [{string.Join(" | ", entries)}]");
         }
 
-        var list = await Step(ChainStep.Opens(ChainWindow.RetainerList, MenuReturnMs, ChainWindow.SelectString | ChainWindow.Talk), () => RetainerClicks.Quit(entry), RetainerClicks.ProgressTalk);
-        return Failed(list, DriverHalt.WindowsDidNotClose, "the retainer menu did not close back to the retainer list");
+        var closed = await Step(ChainStep.Closes(ChainWindow.SelectString, MenuReturnMs, ChainWindow.RetainerList | ChainWindow.Talk), () => RetainerClicks.Quit(entry, quitText), RetainerClicks.ProgressTalk);
+        if (!closed.Succeeded)
+        {
+            return Failed(closed, DriverHalt.WindowsDidNotClose, "the retainer menu did not close");
+        }
+
+        var list = await Watch(ChainStep.Opens(ChainWindow.RetainerList, MenuReturnMs, ChainWindow.Talk), RetainerClicks.ProgressTalk);
+        if (!list.Succeeded)
+        {
+            return Failed(list, DriverHalt.WindowsDidNotClose, "the retainer list did not come back after the retainer left");
+        }
+
+        if (!await WaitUntilTimed(TalkedBackToList, MenuReturnMs, "driver-retainer-gone", StepPollFrames))
+        {
+            return CancelToken.IsCancellationRequested ? Stop.None : new Stop(DriverHalt.WindowsDidNotClose, "the retainer's farewell did not end");
+        }
+
+        Diag($"Driver: back at the retainer list; a retainer is {(plugin.Retainers.TryGetOpenRetainer(out var open) ? $"still counted as open ({open.RetainerId})" : "no longer open")}");
+        return Stop.None;
+    }
+
+    private async Task LeaveRetainerMenu()
+    {
+        if (!RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || !plugin.Retainers.TryGetOpenRetainer(out var open) || !session.Authorization.AllowsRetainer(open.RetainerId))
+        {
+            return;
+        }
+
+        var quitText = RetainerMenuText.Quit();
+        var entry = quitText.FirstMatchIn(NpcInteraction.SelectStringEntries());
+        if (entry == PromptText.NoMatch)
+        {
+            Warn($"Driver: the menu of retainer {open.RetainerId} is open but shows no quit entry; it is left open");
+            return;
+        }
+
+        var left = await RetainerWindows.RepeatUntil(
+            () =>
+            {
+                RetainerClicks.ProgressTalk();
+                return RetainerClicks.Quit(entry, quitText);
+            },
+            static () => !RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) && !RetainerClicks.IsReady(RetainerClicks.TalkAddon) && RetainerClicks.IsReady(RetainerClicks.RetainerListAddon),
+            BackToListBoundMs,
+            unloaded);
+        if (!left)
+        {
+            Warn($"Driver: retainer {open.RetainerId} did not leave within {BackToListBoundMs} ms");
+        }
     }
 
     private async Task<Stop> BackToRetainerList()
     {
-        if (RetainerClicks.IsReady(RetainerClicks.RetainerListAddon))
+        if (RetainerClicks.IsReady(RetainerClicks.RetainerListAddon) && !RetainerClicks.IsReady(RetainerClicks.SelectStringAddon))
         {
             return Stop.None;
         }
@@ -177,9 +231,10 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> CloseRetainerList()
     {
-        session.Show(RunPhase.Finishing, Loc.T(L.Run.StatusClosing));
+        session.Show(RunState.Finishing, Loc.T(L.Run.StatusClosing));
         if (!RetainerClicks.IsReady(RetainerClicks.RetainerListAddon))
         {
+            engaged = false;
             return Stop.None;
         }
 
@@ -199,13 +254,13 @@ internal sealed partial class RetainerDriver
 
     private static bool TalkedBackToList()
     {
-        if (RetainerClicks.IsReady(RetainerClicks.RetainerListAddon))
+        if (RetainerClicks.IsReady(RetainerClicks.TalkAddon))
         {
-            return true;
+            RetainerClicks.ProgressTalk();
+            return false;
         }
 
-        RetainerClicks.ProgressTalk();
-        return false;
+        return RetainerClicks.IsReady(RetainerClicks.RetainerListAddon) && !RetainerClicks.IsReady(RetainerClicks.SelectStringAddon);
     }
 
     private static Stop Failed(in StepResult result, DriverHalt missed, string detail) => result.End switch

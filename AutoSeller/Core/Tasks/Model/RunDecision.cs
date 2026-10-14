@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 
@@ -20,6 +21,7 @@ internal enum RunSkip : byte
     SearchFailed,
     SlotChanged,
     NoFreeSlot,
+    QuantityOutOfBounds,
 }
 
 internal readonly record struct RunDecision(
@@ -29,16 +31,23 @@ internal readonly record struct RunDecision(
     uint Quantity,
     uint CurrentPrice,
     Decision Decision,
-    RunSkip Skip)
+    RunSkip Skip,
+    SaleRejection Guard = SaleRejection.None)
 {
     [JsonIgnore]
-    public bool WouldReprice => Skip == RunSkip.None && Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp;
+    public bool Clear => Skip == RunSkip.None && Guard == SaleRejection.None;
 
     [JsonIgnore]
-    public bool WouldList => Skip == RunSkip.None && Decision.Action == SellAction.List;
+    public bool Refused => Skip == RunSkip.None && Guard != SaleRejection.None;
 
     [JsonIgnore]
-    public bool Kept => Skip == RunSkip.None && Decision.Action == SellAction.Keep;
+    public bool WouldReprice => Clear && Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp;
+
+    [JsonIgnore]
+    public bool WouldList => Clear && Decision.Action == SellAction.List;
+
+    [JsonIgnore]
+    public bool Kept => Clear && Decision.Action == SellAction.Keep;
 
     public static RunDecision ForListing(ulong retainerId, in ListingSlot listing, in Decision decision)
     {

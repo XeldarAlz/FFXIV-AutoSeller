@@ -41,7 +41,7 @@ public sealed class RunOutcomeTests
         var visits = AllVisited(2);
         RunDecision[] decisions = [RunDecision.ForListing(Alpha, OreListing(), repriceDown), RunDecision.ForLot(Beta, lot, list)];
 
-        Assert.Equal(RunEnd.Completed, RunOutcomeRule.Completion(visits, decisions));
+        Assert.Equal(RunState.Completed, RunOutcomeRule.Completion(visits, decisions));
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public sealed class RunOutcomeTests
         skippedRetainer.MarkSkipped(1, DriverHalt.SellListDidNotOpen);
         RunDecision[] skippedRow = [RunDecision.ListingSkipped(Alpha, OreListing(), RunSkip.SearchFailed)];
 
-        Assert.Equal(RunEnd.CompletedPartial, RunOutcomeRule.Completion(skippedRetainer, []));
-        Assert.Equal(RunEnd.CompletedPartial, RunOutcomeRule.Completion(AllVisited(2), skippedRow));
-        Assert.Equal(RunEnd.CompletedPartial, RunOutcomeRule.Completion(new RetainerVisits(1), []));
+        Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(skippedRetainer, []));
+        Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(AllVisited(2), skippedRow));
+        Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(new RetainerVisits(1), []));
     }
 
     [Fact]
@@ -86,19 +86,43 @@ public sealed class RunOutcomeTests
         Assert.False(skipped.Kept);
     }
 
-    [Theory]
-    [InlineData((byte)RunEnd.Completed, (byte)RunState.Completed)]
-    [InlineData((byte)RunEnd.CompletedPartial, (byte)RunState.CompletedPartial)]
-    [InlineData((byte)RunEnd.NeedsPlayer, (byte)RunState.NeedsPlayer)]
-    [InlineData((byte)RunEnd.Failed, (byte)RunState.Failed)]
-    [InlineData((byte)RunEnd.Stopped, (byte)RunState.Stopped)]
-    [InlineData((byte)RunEnd.None, (byte)RunState.Stopped)]
-    public void EveryEndIsJournaledAsAFinalState(byte end, byte state)
+    [Fact]
+    public void ARowTheGuardRefusedMakesTheRunPartialAndIsNoWouldBeChange()
     {
-        var finalState = RunOutcomeRule.FinalStateOf((RunEnd)end);
+        var refused = RunDecision.ForListing(Alpha, OreListing(), repriceDown) with { Guard = SaleRejection.BelowFloor };
 
-        Assert.Equal((RunState)state, finalState);
-        Assert.True(finalState.IsFinal());
+        Assert.True(refused.Refused);
+        Assert.False(refused.Clear);
+        Assert.False(refused.WouldReprice);
+        Assert.Equal(new RunTally(0, 0, 0, 1), RunTally.Of([refused]));
+        Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(AllVisited(1), [refused]));
+    }
+
+    [Fact]
+    public void EveryCompletionIsAFinalState()
+    {
+        Assert.True(RunOutcomeRule.Completion(AllVisited(1), []).IsFinal());
+        Assert.True(RunOutcomeRule.Completion(new RetainerVisits(1), []).IsFinal());
+    }
+
+    [Theory]
+    [InlineData((byte)RunState.Idle, (byte)RunPhase.Idle)]
+    [InlineData((byte)RunState.Authorizing, (byte)RunPhase.Preparing)]
+    [InlineData((byte)RunState.Preflight, (byte)RunPhase.Preparing)]
+    [InlineData((byte)RunState.Planning, (byte)RunPhase.Preparing)]
+    [InlineData((byte)RunState.Travelling, (byte)RunPhase.Travelling)]
+    [InlineData((byte)RunState.AtBell, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.OpeningRetainer, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.Comparing, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.Guarding, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.ClosingRetainer, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.Paused, (byte)RunPhase.Paused)]
+    [InlineData((byte)RunState.StopRequested, (byte)RunPhase.Stopping)]
+    [InlineData((byte)RunState.Finishing, (byte)RunPhase.Finishing)]
+    [InlineData((byte)RunState.Completed, (byte)RunPhase.Finishing)]
+    public void TheShownPhaseFollowsTheRunState(byte state, byte phase)
+    {
+        Assert.Equal((RunPhase)phase, RunPhases.Of((RunState)state));
     }
 
     private static RetainerVisits AllVisited(int count)

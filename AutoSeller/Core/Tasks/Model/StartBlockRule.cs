@@ -16,6 +16,9 @@ internal enum StartBlock : byte
     Settling,
     AlreadyRunning,
     NotAuthorized,
+    InCombat,
+    InCutscene,
+    Trading,
 }
 
 internal readonly record struct StartFacts(
@@ -23,6 +26,9 @@ internal readonly record struct StartFacts(
     bool LoggedIn,
     bool OnHomeWorld,
     bool InContent,
+    bool InCombat,
+    bool InCutscene,
+    bool Trading,
     AutoRetainerStatus AutoRetainer,
     bool UnresolvedJournalEntry,
     bool CompatibilityGatesOpen,
@@ -47,6 +53,21 @@ internal static class StartBlockRule
         if (facts.InContent)
         {
             return StartBlock.InContent;
+        }
+
+        if (facts.InCombat)
+        {
+            return StartBlock.InCombat;
+        }
+
+        if (facts.InCutscene)
+        {
+            return StartBlock.InCutscene;
+        }
+
+        if (facts.Trading)
+        {
+            return StartBlock.Trading;
         }
 
         if (facts.Mode == RunMode.Standalone && facts.AutoRetainer.Busy)

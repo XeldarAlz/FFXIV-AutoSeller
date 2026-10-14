@@ -12,6 +12,8 @@ internal sealed partial class RetainerDriver
     private const ChainWindow RetainerBackdrop = ChainWindow.RetainerList | ChainWindow.SelectString;
     private const ChainWindow SellListBackdrop = RetainerBackdrop | ChainWindow.RetainerSellList;
 
+    private static readonly Func<bool> noClick = static () => true;
+
     private enum StepEnd : byte
     {
         Done,
@@ -29,12 +31,22 @@ internal sealed partial class RetainerDriver
         }
 
         await ClickOnce(act);
+        return await Watch(step, act, whileWaiting);
+    }
+
+    private Task<StepResult> Watch(ChainStep step, Func<bool>? whileWaiting = null)
+    {
+        return Watch(step, noClick, whileWaiting);
+    }
+
+    private async Task<StepResult> Watch(ChainStep step, Func<bool> retry, Func<bool>? whileWaiting)
+    {
         chain.Begin(step, Environment.TickCount64);
         while (!CancelToken.IsCancellationRequested)
         {
             if (UnexpectedAddons.InCombat())
             {
-                return StepResult.Halt(new Stop(DriverHalt.CombatOrDutyPop, $"combat while waiting for {step.Window} to {step.Expectation}"));
+                return StepResult.Halt(new Stop(DriverHalt.CombatOrDutyPop, $"combat while waiting for {step.Window} to {Expected(step)}"));
             }
 
             var verdict = chain.Poll(UnexpectedAddons.View(), Environment.TickCount64);
@@ -46,7 +58,7 @@ internal sealed partial class RetainerDriver
                     continue;
                 case ChainAction.Retry:
                     Diag($"Driver: {step.Window} did not {Expected(step)} within {step.TimeoutMs} ms; trying once more");
-                    await ClickOnce(act);
+                    await ClickOnce(retry);
                     continue;
                 case ChainAction.Next:
                     return StepResult.Done;

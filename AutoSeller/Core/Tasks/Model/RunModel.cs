@@ -13,15 +13,4 @@ internal enum NeedsPlayerReason : byte
     ExternalStop,
     BellNotReached,
     WindowsStuck,
-    CombatOrDuty,
-}
-
-internal enum RunEnd : byte
-{
-    None,
-    Completed,
-    CompletedPartial,
-    Stopped,
-    NeedsPlayer,
-    Failed,
 }

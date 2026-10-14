@@ -1,6 +1,6 @@
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Stats;
-using AutoSeller.Core.Tasks.Model;
 using AutoSeller.Windows.Components;
 using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
@@ -127,7 +127,7 @@ internal sealed class HistoryPage
         TextDraw.At(text.When, new Vector2(textX, top), Styling.TextStrong);
         var badgeMid = top + whenSize.Y * 0.5f;
         var badgeX = textX + whenSize.X + BadgeGap * 2f * scale;
-        badgeX += Badge.DrawLeft(drawList, OutcomeLabel(record.End), OutcomeColor(record.End), badgeX, badgeMid);
+        badgeX += Badge.DrawLeft(drawList, OutcomeLabel(record.Outcome), OutcomeColor(record.Outcome), badgeX, badgeMid);
         if (record.DryRun)
         {
             Badge.DrawLeft(drawList, Loc.T(L.History.DryRun), Styling.AccentBlue, badgeX + BadgeGap * scale, badgeMid);
@@ -162,20 +162,20 @@ internal sealed class HistoryPage
         return Loc.T(L.History.Tooltip, started, ended);
     }
 
-    private static string OutcomeLabel(RunEnd end) => end switch
+    private static string OutcomeLabel(RunState outcome) => outcome switch
     {
-        RunEnd.Completed => Loc.T(L.History.OutcomeCompleted),
-        RunEnd.CompletedPartial => Loc.T(L.History.OutcomePartial),
-        RunEnd.Stopped => Loc.T(L.History.OutcomeStopped),
-        RunEnd.NeedsPlayer => Loc.T(L.History.OutcomeNeedsPlayer),
+        RunState.Completed => Loc.T(L.History.OutcomeCompleted),
+        RunState.CompletedPartial => Loc.T(L.History.OutcomePartial),
+        RunState.Stopped => Loc.T(L.History.OutcomeStopped),
+        RunState.NeedsPlayer => Loc.T(L.History.OutcomeNeedsPlayer),
         _ => Loc.T(L.History.OutcomeFailed),
     };
 
-    private static Vector4 OutcomeColor(RunEnd end) => end switch
+    private static Vector4 OutcomeColor(RunState outcome) => outcome switch
     {
-        RunEnd.Completed => Styling.AccentMint,
-        RunEnd.CompletedPartial or RunEnd.NeedsPlayer => Styling.AccentAmber,
-        RunEnd.Stopped => Styling.TextDim,
+        RunState.Completed => Styling.AccentMint,
+        RunState.CompletedPartial or RunState.NeedsPlayer => Styling.AccentAmber,
+        RunState.Stopped => Styling.TextDim,
         _ => Styling.AccentRose,
     };
 }

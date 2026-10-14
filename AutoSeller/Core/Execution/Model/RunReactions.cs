@@ -10,6 +10,7 @@ internal enum RunReaction : byte
     SearchAgain,
     KeepReading,
     PauseForPlayer,
+    PauseRun,
 }
 
 internal enum InterruptHandling : byte

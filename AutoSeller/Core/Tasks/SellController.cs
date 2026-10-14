@@ -14,6 +14,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 
     public bool Running => session is not null;
 
+    public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
+
     public RunPhase Phase
     {
         get
@@ -28,7 +30,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
                 return RunPhase.Paused;
             }
 
-            return active.StopRequested ? RunPhase.Stopping : active.Phase;
+            return active.StopRequested ? RunPhase.Stopping : RunPhases.Of(active.State);
         }
     }
 
@@ -44,6 +46,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
             return PauseReason switch
             {
                 PauseReason.InContent => Loc.T(L.Run.StatusPausedInContent),
+                PauseReason.Interrupted => Loc.T(L.Run.StatusPausedInterrupted),
                 PauseReason.Manual => Loc.T(L.Run.PhasePaused),
                 _ when active.StopRequested => Loc.T(L.Run.StatusStopping),
                 _ when active.PauseRequested => Loc.T(L.Run.StatusPausing),
@@ -77,8 +80,10 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         StartBlock.CompatibilityGatesClosed => Loc.T(L.Run.BlockGatesClosed),
         StartBlock.NoRules => Loc.T(L.Run.BlockNoRules),
         StartBlock.NoEnabledRetainers => Loc.T(L.Run.BlockNoRetainers),
-        StartBlock.Settling => Loc.T(L.Run.BlockSettling),
         StartBlock.AlreadyRunning => Loc.T(L.Run.BlockRunning),
+        StartBlock.InCombat => Loc.T(L.Run.BlockInCombat),
+        StartBlock.InCutscene => Loc.T(L.Run.BlockInCutscene),
+        StartBlock.Trading => Loc.T(L.Run.BlockTrading),
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 
@@ -87,7 +92,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         NeedsPlayerReason.BellNotReached => Loc.T(L.Run.NeedsBellNotReached),
         NeedsPlayerReason.WindowsStuck => Loc.T(L.Run.NeedsWindowsStuck),
         NeedsPlayerReason.GilLimitPrompt => Loc.T(L.Run.NeedsGilLimit),
-        NeedsPlayerReason.CombatOrDuty => Loc.T(L.Run.NeedsCombatOrDuty),
+        NeedsPlayerReason.UnknownWrite => Loc.T(L.Run.NeedsUnknownWrite),
         _ => Loc.T(L.Run.NeedsUnexpectedWindow),
     };
 }

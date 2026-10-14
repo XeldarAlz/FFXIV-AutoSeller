@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks.Model;
@@ -18,6 +19,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
     private const int ReferenceWaitMs = 25_000;
     private const int CleanupPollFrames = 4;
 
+    private readonly RunDecider decider = new(plugin, session);
     private RetainerDriver? driver;
 
     public bool HoldsWindows => driver is { HoldsWindows: true };
@@ -40,7 +42,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
 
     private async Task RunSteps()
     {
-        if (!await AwaitEarlierSettle() || !SameCharacter())
+        if (!await AwaitEarlierSettle() || !StillAuthorized())
         {
             return;
         }
@@ -61,21 +63,22 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             return true;
         }
 
-        session.Show(RunPhase.Preparing, Loc.T(L.Run.StatusSettling));
+        session.Show(RunState.Preflight, Loc.T(L.Run.StatusSettling));
         Diag("Run: a stopped run is still closing its retainer windows; waiting for it before going on.");
         await WaitUntilTimed(() => !settling(), SettleBoundMs, "run-earlier-settle");
         return !CancelToken.IsCancellationRequested;
     }
 
-    private bool SameCharacter()
+    private bool StillAuthorized()
     {
-        if (Svc.PlayerState.ContentId == session.Authorization.CharacterContentId)
+        var boundary = decider.Boundary(DateTime.UtcNow);
+        if (boundary == DriverHalt.None)
         {
             return true;
         }
 
-        Warn("Run: another character is logged in than the one the run was started for; the run ends.");
-        session.Fail(Loc.T(L.Run.FailedOtherCharacter), false);
+        Warn($"Run: the run is no longer authorized ({boundary}); it ends.");
+        Halt(boundary);
         return false;
     }
 
@@ -86,7 +89,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             return;
         }
 
-        session.Show(RunPhase.Preparing, Loc.T(L.Run.StatusPreparing));
+        session.Show(RunState.Planning, Loc.T(L.Run.StatusPreparing));
         if (!await WaitUntilTimed(() => !plugin.References.Fetching, ReferenceWaitMs, "run-references"))
         {
             Warn($"Run: the Universalis prices did not arrive within {ReferenceWaitMs / TimeUnits.MillisecondsPerSecond} s; the plan uses what is known.");
@@ -121,11 +124,12 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
 
     private async Task<bool> ReachBell()
     {
-        session.Show(RunPhase.Travelling, Loc.T(L.Run.StatusGoingToBell));
+        session.Show(RunState.Travelling, Loc.T(L.Run.StatusGoingToBell));
         var arrival = await GoToBell("Run");
         switch (arrival)
         {
             case BellArrival.Reached or BellArrival.RetainerListOpen:
+                session.Enter(RunState.AtBell);
                 return true;
             case BellArrival.Cancelled:
                 return false;
@@ -140,7 +144,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
 
     private async Task RunDriver()
     {
-        var retainerDriver = new RetainerDriver(session, new RunDecider(plugin, session.Authorization), plugin);
+        var retainerDriver = new RetainerDriver(session, decider, plugin);
         driver = retainerDriver;
         var finished = await RunCancellableDriver(retainerDriver);
         if (!finished)
@@ -201,14 +205,12 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
     {
         switch (DriverHalts.ReactionTo(halt))
         {
-            case HaltReaction.Fail:
-                var failure = halt switch
-                {
-                    DriverHalt.OtherCharacter => Loc.T(L.Run.FailedOtherCharacter),
-                    DriverHalt.MenuTextUnavailable => Loc.T(L.Run.FailedMenuText),
-                    _ => Loc.T(L.Run.FailedFault),
-                };
-                session.Fail(failure, halt == DriverHalt.Fault);
+            case RunReaction.EndRun:
+                session.Fail(FailureOf(halt), halt == DriverHalt.Fault);
+                return;
+            case RunReaction.PauseRun:
+                Diag($"Run: {halt}; the retainer windows are closed and the run pauses until that is over.");
+                session.HoldAtBoundary(PauseReason.Interrupted);
                 return;
             default:
                 session.NeedPlayer(DriverHalts.NeedsPlayerReasonFor(halt));
@@ -216,9 +218,20 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
         }
     }
 
+    private static string FailureOf(DriverHalt halt) => halt switch
+    {
+        DriverHalt.OtherCharacter => Loc.T(L.Run.FailedOtherCharacter),
+        DriverHalt.MenuTextUnavailable => Loc.T(L.Run.FailedMenuText),
+        DriverHalt.SettingsChanged => Loc.T(L.Run.FailedSettingsChanged),
+        DriverHalt.LeftHomeWorld => Loc.T(L.Run.FailedLeftHomeWorld),
+        DriverHalt.DayChanged => Loc.T(L.Run.FailedDayChanged),
+        DriverHalt.GuardEndedRun => Loc.T(L.Run.FailedGuard),
+        _ => Loc.T(L.Run.FailedFault),
+    };
+
     private void Finish()
     {
-        session.Show(RunPhase.Finishing, Loc.T(L.Run.StatusClosing));
+        session.Show(RunState.Finishing, Loc.T(L.Run.StatusClosing));
         session.Conclude(RunOutcomeRule.Completion(session.Visits, session.Decisions));
     }
 }

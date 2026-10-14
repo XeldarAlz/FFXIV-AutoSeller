@@ -11,6 +11,7 @@ using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks.Model;
+using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 
 namespace AutoSeller.Core.Tasks;
@@ -23,7 +24,7 @@ internal sealed partial class SellController
 
     public StartBlock Start()
     {
-        if (session is { End: not RunEnd.None } ended && !Settling)
+        if (session is { Ended: true } ended)
         {
             Settle(ended);
         }
@@ -44,15 +45,23 @@ internal sealed partial class SellController
             Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer is not null && data is not null,
             Svc.PlayerState.HomeWorld.RowId != 0 && Svc.PlayerState.CurrentWorld.RowId == Svc.PlayerState.HomeWorld.RowId,
             DutyWatcher.InContent(),
+            Svc.Condition[ConditionFlag.InCombat],
+            Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
+            Svc.Condition[ConditionFlag.TradeOpen],
             autoRetainerUnread,
             review.BlocksWrites,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
             enabled.Length > 0,
             Settling));
-        if (block != StartBlock.None)
+        if (block is not (StartBlock.None or StartBlock.Settling))
         {
             return Refuse(block, block.ToString());
+        }
+
+        if (block == StartBlock.Settling)
+        {
+            RunLog.Info("Start: the stopped run is still closing its retainer windows; the new run waits for it.");
         }
 
         var markets = data!.SnapshotArray();

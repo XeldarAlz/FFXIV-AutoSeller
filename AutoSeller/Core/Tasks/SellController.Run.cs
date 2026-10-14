@@ -11,6 +11,7 @@ namespace AutoSeller.Core.Tasks;
 internal sealed partial class SellController
 {
     private SellRunSession? session;
+    private SellRunSession? lastSession;
     private SellRunTask? currentTask;
     private SellRunTask? settlingTask;
     private long settlingUntilMs;
@@ -20,16 +21,23 @@ internal sealed partial class SellController
 
     public void Stop()
     {
-        if (session is not { End: RunEnd.None } active)
+        if (session is not { Ended: false } active)
         {
             return;
         }
 
         active.RequestStop();
+        var handling = RunReactions.ForInterruption(active.State);
+        if (currentTask is not null && handling != InterruptHandling.Immediate)
+        {
+            RunLog.Info($"Stop requested during {active.State} ({handling}); the run stops once that step can be left safely.");
+            return;
+        }
+
         StopTask();
         if (Settling)
         {
-            active.Conclude(RunEnd.Stopped);
+            active.Conclude(RunState.Stopped);
             PauseReason = PauseReason.None;
             RunLog.Info("Run stopped by the player; it ends once the stopped retainer driver has closed its windows.");
             return;
@@ -50,17 +58,17 @@ internal sealed partial class SellController
 
     public void Pause(PauseReason reason)
     {
-        if (reason == PauseReason.None || session is not { End: RunEnd.None } active)
+        if (reason == PauseReason.None || session is not { Ended: false } active)
         {
             return;
         }
 
         if (Paused)
         {
-            if (reason == PauseReason.Manual && PauseReason == PauseReason.InContent)
+            if (reason == PauseReason.Manual && PauseReason is PauseReason.InContent or PauseReason.Interrupted)
             {
                 PauseReason = PauseReason.Manual;
-                RunLog.Info("Auto-pause promoted to a manual pause; leaving content will no longer resume.");
+                RunLog.Info("Auto-pause promoted to a manual pause; it no longer resumes on its own.");
             }
 
             return;
@@ -78,9 +86,14 @@ internal sealed partial class SellController
             return;
         }
 
-        PauseReason = reason;
+        var pendingManual = active.PauseRequested && deferredPause == PauseReason.Manual;
+        PauseReason = pendingManual ? PauseReason.Manual : reason;
+        deferredPause = PauseReason.None;
+        active.Enter(RunState.Paused);
         StopTask();
-        RunLog.Info($"Run paused ({reason}); Resume reads the game again and carries on.");
+        RunLog.Info(pendingManual
+            ? $"Run paused ({reason}) while a manual pause was waiting; it stays paused until you resume it."
+            : $"Run paused ({reason}); Resume reads the game again and carries on.");
     }
 
     public void Resume()
@@ -102,8 +115,7 @@ internal sealed partial class SellController
 
     private void Launch(SellRunSession active)
     {
-        active.PauseRequested = false;
-        active.PausedAtBoundary = false;
+        active.Relaunch();
         try
         {
             var task = new SellRunTask(active, plugin, () => Settling);
@@ -126,7 +138,7 @@ internal sealed partial class SellController
         {
             settlingTask = null;
             RunLog.Info("The stopped run finished closing its retainer windows.");
-            if (currentTask is null && session is { End: not RunEnd.None } stopped)
+            if (currentTask is null && session is { Ended: true } stopped)
             {
                 Settle(stopped);
             }
@@ -146,21 +158,29 @@ internal sealed partial class SellController
             return;
         }
 
-        if (active.End == RunEnd.None && active.PausedAtBoundary)
+        if (!active.Ended && active.PausedAtBoundary)
         {
-            PauseReason = deferredPause == PauseReason.None ? PauseReason.Manual : deferredPause;
+            if (active.StopRequested)
+            {
+                active.Conclude(RunState.Stopped);
+                Settle(active);
+                return;
+            }
+
+            PauseReason = deferredPause == PauseReason.Manual || active.PausedFor == PauseReason.None ? PauseReason.Manual : active.PausedFor;
             deferredPause = PauseReason.None;
-            RunLog.Info("Run paused at an item boundary; Resume reads the game again and carries on.");
+            active.Enter(RunState.Paused);
+            RunLog.Info($"Run paused at an item boundary ({PauseReason}); Resume reads the game again and carries on.");
             return;
         }
 
-        if (active.End == RunEnd.None)
+        if (!active.Ended)
         {
             RunLog.Warning("The run task ended without an outcome; the run is marked failed.");
             active.Fail(Loc.T(L.Run.FailedFault), true);
         }
 
-        if (active.End == RunEnd.Failed && active.FailureRestartable && TryAutoResumeAfterFault(active))
+        if (active.State == RunState.Failed && active.FailureRestartable && TryAutoResumeAfterFault(active))
         {
             return;
         }
@@ -187,9 +207,9 @@ internal sealed partial class SellController
     private void EndNow(SellRunSession active, string reason)
     {
         StopTask();
-        if (active.End == RunEnd.None)
+        if (!active.Ended)
         {
-            active.Conclude(RunEnd.Stopped);
+            active.Conclude(RunState.Stopped);
         }
 
         RunLog.Info($"Run stopped: {reason}.");
@@ -214,7 +234,7 @@ internal sealed partial class SellController
 
         settlingTask = task;
         settlingUntilMs = Environment.TickCount64 + SellRunTask.SettleBoundMs;
-        RunLog.Info("The stopped run is closing the sell window, the search results and the sell list; nothing new starts until it is done.");
+        RunLog.Info("The stopped run is closing the sell window, the search results and the sell list; a new run waits until it is done.");
     }
 
     private void Settle(SellRunSession active)
@@ -225,35 +245,36 @@ internal sealed partial class SellController
         }
 
         session = null;
+        lastSession = active;
         PauseReason = PauseReason.None;
         deferredPause = PauseReason.None;
-        if (active.End == RunEnd.None)
+        if (!active.Ended)
         {
-            active.Conclude(RunEnd.Stopped);
+            active.Conclude(RunState.Stopped);
         }
 
         var authorization = active.Authorization;
         var endedAtUtc = DateTime.UtcNow;
-        active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = RunOutcomeRule.FinalStateOf(active.End) });
+        active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State });
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);
         RunLog.Info(
-            $"Run {authorization.RunId} ended {active.End}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
+            $"Run {authorization.RunId} ended {active.State}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
             $"{tally.WouldReprice} would reprice, {tally.WouldList} would list, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
     }
 
     private static void Announce(SellRunSession active, in RunTally tally)
     {
-        var message = active.End switch
+        var message = active.State switch
         {
-            RunEnd.Completed or RunEnd.CompletedPartial => Loc.T(L.Run.StatusDone, tally.WouldReprice, tally.WouldList, tally.Kept, tally.Skipped),
-            RunEnd.NeedsPlayer => Loc.T(L.Run.StatusNeedsPlayer, Describe(active.NeedsPlayer)),
-            RunEnd.Failed => Loc.T(L.Run.StatusFailed, active.Failure),
+            RunState.Completed or RunState.CompletedPartial => Loc.T(L.Run.StatusDone, tally.WouldReprice, tally.WouldList, tally.Kept, tally.Skipped),
+            RunState.NeedsPlayer => Loc.T(L.Run.StatusNeedsPlayer, Describe(active.NeedsPlayer)),
+            RunState.Failed => Loc.T(L.Run.StatusFailed, active.Failure),
             _ => Loc.T(L.Run.StatusStopped),
         };
 
-        if (active.End is RunEnd.NeedsPlayer or RunEnd.Failed)
+        if (active.State is RunState.NeedsPlayer or RunState.Failed)
         {
             Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {message}");
             return;
@@ -264,7 +285,7 @@ internal sealed partial class SellController
 
     private void Record(SellRunSession active, in RunTally tally, DateTime endedAtUtc)
     {
-        if (!active.DidWork && active.End == RunEnd.Stopped)
+        if (!active.DidWork && active.State == RunState.Stopped)
         {
             RunLog.Info("The run was stopped before it decided anything; nothing is recorded.");
             return;
@@ -275,7 +296,7 @@ internal sealed partial class SellController
             authorization.RunId,
             authorization.CreatedAtUtc,
             endedAtUtc,
-            active.End,
+            active.State,
             authorization.DryRun,
             authorization.HomeWorldId,
             active.Visits.Visited,

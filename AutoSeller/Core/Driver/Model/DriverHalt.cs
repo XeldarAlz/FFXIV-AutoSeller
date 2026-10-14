@@ -1,3 +1,4 @@
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Tasks.Model;
 
 namespace AutoSeller.Core.Driver.Model;
@@ -20,30 +21,36 @@ internal enum DriverHalt : byte
     CombatOrDutyPop,
     OtherCharacter,
     Fault,
-}
-
-internal enum HaltReaction : byte
-{
-    Continue,
-    SkipRetainer,
-    NeedsPlayer,
-    Fail,
+    SellWindowUnreadable,
+    GuardEndedRetainer,
+    SettingsChanged,
+    LeftHomeWorld,
+    DayChanged,
+    GuardEndedRun,
+    WriteUnresolved,
 }
 
 internal static class DriverHalts
 {
-    public static HaltReaction ReactionTo(DriverHalt halt) => halt switch
+    public static RunReaction ReactionTo(DriverHalt halt) => halt switch
     {
-        DriverHalt.None => HaltReaction.Continue,
-        DriverHalt.RetainerNotListed => HaltReaction.SkipRetainer,
-        DriverHalt.RetainerMenuDidNotOpen => HaltReaction.SkipRetainer,
-        DriverHalt.MenuEntryNotFound => HaltReaction.SkipRetainer,
-        DriverHalt.SellListDidNotOpen => HaltReaction.SkipRetainer,
-        DriverHalt.MarketNotRead => HaltReaction.SkipRetainer,
-        DriverHalt.MenuTextUnavailable => HaltReaction.Fail,
-        DriverHalt.OtherCharacter => HaltReaction.Fail,
-        DriverHalt.Fault => HaltReaction.Fail,
-        _ => HaltReaction.NeedsPlayer,
+        DriverHalt.None => RunReaction.Continue,
+        DriverHalt.RetainerNotListed => RunReaction.EndRetainer,
+        DriverHalt.RetainerMenuDidNotOpen => RunReaction.EndRetainer,
+        DriverHalt.MenuEntryNotFound => RunReaction.EndRetainer,
+        DriverHalt.SellListDidNotOpen => RunReaction.EndRetainer,
+        DriverHalt.MarketNotRead => RunReaction.EndRetainer,
+        DriverHalt.SellWindowUnreadable => RunReaction.EndRetainer,
+        DriverHalt.GuardEndedRetainer => RunReaction.EndRetainer,
+        DriverHalt.MenuTextUnavailable => RunReaction.EndRun,
+        DriverHalt.OtherCharacter => RunReaction.EndRun,
+        DriverHalt.Fault => RunReaction.EndRun,
+        DriverHalt.SettingsChanged => RunReaction.EndRun,
+        DriverHalt.LeftHomeWorld => RunReaction.EndRun,
+        DriverHalt.DayChanged => RunReaction.EndRun,
+        DriverHalt.GuardEndedRun => RunReaction.EndRun,
+        DriverHalt.CombatOrDutyPop => RunReaction.PauseRun,
+        _ => RunReaction.PauseForPlayer,
     };
 
     public static NeedsPlayerReason NeedsPlayerReasonFor(DriverHalt halt) => halt switch
@@ -52,7 +59,21 @@ internal static class DriverHalts
         DriverHalt.RetainerListDidNotOpen => NeedsPlayerReason.WindowsStuck,
         DriverHalt.WindowsDidNotClose => NeedsPlayerReason.WindowsStuck,
         DriverHalt.GilLimitPrompt => NeedsPlayerReason.GilLimitPrompt,
-        DriverHalt.CombatOrDutyPop => NeedsPlayerReason.CombatOrDuty,
+        DriverHalt.WriteUnresolved => NeedsPlayerReason.UnknownWrite,
         _ => NeedsPlayerReason.UnexpectedWindow,
+    };
+
+    public static DriverHalt ForGuard(SaleRejection rejection) => rejection switch
+    {
+        SaleRejection.RulesChanged or SaleRejection.PricingChanged or SaleRejection.PlanEditsChanged => DriverHalt.SettingsChanged,
+        SaleRejection.WrongCharacter => DriverHalt.OtherCharacter,
+        SaleRejection.NotOnHomeWorld => DriverHalt.LeftHomeWorld,
+        _ => RunReactions.ForGuard(rejection) switch
+        {
+            RunReaction.EndRetainer => DriverHalt.GuardEndedRetainer,
+            RunReaction.NeedsReconciliation => DriverHalt.WriteUnresolved,
+            RunReaction.EndRun => DriverHalt.GuardEndedRun,
+            _ => DriverHalt.None,
+        },
     };
 }

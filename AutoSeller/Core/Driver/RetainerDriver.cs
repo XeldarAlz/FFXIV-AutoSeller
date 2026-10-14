@@ -1,8 +1,8 @@
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Core.Tasks.Model;
 using ECommons;
-using ECommons.DalamudServices;
 using System.Threading.Tasks;
 
 namespace AutoSeller.Core.Driver;
@@ -50,9 +50,13 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             stop = new Stop(DriverHalt.Fault, exception.Message);
         }
 
-        if (engaged && (CancelToken.IsCancellationRequested || stop.Halted))
+        if (engaged && CancelToken.IsCancellationRequested)
         {
             await SettleWindows();
+        }
+        else if (engaged && stop.Halted)
+        {
+            await UnwindToBell(stop);
         }
 
         Finish(stop);
@@ -60,10 +64,10 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
 
     private async Task<Stop> Run()
     {
-        var authorization = session.Authorization;
-        if (Svc.PlayerState.ContentId != authorization.CharacterContentId)
+        var boundary = decider.Boundary(DateTime.UtcNow);
+        if (boundary != DriverHalt.None)
         {
-            return new Stop(DriverHalt.OtherCharacter, $"character {Svc.PlayerState.ContentId} is logged in, the run is for {authorization.CharacterContentId}");
+            return new Stop(boundary, "the run is no longer authorized at its start");
         }
 
         var stop = await OpenRetainerList();
@@ -74,9 +78,8 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
 
         while (!CancelToken.IsCancellationRequested)
         {
-            if (session.PauseRequested)
+            if (StopsAtBoundary())
             {
-                session.PausedAtBoundary = true;
                 break;
             }
 
@@ -84,6 +87,12 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             if (index == RetainerVisits.NoRetainer)
             {
                 break;
+            }
+
+            boundary = decider.Boundary(DateTime.UtcNow);
+            if (boundary != DriverHalt.None)
+            {
+                return new Stop(boundary, $"the run is no longer authorized before {session.Retainers[index].Name}");
             }
 
             var visit = await VisitRetainer(index);
@@ -94,14 +103,14 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
 
             switch (DriverHalts.ReactionTo(visit.Stop.Reason))
             {
-                case HaltReaction.Continue:
+                case RunReaction.Continue:
                     if (visit.Finished)
                     {
                         session.Visits.MarkVisited(index);
                     }
 
                     break;
-                case HaltReaction.SkipRetainer:
+                case RunReaction.EndRetainer:
                     session.Visits.MarkSkipped(index, visit.Stop.Reason);
                     Warn($"Driver: {session.Retainers[index].Name} skipped ({visit.Stop.Reason}): {visit.Stop.Detail}");
                     var back = await BackToRetainerList();
@@ -115,7 +124,7 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
                     return visit.Stop;
             }
 
-            if (session.Visits.NextPending() != RetainerVisits.NoRetainer && !session.PauseRequested)
+            if (session.Visits.NextPending() != RetainerVisits.NoRetainer && !session.HoldRequested)
             {
                 await DelayMs(PacingPlan.BetweenRetainersMs(Random.Shared.NextDouble()));
             }
@@ -129,20 +138,51 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         return await CloseRetainerList();
     }
 
+    private bool StopsAtBoundary()
+    {
+        if (!session.HoldRequested)
+        {
+            return false;
+        }
+
+        if (!session.PausedAtBoundary)
+        {
+            session.HoldAtBoundary(PauseReason.None);
+        }
+
+        return true;
+    }
+
     private async Task SettleWindows()
     {
         try
         {
-            if (CancelToken.IsCancellationRequested)
-            {
-                Diag("Driver: stopped at the retainer; closing the sell window, the search results and the sell list");
-            }
-
+            Diag("Driver: stopped at the retainer; closing the sell window, the search results and the sell list");
             await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
         }
         catch (Exception exception)
         {
             RunLog.Warning(exception, "Driver: closing the retainer windows failed");
+        }
+    }
+
+    private async Task UnwindToBell(Stop stop)
+    {
+        try
+        {
+            Diag($"Driver: halted ({stop.Reason}); closing the sell windows, leaving the retainer and closing the retainer list");
+            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+            await LeaveRetainerMenu();
+            if (await RetainerWindows.RepeatUntil(RetainerClicks.CloseRetainerList, static () => !RetainerClicks.IsReady(RetainerClicks.RetainerListAddon), RetainerListCloseMs, unloaded))
+            {
+                engaged = false;
+            }
+
+            Diag($"Driver: after the unwind the open windows are {UnexpectedAddons.View().Visible}");
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, "Driver: leaving the retainer after a halt failed");
         }
     }
 

@@ -33,8 +33,20 @@ internal static class RetainerMenuText
 
     public static int FindAdjustPrice(ReadOnlySpan<string> entries)
     {
-        var entry = adjustPrice.Get().FirstMatchIn(entries);
-        return entry != PromptText.NoMatch ? entry : adjustPriceAlternate.Get().FirstMatchIn(entries);
+        for (var index = 0; index < entries.Length; index++)
+        {
+            if (IsAdjustPrice(entries[index]))
+            {
+                return index;
+            }
+        }
+
+        return PromptText.NoMatch;
+    }
+
+    public static bool IsAdjustPrice(string shown)
+    {
+        return adjustPrice.Get().Matches(shown) || adjustPriceAlternate.Get().Matches(shown);
     }
 
     public static uint PromptRowOf(string shown)
