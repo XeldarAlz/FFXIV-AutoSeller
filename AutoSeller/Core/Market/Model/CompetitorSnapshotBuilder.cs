@@ -31,6 +31,8 @@ internal readonly ref struct CompetitorCapture
 
 internal static class CompetitorSnapshotBuilder
 {
+    public const uint MaximumUnitPrice = 999_999_999;
+
     public static bool TryBuild(
         in CompetitorCapture capture,
         int currentGeneration,
@@ -59,7 +61,7 @@ internal static class CompetitorSnapshotBuilder
             CapturedAtUtc = capture.CapturedAtUtc,
             ExpectedCount = capture.AnnouncedCount,
             Listings = ImmutableCollectionsMarshal.AsImmutableArray(listings),
-            History = ImmutableArray.Create(capture.History),
+            History = ListableSales(capture.History),
         };
         return true;
     }
@@ -80,13 +82,51 @@ internal static class CompetitorSnapshotBuilder
                 return SnapshotRefusal.OtherItem;
             }
 
-            if (listing.Quantity == 0 || listing.UnitPrice == 0)
+            if (!IsListable(listing.Quantity, listing.UnitPrice))
             {
                 return SnapshotRefusal.InvalidListing;
             }
         }
 
         return SnapshotRefusal.None;
+    }
+
+    private static bool IsListable(uint quantity, uint unitPrice)
+    {
+        return quantity > 0 && unitPrice is > 0 and <= MaximumUnitPrice;
+    }
+
+    private static ImmutableArray<MarketSale> ListableSales(ReadOnlySpan<MarketSale> history)
+    {
+        var sales = new MarketSale[CountListableSales(history)];
+        var salesCount = 0;
+        for (var index = 0; index < history.Length; index++)
+        {
+            var sale = history[index];
+            if (!IsListable(sale.Quantity, sale.UnitPrice))
+            {
+                continue;
+            }
+
+            sales[salesCount] = sale;
+            salesCount++;
+        }
+
+        return ImmutableCollectionsMarshal.AsImmutableArray(sales);
+    }
+
+    private static int CountListableSales(ReadOnlySpan<MarketSale> history)
+    {
+        var count = 0;
+        for (var index = 0; index < history.Length; index++)
+        {
+            if (IsListable(history[index].Quantity, history[index].UnitPrice))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static CompetitorListing ToCompetitor(in ObservedListing listing, uint itemId)

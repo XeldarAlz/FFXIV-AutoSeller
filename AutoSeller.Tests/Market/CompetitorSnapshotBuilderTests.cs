@@ -71,13 +71,46 @@ public sealed class CompetitorSnapshotBuilderTests
     [Theory]
     [InlineData(0u, 900u)]
     [InlineData(5u, 0u)]
-    public void RowWithoutQuantityOrPriceRefusesTheCopy(uint quantity, uint unitPrice)
+    [InlineData(5u, CompetitorSnapshotBuilder.MaximumUnitPrice + 1)]
+    [InlineData(5u, uint.MaxValue)]
+    public void RowWithoutQuantityOrWithAnImpossiblePriceRefusesTheCopy(uint quantity, uint unitPrice)
     {
         ObservedListing[] rows = [Row(1, 900), Row(2, 950) with { Quantity = quantity, UnitPrice = unitPrice }];
 
         Assert.False(CompetitorSnapshotBuilder.TryBuild(Capture(rows, 2), SearchGeneration, out _, out var refusal));
 
         Assert.Equal(SnapshotRefusal.InvalidListing, refusal);
+    }
+
+    [Fact]
+    public void RowAtTheMarketPriceCeilingIsKept()
+    {
+        ObservedListing[] rows = [Row(1, CompetitorSnapshotBuilder.MaximumUnitPrice)];
+
+        var snapshot = Built(rows);
+
+        Assert.Equal(CompetitorSnapshotBuilder.MaximumUnitPrice, snapshot.Listings[0].UnitPrice);
+    }
+
+    [Fact]
+    public void SalesWithoutQuantityOrWithAnImpossiblePriceAreLeftOutOfTheHistory()
+    {
+        var kept = new MarketSale(950, 3, false, false, Now.AddHours(-2));
+        var atTheCeiling = new MarketSale(CompetitorSnapshotBuilder.MaximumUnitPrice, 1, true, false, Now.AddHours(-3));
+        MarketSale[] history =
+        [
+            kept,
+            new(0, 3, false, false, Now.AddHours(-4)),
+            new(900, 0, false, false, Now.AddHours(-5)),
+            new(CompetitorSnapshotBuilder.MaximumUnitPrice + 1, 1, false, false, Now.AddHours(-6)),
+            default,
+            atTheCeiling,
+        ];
+
+        Assert.True(CompetitorSnapshotBuilder.TryBuild(Capture([Row(1, 900)], 1, history), SearchGeneration, out var snapshot, out var refusal));
+
+        Assert.Equal(SnapshotRefusal.None, refusal);
+        Assert.Equal([kept, atTheCeiling], snapshot.History.AsSpan().ToArray());
     }
 
     [Fact]
