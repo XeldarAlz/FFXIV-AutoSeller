@@ -138,6 +138,29 @@ public sealed class LotPlannerTests
     }
 
     [Fact]
+    public void KeepCountSparesWholeLotsWhenALotSizeIsSet()
+    {
+        var plan = Plan(BookSelling(SellRule(keepCount: 10, lotSize: 50)), Stock(Bag(Ore, 50, 0), Material()), Stock(Bag(Ore, 60, 1), Material()));
+
+        Assert.Equal(new uint[] { 50, 50 }, Quantities(plan));
+        Assert.Equal(0u, plan.Slots[0].KeptQuantity);
+        Assert.Equal(10u, plan.Slots[1].KeptQuantity);
+    }
+
+    [Fact]
+    public void KeepCountTakesEveryRemainderBeforeBreakingALot()
+    {
+        var plan = Plan(
+            BookSelling(SellRule(keepCount: 85, lotSize: 50)),
+            Stock(Bag(Ore, 99, 0), Material()),
+            Stock(Bag(Ore, 60, 1), Material()),
+            Stock(Bag(Ore, 80, 2), Material()));
+
+        Assert.Equal(new uint[] { 50, 50, 50 }, Quantities(plan));
+        Assert.Equal(new uint[] { 45, 10, 30 }, new[] { plan.Slots[0].KeptQuantity, plan.Slots[1].KeptQuantity, plan.Slots[2].KeptQuantity });
+    }
+
+    [Fact]
     public void KeepCountPrefersBagsOverOtherSources()
     {
         var rules = Book([SellRule(keepCount: 20)], null, null, SellSources.Default | SellSources.Saddlebag);
@@ -303,7 +326,7 @@ public sealed class LotPlannerTests
     }
 
     [Fact]
-    public void PlannedQuantitiesNeverExceedWhatTheSlotHoldsAfterKeeping()
+    public void PlannedLotsAreTheBestSplitTheKeepCountLeaves()
     {
         var random = new Random(31_337);
         for (var caseIndex = 0; caseIndex < 200; caseIndex++)
@@ -333,11 +356,65 @@ public sealed class LotPlannerTests
             }
 
             Assert.Equal(Math.Min(owned, keep), kept);
-            if (lotSize > 0 && plan.Lots.Length < keepUp)
+            var best = lotSize == 0 ? StacksLeft(plan) : BestLotCount(stock, keep, lotSize);
+            Assert.True(plan.Lots.Length == Math.Min(keepUp, best), $"case {caseIndex}: {plan.Lots.Length} lots, best split {best}, keep up {keepUp}");
+        }
+    }
+
+    private static int BestLotCount(StockSlot[] stock, uint keep, uint lotSize)
+    {
+        long owned = 0;
+        for (var index = 0; index < stock.Length; index++)
+        {
+            owned += stock[index].Slot.Quantity;
+        }
+
+        var toKeep = (int)Math.Min(owned, keep);
+        var best = Unreachable(toKeep);
+        best[0] = 0;
+        for (var index = 0; index < stock.Length; index++)
+        {
+            var quantity = (int)stock[index].Slot.Quantity;
+            var next = Unreachable(toKeep);
+            for (var keptBefore = 0; keptBefore <= toKeep; keptBefore++)
             {
-                Assert.True(plan.Lots.Length <= (owned - kept) / lotSize, $"case {caseIndex}: more lots than the formula allows");
+                if (best[keptBefore] == int.MinValue)
+                {
+                    continue;
+                }
+
+                for (var keptHere = 0; keptHere <= Math.Min(quantity, toKeep - keptBefore); keptHere++)
+                {
+                    var lots = best[keptBefore] + (quantity - keptHere) / (int)lotSize;
+                    next[keptBefore + keptHere] = Math.Max(next[keptBefore + keptHere], lots);
+                }
+            }
+
+            best = next;
+        }
+
+        return best[toKeep];
+    }
+
+    private static int[] Unreachable(int toKeep)
+    {
+        var values = new int[toKeep + 1];
+        Array.Fill(values, int.MinValue);
+        return values;
+    }
+
+    private static int StacksLeft(LotPlan plan)
+    {
+        var count = 0;
+        for (var index = 0; index < plan.Slots.Length; index++)
+        {
+            if (plan.Slots[index].KeptQuantity < plan.Slots[index].Slot.Quantity)
+            {
+                count++;
             }
         }
+
+        return count;
     }
 
     private static uint[] Quantities(LotPlan plan)

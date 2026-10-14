@@ -213,14 +213,30 @@ internal static class LotPlanner
         var stock = context.Stock;
         var keepOrder = new List<int>(group);
         keepOrder.Sort((left, right) => CompareForKeeping(stock[left].Slot, stock[right].Slot));
+        var lotSize = context.Terms.LotSize;
+        var lotQuantity = lotSize == 0 ? 0 : FixedLotQuantity(lotSize, stock[group[0]].Item.StackSize, context.Bounds);
+        if (lotQuantity > 0)
+        {
+            remainingKeep = KeepFrom(context, keepOrder, remainingKeep, lotQuantity);
+        }
+
+        KeepFrom(context, keepOrder, remainingKeep, 0);
+    }
+
+    private static uint KeepFrom(in GroupContext context, List<int> keepOrder, uint remainingKeep, uint lotQuantity)
+    {
         for (var position = 0; position < keepOrder.Count && remainingKeep > 0; position++)
         {
             var stockIndex = keepOrder[position];
             var outcome = context.Outcomes[stockIndex];
-            var kept = Math.Min(outcome.Slot.Quantity, remainingKeep);
+            var free = outcome.Slot.Quantity - outcome.KeptQuantity;
+            var spare = lotQuantity == 0 ? free : free % lotQuantity;
+            var kept = Math.Min(spare, remainingKeep);
             remainingKeep -= kept;
-            context.Outcomes[stockIndex] = outcome with { KeptQuantity = kept };
+            context.Outcomes[stockIndex] = outcome with { KeptQuantity = outcome.KeptQuantity + kept };
         }
+
+        return remainingKeep;
     }
 
     private static void MarkGroup(in GroupContext context, List<int> group, EligibilityReason reason)
