@@ -61,7 +61,7 @@ public sealed class SellRunTests
         var gross = 1_049L * LotQuantity;
         var net = Gil.AfterTax(gross, BetaTaxPercent);
         var nextVisit = MarketOf(Beta, Now.AddHours(6), BetaGil + (uint)net);
-        var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Beta, progress.Writes.AsSpan()).AsSpan());
+        var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Beta, run.Review()).AsSpan());
         var inferred = Assert.Single(InferredSales.From(diff, BetaTaxPercent));
         Assert.Equal(SnapshotDiffCorroboration.Corroborated, diff.Corroboration);
         Assert.Equal((Ore, LotQuantity, 1_049u, net, SaleSource.Diff), (inferred.ItemId, inferred.Quantity, inferred.UnitPrice, inferred.NetGil, inferred.Source));
@@ -76,6 +76,37 @@ public sealed class SellRunTests
         Assert.Equal((1_049u, net, gross), (sale.UnitPrice, sale.NetGil, sale.GrossGil));
         Assert.Equal(inferred.ListedAtUtc, sale.ListedAtUtc);
         Assert.True(sale.HasListingTime);
+    }
+
+    [Fact]
+    public void ALotListedInOneRunIsRecordedSoldByTheDiffOfTheNextRun()
+    {
+        var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0), MarketOf(Beta, Now, BetaGil)], SellRun.Stock(OreInTheBags));
+        run.Start();
+        var assignment = Assert.Single(run.Allocation!.Assignments);
+
+        run.Advance(TimeSpan.FromMinutes(5));
+        var visited = run.ReadMarket(Beta, BetaGil);
+        var competition = run.Search(NormalOre, Seller(1, 1_200), Seller(2, 1_050));
+        var write = SaleWrite.ForLot(assignment, run.DecideLot(assignment, competition));
+        var bagSlot = SlotReading.Of(OreInTheBags);
+        Assert.True(run.Guard(write, bagSlot, bagSlot, competition).IsAllowed);
+        run.Advance(Step);
+        var writeId = run.Intend(write, LotQuantity);
+        var listedNow = OreListing(0, write.NewPrice);
+        Assert.Equal(ReadBackVerdict.Confirmed, run.ReadBack(writeId, write, new ReadBackSample([], true, LotQuantity, BetaGil), new ReadBackSample([listedNow], true, 0, BetaGil), 1_200));
+        run.Stop();
+
+        run.Advance(TimeSpan.FromHours(6));
+        run.Start();
+        var net = Gil.AfterTax((long)write.NewPrice * LotQuantity, BetaTaxPercent);
+        var nextVisit = run.ReadMarket(Beta, BetaGil + (uint)net);
+        var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Beta, run.Review()).AsSpan());
+
+        Assert.Empty(run.Replay().Writes);
+        var sale = Assert.Single(InferredSales.From(diff, BetaTaxPercent));
+        Assert.Equal(SnapshotDiffCorroboration.Corroborated, diff.Corroboration);
+        Assert.Equal((Ore, LotQuantity, write.NewPrice, net, SaleSource.Diff), (sale.ItemId, sale.Quantity, sale.UnitPrice, sale.NetGil, sale.Source));
     }
 
     [Fact]
@@ -111,7 +142,7 @@ public sealed class SellRunTests
         Assert.Equal((SellAction.Keep, DecisionReason.Cooldown), (cooling.Action, cooling.Reason));
 
         var nextVisit = MarketOf(Alpha, Now.AddHours(6), 0, repriced);
-        var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Alpha, run.Replay().Writes.AsSpan()).AsSpan());
+        var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Alpha, run.Review()).AsSpan());
         var change = Assert.Single(diff.Changes);
         Assert.Equal(SnapshotDiffChangeKind.RepricedByUs, change.Kind);
         Assert.Equal(ListedPrice, change.PreviousUnitPrice);
@@ -157,7 +188,7 @@ public sealed class SellRunTests
         var writeId = run.Intend(write, 0);
         Assert.Equal(ReadBackVerdict.Confirmed, run.ReadBack(writeId, write, new ReadBackSample([listing], true, 0, 0), new ReadBackSample([listing with { UnitPrice = 699 }], true, 0, 0), 800));
 
-        var review = JournalReview.Build(run.Journal.Read().Entries);
+        var review = run.Review();
         Assert.Equal(2, review.Runs.Length);
         Assert.Equal(RunState.Stopped, review.Runs[0].FinalState);
         Assert.Equal(1, review.Runs[1].Reprices);
@@ -208,7 +239,7 @@ public sealed class SellRunTests
         Assert.Equal(SaleRejection.WritePending, blocked.Rejection);
         Assert.Equal(RunReaction.NeedsReconciliation, RunReactions.ForGuard(blocked.Rejection));
 
-        var review = JournalReview.Build(run.Journal.Read().Entries);
+        var review = run.Review();
         Assert.True(review.BlocksWrites);
         Assert.Equal(writeId, Assert.Single(review.Unresolved).WriteId);
         Assert.Equal(RunState.NeedsPlayer, run.Replay().RecoveredState);
@@ -217,7 +248,7 @@ public sealed class SellRunTests
         run.Advance(TimeSpan.FromMinutes(2));
         run.Reconcile(writeId, write, applied: true);
 
-        Assert.False(JournalReview.Build(run.Journal.Read().Entries).BlocksWrites);
+        Assert.False(run.Review().BlocksWrites);
         Assert.False(run.Replay().ToValueBook().HasPendingWrite);
         var reused = run.Search(NormalOre);
         var fromTheReusedSearch = SaleWrite.ForListing(Alpha, second, run.DecideListing(Alpha, second, reused));

@@ -194,7 +194,7 @@ internal sealed class SellRun
             SearchCapturedAtUtc = competition.CapturedAtUtc,
             NowUtc = Now,
             Value = Values.Snapshot(),
-            JournalBlocksWrites = JournalReview.Build(Journal.Read().Entries).BlocksWrites,
+            JournalBlocksWrites = Review().BlocksWrites,
             Write = write,
             Planned = planned,
             Observed = observed,
@@ -251,6 +251,11 @@ internal sealed class SellRun
     public JournalProgress Replay()
     {
         return JournalReplayer.Replay(Journal.Read().Entries);
+    }
+
+    public JournalReview Review()
+    {
+        return JournalReview.Build(Journal.Read().Entries);
     }
 
     private static ImmutableArray<AllocationLot> LotsToPlace(LotPlan plan)

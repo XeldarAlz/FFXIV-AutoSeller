@@ -17,6 +17,7 @@ public sealed class DiffWritesTests
     private static readonly Guid UnknownWrite = new("dddddddd-0000-0000-0000-000000000005");
     private static readonly Guid OtherRetainerWrite = new("dddddddd-0000-0000-0000-000000000006");
     private static readonly Guid RejectedWrite = new("dddddddd-0000-0000-0000-000000000007");
+    private static readonly Guid LaterRun = new("dddddddd-0000-0000-0000-0000000000ff");
 
     [Fact]
     public void ConfirmedMarketWritesOfTheRetainerBecomeDiffWrites()
@@ -30,13 +31,31 @@ public sealed class DiffWritesTests
         writer.Intent(RejectedWrite).Rejected(RejectedWrite);
         writer.Intent(OtherRetainerWrite, Reprice() with { RetainerId = SecondRetainer }).Confirmed(OtherRetainerWrite);
 
-        var writes = DiffWrites.For(FirstRetainer, JournalReplayer.Replay(writer.Entries).Writes.AsSpan());
+        var writes = DiffWrites.For(FirstRetainer, JournalReview.Build(writer.Entries));
 
         Assert.Equal(
             [
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Listed, byte.MaxValue, Ore, false, LotQuantity, 0, ListedPrice, Now),
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Repriced, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, UndercutPrice, Now),
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, 0, Now),
+            ],
+            writes.AsSpan().ToArray());
+    }
+
+    [Fact]
+    public void WritesOfEveryRunInTheJournalBecomeDiffWrites()
+    {
+        var journal = new MemoryJournal();
+        new JournalWriter(journal).Authorize().Intent(ListWrite, List()).Confirmed(ListWrite, LotQuantity, ListedPrice).Ended(RunState.Stopped);
+        var nextRun = new JournalWriter(journal, LaterRun).Authorize();
+        nextRun.Intent(RepriceWrite).Confirmed(RepriceWrite, LotQuantity, UndercutPrice);
+
+        var writes = DiffWrites.For(FirstRetainer, JournalReview.Build(nextRun.Entries));
+
+        Assert.Equal(
+            [
+                new SnapshotDiffWrite(SnapshotDiffWriteKind.Listed, byte.MaxValue, Ore, false, LotQuantity, 0, ListedPrice, Now),
+                new SnapshotDiffWrite(SnapshotDiffWriteKind.Repriced, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, UndercutPrice, Now),
             ],
             writes.AsSpan().ToArray());
     }
