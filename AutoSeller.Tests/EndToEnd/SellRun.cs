@@ -37,6 +37,8 @@ internal sealed class SellRun
 
     public PlanEdits Edits { get; init; } = PlanEdits.None;
 
+    public ImmutableArray<ulong> EnabledRetainers { get; init; } = [Alpha, Beta];
+
     public LotPlan? Plan { get; private set; }
 
     public AllocationResult? Allocation { get; private set; }
@@ -69,12 +71,12 @@ internal sealed class SellRun
             Edits = Edits,
         });
 
-        var approved = Approvals.Collect(Edits, markets.AsSpan(), playerApprovals.IsDefault ? [] : playerApprovals.AsSpan());
+        var approved = Approvals.Collect(Edits, markets.AsSpan(), EnabledRetainers.AsSpan(), playerApprovals.IsDefault ? [] : playerApprovals.AsSpan());
         var problem = SellAuthorization.TryCreate(
             Guid.NewGuid(),
             Character,
             HomeWorld,
-            [Alpha, Beta],
+            EnabledRetainers,
             rules,
             pricing,
             Edits,

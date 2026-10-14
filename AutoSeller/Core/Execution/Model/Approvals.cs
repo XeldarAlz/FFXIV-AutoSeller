@@ -6,12 +6,21 @@ namespace AutoSeller.Core.Execution.Model;
 
 internal static class Approvals
 {
-    public static ImmutableArray<ApprovedPrice> Collect(PlanEdits edits, ReadOnlySpan<RetainerSnapshot> markets, ReadOnlySpan<ApprovedPrice> playerApprovals)
+    public static ImmutableArray<ApprovedPrice> Collect(
+        PlanEdits edits,
+        ReadOnlySpan<RetainerSnapshot> markets,
+        ReadOnlySpan<ulong> authorizedRetainerIds,
+        ReadOnlySpan<ApprovedPrice> playerApprovals)
     {
         var approved = ImmutableArray.CreateBuilder<ApprovedPrice>();
         for (var marketIndex = 0; marketIndex < markets.Length; marketIndex++)
         {
             var market = markets[marketIndex];
+            if (!authorizedRetainerIds.Contains(market.RetainerId))
+            {
+                continue;
+            }
+
             var listings = market.Slots;
             for (var slotIndex = 0; slotIndex < listings.Length; slotIndex++)
             {

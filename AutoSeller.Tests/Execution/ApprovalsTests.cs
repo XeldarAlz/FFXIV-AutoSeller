@@ -14,6 +14,7 @@ public sealed class ApprovalsTests
     private const ulong StrangerContentId = 7_700;
 
     private static readonly ListingSlot Listed = new((byte)MarketSlot, Ore, false, LotQuantity, ListedPrice);
+    private static readonly ulong[] Enabled = [FirstRetainer, SecondRetainer];
     private static readonly OwnSellers Sellers = OwnSellers.Create([FirstRetainer, SecondRetainer], [Character]);
 
     [Fact]
@@ -21,7 +22,7 @@ public sealed class ApprovalsTests
     {
         var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, ApprovedDrop, Now)]);
 
-        var approved = Approvals.Collect(edits, [Market(Listed)], []);
+        var approved = Approvals.Collect(edits, [Market(Listed)], Enabled, []);
 
         Assert.Equal([new ApprovedPrice(FirstRetainer, MarketSlot, Ore, false, ListedPrice, ApprovedDrop)], approved.AsSpan().ToArray());
     }
@@ -31,10 +32,10 @@ public sealed class ApprovalsTests
     {
         var approval = ApprovedPrice.For(FirstRetainer, Listed, ApprovedDrop);
 
-        Assert.Equal([approval], Approvals.Collect(PlanEdits.None, [Market(Listed)], [approval]).AsSpan().ToArray());
-        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { UnitPrice = ListedPrice - 1 })], [approval]));
-        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { Slot = (byte)(MarketSlot + 1) })], [approval]));
-        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { IsHq = true })], [approval]));
+        Assert.Equal([approval], Approvals.Collect(PlanEdits.None, [Market(Listed)], Enabled, [approval]).AsSpan().ToArray());
+        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { UnitPrice = ListedPrice - 1 })], Enabled, [approval]));
+        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { Slot = (byte)(MarketSlot + 1) })], Enabled, [approval]));
+        Assert.Empty(Approvals.Collect(PlanEdits.None, [Market(Listed with { IsHq = true })], Enabled, [approval]));
     }
 
     [Fact]
@@ -49,10 +50,25 @@ public sealed class ApprovalsTests
             ApprovedPrice.For(FirstRetainer, second, 610),
         ];
 
-        var approved = Approvals.Collect(edits, [Market(Listed, second)], playerApprovals);
+        var approved = Approvals.Collect(edits, [Market(Listed, second)], Enabled, playerApprovals);
 
         Assert.Equal([ApprovedPrice.For(FirstRetainer, Listed, ApprovedDrop), ApprovedPrice.For(FirstRetainer, second, 610)], approved.AsSpan().ToArray());
         Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryCreate(RunId, Character, HomeWorld, [FirstRetainer], StartRules, StartPricing, edits, RunCaps.Default, false, SellAuthorization.CurrentPolicyVersion, approved, Now, out _));
+    }
+
+    [Fact]
+    public void PricesOnARetainerTheRunDoesNotSellForAreLeftOut()
+    {
+        var disabledRow = ListingRow with { RetainerId = SecondRetainer };
+        var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, ApprovedDrop, Now), PlanEdit.Price(disabledRow, ApprovedDrop, Now)]);
+        ImmutableArray<ulong> onlyFirst = [FirstRetainer];
+
+        var approved = Approvals.Collect(edits, [Market(Listed), MarketOf(SecondRetainer, Listed)], onlyFirst.AsSpan(), [ApprovedPrice.For(SecondRetainer, Listed, 650)]);
+        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, onlyFirst, StartRules, StartPricing, edits, RunCaps.Default, false, SellAuthorization.CurrentPolicyVersion, approved, Now, out var authorization);
+
+        Assert.Equal([ApprovedPrice.For(FirstRetainer, Listed, ApprovedDrop)], approved.AsSpan().ToArray());
+        Assert.Equal(AuthorizationProblem.None, problem);
+        Assert.Equal(PriceOverride.None, authorization!.OverrideForListing(SecondRetainer, Listed));
     }
 
     [Fact]
@@ -60,7 +76,7 @@ public sealed class ApprovalsTests
     {
         var lotRow = new PlanRowKey(0, BagContainer, MarketSlot, 0, Ore, false);
         var edits = PlanEdits.Restore([PlanEdit.Price(lotRow, ApprovedDrop, Now)]);
-        var authorization = Authorization(planEdits: edits, approvedPrices: Approvals.Collect(edits, [Market(Listed)], []));
+        var authorization = Authorization(planEdits: edits, approvedPrices: Approvals.Collect(edits, [Market(Listed)], Enabled, []));
 
         Assert.Empty(authorization.ApprovedPrices);
         Assert.Equal(PriceOverride.SetByPlayer(ApprovedDrop), authorization.OverrideForLot(lotRow));
@@ -97,7 +113,7 @@ public sealed class ApprovalsTests
     public void PlanPriceDropPastTheStepLimitPassesBothAtThatPriceOnly()
     {
         var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, ApprovedDrop, Now)]);
-        var authorization = Approved(Approvals.Collect(edits, [Market(Listed)], []), edits);
+        var authorization = Approved(Approvals.Collect(edits, [Market(Listed)], Enabled, []), edits);
 
         var decision = Decide(authorization, 950);
 
@@ -112,7 +128,7 @@ public sealed class ApprovalsTests
     public void PlanPriceOnAListingRepricedSinceStartIsNotApplied()
     {
         var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, ApprovedDrop, Now)]);
-        var authorization = Approved(Approvals.Collect(edits, [Market(Listed)], []), edits);
+        var authorization = Approved(Approvals.Collect(edits, [Market(Listed)], Enabled, []), edits);
         var repricedOutside = Listed with { UnitPrice = ListedPrice + 100 };
 
         Assert.Equal(PriceOverride.None, authorization.OverrideForListing(FirstRetainer, repricedOutside));
@@ -162,9 +178,14 @@ public sealed class ApprovalsTests
 
     private static RetainerSnapshot Market(params ListingSlot[] listings)
     {
+        return MarketOf(FirstRetainer, listings);
+    }
+
+    private static RetainerSnapshot MarketOf(ulong retainerId, params ListingSlot[] listings)
+    {
         return new RetainerSnapshot
         {
-            RetainerId = FirstRetainer,
+            RetainerId = retainerId,
             CharacterContentId = Character,
             ReadAtUtc = Now,
             Town = 1,
