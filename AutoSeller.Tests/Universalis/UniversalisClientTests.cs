@@ -184,6 +184,45 @@ public sealed class UniversalisClientTests
     }
 
     [Fact]
+    public async Task AShortServerPauseHoldsTheOtherRequestsWhileTheRetryWaits()
+    {
+        var clock = new ManualClock();
+        var retryWaitStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var retryWaitEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taxRatesStartedAt = TimeSpan.Zero;
+        var handler = new ScriptedHandler(
+            _ => Respond(HttpStatusCode.TooManyRequests, retryAfterSeconds: 20),
+            _ =>
+            {
+                taxRatesStartedAt = clock.Elapsed;
+                return Respond(HttpStatusCode.OK, Read(TaxFixture));
+            },
+            _ => Respond(HttpStatusCode.OK, Read(PhoenixFixture)));
+        using var client = NewClient(handler, clock, HoldFirstWait);
+
+        var references = client.FetchReferencesAsync(PhoenixChunk(), CancellationToken.None);
+        await retryWaitStarted.Task;
+        var rates = await client.FetchTaxRatesAsync("Phoenix", CancellationToken.None);
+
+        Assert.False(rates.Failed);
+        Assert.Equal(TimeSpan.FromSeconds(20), taxRatesStartedAt);
+        Assert.Equal([TimeSpan.FromSeconds(20)], clock.Delays);
+        retryWaitEnded.SetResult();
+        Assert.False((await references).Failed);
+        Assert.Equal(3, handler.Requests.Count);
+
+        Task HoldFirstWait(TimeSpan span, CancellationToken cancellationToken)
+        {
+            if (retryWaitStarted.TrySetResult())
+            {
+                return retryWaitEnded.Task;
+            }
+
+            return clock.Delay(span, cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task ServerErrorsAreRetriedABoundedNumberOfTimes()
     {
         var handler = new ScriptedHandler(_ => Respond(HttpStatusCode.ServiceUnavailable));
@@ -312,7 +351,12 @@ public sealed class UniversalisClientTests
 
     private static UniversalisClient NewClient(ScriptedHandler handler, ManualClock clock)
     {
-        return new UniversalisClient(handler, Version, clock, clock.Delay, static () => 0.5);
+        return NewClient(handler, clock, clock.Delay);
+    }
+
+    private static UniversalisClient NewClient(ScriptedHandler handler, ManualClock clock, Func<TimeSpan, CancellationToken, Task> delay)
+    {
+        return new UniversalisClient(handler, Version, clock, delay, static () => 0.5);
     }
 
     private static HttpResponseMessage Respond(HttpStatusCode status, byte[]? body = null, int retryAfterSeconds = -1)

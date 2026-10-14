@@ -12,6 +12,8 @@ internal sealed class ManualClock : TimeProvider
 
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
+    public TimeSpan Elapsed => TimeSpan.FromTicks(GetTimestamp());
+
     public override long GetTimestamp()
     {
         lock (gate)
