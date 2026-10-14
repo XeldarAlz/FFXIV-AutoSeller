@@ -70,30 +70,11 @@ internal sealed unsafe class MarketReader
             return Refuse(MarketReadStatus.SellListClosed, retainer.RetainerId);
         }
 
-        var manager = InventoryManager.Instance();
-        var container = manager->GetInventoryContainer(InventoryType.RetainerMarket);
-        if (container == null || !container->IsLoaded)
+        if (!TryReadRaw(retainer, out var count))
         {
             return Refuse(MarketReadStatus.ContainerNotLoaded, retainer.RetainerId);
         }
 
-        var prices = manager->RetainerMarketPrices;
-        var size = Math.Min((int)container->Size, Math.Min(slots.Length, prices.Length));
-        var count = 0;
-        for (var slotIndex = 0; slotIndex < size; slotIndex++)
-        {
-            var item = container->GetInventorySlot(slotIndex);
-            if (item == null || item->ItemId == 0)
-            {
-                continue;
-            }
-
-            var isHq = (item->Flags & InventoryItem.ItemFlags.HighQuality) != 0;
-            slots[count] = new RawMarketSlot((byte)slotIndex, item->ItemId, isHq, (uint)Math.Max(0, item->Quantity), prices[slotIndex]);
-            count++;
-        }
-
-        ReportRawWhenChanged(new RawReadSummary(retainer.RetainerId, (int)container->Size, count, retainer.MarketItemCount, retainer.Gil, retainer.Town));
         var capture = new RetainerMarketCapture
         {
             RetainerId = retainer.RetainerId,
@@ -116,6 +97,54 @@ internal sealed unsafe class MarketReader
         var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
         RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");
         return new MarketRead(MarketReadStatus.Read, MarketReadRefusal.None, retainer.RetainerId, snapshot, previous);
+    }
+
+    public bool TrySample(ulong retainerId, Span<ListingSlot> listings, out int count, out uint gil)
+    {
+        count = 0;
+        gil = 0;
+        if (!Available || !retainers.TryGetOpenRetainer(out var retainer) || retainer.RetainerId != retainerId || !SellListReady() || !TryReadRaw(retainer, out var read))
+        {
+            return false;
+        }
+
+        gil = retainer.Gil;
+        if (!RetainerSnapshotBuilder.TryCopySlots(slots.AsSpan(0, read), listings))
+        {
+            return false;
+        }
+
+        count = read;
+        return true;
+    }
+
+    private bool TryReadRaw(in RetainerInfo retainer, out int count)
+    {
+        count = 0;
+        var manager = InventoryManager.Instance();
+        var container = manager->GetInventoryContainer(InventoryType.RetainerMarket);
+        if (container == null || !container->IsLoaded)
+        {
+            return false;
+        }
+
+        var prices = manager->RetainerMarketPrices;
+        var size = Math.Min((int)container->Size, Math.Min(slots.Length, prices.Length));
+        for (var slotIndex = 0; slotIndex < size; slotIndex++)
+        {
+            var item = container->GetInventorySlot(slotIndex);
+            if (item == null || item->ItemId == 0)
+            {
+                continue;
+            }
+
+            var isHq = (item->Flags & InventoryItem.ItemFlags.HighQuality) != 0;
+            slots[count] = new RawMarketSlot((byte)slotIndex, item->ItemId, isHq, (uint)Math.Max(0, item->Quantity), prices[slotIndex]);
+            count++;
+        }
+
+        ReportRawWhenChanged(new RawReadSummary(retainer.RetainerId, (int)container->Size, count, retainer.MarketItemCount, retainer.Gil, retainer.Town));
+        return true;
     }
 
     private static bool SellListReady()
