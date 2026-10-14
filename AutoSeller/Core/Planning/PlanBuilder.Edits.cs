@@ -39,14 +39,15 @@ internal sealed partial class PlanBuilder
         return Remove(row, PlanEditKind.Price);
     }
 
-    public bool Approve(in PlanRow row)
+    public bool Approve(in PlanRow row, uint oldPrice, uint price)
     {
-        if (!CanEdit || !row.NeedsApproval)
+        if (!CanEdit || !row.CanApprove(oldPrice, price))
         {
+            RunLog.Info($"Plan: the approval of {row.Key} from {oldPrice} to {price} gil was refused; the row lists {row.CurrentPrice} gil with a floor of {row.Floor} gil.");
             return false;
         }
 
-        var approval = ApprovalOf(row, row.Decision.ProposedPrice);
+        var approval = ApprovalOf(row, price);
         characters.Current!.Approve(approval);
         RunLog.Info($"Plan: approved retainer {approval.RetainerId} slot {approval.Slot} item {approval.ItemId} dropping from {approval.OldPrice} to {approval.Price} gil.");
         return true;

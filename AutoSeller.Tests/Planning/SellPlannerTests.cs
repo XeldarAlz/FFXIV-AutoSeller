@@ -14,6 +14,7 @@ public sealed class SellPlannerTests
 {
     private const uint StrangerItem = 9_999;
     private const uint FarAboveReference = 5_000;
+    private const uint BoardProposal = 650;
 
     private static readonly ListingSlot listedAtReference = OreListing(0, ListedPrice);
     private static readonly PlanRowKey listingKey = PlanRowKey.ForListing(Alpha, listedAtReference);
@@ -126,6 +127,23 @@ public sealed class SellPlannerTests
         Assert.Equal(DecisionReason.Approved, approved.Decision.Reason);
         Assert.True(approved.Has(PlanRowEdits.Approved));
         Assert.True(staleApproval.NeedsApproval);
+    }
+
+    [Fact]
+    public void AnApprovalTakesAnyDropAtOrAboveTheFloorFromThePriceTheRowLists()
+    {
+        var input = Input([OreRule(listingsToKeepUp: 2)], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)], Captured(OreInTheBags)) with { References = References(OreReferences(OreReference, 700)) };
+        var plan = Build(input);
+        var listing = Row(plan, listingKey);
+        var lot = Row(plan, LotKey());
+
+        Assert.True(listing.CanApprove(ListedPrice, BoardProposal));
+        Assert.True(listing.CanApprove(ListedPrice, OreFloor));
+        Assert.False(listing.CanApprove(ListedPrice, OreFloor - 1));
+        Assert.False(listing.CanApprove(ListedPrice + 1, BoardProposal));
+        Assert.False(listing.CanApprove(ListedPrice, ListedPrice));
+        Assert.False(listing.CanApprove(ListedPrice, 0));
+        Assert.False(lot.CanApprove(0, BoardProposal));
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Planning.Model;
@@ -36,7 +37,7 @@ internal sealed partial class PlanTable
 
         for (var index = 0; index < rows.Length; index++)
         {
-            texts[index] = Build(plugin.GameItems, rows[index], run, index, key.Editable);
+            texts[index] = Build(plugin.GameItems, plan, rows[index], run, index, key.Editable);
         }
 
         var groups = plan.Groups;
@@ -68,7 +69,7 @@ internal sealed partial class PlanTable
         }
     }
 
-    private RowText Build(GameItems items, in PlanRow row, in RunView run, int index, bool editable)
+    private RowText Build(GameItems items, SellPlan plan, in PlanRow row, in RunView run, int index, bool editable)
     {
         var item = items.Get(row.Key.ItemId);
         var suffix = index.ToString(CultureInfo.InvariantCulture);
@@ -84,45 +85,66 @@ internal sealed partial class PlanTable
             Source = PlanLabels.Source(row),
             Quantity = PlanLabels.Count(row.Quantity),
             Current = row.IsListing ? PlanLabels.Gil(row.CurrentPrice) : PlanLabels.NoValue,
-            Suggested = SuggestedOf(row),
+            Suggested = SuggestedOf(row.Decision, row.CurrentPrice),
             Reference = PlanLabels.Gil(row.Reference.AverageSalePrice),
             Action = PlanLabels.Action(row.Decision.Action),
             ActionColor = PlanLabels.ActionColor(row.Decision.Action),
             Caption = PlanLabels.RowReason(row),
             CaptionColor = row.NeedsApproval ? Styling.AccentAmberSoft : muted ? Styling.TextMuted : Styling.TextDim,
             Muted = muted,
-            Approvable = row.NeedsApproval,
-            ApproveTooltip = row.NeedsApproval ? Loc.T(L.Plan.ApproveHelp, PlanLabels.Gil(row.CurrentPrice), PlanLabels.Gil(row.Decision.ProposedPrice)) : string.Empty,
         };
 
+        var approved = ApprovedPriceOf(plan, row);
         var overlaid = decided.TryGetValue(row.Key, out var decisionIndex);
+        var decision = overlaid ? run.Decisions[decisionIndex] : default;
         if (overlaid)
         {
-            var decision = run.Decisions[decisionIndex];
             text.Action = PlanLabels.Done(decision);
             text.ActionColor = PlanLabels.DoneColor(decision);
             text.Caption = PlanLabels.DoneReason(decision);
-            text.CaptionColor = Styling.AccentBlueSoft;
-            text.Suggested = decision.WouldReprice || decision.WouldList ? PlanLabels.Gil(decision.Decision.Price) : text.Suggested;
+            text.Suggested = decision.Skip == RunSkip.None ? SuggestedOf(decision.Decision, decision.CurrentPrice) : PlanLabels.NoValue;
+            OfferApproval(text, row, decision.Clear && decision.Decision.Reason == DecisionReason.OverStepLimit, decision.CurrentPrice, decision.Decision.ProposedPrice, approved);
+            text.CaptionColor = text.Approvable ? Styling.AccentAmberSoft : Styling.AccentBlueSoft;
+        }
+        else
+        {
+            OfferApproval(text, row, row.NeedsApproval, row.CurrentPrice, row.Decision.ProposedPrice, approved);
         }
 
-        BadgesOf(row, text);
-        text.Tooltip = TooltipOf(row, text, overlaid ? run.Decisions[decisionIndex] : null, editable);
+        BadgesOf(row, text, overlaid ? decision.Decision : row.Decision, approved);
+        text.Tooltip = TooltipOf(row, text, overlaid ? decision : null, editable);
         return text;
     }
 
-    private static string SuggestedOf(in PlanRow row)
+    private static void OfferApproval(RowText text, in PlanRow row, bool overStepLimit, uint oldPrice, uint proposedPrice, uint approved)
     {
-        var decision = row.Decision;
-        if (row.Writes)
+        text.Approvable = overStepLimit && proposedPrice != approved && row.CanApprove(oldPrice, proposedPrice);
+        text.ApproveFrom = oldPrice;
+        text.ApprovePrice = proposedPrice;
+        text.ApproveTooltip = text.Approvable ? Loc.T(L.Plan.ApproveHelp, PlanLabels.Gil(oldPrice), PlanLabels.Gil(proposedPrice)) : string.Empty;
+    }
+
+    private static uint ApprovedPriceOf(SellPlan plan, in PlanRow row)
+    {
+        if (!row.IsListing || !row.Has(PlanRowEdits.Approved))
+        {
+            return 0;
+        }
+
+        return ApprovedPrice.TryFindLatest(plan.Input.PlayerApprovals.AsSpan(), row.RetainerId, row.Listing, out var approval) ? approval.Price : 0;
+    }
+
+    private static string SuggestedOf(in Decision decision, uint currentPrice)
+    {
+        if (PlanRow.WritesAPrice(decision.Action))
         {
             return PlanLabels.Gil(decision.Price);
         }
 
-        return decision.ProposedPrice > 0 && decision.ProposedPrice != row.CurrentPrice ? PlanLabels.Gil(decision.ProposedPrice) : PlanLabels.NoValue;
+        return decision.ProposedPrice > 0 && decision.ProposedPrice != currentPrice ? PlanLabels.Gil(decision.ProposedPrice) : PlanLabels.NoValue;
     }
 
-    private void BadgesOf(in PlanRow row, RowText text)
+    private void BadgesOf(in PlanRow row, RowText text, in Decision shown, uint approved)
     {
         var count = 0;
         if (row.Key.IsHq)
@@ -145,7 +167,7 @@ internal sealed partial class PlanTable
             Add(ref count, Loc.T(L.Plan.BadgePriceSet), Styling.AccentGlow);
         }
 
-        if (row.Has(PlanRowEdits.Approved) && row.Decision.Reason == DecisionReason.Approved)
+        if (shown.Reason == DecisionReason.Approved || (shown.Reason == DecisionReason.OverStepLimit && approved > 0 && approved == shown.ProposedPrice))
         {
             Add(ref count, Loc.T(L.Plan.BadgeApproved), Styling.AccentMint);
         }
@@ -164,7 +186,8 @@ internal sealed partial class PlanTable
     private string TooltipOf(in PlanRow row, RowText text, RunDecision? decision, bool editable)
     {
         tooltip.Clear().Append(text.Name).Append('\n').Append(text.Caption);
-        var evidence = decision?.Decision.Evidence ?? row.Decision.Evidence;
+        var shown = decision?.Decision ?? row.Decision;
+        var evidence = shown.Evidence;
         if (evidence.Floor > 0)
         {
             tooltip.Append('\n').Append(Loc.T(L.Plan.TipFloor, PlanLabels.Gil(evidence.Floor)));
@@ -175,10 +198,10 @@ internal sealed partial class PlanTable
             tooltip.Append('\n').Append(Loc.T(L.Plan.TipCompetitor, PlanLabels.Gil(evidence.CompetitorPrice)));
         }
 
-        var proposed = decision?.Decision.ProposedPrice ?? row.Decision.ProposedPrice;
-        if (proposed > 0 && proposed != row.CurrentPrice && !row.Writes)
+        var currentPrice = decision?.CurrentPrice ?? row.CurrentPrice;
+        if (shown.ProposedPrice > 0 && shown.ProposedPrice != currentPrice && !PlanRow.WritesAPrice(shown.Action))
         {
-            tooltip.Append('\n').Append(Loc.T(L.Plan.TipProposed, PlanLabels.Gil(proposed)));
+            tooltip.Append('\n').Append(Loc.T(L.Plan.TipProposed, PlanLabels.Gil(shown.ProposedPrice)));
         }
 
         if (row.Reference.AverageSalePrice > 0)

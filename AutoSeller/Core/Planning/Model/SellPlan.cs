@@ -52,13 +52,17 @@ internal readonly record struct PlanRow(
 
     public bool CanMove => !IsListing && BoundRetainerId == 0;
 
-    public bool Writes => Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List;
+    public bool Writes => WritesAPrice(Decision.Action);
 
     public long WrittenValue => Writes ? Gil.SaturatingMultiply(Decision.Price, Quantity) : 0;
 
     public PlanEditTarget EditTarget => new(Key, Floor, BoundRetainerId);
 
     public bool Has(PlanRowEdits edit) => (Edits & edit) != 0;
+
+    public bool CanApprove(uint oldPrice, uint price) => IsListing && oldPrice == CurrentPrice && price >= Floor && price > 0 && price < CurrentPrice;
+
+    public static bool WritesAPrice(SellAction action) => action is SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List;
 }
 
 internal readonly record struct PlanGroup(ulong RetainerId, int Start, int Count, int Changes);

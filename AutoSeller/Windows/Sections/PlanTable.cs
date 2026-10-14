@@ -71,6 +71,8 @@ internal sealed partial class PlanTable
         public Vector4 ActionColor;
         public string Tooltip = string.Empty;
         public string ApproveTooltip = string.Empty;
+        public uint ApproveFrom;
+        public uint ApprovePrice;
         public string[] Badges = [];
         public Vector4[] BadgeColors = [];
         public ushort IconId;
@@ -337,7 +339,7 @@ internal sealed partial class PlanTable
         ImGui.SetCursorScreenPos(new Vector2(right - buttonSize - 6f * scale - approveWidth, midY - buttonSize * 0.5f));
         if (PillButton.Draw(text.ApproveId, label, Styling.AccentAmber, PillButton.Emphasis.Tinted, null, editable, ButtonHeight, text.ApproveTooltip))
         {
-            plugin.Plan.Approve(plan.Rows[index]);
+            plugin.Plan.Approve(plan.Rows[index], text.ApproveFrom, text.ApprovePrice);
         }
 
         hovered |= ImGui.IsItemHovered();
