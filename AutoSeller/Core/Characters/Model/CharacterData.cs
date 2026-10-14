@@ -149,7 +149,7 @@ internal sealed class CharacterData
             updated.Add(new RetainerSetting(retainer.RetainerId, retainer.Name, enabled));
         }
 
-        if (SameRoster(updated))
+        if (updated.Count == 0 || SameRoster(updated))
         {
             return false;
         }
