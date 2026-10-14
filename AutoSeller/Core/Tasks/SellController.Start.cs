@@ -1,7 +1,6 @@
 using AutoSeller.Core.AutoRetainer.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
-using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning.Model;
@@ -101,8 +100,7 @@ internal sealed partial class SellController
             RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
         }
 
-        IRunJournal journal = dryRun ? new MemoryJournal() : ledger.Journal;
-        var active = new SellRunSession(authorization!, input, ledger.Review, journal);
+        var active = new SellRunSession(authorization!, input, ledger.Review, ledger.JournalFor(dryRun));
         if (!active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
         {
             ledger.Invalidate();

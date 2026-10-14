@@ -32,6 +32,11 @@ internal sealed class SellLedger
 
     public void Invalidate() => review = null;
 
+    public IRunJournal JournalFor(bool dryRun)
+    {
+        return dryRun ? new MemoryJournal() : Journal;
+    }
+
     public JournalRotation Rotate(DateTime nowUtc)
     {
         var rotation = Journal.Rotate(nowUtc);

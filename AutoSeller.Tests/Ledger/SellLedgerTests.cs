@@ -182,16 +182,27 @@ public sealed class SellLedgerTests
     }
 
     [Fact]
-    public void ADryRunJournalStaysInMemory()
+    public void ADryRunJournalsToMemoryAndARealRunToTheFile()
     {
         using var directory = new TemporaryDirectory();
         var ledger = new SellLedger(directory.Path);
-        var memory = new MemoryJournal();
-        new JournalWriter(memory).Authorize(Authorization(dryRun: true)).Intent(FirstWrite);
 
-        Assert.Equal(2, memory.Count);
+        var dry = ledger.JournalFor(true);
+        new JournalWriter(dry).Authorize(Authorization(dryRun: true)).Intent(FirstWrite);
+        ledger.Invalidate();
+
+        Assert.IsType<MemoryJournal>(dry);
+        Assert.NotSame(dry, ledger.JournalFor(true));
         Assert.False(File.Exists(ledger.Journal.FilePath));
         Assert.False(ledger.BlocksWrites);
         Assert.Empty(ledger.Review.Runs);
+
+        var real = ledger.JournalFor(false);
+        new JournalWriter(real).Authorize().Intent(FirstWrite);
+        ledger.Invalidate();
+
+        Assert.Same(ledger.Journal, real);
+        Assert.True(File.Exists(ledger.Journal.FilePath));
+        Assert.True(ledger.BlocksWrites);
     }
 }
