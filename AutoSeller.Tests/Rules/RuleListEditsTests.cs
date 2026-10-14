@@ -57,6 +57,19 @@ public sealed class RuleListEditsTests
     }
 
     [Fact]
+    public void NewCategoryRuleStartsWithAMinimumSoCheapItemsStayInTheBags()
+    {
+        var categoryRules = new List<CategoryRule>();
+
+        var added = RuleListEdits.AddCategoryRule(categoryRules);
+
+        Assert.Same(added, Assert.Single(categoryRules));
+        Assert.True(added.Enabled);
+        Assert.Equal(RuleListEdits.NewCategoryMinimum, added.MinimumReferenceValue);
+        Assert.True(added.MinimumReferenceValue > 0);
+    }
+
+    [Fact]
     public void IdListAddsAnItemOnce()
     {
         var ids = new List<uint>();

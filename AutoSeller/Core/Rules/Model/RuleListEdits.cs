@@ -9,6 +9,8 @@ internal enum SellListAdd : byte
 
 internal static class RuleListEdits
 {
+    public const uint NewCategoryMinimum = 1_000;
+
     public static SellListAdd AddSellRule(List<ItemRule> sellList, uint itemId, bool canBeHq, out ItemRule? added)
     {
         added = null;
@@ -40,6 +42,13 @@ internal static class RuleListEdits
         };
         sellList.Add(added);
         return SellListAdd.Added;
+    }
+
+    public static CategoryRule AddCategoryRule(List<CategoryRule> categoryRules)
+    {
+        var rule = new CategoryRule { MinimumReferenceValue = NewCategoryMinimum };
+        categoryRules.Add(rule);
+        return rule;
     }
 
     public static bool AddItemId(List<uint> itemIds, uint itemId)

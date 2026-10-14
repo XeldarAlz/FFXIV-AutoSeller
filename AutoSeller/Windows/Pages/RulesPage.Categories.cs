@@ -37,7 +37,7 @@ internal sealed partial class RulesPage
         var label = Loc.T(L.Rules.AddCategoryRule);
         if (PillButton.Draw("##asell_rules_add_category", label, Styling.AccentGlow, PillButton.Emphasis.Tinted, FontAwesomeIcon.Plus, height: Layout.ActionPillHeight))
         {
-            configuration.CategoryRules.Add(new CategoryRule());
+            RuleListEdits.AddCategoryRule(configuration.CategoryRules);
             configuration.RulesChanged();
         }
 
