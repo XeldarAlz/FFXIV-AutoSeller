@@ -683,6 +683,29 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void MedianListingNeverChangesADecision()
+    {
+        var withoutMedian = FreshReference with { MedianListing = 0 };
+        var withMedian = FreshReference with { MedianListing = 3 * ReferenceGil };
+        PriceDecisionInput[] inputs =
+        [
+            NewLot(Snapshot(Competitors(1_100, 1_000)), withoutMedian),
+            NewLot(Snapshot(), withoutMedian),
+            Existing(1_000, Snapshot(Competitors(600, 700)), withoutMedian),
+            Existing(400, Snapshot(Competitors(2_000)), withoutMedian),
+            Existing(1_000, Snapshot(Competitors(100, 900, 950)), withoutMedian),
+        ];
+
+        for (var index = 0; index < inputs.Length; index++)
+        {
+            Assert.Equal(Decide(inputs[index]), Decide(inputs[index] with { Reference = withMedian }));
+        }
+
+        Assert.Equal(FloorCalculator.Calculate(0, VendorPrice, withoutMedian, 50), FloorCalculator.Calculate(0, VendorPrice, withMedian, 50));
+        Assert.Equal(ReferenceSelector.Select(Normal, withoutMedian, default, Snapshot(), Now), withoutMedian);
+    }
+
+    [Fact]
     public void ReferenceForTheOtherQualityIsNotUsed()
     {
         var input = NewLot(Snapshot(), FreshReference) with { Item = High };

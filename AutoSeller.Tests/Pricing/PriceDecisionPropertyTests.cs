@@ -459,7 +459,7 @@ public sealed class PriceDecisionPropertyTests
         {
             0 => default,
             1 => FreshWorldReference(item, price),
-            2 => new ReferencePrice(item, ReferenceSource.UniversalisDataCenter, price, price, price, 1f, Now - TimeSpan.FromHours(random.Next(72, 200))),
+            2 => new ReferencePrice(item, ReferenceSource.UniversalisDataCenter, price, 0, price, 1f, Now - TimeSpan.FromHours(random.Next(72, 200))),
             3 => new ReferencePrice(item, ReferenceSource.GameHistory, price, 0, 0, 0f, Now),
             _ => FreshWorldReference(new ItemKey(ItemId, !item.IsHq), price),
         };
@@ -467,7 +467,7 @@ public sealed class PriceDecisionPropertyTests
 
     private static ReferencePrice FreshWorldReference(ItemKey item, uint price)
     {
-        return new ReferencePrice(item, ReferenceSource.UniversalisWorld, price, price, price, 1f, Now - TimeSpan.FromHours(5));
+        return new ReferencePrice(item, ReferenceSource.UniversalisWorld, price, 0, price, 1f, Now - TimeSpan.FromHours(5));
     }
 
     private static ItemRuleSnapshot RandomRule(Random random, uint basePrice)

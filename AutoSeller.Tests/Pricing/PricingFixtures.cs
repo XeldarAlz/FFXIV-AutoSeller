@@ -87,7 +87,7 @@ internal static class PricingFixtures
         TimeSpan age = default)
     {
         var updatedAt = Now - (age == default ? TimeSpan.FromHours(1) : age);
-        return new ReferencePrice(new ItemKey(ItemId, isHq), source, price, price, price, 1f, updatedAt);
+        return new ReferencePrice(new ItemKey(ItemId, isHq), source, price, 0, price, 1f, updatedAt);
     }
 
     public static MarketSale Sale(uint price, TimeSpan ago, bool isHq = false, bool onMannequin = false)
