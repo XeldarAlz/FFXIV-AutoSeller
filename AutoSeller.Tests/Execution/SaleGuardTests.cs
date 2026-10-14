@@ -30,6 +30,7 @@ public sealed class SaleGuardTests
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
         (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(PriceRange.Maximum + 1))),
+        (SaleRejection.VendorPriceMismatch, () => GuardInput(Vendor() with { NewPrice = VendorUnitPrice - 1 })),
         (SaleRejection.RepriceCapReached, () => GuardInput(Reprice()) with { Value = new ValueState(RunCaps.DefaultMaxReprices, 0, 0, Guid.Empty) }),
         (SaleRejection.ListingCapReached, () => GuardInput(List()) with { Value = new ValueState(0, RunCaps.DefaultMaxNewListings, 0, Guid.Empty) }),
         (SaleRejection.VendorValueCapReached, () => GuardInput(Vendor()) with { Value = new ValueState(0, 0, RunCaps.DefaultMaxVendoredValue - 1, Guid.Empty) }),
@@ -223,9 +224,23 @@ public sealed class SaleGuardTests
     public void AnOverflowingVendorValueReadsAsOverTheCap()
     {
         var huge = Vendor() with { Quantity = uint.MaxValue, NewPrice = uint.MaxValue };
-        var input = WithObserved(GuardInput(huge), slot => slot with { Quantity = uint.MaxValue });
+        var input = WithObserved(GuardInput(huge), slot => slot with { Quantity = uint.MaxValue }) with { VendorPrice = uint.MaxValue };
 
         Assert.Equal(SaleRejection.VendorValueCapReached, SaleGuard.Evaluate(input).Rejection);
+    }
+
+    [Fact]
+    public void AVendorWriteMustCarryTheItemsVendorPrice()
+    {
+        var atTheCap = new ValueState(0, 0, RunCaps.DefaultMaxVendoredValue, Guid.Empty);
+        var priceless = GuardInput(Vendor() with { NewPrice = 0 }) with { Value = atTheCap };
+        var understated = GuardInput(Vendor() with { NewPrice = 1 }) with { VendorPrice = 5_000 };
+        var noVendorPrice = GuardInput(Vendor()) with { VendorPrice = 0 };
+
+        Assert.Equal(SaleRejection.VendorPriceMismatch, SaleGuard.Evaluate(priceless).Rejection);
+        Assert.Equal(SaleRejection.VendorPriceMismatch, SaleGuard.Evaluate(understated).Rejection);
+        Assert.Equal(SaleRejection.VendorPriceMismatch, SaleGuard.Evaluate(noVendorPrice).Rejection);
+        Assert.Equal(SaleRejection.VendorValueCapReached, SaleGuard.Evaluate(GuardInput(Vendor()) with { Value = atTheCap }).Rejection);
     }
 
     [Fact]

@@ -97,6 +97,18 @@ public sealed class ValueBookTests
     }
 
     [Fact]
+    public void AVendorWriteWithoutAPriceCannotSlipUnderTheCap()
+    {
+        long junkValue = JunkQuantity * VendorUnitPrice;
+        var book = new ValueBook(new RunCaps(80, 100, junkValue));
+        Settle(book, FirstWrite, Vendor());
+
+        Assert.Equal(ValueBookResult.InvalidWrite, book.TryReserve(SecondWrite, Vendor() with { NewPrice = 0 }));
+        Assert.Equal(ValueBookResult.CapReached, book.TryReserve(SecondWrite, Vendor()));
+        Assert.Equal(junkValue, book.VendoredValue);
+    }
+
+    [Fact]
     public void ReturnsAndMovesAreNeverCapped()
     {
         var book = new ValueBook(new RunCaps(0, 0, 0));
@@ -117,6 +129,7 @@ public sealed class ValueBookTests
         Assert.Equal(ValueBookResult.NoSuchWrite, book.Confirm(Guid.Empty));
         Assert.Equal(ValueBookResult.InvalidWrite, book.TryReserve(Guid.Empty, List()));
         Assert.Equal(ValueBookResult.InvalidWrite, book.TryReserve(SecondWrite, List() with { Quantity = 0 }));
+        Assert.Equal(ValueBookResult.InvalidWrite, book.TryReserve(SecondWrite, Vendor() with { NewPrice = 0 }));
         Assert.Equal(FirstWrite, book.PendingWriteId);
         Assert.Throws<ArgumentOutOfRangeException>(() => new ValueBook(new RunCaps(-1, 0, 0)));
     }

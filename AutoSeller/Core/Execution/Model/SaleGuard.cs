@@ -160,6 +160,11 @@ internal static class SaleGuard
     private static SaleRejection CheckPrice(in SaleGuardInput input, uint floor)
     {
         var write = input.Write;
+        if (write.Kind == WriteKind.Vendor)
+        {
+            return input.VendorPrice > 0 && write.NewPrice == input.VendorPrice ? SaleRejection.None : SaleRejection.VendorPriceMismatch;
+        }
+
         if (!write.SetsPrice)
         {
             return SaleRejection.None;

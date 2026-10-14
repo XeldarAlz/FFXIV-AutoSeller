@@ -41,6 +41,7 @@ internal static class RunReactions
         SaleRejection.BelowFloor => RunReaction.SkipItem,
         SaleRejection.OverStepLimit => RunReaction.SkipItem,
         SaleRejection.PriceOutOfRange => RunReaction.SkipItem,
+        SaleRejection.VendorPriceMismatch => RunReaction.SkipItem,
         SaleRejection.RepriceCapReached => RunReaction.SkipItem,
         SaleRejection.ListingCapReached => RunReaction.SkipItem,
         SaleRejection.VendorValueCapReached => RunReaction.SkipItem,

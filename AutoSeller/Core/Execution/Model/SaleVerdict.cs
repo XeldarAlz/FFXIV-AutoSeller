@@ -23,6 +23,7 @@ internal enum SaleRejection : byte
     BelowFloor,
     OverStepLimit,
     PriceOutOfRange,
+    VendorPriceMismatch,
     RepriceCapReached,
     ListingCapReached,
     VendorValueCapReached,

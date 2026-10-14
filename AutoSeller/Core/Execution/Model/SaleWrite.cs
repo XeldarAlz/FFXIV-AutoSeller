@@ -36,7 +36,7 @@ internal readonly record struct SaleWrite(
 
     [JsonIgnore]
     public bool IsWellFormed => Kind <= WriteKind.Move && RetainerId != 0 && ItemId != 0 && Quantity > 0
-        && (!SetsPrice || NewPrice > 0)
+        && (NewPrice > 0 || Kind is WriteKind.Return or WriteKind.Move)
         && (!ActsOnListing || OldPrice > 0);
 
     public bool TryGetValue(out long value)
