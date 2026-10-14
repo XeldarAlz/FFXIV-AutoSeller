@@ -7,6 +7,8 @@ internal static class AsellConstants
 
     public const string LogPrefix = "[ASELL]";
 
+    public const string InternalName = "AutoSeller";
+
     public const int SaveThrottleMs = 500;
 
     internal static class ThrottleKeys

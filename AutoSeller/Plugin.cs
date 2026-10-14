@@ -1,4 +1,5 @@
 using AutoSeller.Core;
+using AutoSeller.Core.AutoRetainer;
 using AutoSeller.Core.Characters;
 using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
@@ -62,6 +63,8 @@ public sealed class Plugin : IDalamudPlugin
     internal BlockedScanner BlockedScanner { get; }
     internal PlanBuilder Plan { get; }
     internal ListingsBook Listings { get; }
+    internal AutoRetainerIpc AutoRetainer { get; }
+    internal MarketbuddyIpc Marketbuddy { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -87,6 +90,10 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(CLibMain.Dispose);
 
             Configuration = LoadConfiguration();
+            AutoRetainer = new AutoRetainerIpc();
+            completed.Push(AutoRetainer.Dispose);
+            Marketbuddy = new MarketbuddyIpc();
+            completed.Push(Marketbuddy.Dispose);
 
             History = new RunHistory(PluginInterface.ConfigDirectory.FullName);
             completed.Push(History.Dispose);
@@ -185,6 +192,8 @@ public sealed class Plugin : IDalamudPlugin
 
         dutyWatcher.Dispose();
         gmAlertWatcher.Dispose();
+        Marketbuddy.Dispose();
+        AutoRetainer.Dispose();
 
         CLibMain.Dispose();
         ECommonsMain.Dispose();
