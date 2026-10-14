@@ -26,6 +26,19 @@ internal readonly struct OwnSellers
         return new OwnSellers(SortedIds.Of(retainerIds), SortedIds.Of(contentIds));
     }
 
+    public static OwnSellers Of(ReadOnlySpan<ulong> ownRetainerIds, ulong ownContentId, in AltSellers alts)
+    {
+        var altRetainerIds = alts.RetainerIds.AsSpan();
+        var altContentIds = alts.ContentIds.AsSpan();
+        var retainerIds = new ulong[ownRetainerIds.Length + altRetainerIds.Length];
+        ownRetainerIds.CopyTo(retainerIds);
+        altRetainerIds.CopyTo(retainerIds.AsSpan(ownRetainerIds.Length));
+        var contentIds = new ulong[altContentIds.Length + 1];
+        contentIds[0] = ownContentId;
+        altContentIds.CopyTo(contentIds.AsSpan(1));
+        return Create(retainerIds, contentIds);
+    }
+
     public bool IsOwnRetainer(ulong retainerId)
     {
         return Holds(retainerIds, retainerId);
