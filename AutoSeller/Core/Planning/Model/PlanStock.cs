@@ -61,7 +61,7 @@ internal static class PlanStock
                 continue;
             }
 
-            var town = TownOf(markets, retainer.RetainerId);
+            var town = RunPlanner.MarketOf(markets, retainer.RetainerId)?.Town ?? 0;
             enabled.Add(new RunRetainer(retainer.RetainerId, retainer.Name, town, taxes.SellerTaxPercentFor(town)));
         }
 
@@ -95,18 +95,5 @@ internal static class PlanStock
     {
         var reference = ReferenceSnapshot.ReferenceFor(references, homeWorldId, slot.Slot.Key, null, nowUtc);
         return slot with { ReferenceUnitPrice = reference.AverageSalePrice };
-    }
-
-    private static byte TownOf(ReadOnlySpan<RetainerSnapshot> markets, ulong retainerId)
-    {
-        for (var index = 0; index < markets.Length; index++)
-        {
-            if (markets[index].RetainerId == retainerId)
-            {
-                return markets[index].Town;
-            }
-        }
-
-        return 0;
     }
 }

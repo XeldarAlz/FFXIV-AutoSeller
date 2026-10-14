@@ -109,7 +109,7 @@ internal sealed partial class PlanBuilder : IDisposable
             PlayerApprovals = ApprovalsOf(data),
             Retainers = RetainersOf(data),
             Markets = [.. markets],
-            ListingItems = ListingItemsOf(markets),
+            ListingItems = items.FactsOfListed(markets),
             Reprices = RepricesOf(data, markets),
             OwnSellers = ownSellers.Current(),
             References = references.Latest,
@@ -310,25 +310,6 @@ internal sealed partial class PlanBuilder : IDisposable
         }
 
         return retainers.MoveToImmutable();
-    }
-
-    private ImmutableArray<ItemFacts> ListingItemsOf(RetainerSnapshot[] markets)
-    {
-        var seen = new HashSet<uint>();
-        var facts = ImmutableArray.CreateBuilder<ItemFacts>();
-        for (var marketIndex = 0; marketIndex < markets.Length; marketIndex++)
-        {
-            var slots = markets[marketIndex].Slots;
-            for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
-            {
-                if (seen.Add(slots[slotIndex].ItemId))
-                {
-                    facts.Add(items.FactsOf(slots[slotIndex].ItemId));
-                }
-            }
-        }
-
-        return facts.ToImmutable();
     }
 
     private static ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> RepricesOf(CharacterData data, RetainerSnapshot[] markets)

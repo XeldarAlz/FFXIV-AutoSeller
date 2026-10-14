@@ -44,6 +44,8 @@ internal readonly record struct PlanRow(
 
     public bool IsPlaced => RetainerId != Unplaced;
 
+    public ListingSlot Listing => new((byte)Key.Slot, Key.ItemId, Key.IsHq, Quantity, CurrentPrice);
+
     public bool NeedsApproval => IsListing && Decision.Reason == DecisionReason.OverStepLimit && Decision.ProposedPrice > 0;
 
     public bool Searches => IsListing ? Duty == ListingDuty.Due : IsPlaced;

@@ -114,6 +114,6 @@ internal sealed partial class PlanBuilder
 
     private static ApprovedPrice ApprovalOf(in PlanRow row, uint price)
     {
-        return new ApprovedPrice(row.Key.RetainerId, row.Key.Slot, row.Key.ItemId, row.Key.IsHq, row.CurrentPrice, price);
+        return ApprovedPrice.For(row.RetainerId, row.Listing, price);
     }
 }

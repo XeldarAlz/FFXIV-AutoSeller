@@ -37,8 +37,8 @@ public sealed class PriceOverridesTests
         ApprovedPrice[] approved = [ApprovedPrice.For(Alpha, listing, 800)];
 
         Assert.Equal(PriceOverride.SetByPlayer(800), PriceOverrides.ForListing(approved, edits, Alpha, listing));
-        Assert.True(PriceOverrides.TryFindApproved(approved, Alpha, listing, out var price));
-        Assert.Equal(800u, price);
+        Assert.True(ApprovedPrice.TryFindLatest(approved, Alpha, listing, out var approval));
+        Assert.Equal(800u, approval.Price);
     }
 
     private static PlanEdits Edit(PlanEdits edits, in PlanEdit edit, in PlanEditTarget target)

@@ -98,6 +98,19 @@ internal static class RunPlanner
         return false;
     }
 
+    public static RetainerSnapshot? MarketOf(ReadOnlySpan<RetainerSnapshot> markets, ulong retainerId)
+    {
+        for (var index = 0; index < markets.Length; index++)
+        {
+            if (markets[index].RetainerId == retainerId)
+            {
+                return markets[index];
+            }
+        }
+
+        return null;
+    }
+
     private static ImmutableArray<AllocationLot> LotsToPlace(LotPlan plan, IReadOnlySet<PlanRowKey> handled)
     {
         var lots = ImmutableArray.CreateBuilder<AllocationLot>(plan.Lots.Length);
@@ -132,18 +145,5 @@ internal static class RunPlanner
         }
 
         return placed.ToImmutable();
-    }
-
-    private static RetainerSnapshot? MarketOf(ReadOnlySpan<RetainerSnapshot> markets, ulong retainerId)
-    {
-        for (var index = 0; index < markets.Length; index++)
-        {
-            if (markets[index].RetainerId == retainerId)
-            {
-                return markets[index];
-            }
-        }
-
-        return null;
     }
 }

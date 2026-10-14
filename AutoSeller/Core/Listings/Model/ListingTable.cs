@@ -79,7 +79,8 @@ internal sealed class ListingTable
         }
 
         var references = ReferenceSnapshot.ForHomeWorld(inputs.References, inputs.HomeWorldId);
-        var marks = UndercutMarks(inputs, references);
+        var histories = HistoriesOf(inputs.Characters);
+        var marks = UndercutMarks(inputs, references, histories);
         var rows = ImmutableArray.CreateBuilder<ListingRow>();
         var characters = ImmutableArray.CreateBuilder<ListingCharacter>(inputs.Characters.Length);
         var retainers = ImmutableArray.CreateBuilder<ListingRetainer>();
@@ -94,7 +95,7 @@ internal sealed class ListingTable
             }
 
             var priced = references is not null && record.HomeWorldId == inputs.HomeWorldId;
-            AddRows(rows, record, priced ? references : null, facts, marks, inputs);
+            AddRows(rows, record, histories[characterIndex], priced ? references : null, facts, marks, inputs);
         }
 
         return new ListingTable { Rows = rows.ToImmutable(), Characters = characters.MoveToImmutable(), Retainers = retainers.ToImmutable() };
@@ -131,6 +132,7 @@ internal sealed class ListingTable
     private static void AddRows(
         ImmutableArray<ListingRow>.Builder rows,
         CharacterRecord record,
+        RepriceHistory reprices,
         ReferenceSnapshot? references,
         Dictionary<uint, ItemFacts> facts,
         ImmutableArray<WatchMark> marks,
@@ -148,13 +150,14 @@ internal sealed class ListingTable
             var slots = snapshot.Slots;
             for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
             {
-                rows.Add(RowOf(record, snapshot, slots[slotIndex], references, facts, marks, inputs));
+                rows.Add(RowOf(record, reprices, snapshot, slots[slotIndex], references, facts, marks, inputs));
             }
         }
     }
 
     private static ListingRow RowOf(
         CharacterRecord record,
+        RepriceHistory reprices,
         RetainerSnapshot snapshot,
         in ListingSlot listing,
         ReferenceSnapshot? references,
@@ -162,7 +165,7 @@ internal sealed class ListingTable
         ImmutableArray<WatchMark> marks,
         ListingInputs inputs)
     {
-        var history = HistoryOf(record, snapshot.RetainerId, listing);
+        var history = reprices.EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
         var world = WorldOf(references, listing.Key);
         var known = MarketEstimate.IsKnown(world, listing.Key, inputs.NowUtc);
         var reference = ReferenceSnapshot.ReferenceFor(references, inputs.HomeWorldId, listing.Key, null, inputs.NowUtc);
@@ -191,7 +194,19 @@ internal sealed class ListingTable
             state);
     }
 
-    private static ImmutableArray<WatchMark> UndercutMarks(ListingInputs inputs, ReferenceSnapshot? references)
+    private static RepriceHistory[] HistoriesOf(ImmutableArray<CharacterRecord> characters)
+    {
+        var histories = new RepriceHistory[characters.Length];
+        for (var index = 0; index < histories.Length; index++)
+        {
+            var saved = characters[index].Reprices;
+            histories[index] = RepriceHistory.Restore(saved.IsDefault ? [] : saved.AsSpan());
+        }
+
+        return histories;
+    }
+
+    private static ImmutableArray<WatchMark> UndercutMarks(ListingInputs inputs, ReferenceSnapshot? references, RepriceHistory[] histories)
     {
         if (references is null)
         {
@@ -221,7 +236,7 @@ internal sealed class ListingTable
                 for (var slotIndex = 0; slotIndex < snapshot.Slots.Length; slotIndex++)
                 {
                     var listing = snapshot.Slots[slotIndex];
-                    var history = HistoryOf(record, snapshot.RetainerId, listing);
+                    var history = histories[characterIndex].EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
                     ours.Add(new WatchedListing(snapshot.RetainerId, listing.Slot, listing.Key, listing.UnitPrice, default, history.LastRepriceUtc));
                     var lowest = WorldOf(references, listing.Key);
                     if (seen.Add(listing.Key) && MarketEstimate.IsKnown(lowest, listing.Key, inputs.NowUtc))
@@ -243,21 +258,6 @@ internal sealed class ListingTable
         }
 
         return reference.World(item.IsHq);
-    }
-
-    private static RepriceEntry HistoryOf(CharacterRecord record, ulong retainerId, in ListingSlot listing)
-    {
-        var reprices = record.Reprices.IsDefault ? [] : record.Reprices;
-        var key = new RepriceKey(retainerId, listing.Slot, listing.Key);
-        for (var index = 0; index < reprices.Length; index++)
-        {
-            if (reprices[index].Key == key)
-            {
-                return reprices[index].Value;
-            }
-        }
-
-        return default;
     }
 
     private static bool TryFindMark(ImmutableArray<WatchMark> marks, ulong retainerId, in ListingSlot listing, out WatchMark mark)

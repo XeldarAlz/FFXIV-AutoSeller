@@ -40,7 +40,7 @@ internal static class SellPlanner
         private readonly ImmutableArray<StockSlot> stock;
         private readonly ImmutableArray<ApprovedPrice> approved;
         private readonly Dictionary<uint, ItemFacts> listingFacts = [];
-        private readonly Dictionary<RepriceKey, RepriceEntry> reprices = [];
+        private readonly RepriceHistory reprices;
         private readonly Dictionary<ItemKey, List<uint>> ownPrices = [];
         private readonly ImmutableArray<PlanRow>.Builder rows = ImmutableArray.CreateBuilder<PlanRow>();
         private readonly ImmutableArray<PlanGroup>.Builder groups = ImmutableArray.CreateBuilder<PlanGroup>();
@@ -61,11 +61,7 @@ internal static class SellPlanner
                 listingFacts[input.ListingItems[index].ItemId] = input.ListingItems[index];
             }
 
-            for (var index = 0; index < input.Reprices.Length; index++)
-            {
-                reprices[input.Reprices[index].Key] = input.Reprices[index].Value;
-            }
-
+            reprices = RepriceHistory.Restore(input.Reprices.AsSpan());
             CollectOwnPrices();
         }
 
@@ -148,7 +144,7 @@ internal static class SellPlanner
             var key = PlanRowKey.ForListing(retainerId, listing);
             var facts = listingFacts.GetValueOrDefault(listing.ItemId);
             var reference = input.ReferenceFor(listing.Key);
-            var history = reprices.GetValueOrDefault(new RepriceKey(retainerId, listing.Slot, listing.Key));
+            var history = reprices.EntryFor(new RepriceKey(retainerId, listing.Slot, listing.Key));
             var settings = input.Pricing;
             var excluded = input.Edits.IsExcluded(key);
             var duty = ListingDuties.Of(input.Rules, listing, facts.ItemUiCategory, reference.AverageSalePrice, history, settings.RepriceCooldown, false, excluded, input.NowUtc);
@@ -176,7 +172,7 @@ internal static class SellPlanner
             var cooldownLeft = duty == ListingDuty.CoolingDown ? settings.RepriceCooldown - (input.NowUtc - history.LastRepriceUtc) : TimeSpan.Zero;
             var edits = (excluded ? PlanRowEdits.Excluded : PlanRowEdits.None)
                 | (input.Edits.TryGetPrice(key, out _) ? PlanRowEdits.PriceSet : PlanRowEdits.None)
-                | (PriceOverrides.TryFindApproved(input.PlayerApprovals.AsSpan(), retainerId, listing, out _) ? PlanRowEdits.Approved : PlanRowEdits.None);
+                | (ApprovedPrice.TryFindLatest(input.PlayerApprovals.AsSpan(), retainerId, listing, out _) ? PlanRowEdits.Approved : PlanRowEdits.None);
             return new PlanRow(key, retainerId, RunRowKind.Listing, SlotSource.Bags, listing.Quantity, listing.UnitPrice, decision, Usable(reference, listing.Key), duty, AllocationReason.Assigned, MoveOutcome.None, 0, edits, cooldownLeft);
         }
 

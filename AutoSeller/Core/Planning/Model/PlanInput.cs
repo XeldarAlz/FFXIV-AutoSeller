@@ -78,15 +78,7 @@ internal sealed record PlanInput
 
     public RetainerSnapshot? MarketOf(ulong retainerId)
     {
-        for (var index = 0; index < Markets.Length; index++)
-        {
-            if (Markets[index].RetainerId == retainerId)
-            {
-                return Markets[index];
-            }
-        }
-
-        return null;
+        return RunPlanner.MarketOf(Markets.AsSpan(), retainerId);
     }
 
     public ReferencePrice ReferenceFor(ItemKey item)

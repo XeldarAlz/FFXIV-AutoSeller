@@ -8,7 +8,7 @@ using AutoSeller.Core.Items;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Pricing;
-using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Retainers.Model;
 using ECommons.DalamudServices;
 
 namespace AutoSeller.Core.Listings;
@@ -128,7 +128,7 @@ internal sealed class ListingsBook
             Characters = all,
             Rules = configuration.BuildRuleBook(),
             Pricing = configuration.BuildPricingSettings(),
-            Items = FactsOf(all),
+            Items = items.FactsOfListed(SnapshotsOf(all)),
             References = references.Latest,
             HomeWorldId = Svc.PlayerState.HomeWorld.RowId,
             NowUtc = nowUtc,
@@ -147,27 +147,22 @@ internal sealed class ListingsBook
         RunLog.Debug($"Listings: {rows.Length} listing(s) over {table.Characters.Length} character(s).");
     }
 
-    private ImmutableArray<ItemFacts> FactsOf(ImmutableArray<CharacterRecord> records)
+    private static RetainerSnapshot[] SnapshotsOf(ImmutableArray<CharacterRecord> records)
     {
-        var seen = new HashSet<uint>();
-        var facts = ImmutableArray.CreateBuilder<ItemFacts>();
+        var snapshots = new List<RetainerSnapshot>();
         for (var recordIndex = 0; recordIndex < records.Length; recordIndex++)
         {
-            var snapshots = records[recordIndex].Snapshots;
-            for (var snapshotIndex = 0; !snapshots.IsDefault && snapshotIndex < snapshots.Length; snapshotIndex++)
+            var saved = records[recordIndex].Snapshots;
+            for (var snapshotIndex = 0; !saved.IsDefault && snapshotIndex < saved.Length; snapshotIndex++)
             {
-                var slots = snapshots[snapshotIndex]?.Slots ?? [];
-                for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
+                if (saved[snapshotIndex] is { } snapshot)
                 {
-                    if (seen.Add(slots[slotIndex].ItemId))
-                    {
-                        facts.Add(items.FactsOf(slots[slotIndex].ItemId));
-                    }
+                    snapshots.Add(snapshot);
                 }
             }
         }
 
-        return facts.ToImmutable();
+        return [.. snapshots];
     }
 
     private static ImmutableArray<CharacterRecord> ReadSaved(string directory, ulong skipped)
