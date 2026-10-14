@@ -7,9 +7,9 @@ internal sealed class RuleBook
 {
     private const int ItemIdShift = 32;
 
-    private readonly ImmutableArray<ItemRule> sellListByItem;
+    private readonly ImmutableArray<ItemRuleSnapshot> sellListByItem;
 
-    private RuleBook(ImmutableArray<ItemRule> sellListByItem, ImmutableArray<CategoryRule> categoryRules, ItemIdSet neverSell, SellSources sources)
+    private RuleBook(ImmutableArray<ItemRuleSnapshot> sellListByItem, ImmutableArray<CategoryRuleSnapshot> categoryRules, ItemIdSet neverSell, SellSources sources)
     {
         this.sellListByItem = sellListByItem;
         CategoryRules = categoryRules;
@@ -17,7 +17,7 @@ internal sealed class RuleBook
         Sources = sources;
     }
 
-    public ImmutableArray<CategoryRule> CategoryRules { get; }
+    public ImmutableArray<CategoryRuleSnapshot> CategoryRules { get; }
 
     public ItemIdSet NeverSell { get; }
 
@@ -25,17 +25,7 @@ internal sealed class RuleBook
 
     public static RuleBook Create(IEnumerable<ItemRule> sellList, IEnumerable<CategoryRule> categoryRules, ItemIdSet neverSell, SellSources sources)
     {
-        var entries = new List<ItemRule>(sellList);
-        var sortKeys = new ulong[entries.Count];
-        var sorted = new ItemRule[entries.Count];
-        for (var index = 0; index < sorted.Length; index++)
-        {
-            sorted[index] = entries[index];
-            sortKeys[index] = ((ulong)entries[index].ItemId << ItemIdShift) | (uint)index;
-        }
-
-        Array.Sort(sortKeys, sorted);
-        return new RuleBook(ImmutableCollectionsMarshal.AsImmutableArray(sorted), [.. categoryRules], neverSell, sources);
+        return new RuleBook(SortedByItem(sellList), EnabledCategoryRules(categoryRules), neverSell, sources);
     }
 
     public bool Allows(SlotSource source)
@@ -49,7 +39,7 @@ internal sealed class RuleBook
         return !EntriesFor(itemId).IsEmpty;
     }
 
-    public ReadOnlySpan<ItemRule> EntriesFor(uint itemId)
+    public ReadOnlySpan<ItemRuleSnapshot> EntriesFor(uint itemId)
     {
         var entries = sellListByItem.AsSpan();
         var low = 0;
@@ -73,5 +63,35 @@ internal sealed class RuleBook
         }
 
         return entries[low..end];
+    }
+
+    private static ImmutableArray<ItemRuleSnapshot> SortedByItem(IEnumerable<ItemRule> sellList)
+    {
+        var entries = new List<ItemRule>(sellList);
+        var sortKeys = new ulong[entries.Count];
+        var sorted = new ItemRuleSnapshot[entries.Count];
+        for (var index = 0; index < sorted.Length; index++)
+        {
+            sorted[index] = ItemRuleSnapshot.From(entries[index]);
+            sortKeys[index] = ((ulong)entries[index].ItemId << ItemIdShift) | (uint)index;
+        }
+
+        Array.Sort(sortKeys, sorted);
+        return ImmutableCollectionsMarshal.AsImmutableArray(sorted);
+    }
+
+    private static ImmutableArray<CategoryRuleSnapshot> EnabledCategoryRules(IEnumerable<CategoryRule> categoryRules)
+    {
+        var rules = new List<CategoryRule>(categoryRules);
+        var builder = ImmutableArray.CreateBuilder<CategoryRuleSnapshot>(rules.Count);
+        for (var index = 0; index < rules.Count; index++)
+        {
+            if (rules[index].Enabled)
+            {
+                builder.Add(CategoryRuleSnapshot.From(rules[index]));
+            }
+        }
+
+        return builder.ToImmutable();
     }
 }

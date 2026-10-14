@@ -23,18 +23,18 @@ internal readonly record struct SellTerms(uint KeepCount, uint LotSize, byte Lis
 {
     public static SellTerms ForCategory => new(0, 0, ItemRule.DefaultListingsToKeepUp, 0);
 
-    public static SellTerms From(ItemRule rule)
+    public static SellTerms From(in ItemRuleSnapshot rule)
     {
         var listingsToKeepUp = Math.Clamp(rule.ListingsToKeepUp, (byte)1, ItemRule.MaximumListingsToKeepUp);
         return new SellTerms(rule.KeepCount, rule.LotSize, listingsToKeepUp, rule.PreferredRetainerId);
     }
 }
 
-internal readonly record struct EligibilityResult(EligibilityReason Reason, ItemRule? SellRule, CategoryRule? CategoryRule)
+internal readonly record struct EligibilityResult(EligibilityReason Reason, ItemRuleSnapshot? SellRule, CategoryRuleSnapshot? CategoryRule)
 {
     public bool IsEligible => Reason == EligibilityReason.Eligible;
 
-    public SellTerms Terms => SellRule is null ? SellTerms.ForCategory : SellTerms.From(SellRule);
+    public SellTerms Terms => SellRule is { } rule ? SellTerms.From(rule) : SellTerms.ForCategory;
 
     public static EligibilityResult Failed(EligibilityReason reason)
     {
@@ -63,14 +63,14 @@ internal static class Eligibility
         return reason == EligibilityReason.Eligible ? CheckUnique(item, listed, null, categoryRule) : EligibilityResult.Failed(reason);
     }
 
-    public static EligibilityReason MatchCategory(RuleBook rules, byte itemUiCategory, uint referenceUnitPrice, out CategoryRule? match)
+    public static EligibilityReason MatchCategory(RuleBook rules, byte itemUiCategory, uint referenceUnitPrice, out CategoryRuleSnapshot? match)
     {
         var categoryRules = rules.CategoryRules;
         var covered = false;
         for (var index = 0; index < categoryRules.Length; index++)
         {
             var rule = categoryRules[index];
-            if (!rule.Enabled || !rule.Covers(itemUiCategory))
+            if (!rule.Covers(itemUiCategory))
             {
                 continue;
             }
@@ -132,14 +132,13 @@ internal static class Eligibility
         return EligibilityReason.Eligible;
     }
 
-    private static EligibilityReason MatchSellList(ReadOnlySpan<ItemRule> entries, bool isHq, out ItemRule? match)
+    private static EligibilityReason MatchSellList(ReadOnlySpan<ItemRuleSnapshot> entries, bool isHq, out ItemRuleSnapshot? match)
     {
-        var quality = isHq ? QualityFilter.High : QualityFilter.Normal;
         var pausedMatch = false;
         for (var index = 0; index < entries.Length; index++)
         {
             var entry = entries[index];
-            if ((entry.Qualities & quality) == 0)
+            if (!entry.Covers(isHq))
             {
                 continue;
             }
@@ -158,7 +157,7 @@ internal static class Eligibility
         return pausedMatch ? EligibilityReason.RulePaused : EligibilityReason.QualityNotAllowed;
     }
 
-    private static EligibilityResult CheckUnique(in ItemFacts item, ListingCounts listed, ItemRule? sellRule, CategoryRule? categoryRule)
+    private static EligibilityResult CheckUnique(in ItemFacts item, ListingCounts listed, ItemRuleSnapshot? sellRule, CategoryRuleSnapshot? categoryRule)
     {
         if (item.IsUnique && listed.ContainsItem(item.ItemId))
         {

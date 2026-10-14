@@ -12,7 +12,7 @@ public sealed class EligibilityTests
         var result = Eligibility.Check(Bag(Ore, 99), Material(), 100, BookSelling(rule), ListingCounts.Empty);
 
         Assert.Equal(EligibilityReason.Eligible, result.Reason);
-        Assert.Same(rule, result.SellRule);
+        Assert.Equal(ItemRuleSnapshot.From(rule), result.SellRule);
         Assert.Null(result.CategoryRule);
     }
 
@@ -93,9 +93,9 @@ public sealed class EligibilityTests
         var hqResult = Eligibility.Check(Bag(Ore, 10, isHq: true), Material(), 100, rules, ListingCounts.Empty);
         var nqResult = Eligibility.Check(Bag(Ore, 10), Material(), 100, rules, ListingCounts.Empty);
 
-        Assert.Same(high, hqResult.SellRule);
+        Assert.Equal(ItemRuleSnapshot.From(high), hqResult.SellRule);
         Assert.Equal(9u, hqResult.Terms.KeepCount);
-        Assert.Same(normal, nqResult.SellRule);
+        Assert.Equal(ItemRuleSnapshot.From(normal), nqResult.SellRule);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public sealed class EligibilityTests
 
         var result = Eligibility.Check(Bag(Ore, 10), Material(), 100, rules, ListingCounts.Empty);
 
-        Assert.Same(loose, result.CategoryRule);
+        Assert.Equal(loose.MinimumReferenceValue, result.CategoryRule?.MinimumReferenceValue);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class EligibilityTests
 
         var result = Eligibility.Check(Bag(Ore, 10), Material(), 100, rules, ListingCounts.Empty);
 
-        Assert.Same(rule, result.SellRule);
+        Assert.Equal(ItemRuleSnapshot.From(rule), result.SellRule);
         Assert.Null(result.CategoryRule);
         Assert.Equal(99u, result.Terms.LotSize);
     }
@@ -198,10 +198,41 @@ public sealed class EligibilityTests
         var entries = rules.EntriesFor(Potion);
 
         Assert.Equal(2, entries.Length);
-        Assert.Same(first, entries[0]);
-        Assert.Same(second, entries[1]);
+        Assert.Equal(ItemRuleSnapshot.From(first), entries[0]);
+        Assert.Equal(ItemRuleSnapshot.From(second), entries[1]);
         Assert.True(rules.IsOnSellList(Ore));
         Assert.False(rules.IsOnSellList(Sword));
+    }
+
+    [Fact]
+    public void RuleBookIgnoresRuleEditsMadeAfterItWasBuilt()
+    {
+        var rule = SellRule(keepCount: 5, lotSize: 10);
+        var category = Category(MedicineCategory, 50);
+        var rules = Book([rule], [category]);
+
+        rule.KeepCount = 40;
+        rule.Paused = true;
+        rule.Qualities = QualityFilter.High;
+        category.ItemUiCategoryIds[0] = MaterialCategory;
+        category.MinimumReferenceValue = 0;
+        category.Enabled = false;
+
+        var sold = Eligibility.Check(Bag(Ore, 10), Material(), 100, rules, ListingCounts.Empty);
+        var medicine = Eligibility.Check(Bag(Potion, 10), Material(Potion) with { ItemUiCategory = MedicineCategory }, 40, rules, ListingCounts.Empty);
+        Assert.Equal(EligibilityReason.Eligible, sold.Reason);
+        Assert.Equal(5u, sold.Terms.KeepCount);
+        Assert.Equal(EligibilityReason.BelowCategoryMinimum, medicine.Reason);
+    }
+
+    [Fact]
+    public void CategoryIdsOutsideTheItemUiCategoryRangeNeverMatch()
+    {
+        var rule = new CategoryRule { ItemUiCategoryIds = [MaterialCategory + 256u] };
+
+        var result = Eligibility.Check(Bag(Ore, 10), Material(), 100, Book(null, [rule]), ListingCounts.Empty);
+
+        Assert.Equal(EligibilityReason.NoMatchingRule, result.Reason);
     }
 
     [Fact]
