@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
@@ -159,10 +160,15 @@ internal sealed class SellAuthorization
 
     public bool TryGetApprovedPrice(in SaleWrite write, out uint price)
     {
+        return TryGetApprovedPrice(write.RetainerId, write.Slot, new ItemKey(write.ItemId, write.IsHq), write.OldPrice, out price);
+    }
+
+    public bool TryGetApprovedPrice(ulong retainerId, ushort slot, ItemKey item, uint oldPrice, out uint price)
+    {
         for (var index = 0; index < ApprovedPrices.Length; index++)
         {
             var approved = ApprovedPrices[index];
-            if (approved.Covers(write))
+            if (approved.Covers(retainerId, slot, item, oldPrice))
             {
                 price = approved.Price;
                 return true;
@@ -171,6 +177,22 @@ internal sealed class SellAuthorization
 
         price = 0;
         return false;
+    }
+
+    public PriceOverride OverrideForLot(PlanRowKey row)
+    {
+        return PlanEdits.TryGetPrice(row, out var price) ? PriceOverride.SetByPlayer(price) : PriceOverride.None;
+    }
+
+    public PriceOverride OverrideForListing(ulong retainerId, in ListingSlot listing)
+    {
+        if (!TryGetApprovedPrice(retainerId, listing.Slot, listing.Key, listing.UnitPrice, out var approvedPrice))
+        {
+            return PriceOverride.None;
+        }
+
+        var setInThePlan = PlanEdits.TryGetPrice(PlanRowKey.ForListing(retainerId, listing), out var planPrice) && planPrice == approvedPrice;
+        return setInThePlan ? PriceOverride.SetByPlayer(approvedPrice) : PriceOverride.ApprovedAt(approvedPrice);
     }
 
     private static AuthorizationProblem Validate(

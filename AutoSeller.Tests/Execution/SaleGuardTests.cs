@@ -326,48 +326,6 @@ public sealed class SaleGuardTests
         return false;
     }
 
-    private static SaleGuardInput GuardInput(SaleWrite write)
-    {
-        var slot = SlotFor(write);
-        return new SaleGuardInput
-        {
-            Authorization = Authorization(),
-            ActiveRunId = RunId,
-            CharacterContentId = Character,
-            CurrentWorldId = HomeWorld,
-            CurrentRulesHash = RulesHash,
-            CurrentPricingHash = PricingHash,
-            CurrentPlanEditsHash = PlanEditsHash,
-            OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
-            WindowChainReady = true,
-            SearchGeneration = SearchGeneration,
-            SearchCapturedAtUtc = Now,
-            NowUtc = Now,
-            Value = default,
-            JournalBlocksWrites = false,
-            Write = write,
-            Planned = slot,
-            Observed = slot,
-            EligibleForWrite = true,
-            RuleFloor = RuleFloor,
-            VendorPrice = VendorUnitPrice,
-            VendorRuleMatches = write.Kind == WriteKind.Vendor,
-            IsGear = false,
-            IsProtected = false,
-            OnSellList = write.Kind != WriteKind.Vendor,
-        };
-    }
-
-    private static SlotReading SlotFor(in SaleWrite write)
-    {
-        return write.Kind switch
-        {
-            WriteKind.Reprice or WriteKind.Return => new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice),
-            WriteKind.List => new SlotReading(write.ItemId, write.IsHq, BagStack, 0),
-            _ => new SlotReading(write.ItemId, write.IsHq, write.Quantity, 0),
-        };
-    }
-
     private static SaleGuardInput WithObserved(SaleGuardInput input, Func<SlotReading, SlotReading> change)
     {
         return input with { Observed = change(input.Observed) };

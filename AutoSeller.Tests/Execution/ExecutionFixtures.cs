@@ -14,7 +14,7 @@ internal static class ExecutionFixtures
     public const ulong SecondRetainer = 502;
     public const ulong StrangerRetainer = 900;
     public const uint Ore = 5_000;
-    public const uint MarketContainer = 12_002;
+    public const uint MarketContainer = PlanRowKey.MarketContainer;
     public const uint BagContainer = 0;
     public const uint SaddlebagContainer = 4_000;
     public const ushort MarketSlot = 3;
@@ -73,6 +73,39 @@ internal static class ExecutionFixtures
         return authorization!;
     }
 
+    public static SaleGuardInput GuardInput(SaleWrite write, SellAuthorization? authorization = null)
+    {
+        var frozen = authorization ?? Authorization();
+        var slot = SlotFor(write);
+        return new SaleGuardInput
+        {
+            Authorization = frozen,
+            ActiveRunId = RunId,
+            CharacterContentId = Character,
+            CurrentWorldId = HomeWorld,
+            CurrentRulesHash = frozen.RulesHash,
+            CurrentPricingHash = frozen.PricingHash,
+            CurrentPlanEditsHash = frozen.PlanEditsHash,
+            OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
+            WindowChainReady = true,
+            SearchGeneration = SearchGeneration,
+            SearchCapturedAtUtc = Now,
+            NowUtc = Now,
+            Value = default,
+            JournalBlocksWrites = false,
+            Write = write,
+            Planned = slot,
+            Observed = slot,
+            EligibleForWrite = true,
+            RuleFloor = RuleFloor,
+            VendorPrice = VendorUnitPrice,
+            VendorRuleMatches = write.Kind == WriteKind.Vendor,
+            IsGear = false,
+            IsProtected = false,
+            OnSellList = write.Kind != WriteKind.Vendor,
+        };
+    }
+
     public static ApprovedPrice Approval(uint price)
     {
         return new ApprovedPrice(FirstRetainer, MarketSlot, Ore, false, ListedPrice, price);
@@ -101,5 +134,15 @@ internal static class ExecutionFixtures
     public static SaleWrite Move()
     {
         return new SaleWrite(WriteKind.Move, FirstRetainer, SaddlebagContainer, BagSlot, Ore, false, LotQuantity, 0, 0, default);
+    }
+
+    private static SlotReading SlotFor(in SaleWrite write)
+    {
+        return write.Kind switch
+        {
+            WriteKind.Reprice or WriteKind.Return => new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice),
+            WriteKind.List => new SlotReading(write.ItemId, write.IsHq, BagStack, 0),
+            _ => new SlotReading(write.ItemId, write.IsHq, write.Quantity, 0),
+        };
     }
 }
