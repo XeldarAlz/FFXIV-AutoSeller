@@ -23,9 +23,11 @@ internal static class RunGuard
 {
     public static readonly TimeSpan DailyResetUtc = TimeSpan.FromHours(15);
 
-    public static bool Applies(in Decision decision)
+    public static bool Applies(RunRowKind kind, in Decision decision)
     {
-        return decision.Action is SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List;
+        return kind == RunRowKind.Listing
+            ? decision.Action is SellAction.RepriceDown or SellAction.RepriceUp or SellAction.Return
+            : decision.Action == SellAction.List;
     }
 
     public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, CompetitorSnapshot competition, ValueBook values, Guid writeId)

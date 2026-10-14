@@ -95,6 +95,7 @@ internal sealed partial class RetainerDriver
         }
 
         var decided = await CompareAndDecide(
+            RunRowKind.Listing,
             listing.Key,
             (competition, nowUtc) => decider.ForListing(retainer.RetainerId, listing, competition, nowUtc),
             (decision, competition, nowUtc) => decider.GuardListing(retainer.RetainerId, listing, shown, decision, competition, nowUtc));
@@ -212,6 +213,7 @@ internal sealed partial class RetainerDriver
         }
 
         var decided = await CompareAndDecide(
+            RunRowKind.Lot,
             lot.Item,
             (competition, nowUtc) => decider.ForLot(lot, competition, nowUtc),
             (decision, competition, nowUtc) => TryReadLotSlot(stock, row, out var observed)
@@ -256,7 +258,7 @@ internal sealed partial class RetainerDriver
         return shown;
     }
 
-    private async Task<Decided> CompareAndDecide(ItemKey item, Func<CompetitorSnapshot, DateTime, Decision> decide, Func<Decision, CompetitorSnapshot, DateTime, SaleVerdict> guard)
+    private async Task<Decided> CompareAndDecide(RunRowKind kind, ItemKey item, Func<CompetitorSnapshot, DateTime, Decision> decide, Func<Decision, CompetitorSnapshot, DateTime, SaleVerdict> guard)
     {
         var allowReuse = true;
         while (true)
@@ -276,7 +278,7 @@ internal sealed partial class RetainerDriver
             session.Enter(RunState.Deciding);
             var nowUtc = DateTime.UtcNow;
             var decision = decide(competition, nowUtc);
-            if (!RunGuard.Applies(decision))
+            if (!RunGuard.Applies(kind, decision))
             {
                 return new Decided(true, decision, SaleRejection.None, Stop.None);
             }

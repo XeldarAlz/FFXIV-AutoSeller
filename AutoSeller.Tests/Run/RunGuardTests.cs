@@ -25,14 +25,18 @@ public sealed class RunGuardTests
     };
 
     [Theory]
-    [InlineData((byte)SellAction.RepriceDown, true)]
-    [InlineData((byte)SellAction.RepriceUp, true)]
-    [InlineData((byte)SellAction.List, true)]
-    [InlineData((byte)SellAction.Keep, false)]
-    [InlineData((byte)SellAction.Skip, false)]
-    public void OnlyAWouldBeWriteIsGuarded(byte action, bool guarded)
+    [InlineData((byte)RunRowKind.Listing, (byte)SellAction.RepriceDown, true)]
+    [InlineData((byte)RunRowKind.Listing, (byte)SellAction.RepriceUp, true)]
+    [InlineData((byte)RunRowKind.Listing, (byte)SellAction.Return, true)]
+    [InlineData((byte)RunRowKind.Listing, (byte)SellAction.Keep, false)]
+    [InlineData((byte)RunRowKind.Listing, (byte)SellAction.List, false)]
+    [InlineData((byte)RunRowKind.Lot, (byte)SellAction.List, true)]
+    [InlineData((byte)RunRowKind.Lot, (byte)SellAction.Keep, false)]
+    [InlineData((byte)RunRowKind.Lot, (byte)SellAction.Skip, false)]
+    [InlineData((byte)RunRowKind.Lot, (byte)SellAction.RepriceDown, false)]
+    public void OnlyAWouldBeWriteOfTheRowsKindIsGuarded(byte kind, byte action, bool guarded)
     {
-        Assert.Equal(guarded, RunGuard.Applies(new Decision((SellAction)action, ListedPrice, ListedPrice, DecisionReason.Undercut, Evidence)));
+        Assert.Equal(guarded, RunGuard.Applies((RunRowKind)kind, new Decision((SellAction)action, ListedPrice, ListedPrice, DecisionReason.Undercut, Evidence)));
     }
 
     [Fact]
