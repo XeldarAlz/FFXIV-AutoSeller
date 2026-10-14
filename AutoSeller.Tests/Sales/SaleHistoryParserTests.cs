@@ -64,6 +64,32 @@ public sealed class SaleHistoryParserTests
     }
 
     [Fact]
+    public void TotalAfterTaxIsTheNetAndLeavesTheUnitPriceUnknown()
+    {
+        var soldAt = new DateTime(2026, 10, 14, 9, 30, 0, DateTimeKind.Utc);
+
+        Assert.True(SaleHistoryParser.TryParse(HistoryPacketWith(DarksteelOre, 18_991, soldAt, 10), CharacterId, FirstRetainerId, CityTaxPercent, SalePriceMeaning.StackTotalAfterTax, out var sales));
+
+        var sale = Assert.Single(sales);
+        Assert.False(sale.HasUnitPrice);
+        Assert.Equal(18_991, sale.NetGil);
+        Assert.Equal(10u, sale.Quantity);
+        Assert.Equal(soldAt, sale.SoldAtUtc);
+    }
+
+    [Theory]
+    [InlineData(SalePriceMeaning.UnitPrice, 1_000_000_000u, 1u)]
+    [InlineData(SalePriceMeaning.StackTotal, 9u, 10u)]
+    [InlineData(SalePriceMeaning.StackTotalAfterTax, 0u, 10u)]
+    [InlineData(SalePriceMeaning.StackTotalAfterTax, 2_000_000_000u, 2u)]
+    public void PriceOutsideTheListableRangeIsSkippedWhateverItMeans(object meaning, uint price, uint quantity)
+    {
+        Assert.True(SaleHistoryParser.TryParse(HistoryPacketWith(DarksteelOre, price, Morning, quantity), CharacterId, FirstRetainerId, CityTaxPercent, (SalePriceMeaning)meaning, out var sales));
+
+        Assert.Empty(sales);
+    }
+
+    [Fact]
     public void ShortPacketIsRefused()
     {
         var packet = HistoryPacket();
@@ -110,6 +136,26 @@ public sealed class SaleHistoryParserTests
         Assert.Equal(19_990, SalePrice.ToGross(19_990, 10, SalePriceMeaning.StackTotal));
         Assert.Equal(1_999u, SalePrice.ToUnitPrice(1_999, 10, SalePriceMeaning.UnitPrice));
         Assert.Equal(19_990, SalePrice.ToGross(1_999, 10, SalePriceMeaning.UnitPrice));
+        Assert.Equal(SaleRecord.UnknownUnitPrice, SalePrice.ToUnitPrice(18_991, 10, SalePriceMeaning.StackTotalAfterTax));
+    }
+
+    [Theory]
+    [InlineData(SalePriceMeaning.UnitPrice, 1_999u, 18_991)]
+    [InlineData(SalePriceMeaning.StackTotal, 19_990u, 18_991)]
+    [InlineData(SalePriceMeaning.StackTotalAfterTax, 18_991u, 18_991)]
+    public void EveryPriceMeaningGivesTheSameNet(object meaning, uint price, long expectedNet)
+    {
+        Assert.Equal(expectedNet, SalePrice.ToNet(price, 10, (SalePriceMeaning)meaning, CityTaxPercent));
+    }
+
+    [Theory]
+    [InlineData(2_000, 1_900, true)]
+    [InlineData(2_000, 2_000, true)]
+    [InlineData(2_000, 1_899, false)]
+    [InlineData(2_000, 2_001, false)]
+    public void NetIsPossibleOnlyBetweenTheHighestTaxAndNoTax(long gross, long net, bool possible)
+    {
+        Assert.Equal(possible, SalePrice.CouldNetTo(gross, net));
     }
 
     [Theory]

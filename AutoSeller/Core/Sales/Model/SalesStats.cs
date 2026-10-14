@@ -171,14 +171,15 @@ internal sealed class SalesStats
         return order != 0 ? order : first.CharacterContentId.CompareTo(second.CharacterContentId);
     }
 
-    private readonly record struct ItemAccumulator(SalesTotals Totals, long GrossGil, long MarketTicks, int TimedSales, DateTime LastSoldAtUtc)
+    private readonly record struct ItemAccumulator(SalesTotals Totals, long PricedGross, long PricedUnits, long MarketTicks, int TimedSales, DateTime LastSoldAtUtc)
     {
         public ItemAccumulator Add(in SaleRecord sale)
         {
             var timed = sale.HasListingTime && sale.SoldAtUtc >= sale.ListedAtUtc;
             return new ItemAccumulator(
                 Totals.Add(sale),
-                Gil.SaturatingAdd(GrossGil, sale.GrossGil),
+                Gil.SaturatingAdd(PricedGross, sale.GrossGil),
+                sale.HasUnitPrice ? PricedUnits + sale.Quantity : PricedUnits,
                 timed ? MarketTicks + (sale.SoldAtUtc - sale.ListedAtUtc).Ticks : MarketTicks,
                 timed ? TimedSales + 1 : TimedSales,
                 sale.SoldAtUtc > LastSoldAtUtc ? sale.SoldAtUtc : LastSoldAtUtc);
@@ -186,7 +187,7 @@ internal sealed class SalesStats
 
         public ItemSales ToItemSales(ItemKey item)
         {
-            var averageUnitPrice = Totals.Units > 0 ? (uint)Math.Min(GrossGil / Totals.Units, uint.MaxValue) : 0;
+            var averageUnitPrice = PricedUnits > 0 ? (uint)Math.Min(PricedGross / PricedUnits, uint.MaxValue) : 0;
             var averageTimeOnMarket = TimedSales > 0 ? TimeSpan.FromTicks(MarketTicks / TimedSales) : TimeSpan.Zero;
             return new ItemSales(item, Totals, averageUnitPrice, averageTimeOnMarket, TimedSales, LastSoldAtUtc);
         }

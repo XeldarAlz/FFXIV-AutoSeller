@@ -40,7 +40,12 @@ internal static class SalesCsv
         AppendField(builder, names.TryGetName(sale.ItemId, out var name) ? name : string.Empty);
         builder.Append(Separator).Append(sale.IsHq ? HighQuality : NormalQuality).Append(Separator);
         builder.Append(invariant, $"{sale.Quantity}").Append(Separator);
-        builder.Append(invariant, $"{sale.UnitPrice}").Append(Separator);
+        if (sale.HasUnitPrice)
+        {
+            builder.Append(invariant, $"{sale.UnitPrice}");
+        }
+
+        builder.Append(Separator);
         builder.Append(invariant, $"{sale.NetGil}").Append(Separator);
         if (sale.HasListingTime)
         {

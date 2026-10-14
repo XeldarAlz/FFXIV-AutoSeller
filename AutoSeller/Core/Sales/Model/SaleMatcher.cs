@@ -125,7 +125,10 @@ internal static class SaleMatcher
         for (var index = 0; index < secondaries.Count; index++)
         {
             var candidate = secondaries[index];
-            if (taken[index] || !AreCompatibleRetainers(primary, candidate) || !CouldHaveSoldAt(candidate, primary.SoldAtUtc))
+            if (taken[index]
+                || !AreCompatibleRetainers(primary, candidate)
+                || !PricesAgree(primary, candidate)
+                || !CouldHaveSoldAt(candidate, primary.SoldAtUtc))
             {
                 continue;
             }
@@ -156,9 +159,27 @@ internal static class SaleMatcher
             SoldAtUtc = soldAtUtc,
             SoldAfterUtc = soldAfterUtc,
             ListedAtUtc = primary.HasListingTime ? primary.ListedAtUtc : secondary.ListedAtUtc,
+            UnitPrice = primary.HasUnitPrice ? primary.UnitPrice : secondary.UnitPrice,
             RetainerId = primary.RetainerId != SaleRecord.UnknownRetainer ? primary.RetainerId : secondary.RetainerId,
             NetGil = secondary.Source == SaleSource.Notice ? secondary.NetGil : primary.NetGil,
         };
+    }
+
+    private static bool PricesAgree(in SaleRecord first, in SaleRecord second)
+    {
+        if (first.HasUnitPrice && second.HasUnitPrice)
+        {
+            return first.UnitPrice == second.UnitPrice;
+        }
+
+        var priced = first.HasUnitPrice ? first : second;
+        var unpriced = first.HasUnitPrice ? second : first;
+        if (!priced.HasUnitPrice || priced.Source == SaleSource.Notice)
+        {
+            return priced.NetGil == unpriced.NetGil;
+        }
+
+        return SalePrice.CouldNetTo(priced.GrossGil, unpriced.NetGil);
     }
 
     private static bool CouldHaveSoldAt(in SaleRecord record, DateTime atUtc)
@@ -177,12 +198,15 @@ internal static class SaleMatcher
 
     private static bool IsSameHistoryEntry(SaleRecord kept, SaleRecord candidate)
     {
-        return kept.RetainerId == candidate.RetainerId && kept.SoldAtUtc == candidate.SoldAtUtc;
+        return kept.RetainerId == candidate.RetainerId
+            && kept.UnitPrice == candidate.UnitPrice
+            && kept.SoldAtUtc == candidate.SoldAtUtc;
     }
 
     private static bool IsRepeatedNotice(SaleRecord kept, SaleRecord candidate)
     {
         return kept.RetainerId == candidate.RetainerId
+            && kept.UnitPrice == candidate.UnitPrice
             && kept.NetGil == candidate.NetGil
             && (candidate.SoldAtUtc - kept.SoldAtUtc).Duration() <= RepeatedNoticeWindow;
     }
@@ -192,8 +216,7 @@ internal static class SaleMatcher
         return first.CharacterContentId == second.CharacterContentId
             && first.ItemId == second.ItemId
             && first.IsHq == second.IsHq
-            && first.Quantity == second.Quantity
-            && first.UnitPrice == second.UnitPrice;
+            && first.Quantity == second.Quantity;
     }
 
     private static int CompareForGrouping(SaleRecord first, SaleRecord second)
@@ -216,17 +239,17 @@ internal static class SaleMatcher
 
         if (order == 0)
         {
-            order = first.UnitPrice.CompareTo(second.UnitPrice);
-        }
-
-        if (order == 0)
-        {
             order = ExactnessRank(first.Source).CompareTo(ExactnessRank(second.Source));
         }
 
         if (order == 0)
         {
             order = first.SoldAtUtc.CompareTo(second.SoldAtUtc);
+        }
+
+        if (order == 0)
+        {
+            order = first.UnitPrice.CompareTo(second.UnitPrice);
         }
 
         return order != 0 ? order : first.RetainerId.CompareTo(second.RetainerId);

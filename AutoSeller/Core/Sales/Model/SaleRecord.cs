@@ -30,6 +30,7 @@ internal readonly record struct SaleRecord(
     SaleSource Source)
 {
     public const ulong UnknownRetainer = 0;
+    public const uint UnknownUnitPrice = 0;
 
     public SnapshotDiffCorroboration GilCorroboration { get; init; }
 
@@ -40,4 +41,6 @@ internal readonly record struct SaleRecord(
     public long GrossGil => Gil.SaturatingMultiply(UnitPrice, Quantity);
 
     public bool HasListingTime => ListedAtUtc != default;
+
+    public bool HasUnitPrice => UnitPrice != UnknownUnitPrice;
 }

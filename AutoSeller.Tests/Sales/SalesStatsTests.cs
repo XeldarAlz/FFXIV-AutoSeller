@@ -71,6 +71,18 @@ public sealed class SalesStatsTests
     }
 
     [Fact]
+    public void SaleWithAnUnknownUnitPriceCountsInTotalsButNotInTheAveragePrice()
+    {
+        var unpriced = History(new DateTime(2026, 10, 14, 11, 0, 0, DateTimeKind.Utc), DarksteelOre, 10, SaleRecord.UnknownUnitPrice) with { NetGil = 950 };
+
+        var stats = SalesStats.Compute(Of(TodayStack, unpriced).AsSpan(), Now, PlayerOffset);
+
+        var darksteel = Assert.Single(stats.Items);
+        Assert.Equal(200u, darksteel.AverageUnitPrice);
+        Assert.Equal(new SalesTotals(2_850, 20, 2), darksteel.Totals);
+    }
+
+    [Fact]
     public void RetainersAndCharactersAreRankedBySoldValue()
     {
         var stats = Stats();

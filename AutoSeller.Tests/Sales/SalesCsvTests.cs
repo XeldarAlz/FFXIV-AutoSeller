@@ -38,6 +38,16 @@ public sealed class SalesCsvTests
     }
 
     [Fact]
+    public void UnknownUnitPriceIsLeftBlank()
+    {
+        var sale = History(SoldAt, DarksteelOre, 10, SaleRecord.UnknownUnitPrice) with { NetGil = 18_991 };
+
+        var row = SalesCsv.Write(Of(sale).AsSpan(), Names).Split('\n')[1];
+
+        Assert.Equal("2026-10-14T09:30:05Z,5057,Darksteel Ore,NQ,10,,18991,,history,confirmed", row);
+    }
+
+    [Fact]
     public void ExportNeverCarriesCharacterOrRetainerIds()
     {
         var csv = Export();

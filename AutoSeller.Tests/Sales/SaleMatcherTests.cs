@@ -13,6 +13,12 @@ public sealed class SaleMatcherTests
     private static readonly DateTime NoticedAt = SoldAt.AddSeconds(2);
     private static readonly DateTime ListedAt = Morning.AddDays(-1);
 
+    private static SaleRecord ParseHistory(SalePriceMeaning meaning, uint price)
+    {
+        Assert.True(SaleHistoryParser.TryParse(HistoryPacketWith(DarksteelOre, price, SoldAt, 10), CharacterId, FirstRetainerId, CityTaxPercent, meaning, out var sales));
+        return Assert.Single(sales);
+    }
+
     [Fact]
     public void NothingInNothingOut()
     {
@@ -48,6 +54,61 @@ public sealed class SaleMatcherTests
         Assert.Equal(PreviousRead, sale.SoldAfterUtc);
         Assert.Equal(ListedAt, sale.ListedAtUtc);
         Assert.Equal(NoticedNet, sale.NetGil);
+    }
+
+    [Theory]
+    [InlineData(SalePriceMeaning.UnitPrice, 200u)]
+    [InlineData(SalePriceMeaning.StackTotal, 2_000u)]
+    [InlineData(SalePriceMeaning.StackTotalAfterTax, 1_901u)]
+    public void NoticeAndHistoryMergeWhateverTheHistoryPriceMeans(object meaning, uint historyPrice)
+    {
+        var history = ParseHistory((SalePriceMeaning)meaning, historyPrice);
+
+        var merged = SaleMatcher.Merge(Of(Notice(NoticedAt, PreviousRead, DarksteelOre, 10, 200, NoticedNet), history).AsSpan());
+
+        var sale = Assert.Single(merged);
+        Assert.Equal(SaleSource.History, sale.Source);
+        Assert.Equal(SoldAt, sale.SoldAtUtc);
+        Assert.Equal(200u, sale.UnitPrice);
+        Assert.Equal(NoticedNet, sale.NetGil);
+    }
+
+    [Theory]
+    [InlineData(SalePriceMeaning.UnitPrice, 200u)]
+    [InlineData(SalePriceMeaning.StackTotal, 2_000u)]
+    [InlineData(SalePriceMeaning.StackTotalAfterTax, 1_901u)]
+    public void HistoryAndDiffMergeWhateverTheHistoryPriceMeans(object meaning, uint historyPrice)
+    {
+        var history = ParseHistory((SalePriceMeaning)meaning, historyPrice);
+
+        var merged = SaleMatcher.Merge(Of(Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200, listedAtUtc: ListedAt), history).AsSpan());
+
+        var sale = Assert.Single(merged);
+        Assert.Equal(SaleSource.History, sale.Source);
+        Assert.Equal(200u, sale.UnitPrice);
+        Assert.Equal(ListedAt, sale.ListedAtUtc);
+    }
+
+    [Fact]
+    public void HistoryTotalAfterTaxDoesNotMergeWithANoticeOfAnotherNet()
+    {
+        var history = ParseHistory(SalePriceMeaning.StackTotalAfterTax, 1_710);
+
+        var merged = SaleMatcher.Merge(Of(Notice(NoticedAt, PreviousRead, DarksteelOre, 10, 200, NoticedNet), history).AsSpan());
+
+        Assert.Equal(2, merged.Length);
+    }
+
+    [Fact]
+    public void HistoryTotalAfterTaxDoesNotMergeWithADiffItCannotBeTheNetOf()
+    {
+        var history = ParseHistory(SalePriceMeaning.StackTotalAfterTax, 1_710);
+
+        var merged = SaleMatcher.Merge(Of(Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200), history).AsSpan());
+
+        Assert.Equal(2, merged.Length);
+        Assert.False(merged[0].HasUnitPrice);
+        Assert.Equal(1_710, merged[0].NetGil);
     }
 
     [Fact]

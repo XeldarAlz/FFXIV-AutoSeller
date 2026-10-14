@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.Immutable;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Sales.Model;
@@ -50,6 +51,17 @@ internal static class SaleFixtures
             Convert.FromHexString(HistoryRecordHex[recordIndex]).CopyTo(packet, 8 + recordIndex * 52);
         }
 
+        return packet;
+    }
+
+    public static byte[] HistoryPacketWith(uint itemId, uint price, DateTime soldAtUtc, uint quantity)
+    {
+        var packet = EmptyHistoryPacket();
+        var record = packet.AsSpan(8, 52);
+        BinaryPrimitives.WriteUInt32LittleEndian(record, itemId);
+        BinaryPrimitives.WriteUInt32LittleEndian(record[4..], price);
+        BinaryPrimitives.WriteUInt32LittleEndian(record[8..], (uint)(soldAtUtc - DateTime.UnixEpoch).TotalSeconds);
+        BinaryPrimitives.WriteUInt32LittleEndian(record[12..], quantity);
         return packet;
     }
 
