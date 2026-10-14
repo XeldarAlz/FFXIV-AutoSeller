@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "該当するルールがありません",
   "plan.reason.noFreeSlot": "空き出品枠なし",
   "plan.reason.excluded": "あなたが対象外にしました",
+  "plan.reason.bait.one": "おとり出品 {0} 件を無視",
+  "plan.reason.bait.other": "おとり出品 {0} 件を無視",
   "plan.placement.listingsToKeepUp": "必要な出品数に達しています",
   "plan.placement.gilNearCap": "リテイナーの所持ギルが上限間近",
   "plan.placement.noMarket": "まだ出品できるリテイナーがいません",

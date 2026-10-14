@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Keine deiner Regeln deckt das ab",
   "plan.reason.noFreeSlot": "Kein freier Angebotsplatz",
   "plan.reason.excluded": "Von dir ausgelassen",
+  "plan.reason.bait.one": "{0} Köderangebot ignoriert",
+  "plan.reason.bait.other": "{0} Köderangebote ignoriert",
   "plan.placement.listingsToKeepUp": "Schon genug Angebote eingestellt",
   "plan.placement.gilNearCap": "Gil des Gehilfen nahe der Grenze",
   "plan.placement.noMarket": "Noch kann kein Gehilfe es einstellen",

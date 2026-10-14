@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Ни одно ваше правило его не охватывает",
   "plan.reason.noFreeSlot": "Нет свободного места для лота",
   "plan.reason.excluded": "Исключено вами",
+  "plan.reason.bait.one": "Пропущено лотов-приманок: {0}",
+  "plan.reason.bait.other": "Пропущено лотов-приманок: {0}",
   "plan.placement.listingsToKeepUp": "Лотов уже достаточно",
   "plan.placement.gilNearCap": "Гил помощника у предела",
   "plan.placement.noMarket": "Пока ни один помощник не может его выставить",

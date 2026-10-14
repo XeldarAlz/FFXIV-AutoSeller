@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "没有规则涵盖此项",
   "plan.reason.noFreeSlot": "没有空闲的挂单栏位",
   "plan.reason.excluded": "已被你排除",
+  "plan.reason.bait.one": "已忽略 {0} 个诱饵挂单",
+  "plan.reason.bait.other": "已忽略 {0} 个诱饵挂单",
   "plan.placement.listingsToKeepUp": "挂单数量已足够",
   "plan.placement.gilNearCap": "雇员金币接近上限",
   "plan.placement.noMarket": "暂无雇员可以上架",

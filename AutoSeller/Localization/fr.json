@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Aucune de vos règles ne le couvre",
   "plan.reason.noFreeSlot": "Aucun emplacement d'annonce libre",
   "plan.reason.excluded": "Exclu par vous",
+  "plan.reason.bait.one": "{0} annonce appât ignorée",
+  "plan.reason.bait.other": "{0} annonces appâts ignorées",
   "plan.placement.listingsToKeepUp": "Déjà assez d'annonces en vente",
   "plan.placement.gilNearCap": "Gils du servant proches du plafond",
   "plan.placement.noMarket": "Aucun servant ne peut encore le mettre en vente",

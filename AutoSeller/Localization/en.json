@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "No rule of yours covers it",
   "plan.reason.noFreeSlot": "No free listing slot",
   "plan.reason.excluded": "Left out by you",
+  "plan.reason.bait.one": "{0} bait listing ignored",
+  "plan.reason.bait.other": "{0} bait listings ignored",
   "plan.placement.listingsToKeepUp": "Enough listings up already",
   "plan.placement.gilNearCap": "Retainer gil near cap",
   "plan.placement.noMarket": "No retainer can list it yet",

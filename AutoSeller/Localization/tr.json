@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Hiçbir kuralınız bunu kapsamıyor",
   "plan.reason.noFreeSlot": "Boş ilan yeri yok",
   "plan.reason.excluded": "Sizin tarafınızdan dışarıda bırakıldı",
+  "plan.reason.bait.one": "{0} yem ilan yok sayıldı",
+  "plan.reason.bait.other": "{0} yem ilan yok sayıldı",
   "plan.placement.listingsToKeepUp": "Zaten yeterince ilan var",
   "plan.placement.gilNearCap": "Yardımcının gili sınıra yakın",
   "plan.placement.noMarket": "Henüz hiçbir yardımcı bunu ilana çıkaramaz",

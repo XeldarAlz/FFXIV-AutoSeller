@@ -83,6 +83,7 @@ internal static partial class L
         public static readonly LocString ReasonNotEligible = new("plan.reason.notEligible", "No rule of yours covers it");
         public static readonly LocString ReasonNoFreeSlot = new("plan.reason.noFreeSlot", "No free listing slot");
         public static readonly LocString ReasonExcluded = new("plan.reason.excluded", "Left out by you");
+        public static readonly LocPlural ReasonBait = new("plan.reason.bait", "{0} bait listing ignored", "{0} bait listings ignored");
         public static readonly LocString PlacementListingsToKeepUp = new("plan.placement.listingsToKeepUp", "Enough listings up already");
         public static readonly LocString PlacementGilNearCap = new("plan.placement.gilNearCap", "Retainer gil near cap");
         public static readonly LocString PlacementNoMarket = new("plan.placement.noMarket", "No retainer can list it yet");

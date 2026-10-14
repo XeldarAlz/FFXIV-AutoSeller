@@ -74,7 +74,7 @@ internal static class PlanLabels
             return Skip(decision.Skip);
         }
 
-        return decision.Refused ? Loc.T(L.Plan.SkipRefused) : Reason(decision.Decision.Reason, TimeSpan.Zero);
+        return decision.Refused ? Loc.T(L.Plan.SkipRefused) : WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);
     }
 
     public static string RowReason(in PlanRow row)
@@ -84,7 +84,7 @@ internal static class PlanLabels
             return Placement(row.Placement);
         }
 
-        var reason = Reason(row.Decision.Reason, row.CooldownLeft);
+        var reason = WithBait(Reason(row.Decision.Reason, row.CooldownLeft), row.Decision.Evidence);
         if (row.Move is MoveOutcome.TargetFull or MoveOutcome.TargetUnavailable or MoveOutcome.TargetGilNearCap)
         {
             return string.Concat(reason, TextDraw.Separator, Loc.T(L.Plan.MoveRefused));
@@ -180,5 +180,12 @@ internal static class PlanLabels
     {
         var name = items.Get(itemId).Name;
         return name.Length > 0 ? name : Loc.T(L.Rules.ItemFallback, itemId.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static string WithBait(string reason, in DecisionEvidence evidence)
+    {
+        return evidence.BaitListingsIgnored > 0
+            ? string.Concat(reason, TextDraw.Separator, Loc.Plural(L.Plan.ReasonBait, evidence.BaitListingsIgnored))
+            : reason;
     }
 }

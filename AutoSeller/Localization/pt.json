@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Nenhuma regra sua cobre isto",
   "plan.reason.noFreeSlot": "Nenhuma vaga de anúncio livre",
   "plan.reason.excluded": "Deixado de fora por você",
+  "plan.reason.bait.one": "{0} anúncio isca ignorado",
+  "plan.reason.bait.other": "{0} anúncios isca ignorados",
   "plan.placement.listingsToKeepUp": "Já há anúncios suficientes",
   "plan.placement.gilNearCap": "Gil do ajudante perto do limite",
   "plan.placement.noMarket": "Nenhum ajudante pode anunciá-lo ainda",

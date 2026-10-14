@@ -106,6 +106,8 @@
   "plan.reason.notEligible": "Ninguna de tus reglas lo cubre",
   "plan.reason.noFreeSlot": "No hay hueco de anuncio libre",
   "plan.reason.excluded": "Excluido por ti",
+  "plan.reason.bait.one": "{0} anuncio cebo ignorado",
+  "plan.reason.bait.other": "{0} anuncios cebo ignorados",
   "plan.placement.listingsToKeepUp": "Ya hay suficientes anuncios",
   "plan.placement.gilNearCap": "Guiles del empleado cerca del tope",
   "plan.placement.noMarket": "Aún ningún empleado puede anunciarlo",
