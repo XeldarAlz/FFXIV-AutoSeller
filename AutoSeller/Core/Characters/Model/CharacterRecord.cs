@@ -9,12 +9,21 @@ namespace AutoSeller.Core.Characters.Model;
 
 internal readonly record struct RetainerSetting(ulong RetainerId, string Name, bool Enabled);
 
+internal enum CharacterRecordFit : byte
+{
+    Fits,
+    Missing,
+    OtherCharacter,
+    NewerVersion,
+}
+
 internal sealed record CharacterRecord
 {
     public const int CurrentVersion = 1;
     public const string FolderName = "chars";
 
     private const string FileExtension = ".json";
+    private const string SetAsideStampFormat = "yyyyMMdd-HHmmss";
 
     public int Version { get; init; } = CurrentVersion;
 
@@ -35,5 +44,25 @@ internal sealed record CharacterRecord
     public static string FileNameFor(ulong contentId)
     {
         return string.Concat(contentId.ToString(CultureInfo.InvariantCulture), FileExtension);
+    }
+
+    public static CharacterRecordFit FitFor(CharacterRecord? record, ulong contentId)
+    {
+        if (record is null)
+        {
+            return CharacterRecordFit.Missing;
+        }
+
+        if (record.ContentId != contentId)
+        {
+            return CharacterRecordFit.OtherCharacter;
+        }
+
+        return record.Version > CurrentVersion ? CharacterRecordFit.NewerVersion : CharacterRecordFit.Fits;
+    }
+
+    public static string SetAsideSuffix(int version, DateTime nowUtc)
+    {
+        return string.Concat(".v", version.ToString(CultureInfo.InvariantCulture), "-", nowUtc.ToString(SetAsideStampFormat, CultureInfo.InvariantCulture));
     }
 }
