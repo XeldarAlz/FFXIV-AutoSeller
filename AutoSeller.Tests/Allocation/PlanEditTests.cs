@@ -77,14 +77,18 @@ public sealed class PlanEditTests
     }
 
     [Fact]
-    public void MoveToAFullRetainerIsAcceptedAndOverflowsInThePlan()
+    public void MoveToAFullRetainerIsAcceptedAndThePlanPlacesTheLotElsewhere()
     {
         var lot = Lot(Ore, 100, 4);
         var edits = Apply(PlanEdits.None, PlanEdit.Move(lot.Row, Beta, Now), LotTarget(0));
 
         var result = Allocate([lot], [Retainer(Alpha), Retainer(Beta, freeSlots: 0)], edits);
 
-        Assert.Equal(AllocationReason.MoveTargetFull, ReasonOf(result, lot));
+        var assignment = Assert.Single(result.Assignments);
+        Assert.Equal(Alpha, assignment.RetainerId);
+        Assert.Equal(MoveOutcome.TargetFull, assignment.Move);
+        Assert.False(assignment.Moved);
+        Assert.True(edits.TryGetMove(lot.Row, out _));
     }
 
     [Fact]

@@ -100,6 +100,27 @@ internal static class AllocationFixtures
         return AllocationReason.Assigned;
     }
 
+    public static MoveOutcome MoveOf(AllocationResult result, AllocationLot lot)
+    {
+        for (var index = 0; index < result.Assignments.Length; index++)
+        {
+            if (result.Assignments[index].Lot.Row == lot.Row)
+            {
+                return result.Assignments[index].Move;
+            }
+        }
+
+        for (var index = 0; index < result.Overflow.Length; index++)
+        {
+            if (result.Overflow[index].Lot.Row == lot.Row)
+            {
+                return result.Overflow[index].Move;
+            }
+        }
+
+        throw new InvalidOperationException($"lot {lot.Row} missing from the result");
+    }
+
     public static RetainerLoad LoadOf(AllocationResult result, ulong retainerId)
     {
         for (var index = 0; index < result.Retainers.Length; index++)

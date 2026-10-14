@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Shared;
 
@@ -9,33 +10,71 @@ internal static class AllocationBruteForce
 
     public static int[] Priority(AllocationRequest request)
     {
+        return Priority(request, MoveOutcomes(request));
+    }
+
+    public static MoveOutcome[] MoveOutcomes(AllocationRequest request)
+    {
         var lots = request.Lots;
-        var order = new int[lots.Length];
-        for (var index = 0; index < order.Length; index++)
+        var retainers = request.Retainers;
+        var outcomes = new MoveOutcome[lots.Length];
+        var moved = new List<int>();
+        for (var lotIndex = 0; lotIndex < lots.Length; lotIndex++)
         {
-            order[index] = index;
+            if (HasMove(request, lotIndex, out _) && !request.Edits.IsExcluded(lots[lotIndex].Row))
+            {
+                moved.Add(lotIndex);
+            }
         }
 
-        Array.Sort(order, (left, right) =>
+        moved.Sort((left, right) => CompareByValue(lots, left, right));
+        var counts = new int[retainers.Length];
+        var values = new long[retainers.Length];
+        var placedByItem = new Dictionary<ItemKey, int>();
+        for (var position = 0; position < moved.Count; position++)
         {
-            var leftMoved = IsMoved(request, left);
-            var rightMoved = IsMoved(request, right);
-            if (leftMoved != rightMoved)
+            var lotIndex = moved[position];
+            var lot = lots[lotIndex];
+            placedByItem.TryGetValue(lot.Item, out var placed);
+            if (placed + request.Listed.Of(lot.Item) >= lot.ListingsToKeepUp)
             {
-                return leftMoved ? -1 : 1;
+                continue;
             }
 
-            var byValue = lots[right].EstimatedValue.CompareTo(lots[left].EstimatedValue);
-            return byValue != 0 ? byValue : lots[left].Row.CompareTo(lots[right].Row);
-        });
-        return order;
+            HasMove(request, lotIndex, out var targetId);
+            var target = IndexOf(request, targetId);
+            if (target == Overflow || !retainers[target].CanList)
+            {
+                outcomes[lotIndex] = MoveOutcome.TargetUnavailable;
+                continue;
+            }
+
+            if (counts[target] >= retainers[target].FreeSlots)
+            {
+                outcomes[lotIndex] = MoveOutcome.TargetFull;
+                continue;
+            }
+
+            if (retainers[target].Load + values[target] + lot.EstimatedValue > MarketLimits.RetainerGilCap)
+            {
+                outcomes[lotIndex] = MoveOutcome.TargetGilNearCap;
+                continue;
+            }
+
+            outcomes[lotIndex] = MoveOutcome.Moved;
+            counts[target]++;
+            values[target] += lot.EstimatedValue;
+            placedByItem[lot.Item] = placed + 1;
+        }
+
+        return outcomes;
     }
 
     public static ulong BestPlacedMask(AllocationRequest request, int[] priority)
     {
         var choices = new int[request.Lots.Length];
         var best = 0ul;
-        Search(request, priority, choices, 0, ref best);
+        Search(request, MoveOutcomes(request), priority, choices, 0, ref best);
         return best;
     }
 
@@ -78,6 +117,18 @@ internal static class AllocationBruteForce
 
     public static bool IsFeasible(AllocationRequest request, int[] choices)
     {
+        return IsFeasible(request, MoveOutcomes(request), choices);
+    }
+
+    public static bool HasMove(AllocationRequest request, int lotIndex, out ulong targetId)
+    {
+        targetId = 0;
+        var lot = request.Lots[lotIndex];
+        return lot.BoundRetainerId == 0 && request.Edits.TryGetMove(lot.Row, out targetId);
+    }
+
+    private static bool IsFeasible(AllocationRequest request, MoveOutcome[] moves, int[] choices)
+    {
         var lots = request.Lots;
         var retainers = request.Retainers;
         var counts = new int[retainers.Length];
@@ -91,7 +142,7 @@ internal static class AllocationBruteForce
                 continue;
             }
 
-            if (!Allows(request, lotIndex, choice))
+            if (!Allows(request, moves, lotIndex, choice))
             {
                 return false;
             }
@@ -123,7 +174,7 @@ internal static class AllocationBruteForce
         return true;
     }
 
-    public static bool Allows(AllocationRequest request, int lotIndex, int retainerIndex)
+    private static bool Allows(AllocationRequest request, MoveOutcome[] moves, int lotIndex, int retainerIndex)
     {
         var lot = request.Lots[lotIndex];
         var retainer = request.Retainers[retainerIndex];
@@ -137,20 +188,58 @@ internal static class AllocationBruteForce
             return retainer.RetainerId == lot.BoundRetainerId;
         }
 
-        return !request.Edits.TryGetMove(lot.Row, out var target) || target == retainer.RetainerId;
+        if (!HasMove(request, lotIndex, out var targetId))
+        {
+            return true;
+        }
+
+        return moves[lotIndex] switch
+        {
+            MoveOutcome.Moved => retainer.RetainerId == targetId,
+            MoveOutcome.None => false,
+            _ => true,
+        };
     }
 
-    public static bool IsMoved(AllocationRequest request, int lotIndex)
+    private static int[] Priority(AllocationRequest request, MoveOutcome[] moves)
     {
-        var lot = request.Lots[lotIndex];
-        return lot.BoundRetainerId == 0 && !request.Edits.IsExcluded(lot.Row) && request.Edits.TryGetMove(lot.Row, out _);
+        var lots = request.Lots;
+        var order = new int[lots.Length];
+        for (var index = 0; index < order.Length; index++)
+        {
+            order[index] = index;
+        }
+
+        Array.Sort(order, (left, right) =>
+        {
+            var leftPinned = IsPinnedByMove(request, moves, left);
+            var rightPinned = IsPinnedByMove(request, moves, right);
+            if (leftPinned != rightPinned)
+            {
+                return leftPinned ? -1 : 1;
+            }
+
+            return CompareByValue(lots, left, right);
+        });
+        return order;
     }
 
-    private static void Search(AllocationRequest request, int[] priority, int[] choices, int lotIndex, ref ulong best)
+    private static bool IsPinnedByMove(AllocationRequest request, MoveOutcome[] moves, int lotIndex)
+    {
+        return HasMove(request, lotIndex, out _) && moves[lotIndex] is MoveOutcome.Moved or MoveOutcome.None;
+    }
+
+    private static int CompareByValue(ImmutableArray<AllocationLot> lots, int left, int right)
+    {
+        var byValue = lots[right].EstimatedValue.CompareTo(lots[left].EstimatedValue);
+        return byValue != 0 ? byValue : lots[left].Row.CompareTo(lots[right].Row);
+    }
+
+    private static void Search(AllocationRequest request, MoveOutcome[] moves, int[] priority, int[] choices, int lotIndex, ref ulong best)
     {
         if (lotIndex == choices.Length)
         {
-            if (!IsFeasible(request, choices))
+            if (!IsFeasible(request, moves, choices))
             {
                 return;
             }
@@ -169,16 +258,16 @@ internal static class AllocationBruteForce
         }
 
         choices[lotIndex] = Overflow;
-        Search(request, priority, choices, lotIndex + 1, ref best);
+        Search(request, moves, priority, choices, lotIndex + 1, ref best);
         for (var retainerIndex = 0; retainerIndex < request.Retainers.Length; retainerIndex++)
         {
-            if (!Allows(request, lotIndex, retainerIndex))
+            if (!Allows(request, moves, lotIndex, retainerIndex))
             {
                 continue;
             }
 
             choices[lotIndex] = retainerIndex;
-            Search(request, priority, choices, lotIndex + 1, ref best);
+            Search(request, moves, priority, choices, lotIndex + 1, ref best);
         }
 
         choices[lotIndex] = Overflow;

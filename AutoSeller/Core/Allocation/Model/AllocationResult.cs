@@ -11,14 +11,24 @@ internal enum AllocationReason : byte
     NoFreeSlot,
     RetainerGilNearCap,
     NoMarketRetainer,
-    MoveTargetUnavailable,
-    MoveTargetFull,
     OwnerRetainerUnavailable,
 }
 
-internal readonly record struct LotAssignment(AllocationLot Lot, ulong RetainerId, bool Moved);
+internal enum MoveOutcome : byte
+{
+    None,
+    Moved,
+    TargetUnavailable,
+    TargetFull,
+    TargetGilNearCap,
+}
 
-internal readonly record struct LotOverflow(AllocationLot Lot, AllocationReason Reason);
+internal readonly record struct LotAssignment(AllocationLot Lot, ulong RetainerId, MoveOutcome Move)
+{
+    public bool Moved => Move == MoveOutcome.Moved;
+}
+
+internal readonly record struct LotOverflow(AllocationLot Lot, AllocationReason Reason, MoveOutcome Move);
 
 internal readonly record struct RetainerLoad(ulong RetainerId, int AssignedCount, long AssignedValue, bool GilNearCap);
 

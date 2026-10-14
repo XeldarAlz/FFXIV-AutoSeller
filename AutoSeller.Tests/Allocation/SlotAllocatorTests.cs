@@ -249,17 +249,18 @@ public sealed class SlotAllocatorTests
     }
 
     [Fact]
-    public void MoveToAFullRetainerOverflowsWithItsReason()
+    public void MoveToAFullRetainerFallsBackToTheRanking()
     {
         var lot = Lot(Ore, 100);
 
         var result = Allocate([lot], [Retainer(Alpha), Retainer(Beta, freeSlots: 0)], Edits(PlanEdit.Move(lot.Row, Beta, Now)));
 
-        Assert.Equal(AllocationReason.MoveTargetFull, ReasonOf(result, lot));
+        Assert.Equal(Alpha, RetainerOf(result, lot));
+        Assert.Equal(MoveOutcome.TargetFull, MoveOf(result, lot));
     }
 
     [Fact]
-    public void MoveToAnUnusableRetainerOverflowsWithItsReason()
+    public void MoveToAnUnusableRetainerFallsBackToTheRanking()
     {
         var unknown = Lot(Ore, 100, 0);
         var unregistered = Lot(Potion, 100, 1);
@@ -268,8 +269,50 @@ public sealed class SlotAllocatorTests
 
         var result = Allocate([unknown, unregistered], retainers, edits);
 
-        Assert.Equal(AllocationReason.MoveTargetUnavailable, ReasonOf(result, unknown));
-        Assert.Equal(AllocationReason.MoveTargetUnavailable, ReasonOf(result, unregistered));
+        Assert.Equal(Alpha, RetainerOf(result, unknown));
+        Assert.Equal(Alpha, RetainerOf(result, unregistered));
+        Assert.Equal(MoveOutcome.TargetUnavailable, MoveOf(result, unknown));
+        Assert.Equal(MoveOutcome.TargetUnavailable, MoveOf(result, unregistered));
+    }
+
+    [Fact]
+    public void MoveToARetainerNearItsGilCapFallsBackAndFlagsTheRetainer()
+    {
+        var lot = Lot(Ore, 600);
+
+        var result = Allocate([lot], [Retainer(Alpha), Retainer(Beta, gil: MarketLimits.RetainerGilCap - 500)], Edits(PlanEdit.Move(lot.Row, Beta, Now)));
+
+        Assert.Equal(Alpha, RetainerOf(result, lot));
+        Assert.Equal(MoveOutcome.TargetGilNearCap, MoveOf(result, lot));
+        Assert.True(LoadOf(result, Beta).GilNearCap);
+    }
+
+    [Fact]
+    public void FailedMoveWaitsForItsValueTurn()
+    {
+        var moved = Lot(Ore, 10, 0);
+        var dear = Lot(Potion, 900, 1);
+
+        var result = Allocate([moved, dear], [Retainer(Alpha, freeSlots: 1), Retainer(Beta, freeSlots: 0)], Edits(PlanEdit.Move(moved.Row, Beta, Now)));
+
+        Assert.Equal(Alpha, RetainerOf(result, dear));
+        Assert.Equal(AllocationReason.NoFreeSlot, ReasonOf(result, moved));
+        Assert.Equal(MoveOutcome.TargetFull, result.Overflow[0].Move);
+    }
+
+    [Fact]
+    public void SecondMoveToARetainerWithOneSlotFallsBack()
+    {
+        var first = Lot(Ore, 500, 0);
+        var second = Lot(Potion, 100, 1);
+        var edits = Edits(PlanEdit.Move(first.Row, Beta, Now), PlanEdit.Move(second.Row, Beta, Now));
+
+        var result = Allocate([first, second], [Retainer(Alpha), Retainer(Beta, freeSlots: 1)], edits);
+
+        Assert.Equal(Beta, RetainerOf(result, first));
+        Assert.Equal(MoveOutcome.Moved, MoveOf(result, first));
+        Assert.Equal(Alpha, RetainerOf(result, second));
+        Assert.Equal(MoveOutcome.TargetFull, MoveOf(result, second));
     }
 
     [Fact]

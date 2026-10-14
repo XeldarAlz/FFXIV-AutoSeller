@@ -12,6 +12,7 @@ internal static class AllocationInvariants
         Assert.True(AllocationBruteForce.IsFeasible(request, choices), "the allocation breaks a slot, gil, pin or listings rule");
         CheckOverflowReasons(request, result);
         CheckAssignments(request, result);
+        CheckMoveOutcomes(request, result);
         CheckLoads(request, result);
     }
 
@@ -79,8 +80,7 @@ internal static class AllocationInvariants
                     Assert.False(anyFreeSlot, $"{lot.Row} overflowed while a slot was free");
                     break;
                 case AllocationReason.NoFreeSlot:
-                case AllocationReason.MoveTargetFull:
-                    Assert.Equal(0, freeSlots[IndexOf(request, PinOf(request, lot))]);
+                    Assert.Equal(0, freeSlots[IndexOf(request, lot.BoundRetainerId)]);
                     break;
             }
         }
@@ -92,12 +92,27 @@ internal static class AllocationInvariants
         {
             var assignment = result.Assignments[index];
             var lot = assignment.Lot;
-            var moved = lot.BoundRetainerId == 0 && request.Edits.TryGetMove(lot.Row, out _);
-            Assert.Equal(moved, assignment.Moved);
-            if (lot.BoundRetainerId != 0 || moved)
+            if (lot.BoundRetainerId != 0)
             {
-                Assert.Equal(PinOf(request, lot), assignment.RetainerId);
+                Assert.Equal(lot.BoundRetainerId, assignment.RetainerId);
             }
+
+            if (assignment.Moved)
+            {
+                Assert.True(request.Edits.TryGetMove(lot.Row, out var target));
+                Assert.Equal(target, assignment.RetainerId);
+            }
+        }
+    }
+
+    private static void CheckMoveOutcomes(AllocationRequest request, AllocationResult result)
+    {
+        var expected = AllocationBruteForce.MoveOutcomes(request);
+        for (var lotIndex = 0; lotIndex < request.Lots.Length; lotIndex++)
+        {
+            var lot = request.Lots[lotIndex];
+            var actual = AllocationFixtures.MoveOf(result, lot);
+            Assert.True(expected[lotIndex] == actual, $"{lot.Row} reported move {actual}, expected {expected[lotIndex]}");
         }
     }
 
@@ -191,17 +206,6 @@ internal static class AllocationInvariants
         }
 
         return -1;
-    }
-
-    private static ulong PinOf(AllocationRequest request, AllocationLot lot)
-    {
-        if (lot.BoundRetainerId != 0)
-        {
-            return lot.BoundRetainerId;
-        }
-
-        request.Edits.TryGetMove(lot.Row, out var target);
-        return target;
     }
 
     private static int IndexOf(AllocationRequest request, ulong retainerId)

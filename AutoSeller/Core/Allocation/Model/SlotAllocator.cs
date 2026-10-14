@@ -9,12 +9,8 @@ internal static class SlotAllocator
     public static AllocationResult Allocate(AllocationRequest request)
     {
         var work = new Work(request);
-        var order = work.PriorityOrder();
-        for (var position = 0; position < order.Length; position++)
-        {
-            work.Place(order[position]);
-        }
-
+        work.PlaceMovedLots();
+        work.PlaceOtherLots();
         return work.Result();
     }
 
@@ -37,6 +33,8 @@ internal static class SlotAllocator
         private readonly bool[] excluded;
         private readonly int[] placements;
         private readonly AllocationReason[] reasons;
+        private readonly MoveOutcome[] moveOutcomes;
+        private readonly int[] order;
         private readonly int[] freeSlots;
         private readonly int[] listingCounts;
         private readonly long[] loads;
@@ -44,7 +42,6 @@ internal static class SlotAllocator
         private readonly long[] assignedValues;
         private readonly bool[] gilNearCap;
         private readonly Dictionary<ItemKey, int> placedByItem = new();
-        private int[] order = [];
 
         public Work(AllocationRequest request)
         {
@@ -57,8 +54,11 @@ internal static class SlotAllocator
             excluded = new bool[lotCount];
             placements = new int[lotCount];
             reasons = new AllocationReason[lotCount];
+            moveOutcomes = new MoveOutcome[lotCount];
+            order = new int[lotCount];
             for (var lotIndex = 0; lotIndex < lotCount; lotIndex++)
             {
+                order[lotIndex] = lotIndex;
                 ResolveEdits(lotIndex, request.Edits);
             }
 
@@ -76,43 +76,30 @@ internal static class SlotAllocator
                 listingCounts[retainerIndex] = retainer.ListingCount;
                 loads[retainerIndex] = retainer.Load;
             }
+
+            Array.Sort(order, ComparePriority);
         }
 
-        public int[] PriorityOrder()
+        public void PlaceMovedLots()
         {
-            order = new int[lots.Length];
-            for (var lotIndex = 0; lotIndex < order.Length; lotIndex++)
+            for (var position = 0; position < order.Length && pinKinds[order[position]] == PinKind.Move; position++)
             {
-                order[lotIndex] = lotIndex;
+                Place(order[position]);
             }
 
             Array.Sort(order, ComparePriority);
-            return order;
         }
 
-        public void Place(int lotIndex)
+        public void PlaceOtherLots()
         {
-            if (excluded[lotIndex])
+            for (var position = 0; position < order.Length; position++)
             {
-                reasons[lotIndex] = AllocationReason.Excluded;
-                return;
+                var lotIndex = order[position];
+                if (pinKinds[lotIndex] != PinKind.Move)
+                {
+                    Place(lotIndex);
+                }
             }
-
-            var lot = lots[lotIndex];
-            placedByItem.TryGetValue(lot.Item, out var placed);
-            if (placed + listed.Of(lot.Item) >= lot.ListingsToKeepUp)
-            {
-                reasons[lotIndex] = AllocationReason.ListingsToKeepUpReached;
-                return;
-            }
-
-            if (pinKinds[lotIndex] == PinKind.None)
-            {
-                PlaceFree(lotIndex);
-                return;
-            }
-
-            PlacePinned(lotIndex);
         }
 
         public AllocationResult Result()
@@ -125,12 +112,11 @@ internal static class SlotAllocator
                 var placement = placements[lotIndex];
                 if (placement == Unplaced)
                 {
-                    overflow.Add(new LotOverflow(lots[lotIndex], reasons[lotIndex]));
+                    overflow.Add(new LotOverflow(lots[lotIndex], reasons[lotIndex], moveOutcomes[lotIndex]));
                     continue;
                 }
 
-                var moved = pinKinds[lotIndex] == PinKind.Move;
-                assignments.Add(new LotAssignment(lots[lotIndex], retainers[placement].RetainerId, moved));
+                assignments.Add(new LotAssignment(lots[lotIndex], retainers[placement].RetainerId, moveOutcomes[lotIndex]));
             }
 
             var loadsBuilder = ImmutableArray.CreateBuilder<RetainerLoad>(retainers.Length);
@@ -149,6 +135,36 @@ internal static class SlotAllocator
                 Overflow = overflow.ToImmutable(),
                 Retainers = loadsBuilder.MoveToImmutable(),
             };
+        }
+
+        private void Place(int lotIndex)
+        {
+            if (excluded[lotIndex])
+            {
+                reasons[lotIndex] = AllocationReason.Excluded;
+                return;
+            }
+
+            var lot = lots[lotIndex];
+            placedByItem.TryGetValue(lot.Item, out var placed);
+            if (placed + listed.Of(lot.Item) >= lot.ListingsToKeepUp)
+            {
+                reasons[lotIndex] = AllocationReason.ListingsToKeepUpReached;
+                return;
+            }
+
+            switch (pinKinds[lotIndex])
+            {
+                case PinKind.Move:
+                    PlaceMoved(lotIndex);
+                    break;
+                case PinKind.Owner:
+                    PlaceOwned(lotIndex);
+                    break;
+                default:
+                    PlaceFree(lotIndex);
+                    break;
+            }
         }
 
         private void ResolveEdits(int lotIndex, PlanEdits edits)
@@ -204,30 +220,64 @@ internal static class SlotAllocator
             reasons[lotIndex] = FreeLotOverflowReason();
         }
 
-        private void PlacePinned(int lotIndex)
+        private void PlaceMoved(int lotIndex)
         {
             var target = pinTargets[lotIndex];
-            var isMove = pinKinds[lotIndex] == PinKind.Move;
-            if (target == Unplaced || !retainers[target].CanList)
-            {
-                reasons[lotIndex] = isMove ? AllocationReason.MoveTargetUnavailable : AllocationReason.OwnerRetainerUnavailable;
-                return;
-            }
-
-            var value = lots[lotIndex].EstimatedValue;
-            if (CanTake(target, value) || TryMakeRoom(target, value))
+            var outcome = MoveOutcomeAt(target, lots[lotIndex].EstimatedValue);
+            moveOutcomes[lotIndex] = outcome;
+            if (outcome == MoveOutcome.Moved)
             {
                 Assign(lotIndex, target);
                 return;
             }
 
+            pinKinds[lotIndex] = PinKind.None;
+        }
+
+        private MoveOutcome MoveOutcomeAt(int target, long value)
+        {
+            if (target == Unplaced || !retainers[target].CanList)
+            {
+                return MoveOutcome.TargetUnavailable;
+            }
+
             if (freeSlots[target] == 0)
             {
-                reasons[lotIndex] = isMove ? AllocationReason.MoveTargetFull : AllocationReason.NoFreeSlot;
-                return;
+                return MoveOutcome.TargetFull;
+            }
+
+            if (GilFits(loads[target], value))
+            {
+                return MoveOutcome.Moved;
             }
 
             gilNearCap[target] = true;
+            return MoveOutcome.TargetGilNearCap;
+        }
+
+        private void PlaceOwned(int lotIndex)
+        {
+            var owner = pinTargets[lotIndex];
+            if (owner == Unplaced || !retainers[owner].CanList)
+            {
+                reasons[lotIndex] = AllocationReason.OwnerRetainerUnavailable;
+                return;
+            }
+
+            var value = lots[lotIndex].EstimatedValue;
+            if (CanTake(owner, value) || TryMakeRoom(owner, value))
+            {
+                Assign(lotIndex, owner);
+                return;
+            }
+
+            if (freeSlots[owner] == 0)
+            {
+                reasons[lotIndex] = AllocationReason.NoFreeSlot;
+                return;
+            }
+
+            gilNearCap[owner] = true;
             reasons[lotIndex] = AllocationReason.RetainerGilNearCap;
         }
 
