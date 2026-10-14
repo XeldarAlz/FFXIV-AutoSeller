@@ -64,6 +64,33 @@ public sealed class RunHistoryFileTests : IDisposable
     }
 
     [Fact]
+    public void ARunFromTheDryRunReleaseKeepsItsCounts()
+    {
+        var store = new CheckpointStore<RunHistoryFile>(directory.Path, RunHistoryFile.FileName);
+        var stored = $$"""
+            {"Version":1,"Records":[{"RunId":"{{Guid.NewGuid()}}","StartedAtUtc":"2026-10-01T10:00:00Z","EndedAtUtc":"2026-10-01T10:05:00Z","Outcome":{{(int)RunState.Completed}},"DryRun":true,"WorldId":{{HomeWorld}},"RetainersVisited":2,"RetainersPlanned":2,"WouldReprice":3,"WouldList":2,"Kept":4,"Skipped":1,"Decisions":[]}]}
+            """;
+        File.WriteAllText(store.FilePath, stored);
+
+        var loaded = Assert.Single(store.Load().Value!.Records);
+
+        Assert.Equal((3, 2, 0L, 4, 1), (loaded.Repriced, loaded.Listed, loaded.ListedValue, loaded.Kept, loaded.Skipped));
+    }
+
+    [Fact]
+    public void TheCountsAreStoredUnderTheirFirstNames()
+    {
+        var store = new CheckpointStore<RunHistoryFile>(directory.Path, RunHistoryFile.FileName);
+
+        Assert.True(store.TrySave(new RunHistoryFile { Records = [Record(1)] }));
+
+        var stored = File.ReadAllText(store.FilePath);
+        Assert.Contains("\"WouldReprice\":1", stored, StringComparison.Ordinal);
+        Assert.Contains("\"WouldList\":0", stored, StringComparison.Ordinal);
+        Assert.Contains("\"ListedValue\":900", stored, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ADamagedFileIsSetAsideUnderTheBadSuffix()
     {
         var store = new CheckpointStore<RunHistoryFile>(directory.Path, RunHistoryFile.FileName);
