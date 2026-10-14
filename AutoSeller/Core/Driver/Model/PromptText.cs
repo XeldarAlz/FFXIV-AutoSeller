@@ -3,6 +3,7 @@ namespace AutoSeller.Core.Driver.Model;
 internal readonly struct PromptText
 {
     public const string MacroPlaceholder = "￼";
+    public const int NoMatch = -1;
 
     private const char Hole = '￼';
     private const char SoftHyphen = '­';
@@ -43,6 +44,19 @@ internal readonly struct PromptText
     {
         ReadOnlySpan<char> significant = template;
         return !significant.IsEmpty && Fits(shown, significant);
+    }
+
+    public int FirstMatchIn(ReadOnlySpan<string> shown)
+    {
+        for (var index = 0; index < shown.Length; index++)
+        {
+            if (Matches(shown[index]))
+            {
+                return index;
+            }
+        }
+
+        return NoMatch;
     }
 
     private static bool Fits(ReadOnlySpan<char> shown, ReadOnlySpan<char> template)
