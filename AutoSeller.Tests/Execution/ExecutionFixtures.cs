@@ -1,0 +1,81 @@
+using System.Collections.Immutable;
+using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Pricing.Model;
+
+namespace AutoSeller.Tests.Execution;
+
+internal static class ExecutionFixtures
+{
+    public const ulong Character = 1_001;
+    public const uint HomeWorld = 33;
+    public const ulong FirstRetainer = 501;
+    public const ulong SecondRetainer = 502;
+    public const ulong StrangerRetainer = 900;
+    public const uint Ore = 5_000;
+    public const uint MarketContainer = 12_002;
+    public const uint BagContainer = 0;
+    public const uint SaddlebagContainer = 4_000;
+    public const ushort MarketSlot = 3;
+    public const ushort BagSlot = 7;
+    public const uint BagStack = 12;
+    public const uint LotQuantity = 5;
+    public const uint ListedPrice = 1_000;
+    public const uint UndercutPrice = 900;
+    public const uint DecisionFloor = 600;
+    public const uint RuleFloor = 500;
+    public const uint VendorUnitPrice = 40;
+    public const uint JunkQuantity = 20;
+    public const int SearchGeneration = 3;
+    public const int StepLimitPercent = 25;
+    public const ulong RulesHash = 0x1234;
+    public const ulong PricingHash = 0x5678;
+
+    public static readonly Guid RunId = new("6f1c2a4e-0d5b-4a8e-9a37-2f6a1b3c4d5e");
+    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+    public static readonly DecisionEvidence Evidence = new(77, 901, SearchGeneration, 0, ReferenceSource.UniversalisWorld, 1_100, DecisionFloor);
+
+    public static SellAuthorization Authorization(RunCaps? caps = null, ImmutableArray<ApprovedPrice>? approvedPrices = null, bool dryRun = false)
+    {
+        var problem = SellAuthorization.TryCreate(
+            RunId,
+            Character,
+            HomeWorld,
+            [SecondRetainer, FirstRetainer],
+            RulesHash,
+            PricingHash,
+            StepLimitPercent,
+            caps ?? RunCaps.Default,
+            dryRun,
+            SellAuthorization.CurrentPolicyVersion,
+            approvedPrices ?? [],
+            Now,
+            out var authorization);
+        Assert.Equal(AuthorizationProblem.None, problem);
+        return authorization!;
+    }
+
+    public static SaleWrite Reprice(uint newPrice = UndercutPrice)
+    {
+        return new SaleWrite(WriteKind.Reprice, FirstRetainer, MarketContainer, MarketSlot, Ore, false, LotQuantity, ListedPrice, newPrice, Evidence);
+    }
+
+    public static SaleWrite List(uint price = ListedPrice)
+    {
+        return new SaleWrite(WriteKind.List, FirstRetainer, BagContainer, BagSlot, Ore, false, LotQuantity, 0, price, Evidence);
+    }
+
+    public static SaleWrite Return()
+    {
+        return new SaleWrite(WriteKind.Return, FirstRetainer, MarketContainer, MarketSlot, Ore, false, LotQuantity, ListedPrice, 0, Evidence);
+    }
+
+    public static SaleWrite Vendor()
+    {
+        return new SaleWrite(WriteKind.Vendor, FirstRetainer, BagContainer, BagSlot, Ore, false, JunkQuantity, 0, VendorUnitPrice, default);
+    }
+
+    public static SaleWrite Move()
+    {
+        return new SaleWrite(WriteKind.Move, FirstRetainer, SaddlebagContainer, BagSlot, Ore, false, LotQuantity, 0, 0, default);
+    }
+}
