@@ -27,6 +27,11 @@ internal static class ReferenceSelector
             return dataCenter;
         }
 
+        if (competition.ItemId != item.ItemId)
+        {
+            return default;
+        }
+
         return FromHistory(item, competition.History.AsSpan(), competition.CapturedAtUtc);
     }
 

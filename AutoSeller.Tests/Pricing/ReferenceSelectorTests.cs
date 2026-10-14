@@ -62,6 +62,25 @@ public sealed class ReferenceSelectorTests
     }
 
     [Fact]
+    public void SaleHistoryOfAnotherItemIsIgnored()
+    {
+        var foreign = new CompetitorSnapshot
+        {
+            ItemId = OtherItemId,
+            WorldId = WorldId,
+            Generation = Generation,
+            CapturedAtUtc = Now,
+            ExpectedCount = 0,
+            Listings = [],
+            History = [Sale(77_777, Hours(1))],
+        };
+        var dataCenter = Reference(2_000, ReferenceSource.UniversalisDataCenter);
+
+        Assert.False(ReferenceSelector.Select(Normal, default, default, foreign, Now).Exists);
+        Assert.Equal(dataCenter, ReferenceSelector.Select(Normal, default, dataCenter, foreign, Now));
+    }
+
+    [Fact]
     public void ReferenceForTheOtherQualityIsIgnored()
     {
         var highWorld = Reference(5_000, isHq: true);
