@@ -1,5 +1,8 @@
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
@@ -105,6 +108,22 @@ public sealed class SaleGuardTests
             Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(loweredFloor).Rejection);
             Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(SaleGuard.Evaluate(loweredFloor).Rejection));
         }
+    }
+
+    [Fact]
+    public void TheLiveConfigurationIsComparedWithWhatStartFroze()
+    {
+        var input = GuardInput(Reprice());
+        var rebuilt = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+        var loweredFloor = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor - 1 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+        var vendoringOn = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []);
+        var editedPlan = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now)]);
+
+        Assert.True(SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(rebuilt), CurrentPricingHash = Fingerprint.OfPricing(new PricingSettings()) }).IsAllowed);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(loweredFloor) }).Rejection);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(vendoringOn) }).Rejection);
+        Assert.Equal(SaleRejection.PricingChanged, SaleGuard.Evaluate(input with { CurrentPricingHash = Fingerprint.OfPricing(StartPricing with { StepLimitPercent = 90 }) }).Rejection);
+        Assert.Equal(SaleRejection.PlanEditsChanged, SaleGuard.Evaluate(input with { CurrentPlanEditsHash = Fingerprint.OfPlanEdits(editedPlan) }).Rejection);
     }
 
     [Fact]

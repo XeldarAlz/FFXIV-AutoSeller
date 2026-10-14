@@ -1,5 +1,8 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
@@ -13,7 +16,6 @@ internal enum AuthorizationProblem : byte
     NoRetainers,
     InvalidRetainer,
     DuplicateRetainer,
-    InvalidStepLimit,
     InvalidCaps,
     InvalidApprovedPrice,
     DuplicateApprovedPrice,
@@ -21,9 +23,7 @@ internal enum AuthorizationProblem : byte
 
 internal sealed class SellAuthorization
 {
-    public const int CurrentPolicyVersion = 1;
-    public const int MinimumStepLimitPercent = 5;
-    public const int MaximumStepLimitPercent = 90;
+    public const int CurrentPolicyVersion = 2;
 
     private SellAuthorization()
     {
@@ -37,13 +37,17 @@ internal sealed class SellAuthorization
 
     public required ImmutableArray<ulong> RetainerIds { get; init; }
 
+    public required RuleBook Rules { get; init; }
+
+    public required PricingSettings Pricing { get; init; }
+
+    public required PlanEdits PlanEdits { get; init; }
+
     public required ulong RulesHash { get; init; }
 
     public required ulong PricingHash { get; init; }
 
     public required ulong PlanEditsHash { get; init; }
-
-    public required int StepLimitPercent { get; init; }
 
     public required RunCaps Caps { get; init; }
 
@@ -55,15 +59,16 @@ internal sealed class SellAuthorization
 
     public required DateTime CreatedAtUtc { get; init; }
 
+    public int StepLimitPercent => Pricing.StepLimitPercent;
+
     public static AuthorizationProblem TryCreate(
         Guid runId,
         ulong characterContentId,
         uint homeWorldId,
         ImmutableArray<ulong> retainerIds,
-        ulong rulesHash,
-        ulong pricingHash,
-        ulong planEditsHash,
-        int stepLimitPercent,
+        RuleBook rules,
+        PricingSettings pricing,
+        PlanEdits planEdits,
         RunCaps caps,
         bool dryRun,
         int policyVersion,
@@ -76,7 +81,7 @@ internal sealed class SellAuthorization
         var frozenPrices = approvedPrices.IsDefault ? [] : approvedPrices.AsSpan().ToArray();
         Array.Sort(frozenRetainers);
         Array.Sort(frozenPrices, ApprovedPrice.Compare);
-        var problem = Validate(runId, characterContentId, homeWorldId, frozenRetainers, stepLimitPercent, caps);
+        var problem = Validate(runId, characterContentId, homeWorldId, frozenRetainers, caps);
         if (problem == AuthorizationProblem.None)
         {
             problem = ValidateApprovedPrices(frozenPrices, frozenRetainers);
@@ -93,10 +98,12 @@ internal sealed class SellAuthorization
             CharacterContentId = characterContentId,
             HomeWorldId = homeWorldId,
             RetainerIds = ImmutableCollectionsMarshal.AsImmutableArray(frozenRetainers),
-            RulesHash = rulesHash,
-            PricingHash = pricingHash,
-            PlanEditsHash = planEditsHash,
-            StepLimitPercent = stepLimitPercent,
+            Rules = rules,
+            Pricing = pricing,
+            PlanEdits = planEdits,
+            RulesHash = Fingerprint.OfRuleBook(rules),
+            PricingHash = Fingerprint.OfPricing(pricing),
+            PlanEditsHash = Fingerprint.OfPlanEdits(planEdits),
             Caps = caps,
             DryRun = dryRun,
             PolicyVersion = policyVersion,
@@ -113,10 +120,9 @@ internal sealed class SellAuthorization
             recorded.CharacterContentId,
             recorded.HomeWorldId,
             recorded.RetainerIds,
-            recorded.RulesHash,
-            recorded.PricingHash,
-            recorded.PlanEditsHash,
-            recorded.StepLimitPercent,
+            recorded.Rules.ToRuleBook(),
+            recorded.Pricing,
+            PlanEdits.Restore(recorded.PlanEdits.AsSpan()),
             recorded.Caps,
             recorded.DryRun,
             recorded.PolicyVersion,
@@ -135,10 +141,9 @@ internal sealed class SellAuthorization
             CharacterContentId = CharacterContentId,
             HomeWorldId = HomeWorldId,
             RetainerIds = RetainerIds,
-            RulesHash = RulesHash,
-            PricingHash = PricingHash,
-            PlanEditsHash = PlanEditsHash,
-            StepLimitPercent = StepLimitPercent,
+            Rules = AuthorizedRules.From(Rules),
+            Pricing = Pricing,
+            PlanEdits = PlanEdits.Items,
             Caps = Caps,
             DryRun = DryRun,
             PolicyVersion = PolicyVersion,
@@ -173,7 +178,6 @@ internal sealed class SellAuthorization
         ulong characterContentId,
         uint homeWorldId,
         ulong[] sortedRetainers,
-        int stepLimitPercent,
         RunCaps caps)
     {
         if (runId == Guid.Empty)
@@ -207,11 +211,6 @@ internal sealed class SellAuthorization
             {
                 return AuthorizationProblem.DuplicateRetainer;
             }
-        }
-
-        if (stepLimitPercent is < MinimumStepLimitPercent or > MaximumStepLimitPercent)
-        {
-            return AuthorizationProblem.InvalidStepLimit;
         }
 
         return caps.IsValid ? AuthorizationProblem.None : AuthorizationProblem.InvalidCaps;

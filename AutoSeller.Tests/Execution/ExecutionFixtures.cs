@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Rules.Model;
 
 namespace AutoSeller.Tests.Execution;
 
@@ -27,25 +29,40 @@ internal static class ExecutionFixtures
     public const uint JunkQuantity = 20;
     public const int SearchGeneration = 3;
     public const int StepLimitPercent = 25;
-    public const ulong RulesHash = 0x1234;
-    public const ulong PricingHash = 0x5678;
-    public const ulong PlanEditsHash = 0x9ABC;
 
+    public static readonly RuleBook StartRules = RuleBook.Create(
+        [new ItemRule { ItemId = Ore, Floor = RuleFloor }],
+        [],
+        ItemIdSet.Empty,
+        VendorSettings.Off,
+        SellSources.Default,
+        []);
+
+    public static readonly PricingSettings StartPricing = new() { StepLimitPercent = StepLimitPercent };
+    public static readonly ulong RulesHash = Fingerprint.OfRuleBook(StartRules);
+    public static readonly ulong PricingHash = Fingerprint.OfPricing(StartPricing);
+    public static readonly ulong PlanEditsHash = Fingerprint.OfPlanEdits(PlanEdits.None);
     public static readonly Guid RunId = new("6f1c2a4e-0d5b-4a8e-9a37-2f6a1b3c4d5e");
     public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+    public static readonly PlanRowKey ListingRow = new(FirstRetainer, MarketContainer, MarketSlot, 0, Ore, false);
     public static readonly DecisionEvidence Evidence = new(77, 901, SearchGeneration, 0, ReferenceSource.UniversalisWorld, 1_100, DecisionFloor);
 
-    public static SellAuthorization Authorization(RunCaps? caps = null, ImmutableArray<ApprovedPrice>? approvedPrices = null, bool dryRun = false)
+    public static SellAuthorization Authorization(
+        RunCaps? caps = null,
+        ImmutableArray<ApprovedPrice>? approvedPrices = null,
+        bool dryRun = false,
+        RuleBook? rules = null,
+        PricingSettings? pricing = null,
+        PlanEdits? planEdits = null)
     {
         var problem = SellAuthorization.TryCreate(
             RunId,
             Character,
             HomeWorld,
             [SecondRetainer, FirstRetainer],
-            RulesHash,
-            PricingHash,
-            PlanEditsHash,
-            StepLimitPercent,
+            rules ?? StartRules,
+            pricing ?? StartPricing,
+            planEdits ?? PlanEdits.None,
             caps ?? RunCaps.Default,
             dryRun,
             SellAuthorization.CurrentPolicyVersion,

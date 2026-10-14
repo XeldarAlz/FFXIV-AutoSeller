@@ -14,6 +14,20 @@ internal sealed class PlanEdits
 
     public ImmutableArray<PlanEdit> Items { get; }
 
+    public static PlanEdits Restore(ReadOnlySpan<PlanEdit> edits)
+    {
+        var builder = ImmutableArray.CreateBuilder<PlanEdit>(edits.Length);
+        for (var index = 0; index < edits.Length; index++)
+        {
+            if (!IsReplacedLater(edits, index))
+            {
+                builder.Add(edits[index]);
+            }
+        }
+
+        return builder.Count == 0 ? None : new PlanEdits(builder.ToImmutable());
+    }
+
     public static PlanEditRefusal Validate(in PlanEdit edit, in PlanEditTarget target)
     {
         return edit.Kind switch
@@ -115,6 +129,20 @@ internal sealed class PlanEdits
         }
 
         return edit.Value < target.Floor ? PlanEditRefusal.PriceBelowFloor : PlanEditRefusal.None;
+    }
+
+    private static bool IsReplacedLater(ReadOnlySpan<PlanEdit> edits, int position)
+    {
+        var edit = edits[position];
+        for (var index = position + 1; index < edits.Length; index++)
+        {
+            if (edits[index].Row == edit.Row && edits[index].Kind == edit.Kind)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryFindRow(ReadOnlySpan<PlanEditTarget> rows, PlanRowKey row, out PlanEditTarget target)

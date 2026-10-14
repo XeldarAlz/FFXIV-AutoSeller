@@ -285,7 +285,7 @@ public sealed class JournalReplayerTests
     public void AnAuthorizationThatNoLongerValidatesBlocksWrites()
     {
         var journal = new MemoryJournal();
-        var recorded = Authorization().ToJournalEvent(1, Now) with { StepLimitPercent = 0 };
+        var recorded = Authorization().ToJournalEvent(1, Now) with { RetainerIds = [FirstRetainer, FirstRetainer] };
         new JournalWriter(journal).Append(recorded);
 
         var progress = JournalReplayer.Replay(new JournalWriter(journal).Entries);

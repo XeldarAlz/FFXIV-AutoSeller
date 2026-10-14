@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Allocation.Model;
@@ -5,6 +6,7 @@ namespace AutoSeller.Core.Allocation.Model;
 internal readonly record struct PlanRowKey(ulong RetainerId, uint Container, ushort Slot, ushort LotIndex, uint ItemId, bool IsHq)
     : IComparable<PlanRowKey>
 {
+    [JsonIgnore]
     public ItemKey Item => new(ItemId, IsHq);
 
     public int CompareTo(PlanRowKey other)
