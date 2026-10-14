@@ -1,0 +1,169 @@
+using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Ledger;
+using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Tests.Ledger;
+using static AutoSeller.Tests.Execution.ExecutionFixtures;
+
+namespace AutoSeller.Tests.Execution;
+
+public sealed class RunReactionsTests
+{
+    private static readonly Guid CaughtWrite = new("99999999-0000-0000-0000-000000000001");
+
+    private static readonly Dictionary<SaleRejection, RunReaction> GuardReactions = new()
+    {
+        [SaleRejection.None] = RunReaction.Continue,
+        [SaleRejection.WrongRun] = RunReaction.EndRun,
+        [SaleRejection.WrongCharacter] = RunReaction.EndRun,
+        [SaleRejection.NotOnHomeWorld] = RunReaction.EndRun,
+        [SaleRejection.RetainerNotAuthorized] = RunReaction.EndRetainer,
+        [SaleRejection.WrongRetainer] = RunReaction.EndRetainer,
+        [SaleRejection.WindowChainNotReady] = RunReaction.EndRetainer,
+        [SaleRejection.StaleSearch] = RunReaction.SkipItem,
+        [SaleRejection.WritePending] = RunReaction.NeedsReconciliation,
+        [SaleRejection.JournalUnresolved] = RunReaction.NeedsReconciliation,
+        [SaleRejection.ItemMismatch] = RunReaction.SkipItem,
+        [SaleRejection.QualityMismatch] = RunReaction.SkipItem,
+        [SaleRejection.QuantityMismatch] = RunReaction.SkipItem,
+        [SaleRejection.ListingChanged] = RunReaction.SkipItem,
+        [SaleRejection.NotEligible] = RunReaction.SkipItem,
+        [SaleRejection.BelowFloor] = RunReaction.SkipItem,
+        [SaleRejection.OverStepLimit] = RunReaction.SkipItem,
+        [SaleRejection.PriceOutOfRange] = RunReaction.SkipItem,
+        [SaleRejection.RepriceCapReached] = RunReaction.SkipItem,
+        [SaleRejection.ListingCapReached] = RunReaction.SkipItem,
+        [SaleRejection.VendorValueCapReached] = RunReaction.SkipItem,
+        [SaleRejection.NoVendorRule] = RunReaction.SkipItem,
+        [SaleRejection.VendorHighQuality] = RunReaction.SkipItem,
+        [SaleRejection.VendorGear] = RunReaction.SkipItem,
+        [SaleRejection.VendorProtected] = RunReaction.SkipItem,
+    };
+
+    private static readonly Dictionary<SellWindowVerdict, RunReaction> WindowReactions = new()
+    {
+        [SellWindowVerdict.Matches] = RunReaction.Continue,
+        [SellWindowVerdict.Unreadable] = RunReaction.EndRetainer,
+        [SellWindowVerdict.OtherItem] = RunReaction.SkipItem,
+        [SellWindowVerdict.OtherQuality] = RunReaction.SkipItem,
+        [SellWindowVerdict.OtherQuantity] = RunReaction.SkipItem,
+        [SellWindowVerdict.OtherPrice] = RunReaction.SkipItem,
+    };
+
+    private static readonly Dictionary<ReadBackOutcome, RunReaction> ReadBackReactions = new()
+    {
+        [ReadBackOutcome.Pending] = RunReaction.Continue,
+        [ReadBackOutcome.Confirmed] = RunReaction.Continue,
+        [ReadBackOutcome.Rejected] = RunReaction.SkipItem,
+        [ReadBackOutcome.Unknown] = RunReaction.NeedsReconciliation,
+    };
+
+    [Fact]
+    public void EveryGuardRejectionHasItsReaction()
+    {
+        foreach (var value in Enum.GetValues<SaleRejection>())
+        {
+            Assert.True(GuardReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
+            Assert.Equal(expected, RunReactions.ForGuard(value));
+        }
+    }
+
+    [Fact]
+    public void EveryWindowVerdictHasItsReaction()
+    {
+        foreach (var value in Enum.GetValues<SellWindowVerdict>())
+        {
+            Assert.True(WindowReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
+            Assert.Equal(expected, RunReactions.ForWindow(value));
+        }
+    }
+
+    [Fact]
+    public void EveryReadBackOutcomeHasItsReaction()
+    {
+        foreach (var value in Enum.GetValues<ReadBackOutcome>())
+        {
+            Assert.True(ReadBackReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
+            Assert.Equal(expected, RunReactions.ForReadBack(value));
+        }
+    }
+
+    [Fact]
+    public void AStopOrPauseNeverLandsBetweenTypingAndItsOutcome()
+    {
+        (RunState State, InterruptHandling Expected)[] rows =
+        [
+            (RunState.Guarding, InterruptHandling.Immediate),
+            (RunState.PersistingIntent, InterruptHandling.CancelFirst),
+            (RunState.Typing, InterruptHandling.CancelFirst),
+            (RunState.CheckingWindow, InterruptHandling.CancelFirst),
+            (RunState.Confirming, InterruptHandling.ReadBackFirst),
+            (RunState.ReadingBack, InterruptHandling.ReadBackFirst),
+            (RunState.ClosingSellList, InterruptHandling.Immediate),
+        ];
+        for (var index = 0; index < rows.Length; index++)
+        {
+            Assert.Equal(rows[index].Expected, RunReactions.ForInterruption(rows[index].State));
+        }
+    }
+
+    [Fact]
+    public void AWriteCaughtByStopAfterConfirmIsReadBackAndJournaled()
+    {
+        var journal = new MemoryJournal();
+        var writer = new JournalWriter(journal).Authorize().Intent(CaughtWrite);
+        var stoppedIn = RunState.Confirming;
+
+        Assert.Equal(InterruptHandling.ReadBackFirst, RunReactions.ForInterruption(stoppedIn));
+        ListingSlot[] before = [new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, ListedPrice)];
+        ListingSlot[] after = [new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, UndercutPrice)];
+        var verdict = SaleReadBack.Judge(
+            Reprice(),
+            new ReadBackSample(before, true, ReadBackSample.Unread, ReadBackSample.Unread),
+            new ReadBackSample(after, true, ReadBackSample.Unread, ReadBackSample.Unread),
+            400);
+        Assert.Equal(ReadBackVerdict.Confirmed, verdict);
+        writer.Confirmed(CaughtWrite).Ended(RunState.Stopped);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+
+        Assert.False(review.BlocksWrites);
+        Assert.Equal(1, review.Runs[0].Reprices);
+        Assert.Equal(RunState.Stopped, review.Runs[0].RecoveredState);
+    }
+
+    [Fact]
+    public void AWriteCaughtByStopBeforeConfirmIsCancelledAndJournaled()
+    {
+        var journal = new MemoryJournal();
+        var writer = new JournalWriter(journal).Authorize().Intent(CaughtWrite);
+
+        Assert.Equal(InterruptHandling.CancelFirst, RunReactions.ForInterruption(RunState.Typing));
+        writer.Rejected(CaughtWrite, WriteRejection.Cancelled).Ended(RunState.Stopped);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+
+        Assert.False(review.BlocksWrites);
+        Assert.Equal(0, review.Runs[0].Reprices);
+        Assert.Equal(1, review.Runs[0].RejectedWrites);
+    }
+
+    [Fact]
+    public void AStopThatLeavesTheReadBackUnknownBlocksTheNextRun()
+    {
+        var journal = new MemoryJournal();
+        var writer = new JournalWriter(journal).Authorize().Intent(CaughtWrite);
+        ListingSlot[] before = [new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, ListedPrice)];
+        var verdict = SaleReadBack.Judge(
+            Reprice(),
+            new ReadBackSample(before, true, ReadBackSample.Unread, ReadBackSample.Unread),
+            new ReadBackSample([], false, ReadBackSample.Unread, ReadBackSample.Unread),
+            SaleReadBack.SettleWindowMs);
+
+        Assert.Equal(RunReaction.NeedsReconciliation, RunReactions.ForReadBack(verdict.Outcome));
+        writer.Unknown(CaughtWrite, verdict.Cause).Ended(RunState.NeedsPlayer);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+        Assert.True(review.BlocksWrites);
+        Assert.Equal(CaughtWrite, Assert.Single(review.Unresolved).WriteId);
+    }
+}
