@@ -316,6 +316,25 @@ public sealed class UniversalisClientTests
     }
 
     [Fact]
+    public async Task AHungAttemptTimesOutOnTheClockAndIsRetried()
+    {
+        var clock = new ManualClock();
+        var handler = new ScriptedHandler(_ => Respond(HttpStatusCode.OK, Read(PhoenixFixture))) { HangingRequests = 1 };
+        using var client = NewClient(handler, clock);
+
+        var fetch = client.FetchReferencesAsync(PhoenixChunk(), CancellationToken.None);
+        await handler.HangStarted;
+        clock.Advance(UniversalisClient.RequestTimeout - TimeSpan.FromTicks(1));
+        Assert.False(fetch.IsCompleted);
+        clock.Advance(TimeSpan.FromTicks(1));
+        var result = await fetch.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(result.Failed);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal([RetryPolicy.Backoff(1, 0.5)], clock.Delays);
+    }
+
+    [Fact]
     public async Task EveryAttemptTimingOutIsReportedAsATimeout()
     {
         var handler = new ScriptedHandler(_ => throw new TaskCanceledException("timed out"));

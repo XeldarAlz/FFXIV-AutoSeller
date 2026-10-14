@@ -8,7 +8,7 @@ namespace AutoSeller.Core.Pricing.Universalis;
 
 internal sealed class UniversalisClient : IDisposable
 {
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
+    public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
 
     private static readonly TimeSpan ConnectionLifetime = TimeSpan.FromMinutes(5);
 
@@ -123,8 +123,8 @@ internal sealed class UniversalisClient : IDisposable
             return Reply.Final(UniversalisFailure.ServerPaused);
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(RequestTimeout);
+        using var timer = new CancellationTokenSource(RequestTimeout, time);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timer.Token);
         try
         {
             using var response = await http.GetAsync(path, timeout.Token).ConfigureAwait(false);

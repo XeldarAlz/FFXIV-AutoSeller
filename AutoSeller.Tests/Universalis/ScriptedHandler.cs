@@ -9,11 +9,16 @@ internal sealed record SeenRequest(string Uri, string UserAgent);
 internal sealed class ScriptedHandler(params Func<HttpRequestMessage, HttpResponseMessage>[] script) : HttpMessageHandler
 {
     private readonly Lock gate = new();
+    private readonly TaskCompletionSource hangStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int inFlight;
 
     public List<SeenRequest> Requests { get; } = [];
 
     public TimeSpan HoldFor { get; init; }
+
+    public int HangingRequests { get; init; }
+
+    public Task HangStarted => hangStarted.Task;
 
     public int MostInFlight { get; private set; }
 
@@ -30,6 +35,12 @@ internal sealed class ScriptedHandler(params Func<HttpRequestMessage, HttpRespon
 
         try
         {
+            if (index < HangingRequests)
+            {
+                hangStarted.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+
             if (HoldFor > TimeSpan.Zero)
             {
                 await Task.Delay(HoldFor, cancellationToken);
