@@ -227,6 +227,31 @@ public sealed class SearchReuseTests
     }
 
     [Fact]
+    public void ReusedSnapshotStaysFreshForTypingAfterLaterSearchesMoveTheGeneration()
+    {
+        const int noJitter = 0;
+        var machine = new ListingRequestMachine();
+        machine.Begin(Ore, noJitter);
+        machine.Poll(0, 0, 0);
+        machine.OnSent(0, true, noJitter);
+        var builtGeneration = machine.Generation;
+        Assert.True(CompetitorSnapshotBuilder.TryBuild(Capture([Row(1, 900)], 1, generation: builtGeneration), machine.Generation, out var built, out _));
+        machine.OnCaptured();
+        var reuse = new SearchReuse();
+        reuse.Store(built, false);
+
+        machine.Begin(Cloth, noJitter);
+        machine.Poll(ListingRequestMachine.DefaultIntervalMs, 0, 0);
+        machine.OnSent(ListingRequestMachine.DefaultIntervalMs, true, noJitter);
+        var decidedAt = Now + SearchReuse.TypingWindow;
+
+        Assert.True(reuse.TryReuse(NormalOre, decidedAt, out var reused));
+        Assert.Equal(builtGeneration, reused.Generation);
+        Assert.NotEqual(machine.Generation, reused.Generation);
+        Assert.True(SearchReuse.IsFreshForTyping(reused, decidedAt));
+    }
+
+    [Fact]
     public void ReusedSnapshotKeepsItsCaptureTimeForTheTypingCheck()
     {
         var reuse = new SearchReuse();

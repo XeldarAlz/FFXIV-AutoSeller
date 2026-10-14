@@ -34,13 +34,13 @@ internal static class MarketFixtures
         return rows;
     }
 
-    public static CompetitorCapture Capture(ReadOnlySpan<ObservedListing> listings, int announcedCount, ReadOnlySpan<MarketSale> history = default)
+    public static CompetitorCapture Capture(ReadOnlySpan<ObservedListing> listings, int announcedCount, ReadOnlySpan<MarketSale> history = default, int generation = SearchGeneration)
     {
         return new CompetitorCapture
         {
             ItemId = Ore,
             WorldId = HomeWorld,
-            Generation = SearchGeneration,
+            Generation = generation,
             CapturedAtUtc = Now,
             AnnouncedCount = announcedCount,
             Listings = listings,
