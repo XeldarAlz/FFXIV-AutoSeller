@@ -33,7 +33,7 @@ internal enum LotHold : byte
 
 internal readonly record struct SlotOutcome(SlotFacts Slot, EligibilityReason Reason, LotHold Hold, ushort LotCount, uint KeptQuantity);
 
-internal readonly record struct PlannedLot(PlanRowKey Row, SlotSource Source, uint Quantity, ulong PreferredRetainerId, byte ListingsToKeepUp)
+internal readonly record struct PlannedLot(PlanRowKey Row, SlotSource Source, uint Quantity, ulong PreferredRetainerId, byte ListingsToKeepUp, long EstimatedValue)
 {
     public ItemKey Item => Row.Item;
 
@@ -410,7 +410,7 @@ internal static class LotPlanner
                     var row = new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, (ushort)lotIndex, slot.ItemId, slot.IsHq);
                     var quantity = split.QuantityOf(lotIndex);
                     plannedQuantities[stockIndex] += quantity;
-                    lots.Add(new PlannedLot(row, slot.Source, quantity, terms.PreferredRetainerId, listingsToKeepUp));
+                    lots.Add(new PlannedLot(row, slot.Source, quantity, terms.PreferredRetainerId, listingsToKeepUp, Gil.SaturatingMultiply(stock[stockIndex].ReferenceUnitPrice, quantity)));
                 }
 
                 var partial = taken < split.LotCount ? LotHold.ListingsToKeepUpReached : LotHold.None;

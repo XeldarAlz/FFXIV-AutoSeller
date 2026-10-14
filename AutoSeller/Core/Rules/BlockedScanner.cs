@@ -108,12 +108,6 @@ internal sealed class BlockedScanner : IDisposable
             return ListingCounts.Empty;
         }
 
-        var snapshots = new RetainerSnapshot[current.Snapshots.Count];
-        for (var index = 0; index < snapshots.Length; index++)
-        {
-            snapshots[index] = current.Snapshots[index];
-        }
-
-        return ListingCounts.From(snapshots);
+        return ListingCounts.From(current.SnapshotArray());
     }
 }

@@ -264,7 +264,7 @@ internal sealed class SellRun
         for (var index = 0; index < plan.Lots.Length; index++)
         {
             var lot = plan.Lots[index];
-            lots.Add(AllocationLot.From(lot, (long)Stock(OreInTheBags).ReferenceUnitPrice * lot.Quantity));
+            lots.Add(AllocationLot.From(lot));
         }
 
         return lots.MoveToImmutable();
