@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
@@ -16,6 +17,10 @@ internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int Fre
 internal sealed unsafe class BagReader
 {
     private readonly Func<uint, bool> isProtected;
+    private readonly DiagnosticLog bagLog = new();
+    private readonly DiagnosticLog retainerLog = new();
+    private readonly DiagnosticLog gearsetLog = new();
+    private readonly StringBuilder unloaded = new();
 
     public BagReader(Func<uint, bool> isProtected)
     {
@@ -32,9 +37,10 @@ internal sealed unsafe class BagReader
 
         var openRetainerId = OpenRetainerId(manager);
         var readRetainer = openRetainerId != 0 && Contains(inventoryRetainerIds, openRetainerId);
-        var gearsets = GearsetGuard.Read();
+        var gearsets = GearsetGuard.Read(gearsetLog);
         var containers = SourceContainers.For(sources, readRetainer);
         var slots = ImmutableArray.CreateBuilder<SlotFacts>();
+        unloaded.Clear();
         var skipped = 0;
         var protectedSlots = 0;
         var gearsetSlots = 0;
@@ -45,7 +51,7 @@ internal sealed unsafe class BagReader
             if (container == null || !container->IsLoaded)
             {
                 skipped++;
-                RunLog.Info($"Bags: container {source.Container} ({source.Source}) is not loaded; skipped.");
+                unloaded.Append(unloaded.Length == 0 ? " (not loaded: " : ", ").Append(source.Container);
                 continue;
             }
 
@@ -77,12 +83,17 @@ internal sealed unsafe class BagReader
             }
         }
 
+        if (unloaded.Length > 0)
+        {
+            unloaded.Append(')');
+        }
+
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
-        RunLog.Info($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
+        bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
         return new BagRead(slots.ToImmutable(), freeBagSlots, openRetainerId);
     }
 
-    private static ulong OpenRetainerId(InventoryManager* manager)
+    private ulong OpenRetainerId(InventoryManager* manager)
     {
         var retainers = RetainerManager.Instance();
         var atBell = Svc.Condition[ConditionFlag.OccupiedSummoningBell];
@@ -90,7 +101,7 @@ internal sealed unsafe class BagReader
         var retainerObjectId = retainers == null ? 0 : retainers->RetainerObjectId;
         var firstPage = manager->GetInventoryContainer(InventoryType.RetainerPage1);
         var pageLoaded = firstPage != null && firstPage->IsLoaded;
-        RunLog.Info($"Bags: retainer open check: at bell {atBell}, last selected retainer {lastSelected}, retainer object 0x{retainerObjectId:X}, first retainer page loaded {pageLoaded}.");
+        retainerLog.Report($"Bags: retainer open check: at bell {atBell}, last selected retainer {lastSelected}, retainer object 0x{retainerObjectId:X}, first retainer page loaded {pageLoaded}.");
         return atBell && pageLoaded ? lastSelected : 0;
     }
 

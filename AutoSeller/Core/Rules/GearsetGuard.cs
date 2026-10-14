@@ -9,12 +9,12 @@ internal static unsafe class GearsetGuard
     private const int SlotsPerGearset = 14;
     private const int MaximumGearsets = 100;
 
-    public static GearsetItems Read()
+    public static GearsetItems Read(DiagnosticLog log)
     {
         var module = RaptureGearsetModule.Instance();
         if (module == null)
         {
-            RunLog.Info($"Gear sets: the gear set module is not loaded; no item counts as in a gear set.");
+            log.Report($"Gear sets: the gear set module is not loaded; no item counts as in a gear set.");
             return GearsetItems.Empty;
         }
 
@@ -53,7 +53,7 @@ internal static unsafe class GearsetGuard
         }
 
         var guarded = GearsetItems.From(rawItemIds[..count]);
-        RunLog.Info($"Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {MarketItemId.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
+        log.Report($"Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {MarketItemId.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
         return guarded;
     }
 }
