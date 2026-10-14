@@ -11,6 +11,11 @@ namespace AutoSeller.Windows.Sections.Config;
 
 internal static class AutoRetainerSettings
 {
+    private const int CountBits = 32;
+
+    private static CachedText altsText;
+    private static CachedText jobText;
+
     public static void Draw(Plugin plugin)
     {
         var configuration = plugin.Configuration;
@@ -84,18 +89,35 @@ internal static class AutoRetainerSettings
         }
 
         var alts = plugin.OwnSellers.Alts;
-        return string.Concat(Loc.Plural(L.AutoRetainer.AltCharacters, alts.ContentIds.Length), TextDraw.Separator, Loc.Plural(L.Plan.Retainers, alts.RetainerIds.Length));
+        var key = ((long)alts.ContentIds.Length << CountBits) | (uint)alts.RetainerIds.Length;
+        return altsText.Get(key, static key => string.Concat(
+            Loc.Plural(L.AutoRetainer.AltCharacters, (int)(key >> CountBits)),
+            TextDraw.Separator,
+            Loc.Plural(L.Plan.Retainers, (int)(uint)key)));
     }
 
-    private static string JobText(Configuration configuration, PostprocessHost host) => host.Phase switch
+    private static string JobText(Configuration configuration, PostprocessHost host)
     {
-        HandshakePhase.Requested => Loc.T(L.AutoRetainer.JobRequested, host.RetainerName),
-        HandshakePhase.Working or HandshakePhase.Unwinding => Loc.T(L.AutoRetainer.JobWorking, host.RetainerName),
-        HandshakePhase.Returning => Loc.T(L.AutoRetainer.JobReturning, host.RetainerName),
-        _ when host.StoodDown => Loc.T(L.AutoRetainer.JobStoodDown),
-        _ when configuration.AutoRetainerPostprocess => Loc.T(L.AutoRetainer.JobWaiting),
-        _ => Loc.T(L.AutoRetainer.JobOff),
-    };
+        var phase = host.Phase;
+        if (phase == HandshakePhase.Idle)
+        {
+            return Loc.T(host.StoodDown ? L.AutoRetainer.JobStoodDown : configuration.AutoRetainerPostprocess ? L.AutoRetainer.JobWaiting : L.AutoRetainer.JobOff);
+        }
+
+        var retainerName = host.RetainerName;
+        var key = HashCode.Combine(phase, retainerName);
+        if (!jobText.TryGet(key, out var text))
+        {
+            text = jobText.Set(key, Loc.T(phase switch
+            {
+                HandshakePhase.Requested => L.AutoRetainer.JobRequested,
+                HandshakePhase.Returning => L.AutoRetainer.JobReturning,
+                _ => L.AutoRetainer.JobWorking,
+            }, retainerName));
+        }
+
+        return text;
+    }
 
     private static Vector4 JobColor(PostprocessHost host) => host.Phase switch
     {
