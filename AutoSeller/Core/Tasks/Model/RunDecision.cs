@@ -3,6 +3,7 @@ using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Tasks.Model;
@@ -11,6 +12,7 @@ internal enum RunRowKind : byte
 {
     Listing,
     Lot,
+    Vendor,
 }
 
 internal enum RunSkip : byte
@@ -54,10 +56,19 @@ internal readonly record struct RunDecision(
     public bool Listed => Clear && Decision.Action == SellAction.List;
 
     [JsonIgnore]
+    public bool Returned => Clear && Decision.Action == SellAction.Return;
+
+    [JsonIgnore]
+    public bool Vendored => Clear && Decision.Action == SellAction.Vendor;
+
+    [JsonIgnore]
     public bool Kept => Clear && Decision.Action == SellAction.Keep;
 
     [JsonIgnore]
     public long ListedValue => Repriced || Listed ? Gil.SaturatingMultiply(Decision.Price, Quantity) : 0;
+
+    [JsonIgnore]
+    public long VendoredValue => Vendored ? Gil.SaturatingMultiply(Decision.Price, Quantity) : 0;
 
     public static RunDecision ForListing(ulong retainerId, in ListingSlot listing, in Decision decision)
     {
@@ -90,24 +101,38 @@ internal readonly record struct RunDecision(
     {
         return new RunDecision(retainerId, RunRowKind.Lot, lot.Row, lot.Quantity, 0, default, skip);
     }
+
+    public static RunDecision ForVendor(ulong retainerId, in VendorVerdict verdict, uint vendorPrice)
+    {
+        return new RunDecision(retainerId, RunRowKind.Vendor, PlanRowKey.ForVendor(verdict.Slot), verdict.Slot.Quantity, 0, VendorRules.DecisionFor(verdict, vendorPrice), RunSkip.None);
+    }
+
+    public static RunDecision VendorSkipped(ulong retainerId, in VendorVerdict verdict, RunSkip skip)
+    {
+        return new RunDecision(retainerId, RunRowKind.Vendor, PlanRowKey.ForVendor(verdict.Slot), verdict.Slot.Quantity, 0, default, skip);
+    }
 }
 
-internal readonly record struct RunTally(int Repriced, int Listed, int Kept, int Skipped, long ListedValue)
+internal readonly record struct RunTally(int Repriced, int Listed, int Kept, int Skipped, long ListedValue, int Returned = 0, int Vendored = 0, long VendoredValue = 0)
 {
     [JsonIgnore]
-    public int Decided => Repriced + Listed + Kept + Skipped;
+    public int Decided => Repriced + Listed + Returned + Vendored + Kept + Skipped;
 
     public static RunTally Of(ReadOnlySpan<RunDecision> decisions)
     {
         var repriced = 0;
         var listed = 0;
+        var returned = 0;
+        var vendored = 0;
         var kept = 0;
         var skipped = 0;
         long listedValue = 0;
+        long vendoredValue = 0;
         for (var index = 0; index < decisions.Length; index++)
         {
             var decision = decisions[index];
             listedValue = Gil.SaturatingAdd(listedValue, decision.ListedValue);
+            vendoredValue = Gil.SaturatingAdd(vendoredValue, decision.VendoredValue);
             if (decision.Repriced)
             {
                 repriced++;
@@ -115,6 +140,14 @@ internal readonly record struct RunTally(int Repriced, int Listed, int Kept, int
             else if (decision.Listed)
             {
                 listed++;
+            }
+            else if (decision.Returned)
+            {
+                returned++;
+            }
+            else if (decision.Vendored)
+            {
+                vendored++;
             }
             else if (decision.Kept)
             {
@@ -126,6 +159,6 @@ internal readonly record struct RunTally(int Repriced, int Listed, int Kept, int
             }
         }
 
-        return new RunTally(repriced, listed, kept, skipped, listedValue);
+        return new RunTally(repriced, listed, kept, skipped, listedValue, returned, vendored, vendoredValue);
     }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Allocation.Model;
@@ -7,6 +8,8 @@ namespace AutoSeller.Core.Allocation.Model;
 internal readonly record struct PlanRowKey(ulong RetainerId, uint Container, ushort Slot, ushort LotIndex, uint ItemId, bool IsHq)
     : IComparable<PlanRowKey>
 {
+    public const ushort VendorLot = ushort.MaxValue;
+
     [JsonIgnore]
     public ItemKey Item => new(ItemId, IsHq);
 
@@ -16,6 +19,11 @@ internal readonly record struct PlanRowKey(ulong RetainerId, uint Container, ush
     public static PlanRowKey ForListing(ulong retainerId, in ListingSlot listing)
     {
         return new PlanRowKey(retainerId, ListingSlot.MarketContainer, listing.Slot, 0, listing.ItemId, listing.IsHq);
+    }
+
+    public static PlanRowKey ForVendor(in SlotFacts slot)
+    {
+        return new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, VendorLot, slot.ItemId, slot.IsHq);
     }
 
     public int CompareTo(PlanRowKey other)

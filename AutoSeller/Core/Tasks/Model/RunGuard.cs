@@ -18,7 +18,16 @@ internal readonly record struct RunLiveFacts(
     bool JournalBlocksWrites,
     DateTime NowUtc);
 
-internal readonly record struct GuardedRow(SaleWrite Write, SlotReading Planned, SlotReading Observed, bool Eligible, uint RuleFloor, uint VendorPrice, bool Protected);
+internal readonly record struct GuardedRow(
+    SaleWrite Write,
+    SlotReading Planned,
+    SlotReading Observed,
+    bool Eligible,
+    uint RuleFloor,
+    uint VendorPrice,
+    bool Protected,
+    bool VendorRuleMatches = false,
+    bool IsGear = false);
 
 internal static class RunGuard
 {
@@ -33,6 +42,11 @@ internal static class RunGuard
 
     public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, CompetitorSnapshot competition, ValueBook values, Guid writeId)
     {
+        return Evaluate(authorization, live, row, competition.Generation, competition.CapturedAtUtc, values, writeId);
+    }
+
+    public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, int searchGeneration, DateTime searchCapturedAtUtc, ValueBook values, Guid writeId)
+    {
         var verdict = SaleGuard.Evaluate(new SaleGuardInput
         {
             Authorization = authorization,
@@ -44,8 +58,8 @@ internal static class RunGuard
             CurrentPlanEdits = live.PlanEdits,
             OpenRetainerId = live.OpenRetainerId,
             WindowChainReady = live.WindowChainReady,
-            SearchGeneration = competition.Generation,
-            SearchCapturedAtUtc = competition.CapturedAtUtc,
+            SearchGeneration = searchGeneration,
+            SearchCapturedAtUtc = searchCapturedAtUtc,
             NowUtc = live.NowUtc,
             Value = values.Snapshot(),
             JournalBlocksWrites = live.JournalBlocksWrites,
@@ -55,8 +69,8 @@ internal static class RunGuard
             EligibleForWrite = row.Eligible,
             RuleFloor = row.RuleFloor,
             VendorPrice = row.VendorPrice,
-            VendorRuleMatches = false,
-            IsGear = false,
+            VendorRuleMatches = row.VendorRuleMatches,
+            IsGear = row.IsGear,
             IsProtected = row.Protected,
             OnSellList = authorization.Rules.IsOnSellList(row.Write.ItemId),
         });
