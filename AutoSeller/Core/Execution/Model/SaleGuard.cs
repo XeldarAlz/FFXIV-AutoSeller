@@ -170,6 +170,11 @@ internal static class SaleGuard
             return SaleRejection.None;
         }
 
+        if (write.Kind == WriteKind.Reprice && write.NewPrice == write.OldPrice)
+        {
+            return SaleRejection.PriceUnchanged;
+        }
+
         if (write.NewPrice < floor)
         {
             return SaleRejection.BelowFloor;

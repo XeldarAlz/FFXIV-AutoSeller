@@ -27,6 +27,7 @@ public sealed class SaleGuardTests
         (SaleRejection.QualityMismatch, () => WithPlanned(GuardInput(Reprice()), slot => slot with { IsHq = true })),
         (SaleRejection.ListingChanged, () => WithPlanned(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 })),
         (SaleRejection.NotEligible, () => GuardInput(Reprice()) with { Eligible = false }),
+        (SaleRejection.PriceUnchanged, () => GuardInput(Reprice(ListedPrice))),
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
         (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(PriceRange.Maximum + 1))),
@@ -125,6 +126,18 @@ public sealed class SaleGuardTests
     {
         Assert.True(SaleGuard.Evaluate(GuardInput(Reprice(750))).IsAllowed);
         Assert.Equal(SaleRejection.OverStepLimit, SaleGuard.Evaluate(GuardInput(Reprice(749))).Rejection);
+    }
+
+    [Fact]
+    public void ARepriceToTheSamePriceIsRefusedAndCostsNoReprice()
+    {
+        var unchanged = GuardInput(Reprice(ListedPrice)) with { Value = new ValueState(RunCaps.DefaultMaxReprices - 1, 0, 0, Guid.Empty) };
+        var book = new ValueBook(RunCaps.Default);
+
+        Assert.Equal(SaleRejection.PriceUnchanged, SaleGuard.Evaluate(unchanged).Rejection);
+        Assert.False(Reprice(ListedPrice).IsWellFormed);
+        Assert.Equal(ValueBookResult.InvalidWrite, book.TryReserve(Guid.NewGuid(), Reprice(ListedPrice)));
+        Assert.True(SaleGuard.Evaluate(unchanged with { Write = Reprice(ListedPrice + 1) }).IsAllowed);
     }
 
     [Fact]

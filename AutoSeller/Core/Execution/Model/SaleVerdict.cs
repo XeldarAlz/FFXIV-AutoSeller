@@ -20,6 +20,7 @@ internal enum SaleRejection : byte
     QuantityMismatch,
     ListingChanged,
     NotEligible,
+    PriceUnchanged,
     BelowFloor,
     OverStepLimit,
     PriceOutOfRange,

@@ -30,6 +30,7 @@ public sealed class RunReactionsTests
         [SaleRejection.QuantityMismatch] = RunReaction.SkipItem,
         [SaleRejection.ListingChanged] = RunReaction.SkipItem,
         [SaleRejection.NotEligible] = RunReaction.SkipItem,
+        [SaleRejection.PriceUnchanged] = RunReaction.SkipItem,
         [SaleRejection.BelowFloor] = RunReaction.SkipItem,
         [SaleRejection.OverStepLimit] = RunReaction.SkipItem,
         [SaleRejection.PriceOutOfRange] = RunReaction.SkipItem,
