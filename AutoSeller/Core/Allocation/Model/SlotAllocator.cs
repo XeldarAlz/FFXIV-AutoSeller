@@ -112,12 +112,7 @@ internal static class SlotAllocator
                 for (var upperPosition = 0; upperPosition < order.Length; upperPosition++)
                 {
                     var upper = order[upperPosition];
-                    if (!CanTrade(upper))
-                    {
-                        continue;
-                    }
-
-                    for (var lowerPosition = upperPosition + 1; lowerPosition < order.Length; lowerPosition++)
+                    for (var lowerPosition = upperPosition + 1; lowerPosition < order.Length && CanTrade(upper); lowerPosition++)
                     {
                         var lower = order[lowerPosition];
                         if (CanTrade(lower) && TradeLowersTax(upper, lower))
