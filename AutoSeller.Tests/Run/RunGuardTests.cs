@@ -52,6 +52,37 @@ public sealed class RunGuardTests
     }
 
     [Fact]
+    public void AnAllowedRealWriteIsLeftToTheWritePathToReserveAndCount()
+    {
+        var real = Authorization();
+        var values = new ValueBook(real.Caps);
+
+        var verdict = RunGuard.Evaluate(real, live, Row(Reprice()), competition, values, Guid.NewGuid());
+
+        Assert.True(verdict.IsAllowed);
+        Assert.Equal(0, values.Reprices);
+        Assert.False(values.HasPendingWrite);
+    }
+
+    [Fact]
+    public void AWindowChainWithSomethingInFrontOfTheSellWindowEndsTheRetainer()
+    {
+        var verdict = RunGuard.Evaluate(dryRun, live with { WindowChainReady = false }, Row(Reprice()), competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+
+        Assert.Equal(SaleRejection.WindowChainNotReady, verdict.Rejection);
+        Assert.Equal(DriverHalt.GuardEndedRetainer, DriverHalts.ForGuard(verdict.Rejection));
+    }
+
+    [Fact]
+    public void AnUnresolvedWriteInTheJournalStopsTheRunForThePlayer()
+    {
+        var verdict = RunGuard.Evaluate(dryRun, live with { JournalBlocksWrites = true }, Row(Reprice()), competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+
+        Assert.Equal(SaleRejection.JournalUnresolved, verdict.Rejection);
+        Assert.Equal(DriverHalt.WriteUnresolved, DriverHalts.ForGuard(verdict.Rejection));
+    }
+
+    [Fact]
     public void ARefusedWouldBeWriteNamesItsRejectionAndCountsNothing()
     {
         var values = new ValueBook(dryRun.Caps);
