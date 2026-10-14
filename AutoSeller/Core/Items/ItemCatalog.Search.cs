@@ -9,7 +9,7 @@ internal sealed partial class ItemCatalog
     private const char LeftSingleQuote = (char)0x2018;
     private const char RightSingleQuote = (char)0x2019;
 
-    public int Search(string query, Span<int> results)
+    public int Search(string query, CatalogItemFlags wanted, Span<int> results)
     {
         var current = snapshot;
         if (current is null || results.IsEmpty)
@@ -24,8 +24,9 @@ internal sealed partial class ItemCatalog
         }
 
         var count = 0;
+        var flags = current.Flags;
         if (IsDigits(folded) && uint.TryParse(folded, NumberStyles.None, CultureInfo.InvariantCulture, out var itemId)
-            && current.IndexById.TryGetValue(itemId, out var idIndex))
+            && current.IndexById.TryGetValue(itemId, out var idIndex) && Has(flags[idIndex], wanted))
         {
             results[count++] = idIndex;
         }
@@ -33,7 +34,7 @@ internal sealed partial class ItemCatalog
         var names = current.FoldedNames;
         for (var index = 0; index < names.Length && count < results.Length; index++)
         {
-            if (names[index].StartsWith(folded, StringComparison.Ordinal) && !results[..count].Contains(index))
+            if (Has(flags[index], wanted) && names[index].StartsWith(folded, StringComparison.Ordinal) && !results[..count].Contains(index))
             {
                 results[count++] = index;
             }
@@ -42,7 +43,7 @@ internal sealed partial class ItemCatalog
         for (var index = 0; index < names.Length && count < results.Length; index++)
         {
             var name = names[index];
-            if (!name.StartsWith(folded, StringComparison.Ordinal) && name.Contains(folded, StringComparison.Ordinal) && !results[..count].Contains(index))
+            if (Has(flags[index], wanted) && !name.StartsWith(folded, StringComparison.Ordinal) && name.Contains(folded, StringComparison.Ordinal) && !results[..count].Contains(index))
             {
                 results[count++] = index;
             }
@@ -50,6 +51,8 @@ internal sealed partial class ItemCatalog
 
         return count;
     }
+
+    private static bool Has(CatalogItemFlags flags, CatalogItemFlags wanted) => (flags & wanted) == wanted;
 
     private static bool IsDigits(ReadOnlySpan<char> text)
     {

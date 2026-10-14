@@ -5,6 +5,8 @@ internal enum CatalogItemFlags : byte
 {
     None = 0,
     CanBeHighQuality = 1 << 0,
+    Marketable = 1 << 1,
+    Vendorable = 1 << 2,
 }
 
 internal readonly record struct CatalogItem(uint Id, string Name, uint IconId, CatalogItemFlags Flags)

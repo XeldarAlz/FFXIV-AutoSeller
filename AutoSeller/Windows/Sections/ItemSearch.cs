@@ -21,6 +21,7 @@ internal sealed class ItemSearch
     private const float ResultsGap = 6f;
 
     private readonly string fieldId;
+    private readonly CatalogItemFlags wanted;
     private readonly int[] results = new int[MaximumResults];
     private readonly string[] resultIds = new string[MaximumResults];
     private int resultCount;
@@ -32,9 +33,10 @@ internal sealed class ItemSearch
     private bool focused;
     private bool focusNext;
 
-    public ItemSearch(string fieldId)
+    public ItemSearch(string fieldId, CatalogItemFlags wanted)
     {
         this.fieldId = fieldId;
+        this.wanted = wanted;
     }
 
     public int Draw(ItemCatalog catalog, string hint, float width)
@@ -66,7 +68,7 @@ internal sealed class ItemSearch
         searchedQuery = query;
         searchedWithItems = withItems;
         highlight = 0;
-        resultCount = catalog.Search(query, results);
+        resultCount = catalog.Search(query, wanted, results);
         for (var index = 0; index < resultCount; index++)
         {
             resultIds[index] = string.Concat("#", catalog.At(results[index]).Id.ToString(CultureInfo.InvariantCulture));

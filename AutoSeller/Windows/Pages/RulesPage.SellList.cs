@@ -51,7 +51,7 @@ internal sealed partial class RulesPage
         (L.Rules.PreferredRetainer, L.Rules.PreferredRetainerHelp),
     ];
 
-    private readonly ItemSearch sellSearch = new("##asell_rules_sell_search");
+    private readonly ItemSearch sellSearch = new("##asell_rules_sell_search", CatalogItemFlags.Marketable);
     private readonly Dictionary<ItemRule, RuleBuffers> ruleBuffers = [];
     private readonly string[] qualityLabels = new string[3];
     private readonly Dictionary<uint, string> idCaptions = [];

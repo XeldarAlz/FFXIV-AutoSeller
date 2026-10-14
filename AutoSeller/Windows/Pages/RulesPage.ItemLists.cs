@@ -12,8 +12,8 @@ namespace AutoSeller.Windows.Pages;
 
 internal sealed partial class RulesPage
 {
-    private readonly ItemSearch neverSellSearch = new("##asell_rules_never_search");
-    private readonly ItemSearch vendorSearch = new("##asell_rules_vendor_search");
+    private readonly ItemSearch neverSellSearch = new("##asell_rules_never_search", CatalogItemFlags.Marketable);
+    private readonly ItemSearch vendorSearch = new("##asell_rules_vendor_search", CatalogItemFlags.Vendorable);
 
     private void DrawNeverSell(Plugin plugin)
     {

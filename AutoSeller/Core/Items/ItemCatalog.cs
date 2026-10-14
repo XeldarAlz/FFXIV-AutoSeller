@@ -7,7 +7,7 @@ namespace AutoSeller.Core.Items;
 
 internal sealed partial class ItemCatalog
 {
-    private const int ExpectedMarketableItems = 20_000;
+    private const int ExpectedItems = 40_000;
 
     private readonly object gate = new();
     private Task? loading;
@@ -77,7 +77,7 @@ internal sealed partial class ItemCatalog
         {
             var built = Build();
             snapshot = built;
-            RunLog.Info($"Item catalog ready: {built.Ids.Length} marketable items in {built.Categories.Length} categories.");
+            RunLog.Info($"Item catalog ready: {built.Ids.Length} items, {built.MarketableCount} of them marketable, in {built.Categories.Length} categories.");
         }
         catch (Exception exception)
         {
@@ -89,12 +89,13 @@ internal sealed partial class ItemCatalog
     private static Snapshot Build()
     {
         var sheet = Svc.Data.GetExcelSheet<Item>();
-        var entries = new List<CatalogItem>(ExpectedMarketableItems);
+        var entries = new List<CatalogItem>(ExpectedItems);
         var usedCategories = new bool[byte.MaxValue + 1];
         for (var rowIndex = 0; rowIndex < sheet.Count; rowIndex++)
         {
             var row = sheet.GetRowAt(rowIndex);
-            if (row.ItemSearchCategory.RowId == 0 || row.IsUntradable)
+            var flags = FlagsOf(row);
+            if (!Has(flags, CatalogItemFlags.Marketable) && !Has(flags, CatalogItemFlags.Vendorable))
             {
                 continue;
             }
@@ -105,13 +106,11 @@ internal sealed partial class ItemCatalog
                 continue;
             }
 
-            var flags = CatalogItemFlags.None;
-            if (row.CanBeHq)
+            if (Has(flags, CatalogItemFlags.Marketable))
             {
-                flags |= CatalogItemFlags.CanBeHighQuality;
+                usedCategories[row.ItemUICategory.RowId] = true;
             }
 
-            usedCategories[row.ItemUICategory.RowId] = true;
             entries.Add(new CatalogItem(row.RowId, name, row.Icon, flags));
         }
 
@@ -122,6 +121,27 @@ internal sealed partial class ItemCatalog
         });
 
         return new Snapshot(entries, BuildCategories(usedCategories));
+    }
+
+    private static CatalogItemFlags FlagsOf(in Item row)
+    {
+        var flags = CatalogItemFlags.None;
+        if (row.CanBeHq)
+        {
+            flags |= CatalogItemFlags.CanBeHighQuality;
+        }
+
+        if (row.ItemSearchCategory.RowId != 0 && !row.IsUntradable)
+        {
+            flags |= CatalogItemFlags.Marketable;
+        }
+
+        if (row.PriceLow > 0)
+        {
+            flags |= CatalogItemFlags.Vendorable;
+        }
+
+        return flags;
     }
 
     private static ImmutableArray<CatalogCategory> BuildCategories(bool[] usedCategories)
@@ -169,6 +189,7 @@ internal sealed partial class ItemCatalog
         public readonly Dictionary<uint, int> IndexById;
         public readonly ImmutableArray<CatalogCategory> Categories;
         public readonly ushort[] GlyphRanges;
+        public readonly int MarketableCount;
 
         public Snapshot(List<CatalogItem> entries, ImmutableArray<CatalogCategory> categories)
         {
@@ -191,6 +212,7 @@ internal sealed partial class ItemCatalog
                 IconIds[index] = (ushort)entry.IconId;
                 Flags[index] = entry.Flags;
                 IndexById[entry.Id] = index;
+                MarketableCount += Has(entry.Flags, CatalogItemFlags.Marketable) ? 1 : 0;
                 Localization.GlyphRanges.MarkText(glyphs, entry.Name);
             }
 
