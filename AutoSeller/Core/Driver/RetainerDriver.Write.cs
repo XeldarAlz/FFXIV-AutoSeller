@@ -13,6 +13,7 @@ internal sealed partial class RetainerDriver
 {
     private const int TypedShownMs = 3_000;
     private const int ReadBackPollFrames = 2;
+    private const int AnswerReadDelayMs = 1_000;
 
     private readonly ListingSlot[] marketBefore = new ListingSlot[RetainerSnapshot.SlotCount];
     private readonly ListingSlot[] marketAfter = new ListingSlot[RetainerSnapshot.SlotCount];
@@ -34,6 +35,11 @@ internal sealed partial class RetainerDriver
         var settlement = written.Settlement;
         Record(outcome with { Skip = written.Skip, Write = settlement.Write, Rejection = settlement.Rejection }, retainer);
         var closed = RetainerClicks.IsReady(RetainerClicks.SellWindowAddon) ? await CancelSellWindow() : Stop.None;
+        if (settlement.Write == RunWrite.Unknown && !closed.Halted)
+        {
+            await ReadForTheAnswer(retainer);
+        }
+
         return written.Stop.Halted ? written.Stop : closed;
     }
 
@@ -126,6 +132,15 @@ internal sealed partial class RetainerDriver
     {
         var cancelled = WriteSettlement.NotConfirmed(WriteRejection.Cancelled);
         return new Written(cancelled, RunSkip.None, Settle(intent, cancelled, retainer));
+    }
+
+    private async Task ReadForTheAnswer(RunRetainer retainer)
+    {
+        await DelayMs(AnswerReadDelayMs);
+        var market = await ReadMarket(retainer);
+        Diag(market is null
+            ? $"Driver: {retainer.Name} could not be read again, so the question about the unconfirmed write starts without a suggested answer."
+            : $"Driver: {retainer.Name} was read again, so the question about the unconfirmed write can suggest an answer.");
     }
 
     private async Task Type(SaleWrite write)
