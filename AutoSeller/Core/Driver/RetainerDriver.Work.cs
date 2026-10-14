@@ -124,6 +124,7 @@ internal sealed partial class RetainerDriver
             return await RecordAndCancel(RunDecision.ListingSkipped(retainer.RetainerId, listing, RunSkip.SearchFailed), retainer);
         }
 
+        decider.TrackListing(retainer.RetainerId, listing, decided.Decision, DateTime.UtcNow);
         var outcome = RunDecision.ForListing(retainer.RetainerId, listing, decided.Decision) with { Guard = decided.Guard };
         return await Conclude(outcome, () => SaleWrite.ForListing(retainer.RetainerId, listing, decided.Decision), retainer, name);
     }

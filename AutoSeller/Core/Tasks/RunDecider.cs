@@ -44,6 +44,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             OwnSellers = plugin.OwnSellers.Current(),
             History = HistoryOf(retainerId, listing),
             Override = Authorization.OverrideForListing(retainerId, listing),
+            BelowFloorDuration = plugin.Characters.Current?.StreakFor(new RepriceKey(retainerId, listing.Slot, listing.Key)).BelowFloorFor(nowUtc) ?? TimeSpan.Zero,
             NowUtc = nowUtc,
         });
     }
@@ -72,6 +73,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
     public DriverHalt Boundary(DateTime nowUtc)
     {
         return RunGuard.CheckBoundary(Authorization, Live(nowUtc));
+    }
+
+    public void TrackListing(ulong retainerId, in ListingSlot listing, in Decision decision, DateTime nowUtc)
+    {
+        plugin.Characters.Current?.TrackDecision(new RepriceKey(retainerId, listing.Slot, listing.Key), decision.Reason, nowUtc);
     }
 
     public SaleVerdict GuardListing(ulong retainerId, in ListingSlot listing, in SellWindowShown shown, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)

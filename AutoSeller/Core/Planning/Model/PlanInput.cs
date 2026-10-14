@@ -44,6 +44,8 @@ internal sealed record PlanInput
 
     public required ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> Reprices { get; init; }
 
+    public ImmutableArray<ListingStreak> Streaks { get; init; } = [];
+
     public required OwnSellers OwnSellers { get; init; }
 
     public required ReferenceSnapshot? References { get; init; }
@@ -79,6 +81,20 @@ internal sealed record PlanInput
     public RetainerSnapshot? MarketOf(ulong retainerId)
     {
         return RunPlanner.MarketOf(Markets.AsSpan(), retainerId);
+    }
+
+    public TimeSpan BelowFloorFor(RepriceKey key)
+    {
+        var streaks = Streaks.IsDefault ? [] : Streaks.AsSpan();
+        for (var index = 0; index < streaks.Length; index++)
+        {
+            if (streaks[index].Key == key)
+            {
+                return streaks[index].BelowFloorFor(NowUtc);
+            }
+        }
+
+        return TimeSpan.Zero;
     }
 
     public ReferencePrice ReferenceFor(ItemKey item)

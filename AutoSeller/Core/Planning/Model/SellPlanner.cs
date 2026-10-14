@@ -148,7 +148,8 @@ internal static class SellPlanner
             var key = PlanRowKey.ForListing(retainerId, listing);
             var facts = listingFacts.GetValueOrDefault(listing.ItemId);
             var reference = input.ReferenceFor(listing.Key);
-            var history = reprices.EntryFor(new RepriceKey(retainerId, listing.Slot, listing.Key));
+            var repriceKey = new RepriceKey(retainerId, listing.Slot, listing.Key);
+            var history = reprices.EntryFor(repriceKey);
             var settings = input.Pricing;
             var excluded = input.Edits.IsExcluded(key);
             var duty = ListingDuties.Of(input.Rules, listing, facts.ItemUiCategory, reference.AverageSalePrice, history, settings.RepriceCooldown, false, excluded, input.NowUtc);
@@ -169,6 +170,7 @@ internal static class SellPlanner
                     OwnSellers = input.OwnSellers,
                     History = history,
                     Override = PriceOverrides.ForListing(approved.AsSpan(), input.Edits, retainerId, listing),
+                    BelowFloorDuration = input.BelowFloorFor(repriceKey),
                     NowUtc = input.NowUtc,
                 }),
             };

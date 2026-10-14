@@ -112,6 +112,7 @@ internal sealed partial class PlanBuilder : IDisposable
             Markets = [.. markets],
             ListingItems = items.FactsOfListed(markets),
             Reprices = RepricesOf(data, markets),
+            Streaks = [.. data.Streaks],
             OwnSellers = ownSellers.Current(),
             References = references.Latest,
         };
