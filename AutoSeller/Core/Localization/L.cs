@@ -151,6 +151,10 @@ internal static partial class L
         public static readonly LocString Repriced = new("history.repriced", "{0} repriced");
         public static readonly LocString Listed = new("history.listed", "{0} listed");
         public static readonly LocString Worth = new("history.worth", "worth {0}");
+        public static readonly LocString ToReturn = new("history.toReturn", "{0} to return");
+        public static readonly LocString Returned = new("history.returned", "{0} returned");
+        public static readonly LocString ToVendor = new("history.toVendor", "{0} to vendor for {1}");
+        public static readonly LocString Vendored = new("history.vendored", "{0} vendored for {1}");
         public static readonly LocString Kept = new("history.kept", "{0} kept");
         public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
         public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");

@@ -58,6 +58,8 @@ internal static class PlanLabels
         {
             SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced),
             SellAction.List => Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed),
+            SellAction.Return => Loc.T(dryRun ? L.Plan.DoneReturn : L.Plan.DoneReturned),
+            SellAction.Vendor => Loc.T(dryRun ? L.Plan.DoneVendor : L.Plan.DoneVendored),
             SellAction.Skip => Loc.T(L.Plan.DoneSkipped),
             _ => Loc.T(L.Plan.DoneKept),
         };
@@ -139,6 +141,7 @@ internal static class PlanLabels
         DecisionReason.UnknownCompetition => Loc.T(L.Plan.ReasonUnknownCompetition),
         DecisionReason.NoPriceData => Loc.T(L.Plan.ReasonNoPriceData),
         DecisionReason.Junk => Loc.T(L.Plan.ReasonJunk),
+        DecisionReason.VendorList => Loc.T(L.Plan.ReasonVendorList),
         DecisionReason.NotEligible => Loc.T(L.Plan.ReasonNotEligible),
         DecisionReason.NoFreeSlot => Loc.T(L.Plan.ReasonNoFreeSlot),
         DecisionReason.Excluded => Loc.T(L.Plan.ReasonExcluded),

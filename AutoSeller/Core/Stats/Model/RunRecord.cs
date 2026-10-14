@@ -19,4 +19,7 @@ internal sealed record RunRecord(
     long ListedValue,
     int Kept,
     int Skipped,
-    ImmutableArray<RunDecision> Decisions);
+    ImmutableArray<RunDecision> Decisions,
+    int Returned = 0,
+    int Vendored = 0,
+    long VendoredValue = 0);

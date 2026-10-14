@@ -373,6 +373,9 @@ internal sealed partial class SellController
             tally.ListedValue,
             tally.Kept,
             tally.Skipped,
-            [.. active.Decisions]));
+            [.. active.Decisions],
+            tally.Returned,
+            tally.Vendored,
+            tally.VendoredValue));
     }
 }

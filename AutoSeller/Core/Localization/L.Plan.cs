@@ -73,6 +73,10 @@ internal static partial class L
         public static readonly LocString DoneRefused = new("plan.done.refused", "Refused");
         public static readonly LocString DoneRepriced = new("plan.done.repriced", "Repriced");
         public static readonly LocString DoneListed = new("plan.done.listed", "Listed");
+        public static readonly LocString DoneReturn = new("plan.done.return", "Would return");
+        public static readonly LocString DoneReturned = new("plan.done.returned", "Returned");
+        public static readonly LocString DoneVendor = new("plan.done.vendor", "Would vendor");
+        public static readonly LocString DoneVendored = new("plan.done.vendored", "Vendored");
         public static readonly LocString DoneRejected = new("plan.done.rejected", "Not changed");
         public static readonly LocString DoneUnknown = new("plan.done.unknown", "Unconfirmed");
         public static readonly LocString DoneCancelled = new("plan.done.cancelled", "Cancelled");
@@ -100,6 +104,7 @@ internal static partial class L
         public static readonly LocString ReasonUnknownCompetition = new("plan.reason.unknownCompetition", "No usable market data yet, kept");
         public static readonly LocString ReasonNoPriceData = new("plan.reason.noPriceData", "No price data");
         public static readonly LocString ReasonJunk = new("plan.reason.junk", "Junk by your vendor rule");
+        public static readonly LocString ReasonVendorList = new("plan.reason.vendorList", "On your vendor list");
         public static readonly LocString ReasonNotEligible = new("plan.reason.notEligible", "No rule of yours covers it");
         public static readonly LocString ReasonNoFreeSlot = new("plan.reason.noFreeSlot", "No free listing slot");
         public static readonly LocString ReasonExcluded = new("plan.reason.excluded", "Left out by you");
