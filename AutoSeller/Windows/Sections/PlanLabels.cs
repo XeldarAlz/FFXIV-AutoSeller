@@ -1,5 +1,6 @@
 using System.Globalization;
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Planning.Model;
@@ -36,7 +37,7 @@ internal static class PlanLabels
         _ => Styling.TextDim,
     };
 
-    public static string Done(in RunDecision decision)
+    public static string Done(in RunDecision decision, bool dryRun)
     {
         if (decision.Skip != RunSkip.None)
         {
@@ -48,10 +49,15 @@ internal static class PlanLabels
             return Loc.T(L.Plan.DoneRefused);
         }
 
+        if (decision.Failed)
+        {
+            return Loc.T(decision.Write == RunWrite.Unknown ? L.Plan.DoneUnknown : L.Plan.DoneRejected);
+        }
+
         return decision.Decision.Action switch
         {
-            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(L.Plan.DoneReprice),
-            SellAction.List => Loc.T(L.Plan.DoneList),
+            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced),
+            SellAction.List => Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed),
             SellAction.Skip => Loc.T(L.Plan.DoneSkipped),
             _ => Loc.T(L.Plan.DoneKept),
         };
@@ -64,6 +70,11 @@ internal static class PlanLabels
             return Styling.TextMuted;
         }
 
+        if (decision.Failed)
+        {
+            return decision.Write == RunWrite.Unknown ? Styling.AccentAmber : Styling.AccentRose;
+        }
+
         return decision.Refused ? Styling.AccentRose : ActionColor(decision.Decision.Action);
     }
 
@@ -72,6 +83,11 @@ internal static class PlanLabels
         if (decision.Skip != RunSkip.None)
         {
             return Skip(decision.Skip);
+        }
+
+        if (decision.Failed)
+        {
+            return Loc.T(decision.Write == RunWrite.Unknown ? L.Plan.DoneUnknownReason : L.Plan.DoneRejectedReason);
         }
 
         return decision.Refused ? Loc.T(L.Plan.SkipRefused) : WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);

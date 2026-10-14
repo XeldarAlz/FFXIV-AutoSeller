@@ -154,7 +154,7 @@ internal sealed partial class RetainerDriver
             }
 
             var decided = session.Decisions;
-            if (decided.Length > 0 && decided[^1].Row == lot.Row && decided[^1].WouldList)
+            if (decided.Length > 0 && decided[^1].Row == lot.Row && decided[^1].Listed)
             {
                 freeSlots--;
             }

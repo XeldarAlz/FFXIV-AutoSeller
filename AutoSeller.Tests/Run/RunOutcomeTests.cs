@@ -72,7 +72,7 @@ public sealed class RunOutcomeTests
 
         var tally = RunTally.Of(decisions);
 
-        Assert.Equal(new RunTally(2, 1, 2, 2), tally);
+        Assert.Equal(new RunTally(2, 1, 2, 2, (repriceDown.Price * 2L + list.Price) * LotQuantity), tally);
         Assert.Equal(decisions.Length, tally.Decided);
     }
 
@@ -81,8 +81,8 @@ public sealed class RunOutcomeTests
     {
         var skipped = RunDecision.ListingSkipped(Alpha, OreListing(), RunSkip.WindowMismatch) with { Decision = repriceDown };
 
-        Assert.False(skipped.WouldReprice);
-        Assert.False(skipped.WouldList);
+        Assert.False(skipped.Repriced);
+        Assert.False(skipped.Listed);
         Assert.False(skipped.Kept);
     }
 
@@ -93,8 +93,8 @@ public sealed class RunOutcomeTests
 
         Assert.True(refused.Refused);
         Assert.False(refused.Clear);
-        Assert.False(refused.WouldReprice);
-        Assert.Equal(new RunTally(0, 0, 0, 1), RunTally.Of([refused]));
+        Assert.False(refused.Repriced);
+        Assert.Equal(new RunTally(0, 0, 0, 1, 0), RunTally.Of([refused]));
         Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(AllVisited(1), [refused]));
     }
 

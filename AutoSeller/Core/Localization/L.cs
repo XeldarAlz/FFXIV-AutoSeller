@@ -84,6 +84,7 @@ internal static partial class L
         public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");
         public static readonly LocString StatusStopping = new("run.status.stopping", "Stopping and closing the sell windows");
         public static readonly LocString StatusDone = new("run.status.done", "Dry run done: {0} to reprice, {1} to list, {2} kept, {3} skipped");
+        public static readonly LocString StatusDoneLive = new("run.status.doneLive", "Run done: {0} repriced, {1} listed, {2} kept, {3} skipped");
         public static readonly LocString StatusNeedsPlayer = new("run.status.needsPlayer", "Needs you: {0}");
         public static readonly LocString StatusFailed = new("run.status.failed", "The run failed: {0}");
         public static readonly LocString StatusStopped = new("run.status.stopped", "Stopped");
@@ -136,6 +137,9 @@ internal static partial class L
         public static readonly LocString Retainers = new("history.retainers", "{0} of {1} retainers");
         public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
         public static readonly LocString ToList = new("history.toList", "{0} to list");
+        public static readonly LocString Repriced = new("history.repriced", "{0} repriced");
+        public static readonly LocString Listed = new("history.listed", "{0} listed");
+        public static readonly LocString Worth = new("history.worth", "worth {0}");
         public static readonly LocString Kept = new("history.kept", "{0} kept");
         public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
         public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");

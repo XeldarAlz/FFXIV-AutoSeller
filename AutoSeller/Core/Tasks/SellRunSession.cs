@@ -69,6 +69,8 @@ internal sealed class SellRunSession
 
     public bool Ended => State.IsFinal();
 
+    public DateTime EndedAtUtc { get; private set; }
+
     public NeedsPlayerReason NeedsPlayer { get; private set; } = NeedsPlayerReason.None;
 
     public string Failure { get; private set; } = string.Empty;
@@ -145,6 +147,7 @@ internal sealed class SellRunSession
         }
 
         State = final;
+        EndedAtUtc = DateTime.UtcNow;
         Revision++;
     }
 

@@ -15,6 +15,14 @@ internal static class RunLabels
         _ => Loc.T(L.History.OutcomeFailed),
     };
 
+    public static string Changes(bool dryRun, int repriced, int listed, long listedValue)
+    {
+        return string.Concat(
+            Loc.T(dryRun ? L.History.ToReprice : L.History.Repriced, repriced), TextDraw.Separator,
+            Loc.T(dryRun ? L.History.ToList : L.History.Listed, listed), TextDraw.Separator,
+            Loc.T(L.History.Worth, Formatting.Gil(listedValue)));
+    }
+
     public static Vector4 OutcomeColor(RunState outcome) => outcome switch
     {
         RunState.Completed => Styling.AccentMint,

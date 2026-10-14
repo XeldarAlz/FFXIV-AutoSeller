@@ -255,21 +255,21 @@ internal sealed partial class SellController
         }
 
         var authorization = active.Authorization;
-        var endedAtUtc = DateTime.UtcNow;
+        var endedAtUtc = active.EndedAtUtc;
         active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State });
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);
         RunLog.Info(
             $"Run {authorization.RunId} ended {active.State}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
-            $"{tally.WouldReprice} would reprice, {tally.WouldList} would list, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
+            $"{tally.Repriced} {(authorization.DryRun ? "would reprice" : "repriced")}, {tally.Listed} {(authorization.DryRun ? "would list" : "listed")} worth {tally.ListedValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
     }
 
     private static void Announce(SellRunSession active, in RunTally tally)
     {
         var message = active.State switch
         {
-            RunState.Completed or RunState.CompletedPartial => Loc.T(L.Run.StatusDone, tally.WouldReprice, tally.WouldList, tally.Kept, tally.Skipped),
+            RunState.Completed or RunState.CompletedPartial => Loc.T(active.Authorization.DryRun ? L.Run.StatusDone : L.Run.StatusDoneLive, tally.Repriced, tally.Listed, tally.Kept, tally.Skipped),
             RunState.NeedsPlayer => Loc.T(L.Run.StatusNeedsPlayer, Describe(active.NeedsPlayer)),
             RunState.Failed => Loc.T(L.Run.StatusFailed, active.Failure),
             _ => Loc.T(L.Run.StatusStopped),
@@ -302,8 +302,9 @@ internal sealed partial class SellController
             authorization.HomeWorldId,
             active.Visits.Visited,
             active.Visits.Count,
-            tally.WouldReprice,
-            tally.WouldList,
+            tally.Repriced,
+            tally.Listed,
+            tally.ListedValue,
             tally.Kept,
             tally.Skipped,
             [.. active.Decisions]));

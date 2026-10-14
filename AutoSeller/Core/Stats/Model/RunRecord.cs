@@ -13,8 +13,9 @@ internal sealed record RunRecord(
     uint WorldId,
     int RetainersVisited,
     int RetainersPlanned,
-    int WouldReprice,
-    int WouldList,
+    int Repriced,
+    int Listed,
+    long ListedValue,
     int Kept,
     int Skipped,
     ImmutableArray<RunDecision> Decisions);

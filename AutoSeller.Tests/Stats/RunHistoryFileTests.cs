@@ -91,6 +91,7 @@ public sealed class RunHistoryFileTests : IDisposable
             2,
             1,
             0,
+            900,
             0,
             1,
             [RunDecision.ForListing(Alpha, OreListing(), decision), RunDecision.ForListing(Alpha, OreListing(1), decision) with { Guard = SaleRejection.BelowFloor }]);

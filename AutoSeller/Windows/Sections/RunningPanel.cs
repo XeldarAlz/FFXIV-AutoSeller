@@ -41,8 +41,9 @@ internal sealed class RunningPanel
     private string reason = string.Empty;
     private FittedText reasonFit;
     private string retainers = string.Empty;
-    private string wouldReprice = string.Empty;
-    private string wouldList = string.Empty;
+    private string repriced = string.Empty;
+    private string listed = string.Empty;
+    private bool dryRun;
     private string kept = string.Empty;
     private string elapsed = string.Empty;
 
@@ -209,9 +210,9 @@ internal sealed class RunningPanel
         var tileWidth = (ImGui.GetContentRegionAvail().X - gap * (TileCount - 1)) / TileCount;
         StatTile.Draw(Loc.T(L.Plan.RunTileRetainers), retainers, null, Styling.AccentNebula, tileWidth);
         ImGui.SameLine(0f, gap);
-        StatTile.Draw(Loc.T(L.Plan.DoneReprice), wouldReprice, null, Styling.AccentBlue, tileWidth);
+        StatTile.Draw(Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced), repriced, null, Styling.AccentBlue, tileWidth);
         ImGui.SameLine(0f, gap);
-        StatTile.Draw(Loc.T(L.Plan.DoneList), wouldList, null, Styling.AccentGlow, tileWidth);
+        StatTile.Draw(Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed), listed, null, Styling.AccentGlow, tileWidth);
         ImGui.SameLine(0f, gap);
         StatTile.Draw(Loc.T(L.Plan.RunTileKept), kept, null, Styling.TextDim, tileWidth);
         ImGui.SameLine(0f, gap);
@@ -242,8 +243,9 @@ internal sealed class RunningPanel
             : string.Empty;
         var tally = run.Tally;
         retainers = string.Concat(PlanLabels.Count(run.Settled), " / ", PlanLabels.Count(all.Length));
-        wouldReprice = PlanLabels.Count(tally.WouldReprice);
-        wouldList = PlanLabels.Count(tally.WouldList);
+        dryRun = run.DryRun;
+        repriced = PlanLabels.Count(tally.Repriced);
+        listed = PlanLabels.Count(tally.Listed);
         kept = PlanLabels.Count(tally.Kept + tally.Skipped);
         DescribeItem(items, run);
     }
@@ -270,7 +272,7 @@ internal sealed class RunningPanel
 
         var price = latest.Decision.Evidence.CompetitorPrice;
         competitor = price > 0 ? Loc.T(L.Plan.RunCompetitor, Formatting.Gil(price)) : string.Empty;
-        decision = PlanLabels.Done(latest);
+        decision = PlanLabels.Done(latest, run.DryRun);
         decisionColor = PlanLabels.DoneColor(latest);
         reason = PlanLabels.DoneReason(latest);
     }

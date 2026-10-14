@@ -99,7 +99,7 @@ internal sealed partial class PlanTable
         var decision = overlaid ? run.Decisions[decisionIndex] : default;
         if (overlaid)
         {
-            text.Action = PlanLabels.Done(decision);
+            text.Action = PlanLabels.Done(decision, run.DryRun);
             text.ActionColor = PlanLabels.DoneColor(decision);
             text.Caption = PlanLabels.DoneReason(decision);
             text.Suggested = decision.Skip == RunSkip.None ? SuggestedOf(decision.Decision, decision.CurrentPrice) : PlanLabels.NoValue;

@@ -61,6 +61,12 @@ internal static partial class L
         public static readonly LocString DoneKept = new("plan.done.kept", "Kept");
         public static readonly LocString DoneSkipped = new("plan.done.skipped", "Skipped");
         public static readonly LocString DoneRefused = new("plan.done.refused", "Refused");
+        public static readonly LocString DoneRepriced = new("plan.done.repriced", "Repriced");
+        public static readonly LocString DoneListed = new("plan.done.listed", "Listed");
+        public static readonly LocString DoneRejected = new("plan.done.rejected", "Not changed");
+        public static readonly LocString DoneUnknown = new("plan.done.unknown", "Unconfirmed");
+        public static readonly LocString DoneRejectedReason = new("plan.done.rejectedReason", "The listing did not change after Confirm");
+        public static readonly LocString DoneUnknownReason = new("plan.done.unknownReason", "Not confirmed; answer the question on the Sell page");
         public static readonly LocString DoneHelp = new("plan.done.help", "Decided by the run at the board.");
 
         public static readonly LocString ReasonAlreadyLowest = new("plan.reason.alreadyLowest", "Already lowest");

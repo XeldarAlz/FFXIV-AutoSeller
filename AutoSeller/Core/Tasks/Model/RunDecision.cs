@@ -3,6 +3,7 @@ using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Tasks.Model;
 
@@ -32,22 +33,29 @@ internal readonly record struct RunDecision(
     uint CurrentPrice,
     Decision Decision,
     RunSkip Skip,
-    SaleRejection Guard = SaleRejection.None)
+    SaleRejection Guard = SaleRejection.None,
+    RunWrite Write = RunWrite.None)
 {
     [JsonIgnore]
-    public bool Clear => Skip == RunSkip.None && Guard == SaleRejection.None;
+    public bool Clear => Skip == RunSkip.None && Guard == SaleRejection.None && !Failed;
 
     [JsonIgnore]
     public bool Refused => Skip == RunSkip.None && Guard != SaleRejection.None;
 
     [JsonIgnore]
-    public bool WouldReprice => Clear && Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp;
+    public bool Failed => Skip == RunSkip.None && Guard == SaleRejection.None && Write is RunWrite.Rejected or RunWrite.Unknown;
 
     [JsonIgnore]
-    public bool WouldList => Clear && Decision.Action == SellAction.List;
+    public bool Repriced => Clear && Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp;
+
+    [JsonIgnore]
+    public bool Listed => Clear && Decision.Action == SellAction.List;
 
     [JsonIgnore]
     public bool Kept => Clear && Decision.Action == SellAction.Keep;
+
+    [JsonIgnore]
+    public long ListedValue => Repriced || Listed ? Gil.SaturatingMultiply(Decision.Price, Quantity) : 0;
 
     public static RunDecision ForListing(ulong retainerId, in ListingSlot listing, in Decision decision)
     {
@@ -82,27 +90,29 @@ internal readonly record struct RunDecision(
     }
 }
 
-internal readonly record struct RunTally(int WouldReprice, int WouldList, int Kept, int Skipped)
+internal readonly record struct RunTally(int Repriced, int Listed, int Kept, int Skipped, long ListedValue)
 {
     [JsonIgnore]
-    public int Decided => WouldReprice + WouldList + Kept + Skipped;
+    public int Decided => Repriced + Listed + Kept + Skipped;
 
     public static RunTally Of(ReadOnlySpan<RunDecision> decisions)
     {
-        var wouldReprice = 0;
-        var wouldList = 0;
+        var repriced = 0;
+        var listed = 0;
         var kept = 0;
         var skipped = 0;
+        long listedValue = 0;
         for (var index = 0; index < decisions.Length; index++)
         {
             var decision = decisions[index];
-            if (decision.WouldReprice)
+            listedValue = Gil.SaturatingAdd(listedValue, decision.ListedValue);
+            if (decision.Repriced)
             {
-                wouldReprice++;
+                repriced++;
             }
-            else if (decision.WouldList)
+            else if (decision.Listed)
             {
-                wouldList++;
+                listed++;
             }
             else if (decision.Kept)
             {
@@ -114,6 +124,6 @@ internal readonly record struct RunTally(int WouldReprice, int WouldList, int Ke
             }
         }
 
-        return new RunTally(wouldReprice, wouldList, kept, skipped);
+        return new RunTally(repriced, listed, kept, skipped, listedValue);
     }
 }
