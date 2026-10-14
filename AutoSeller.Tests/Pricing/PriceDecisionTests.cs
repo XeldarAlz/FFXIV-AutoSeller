@@ -306,6 +306,51 @@ public sealed class PriceDecisionTests
         Assert.Equal(ReferenceFloor, decision.Evidence.Floor);
     }
 
+    [Theory]
+    [InlineData(BlindSearch.Capped)]
+    [InlineData(BlindSearch.Incomplete)]
+    [InlineData(BlindSearch.CountUnknown)]
+    [InlineData(BlindSearch.Stale)]
+    [InlineData(BlindSearch.FromTheFuture)]
+    public void PlayerPriceDoesNotNeedTheSearch(BlindSearch search)
+    {
+        var input = Existing(1_100, BlindSnapshot(search), FreshReference) with { Override = PriceOverride.SetByPlayer(1_200) };
+
+        var decision = Decide(input);
+
+        AssertDecision(decision, SellAction.RepriceUp, 1_200, 1_200, DecisionReason.PlayerPrice);
+        Assert.Equal(new DecisionEvidence(0, 0, Generation, 0, ReferenceSource.UniversalisWorld, ReferenceGil, ReferenceFloor), decision.Evidence);
+    }
+
+    [Fact]
+    public void PlayerPriceBelowTheFloorIsRefusedWithoutTheSearch()
+    {
+        var input = Existing(1_100, BlindSnapshot(BlindSearch.Capped), FreshReference) with { Override = PriceOverride.SetByPlayer(400) };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_100, 400, DecisionReason.BelowFloorKept);
+    }
+
+    [Fact]
+    public void FixedPriceDoesNotNeedTheSearch()
+    {
+        var capped = BlindSnapshot(BlindSearch.Capped);
+
+        AssertDecision(Decide(Existing(1_000, capped, FreshReference) with { Rule = Rule(fixedPrice: 900) }), SellAction.RepriceDown, 900, 900, DecisionReason.FixedPrice);
+        AssertDecision(Decide(NewLot(capped, FreshReference) with { Rule = Rule(fixedPrice: 1_234) }), SellAction.List, 1_234, 1_234, DecisionReason.FixedPrice);
+    }
+
+    [Fact]
+    public void SearchForAnotherItemKeepsEvenAPlayerPrice()
+    {
+        var input = Existing(1_100, BlindSnapshot(BlindSearch.OtherItem), FreshReference) with
+        {
+            Override = PriceOverride.SetByPlayer(1_200),
+            Rule = Rule(fixedPrice: 1_300),
+        };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_100, 0, DecisionReason.UnknownCompetition);
+    }
+
     [Fact]
     public void SearchIsCurrentFromItsCaptureToTheEndOfItsLifetime()
     {

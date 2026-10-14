@@ -12,23 +12,19 @@ internal static class PriceDecision
         var reference = ReferenceSelector.IsUsable(input.Reference, input.Item, input.NowUtc) ? input.Reference : default;
         var floor = FloorCalculator.Calculate(input.Rule.Floor, input.VendorPrice, reference, settings.MinimumReferenceRatioPercent);
         var competition = input.Competition;
-        if (!IsCurrent(competition, input.Item, input.NowUtc))
+        if (IsCurrent(competition, input.Item, input.NowUtc))
         {
-            var blind = new DecisionEvidence(0, 0, competition.Generation, 0, reference.Source, reference.AverageSalePrice, floor);
-            return Keep(input.CurrentListing?.UnitPrice ?? 0, 0, DecisionReason.UnknownCompetition, blind);
+            Span<CompetitorListing> buffer = stackalloc CompetitorListing[competition.Listings.Length];
+            var sane = BaitFilter.Filter(competition.Listings.AsSpan(), input.Item, input.OwnSellers, reference, settings.BaitRatioPercent, buffer);
+            return DecideAgainst(input, sane, reference, floor);
         }
 
-        Span<CompetitorListing> buffer = stackalloc CompetitorListing[competition.Listings.Length];
-        var sane = BaitFilter.Filter(competition.Listings.AsSpan(), input.Item, input.OwnSellers, reference, settings.BaitRatioPercent, buffer);
-        var evidence = EvidenceFor(competition, sane, reference, floor);
-        var target = TargetFor(input, sane, reference);
-        if (input.CurrentListing is not { } listing)
+        if (competition.ItemId == input.Item.ItemId && IsPricedWithoutCompetition(input))
         {
-            return DecideNewLot(settings, target, floor, evidence);
+            return DecideAgainst(input, default, reference, floor);
         }
 
-        var marketPrice = sane.IsEmpty ? target.Price : sane.Lowest.UnitPrice;
-        return DecideListing(input, listing.UnitPrice, target, marketPrice, floor, evidence);
+        return Keep(input.CurrentListing?.UnitPrice ?? 0, 0, DecisionReason.UnknownCompetition, EvidenceFor(competition, default, reference, floor));
     }
 
     public static bool IsCurrent(CompetitorSnapshot competition, ItemKey item, DateTime nowUtc)
@@ -43,6 +39,24 @@ internal static class PriceDecision
     {
         var age = nowUtc - capturedAtUtc;
         return age >= TimeSpan.Zero && age <= PricingSettings.CompetitionLifetime;
+    }
+
+    private static bool IsPricedWithoutCompetition(in PriceDecisionInput input)
+    {
+        return input.Override.Kind == PriceOverrideKind.Player || input.Rule.FixedPrice > 0;
+    }
+
+    private static Decision DecideAgainst(in PriceDecisionInput input, in SaneCompetition sane, in ReferencePrice reference, uint floor)
+    {
+        var evidence = EvidenceFor(input.Competition, sane, reference, floor);
+        var target = TargetFor(input, sane, reference);
+        if (input.CurrentListing is not { } listing)
+        {
+            return DecideNewLot(input.Settings, target, floor, evidence);
+        }
+
+        var marketPrice = sane.IsEmpty ? target.Price : sane.Lowest.UnitPrice;
+        return DecideListing(input, listing.UnitPrice, target, marketPrice, floor, evidence);
     }
 
     private static Decision DecideNewLot(PricingSettings settings, PriceTarget target, uint floor, in DecisionEvidence evidence)
