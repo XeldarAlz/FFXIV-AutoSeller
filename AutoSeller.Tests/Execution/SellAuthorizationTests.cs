@@ -65,8 +65,8 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.NoRetainers, Create(out _, retainers: []));
         Assert.Equal(AuthorizationProblem.InvalidRetainer, Create(out _, retainers: [FirstRetainer, 0]));
         Assert.Equal(AuthorizationProblem.DuplicateRetainer, Create(out _, retainers: [FirstRetainer, SecondRetainer, FirstRetainer]));
-        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 0));
-        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 101));
+        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 4));
+        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 91));
         Assert.Equal(AuthorizationProblem.InvalidCaps, Create(out _, caps: new RunCaps(-1, 100, 20_000)));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = PriceRange.Maximum + 1 }]));
@@ -75,6 +75,14 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { RetainerId = StrangerRetainer }]));
         Assert.Equal(AuthorizationProblem.DuplicateApprovedPrice, Create(out _, approvedPrices: [FirstApproval, FirstApproval with { Price = 700 }]));
         Assert.Equal(AuthorizationProblem.None, Create(out _));
+    }
+
+    [Fact]
+    public void StepLimitMayBeFrozenAnywhereInsideThePlansRange()
+    {
+        Assert.Equal(AuthorizationProblem.None, Create(out _, stepLimitPercent: 5));
+        Assert.Equal(AuthorizationProblem.None, Create(out _, stepLimitPercent: 90));
+        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 100));
     }
 
     [Fact]

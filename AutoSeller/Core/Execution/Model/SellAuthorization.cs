@@ -21,8 +21,8 @@ internal enum AuthorizationProblem : byte
 internal sealed class SellAuthorization
 {
     public const int CurrentPolicyVersion = 1;
-    public const int MinimumStepLimitPercent = 1;
-    public const int MaximumStepLimitPercent = 100;
+    public const int MinimumStepLimitPercent = 5;
+    public const int MaximumStepLimitPercent = 90;
 
     private SellAuthorization()
     {
