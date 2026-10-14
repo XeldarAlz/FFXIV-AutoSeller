@@ -23,6 +23,7 @@ internal enum RunSkip : byte
     SlotChanged,
     NoFreeSlot,
     QuantityOutOfBounds,
+    ReadBackUnavailable,
 }
 
 internal readonly record struct RunDecision(
@@ -34,7 +35,8 @@ internal readonly record struct RunDecision(
     Decision Decision,
     RunSkip Skip,
     SaleRejection Guard = SaleRejection.None,
-    RunWrite Write = RunWrite.None)
+    RunWrite Write = RunWrite.None,
+    WriteRejection Rejection = WriteRejection.Unchanged)
 {
     [JsonIgnore]
     public bool Clear => Skip == RunSkip.None && Guard == SaleRejection.None && !Failed;

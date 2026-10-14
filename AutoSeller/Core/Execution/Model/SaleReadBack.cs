@@ -75,6 +75,15 @@ internal static class SaleReadBack
         return tally.Verdict(sinceConfirmMs >= SettleWindowMs);
     }
 
+    public static bool CanJudge(in SaleWrite write, in ReadBackSample before) => write.Kind switch
+    {
+        WriteKind.Reprice => before.MarketReadable,
+        WriteKind.List or WriteKind.Return => before.MarketReadable && before.ItemCount >= 0,
+        WriteKind.Vendor => before.ItemCount >= 0 && before.Gil >= 0,
+        WriteKind.Move => before.ItemCount >= 0,
+        _ => false,
+    };
+
     private static Evidence RepricedListing(in SaleWrite write, in ReadBackSample before, in ReadBackSample after)
     {
         if (!before.MarketReadable || !after.MarketReadable)
