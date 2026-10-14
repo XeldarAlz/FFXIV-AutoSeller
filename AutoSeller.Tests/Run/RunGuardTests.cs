@@ -141,6 +141,16 @@ public sealed class RunGuardTests
     }
 
     [Fact]
+    public void AnItemAutoRetainerProtectsIsRefusedRightBeforeTheWrite()
+    {
+        var verdict = RunGuard.Evaluate(dryRun, live, Row(Reprice()) with { Protected = true }, competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+
+        Assert.Equal(SaleRejection.ItemProtected, verdict.Rejection);
+        Assert.Equal(RunReaction.SkipItem, RunReactions.ForGuard(verdict.Rejection));
+        Assert.Equal(DriverHalt.None, DriverHalts.ForGuard(verdict.Rejection));
+    }
+
+    [Fact]
     public void OnlyTheAuthorizedCharacterIsTheSameCharacter()
     {
         Assert.True(RunGuard.SameCharacter(dryRun, Character));
