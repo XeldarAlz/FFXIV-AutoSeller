@@ -87,6 +87,18 @@ public sealed class ChainWindowTests
     }
 
     [Fact]
+    public void TheRetainerMenuIsBackOnlyWhenNoSellWindowOrSpeechIsLeft()
+    {
+        Assert.True(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString));
+        Assert.True(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString | ChainWindow.RetainerList));
+        Assert.False(ChainUnwind.AtRetainerMenu(ChainWindow.RetainerList));
+        Assert.False(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString | ChainWindow.Talk));
+        Assert.False(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString | ChainWindow.RetainerSellList));
+        Assert.False(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString | ChainWindow.RetainerHistory));
+        Assert.False(ChainUnwind.AtRetainerMenu(ChainWindow.SelectString | ChainWindow.RetainerSellList | ChainWindow.RetainerSell));
+    }
+
+    [Fact]
     public void UnwindNeverTouchesAPromptOrTheRetainerMenu()
     {
         Assert.Equal(ChainWindow.None, ChainUnwind.NextToClose(ChainWindow.SelectYesno | ChainWindow.SelectString | ChainWindow.Talk | ChainWindow.RetainerList | ChainWindow.SelectOk));

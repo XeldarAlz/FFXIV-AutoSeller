@@ -28,6 +28,11 @@ internal static class SaleGuard
             return SaleVerdict.Rejected(SaleRejection.NotEligible, floor);
         }
 
+        if (input.IsProtected && input.Write.Kind != WriteKind.Vendor)
+        {
+            return SaleVerdict.Rejected(SaleRejection.ItemProtected, floor);
+        }
+
         rejection = CheckPrice(input, floor);
         if (rejection != SaleRejection.None)
         {

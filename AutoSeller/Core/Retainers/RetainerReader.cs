@@ -1,6 +1,8 @@
 using System.Text;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
+using Dalamud.Game.ClientState.Conditions;
+using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace AutoSeller.Core.Retainers;
@@ -21,6 +23,8 @@ internal sealed unsafe class RetainerReader
 
     public bool Available { get; }
 
+    public static bool CanReadRoster => Svc.Condition[ConditionFlag.OccupiedSummoningBell];
+
     public ReadOnlySpan<RetainerInfo> Last => roster.AsSpan(0, count);
 
     public void Reset()
@@ -33,7 +37,7 @@ internal sealed unsafe class RetainerReader
     public bool TryRead(out ReadOnlySpan<RetainerInfo> retainers)
     {
         retainers = default;
-        if (!Available)
+        if (!Available || !CanReadRoster)
         {
             return false;
         }
@@ -80,7 +84,7 @@ internal sealed unsafe class RetainerReader
     public bool TryGetOpenRetainer(out RetainerInfo retainer)
     {
         retainer = default;
-        if (!Available)
+        if (!Available || !CanReadRoster)
         {
             return false;
         }

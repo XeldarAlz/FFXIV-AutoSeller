@@ -36,6 +36,20 @@ internal static class RetainerWindows
         return left == ChainWindow.None;
     }
 
+    public static ChainWindow CloseOwnedNow(ChainWindow windows)
+    {
+        var open = UnexpectedAddons.View().Visible & windows;
+        var left = open;
+        for (var next = ChainUnwind.NextToClose(left); next != ChainWindow.None; next = ChainUnwind.NextToClose(left))
+        {
+            RetainerClicks.ResetCloseThrottles();
+            CloseOne(next);
+            left &= ~next;
+        }
+
+        return open;
+    }
+
     public static async Task<bool> RepeatUntil(Func<bool> click, Func<bool> done, int timeoutMs, Func<bool> stopped)
     {
         var deadline = Environment.TickCount64 + timeoutMs;

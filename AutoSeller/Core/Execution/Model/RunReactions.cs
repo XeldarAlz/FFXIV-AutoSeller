@@ -56,6 +56,7 @@ internal static class RunReactions
         SaleRejection.VendorGear => RunReaction.SkipItem,
         SaleRejection.VendorProtected => RunReaction.SkipItem,
         SaleRejection.VendorOnSellList => RunReaction.SkipItem,
+        SaleRejection.ItemProtected => RunReaction.SkipItem,
         _ => RunReaction.EndRun,
     };
 

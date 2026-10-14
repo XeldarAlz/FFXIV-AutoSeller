@@ -35,6 +35,16 @@ internal static unsafe class RetainerClicks
     private const string DeclinePromptThrottleKey = "AutoSeller.Retainer.DeclinePrompt";
     private const string CloseWindowThrottleKey = "AutoSeller.Retainer.CloseWindow";
 
+    private static readonly string[] closeThrottleKeys =
+    [
+        CloseContextMenuThrottleKey,
+        CancelSellThrottleKey,
+        CloseSellWindowThrottleKey,
+        CloseResultWindowThrottleKey,
+        CloseSellListThrottleKey,
+        CloseWindowThrottleKey,
+    ];
+
     public static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
     public static readonly string SelectStringAddon = ChainWindows.NameOf(ChainWindow.SelectString);
     public static readonly string TalkAddon = ChainWindows.NameOf(ChainWindow.Talk);
@@ -164,6 +174,14 @@ internal static unsafe class RetainerClicks
     public static bool CloseAddon(string addonName) => Close(addonName, CloseWindowThrottleKey);
 
     public static bool DeclinePrompt() => NpcInteraction.AnswerNo(DeclinePromptThrottleKey);
+
+    public static void ResetCloseThrottles()
+    {
+        for (var index = 0; index < closeThrottleKeys.Length; index++)
+        {
+            EzThrottler.Reset(closeThrottleKeys[index]);
+        }
+    }
 
     private static void ReportContextOwner()
     {

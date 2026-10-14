@@ -73,25 +73,7 @@ internal sealed partial class RetainerDriver
             return new Visit(new Stop(DriverHalt.RetainerNotListed, $"the open retainer is not {retainer.Name} ({retainer.RetainerId})"), false);
         }
 
-        var stop = await OpenSellList(retainer);
-        if (stop.Halted)
-        {
-            return new Visit(stop, false);
-        }
-
-        session.Show(RunState.ReadingMarket, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
-        var market = await ReadMarket(retainer);
-        if (market is null)
-        {
-            return new Visit(new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read"), false);
-        }
-
-        stop = await WorkListings(index, retainer, market);
-        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
-        {
-            stop = await WorkLots(index, retainer, market);
-        }
-
+        var stop = await WorkRetainer(index, retainer);
         if (stop.Halted || CancelToken.IsCancellationRequested)
         {
             return new Visit(stop, false);
@@ -100,6 +82,86 @@ internal sealed partial class RetainerDriver
         var finished = !session.PausedAtBoundary;
         stop = await LeaveRetainer(retainer);
         return new Visit(stop, finished && !stop.Halted);
+    }
+
+    private async Task<Stop> WorkHandedOverRetainer()
+    {
+        engaged = true;
+        const int index = 0;
+        var visit = await VisitHandedOverRetainer(index);
+        if (CancelToken.IsCancellationRequested)
+        {
+            return Stop.None;
+        }
+
+        switch (DriverHalts.ReactionTo(visit.Stop.Reason))
+        {
+            case RunReaction.Continue:
+                if (visit.Finished)
+                {
+                    session.Visits.MarkVisited(index);
+                }
+
+                return Stop.None;
+            case RunReaction.EndRetainer:
+                session.Visits.MarkSkipped(index, visit.Stop.Reason);
+                Warn($"Driver: {session.Retainers[index].Name} skipped ({visit.Stop.Reason}): {visit.Stop.Detail}");
+                return await BackToRetainerMenu();
+            default:
+                return visit.Stop;
+        }
+    }
+
+    private async Task<Visit> VisitHandedOverRetainer(int index)
+    {
+        var retainer = session.Retainers[index];
+        session.WorkOn(index, default);
+        session.Show(RunState.ReadyForPostprocess, Loc.T(L.Run.StatusPostprocess, retainer.Name));
+        if (NotRegisteredToAMarket(retainer.RetainerId))
+        {
+            return new Visit(new Stop(DriverHalt.RetainerNotRegistered, $"{retainer.Name} is not registered to any market, so it has nothing to sell"), false);
+        }
+
+        if (!await WaitUntilTimed(() => OpenRetainerIs(retainer.RetainerId) && BackAtRetainerMenu(), RetainerMenuOpenMs, "driver-handed-over", StepPollFrames))
+        {
+            var reason = OpenRetainerIs(retainer.RetainerId) ? DriverHalt.RetainerMenuDidNotOpen : DriverHalt.RetainerNotListed;
+            return new Visit(new Stop(reason, $"AutoRetainer handed over {retainer.Name} ({retainer.RetainerId}) but its menu is not open; the windows are {UnexpectedAddons.View().Visible}"), false);
+        }
+
+        Diag($"Driver: AutoRetainer handed over {retainer.Name} at its menu.");
+        var stop = await WorkRetainer(index, retainer);
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return new Visit(stop, false);
+        }
+
+        var finished = !session.PausedAtBoundary;
+        stop = await CloseSellListToMenu(retainer);
+        return new Visit(stop, finished && !stop.Halted);
+    }
+
+    private async Task<Stop> WorkRetainer(int index, RunRetainer retainer)
+    {
+        var stop = await OpenSellList(retainer);
+        if (stop.Halted)
+        {
+            return stop;
+        }
+
+        session.Show(RunState.ReadingMarket, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read");
+        }
+
+        stop = await WorkListings(index, retainer, market);
+        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
+        {
+            stop = await WorkLots(index, retainer, market);
+        }
+
+        return stop;
     }
 
     private async Task<Stop> OpenSellList(RunRetainer retainer)
@@ -130,6 +192,17 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> LeaveRetainer(RunRetainer retainer)
     {
+        var closed = await CloseSellListToMenu(retainer);
+        if (closed.Halted || CancelToken.IsCancellationRequested)
+        {
+            return closed;
+        }
+
+        return await QuitRetainer();
+    }
+
+    private async Task<Stop> CloseSellListToMenu(RunRetainer retainer)
+    {
         session.Show(RunState.ClosingSellList, Loc.T(L.Run.StatusLeaving, retainer.Name));
         var closed = await Step(ChainStep.Closes(ChainWindow.RetainerSellList, MenuReturnMs, RetainerBackdrop | ChainWindow.Talk), RetainerClicks.CloseSellList, RetainerClicks.ProgressTalk);
         if (!closed.Succeeded)
@@ -138,12 +211,30 @@ internal sealed partial class RetainerDriver
         }
 
         var menu = await Watch(ChainStep.Opens(ChainWindow.SelectString, MenuReturnMs, ChainWindow.RetainerList | ChainWindow.Talk), RetainerClicks.ProgressTalk);
-        if (!menu.Succeeded)
+        return menu.Succeeded ? Stop.None : Failed(menu, DriverHalt.WindowsDidNotClose, $"the menu of {retainer.Name} did not come back after the sell list");
+    }
+
+    private async Task<Stop> BackToRetainerMenu()
+    {
+        await RetainerWindows.CloseOwned(ChainUnwind.Owned, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
+        if (await WaitUntilTimed(BackAtRetainerMenu, MenuReturnMs, "driver-back-to-menu", StepPollFrames) || CancelToken.IsCancellationRequested)
         {
-            return Failed(menu, DriverHalt.WindowsDidNotClose, $"the menu of {retainer.Name} did not come back after the sell list");
+            return Stop.None;
         }
 
-        return await QuitRetainer();
+        return new Stop(DriverHalt.WindowsDidNotClose, $"the retainer menu did not come back; the windows are {UnexpectedAddons.View().Visible}");
+    }
+
+    private static bool BackAtRetainerMenu()
+    {
+        var visible = UnexpectedAddons.View().Visible;
+        if (ChainWindows.Contains(visible, ChainWindow.Talk))
+        {
+            RetainerClicks.ProgressTalk();
+            return false;
+        }
+
+        return ChainUnwind.AtRetainerMenu(visible);
     }
 
     private async Task<Stop> QuitRetainer()

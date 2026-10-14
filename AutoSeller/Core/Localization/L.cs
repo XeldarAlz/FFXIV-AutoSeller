@@ -80,6 +80,8 @@ internal static partial class L
         public static readonly LocString StatusLot = new("run.status.lot", "{0}: pricing {1} for a new listing ({2} of {3})");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
+        public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");
+        public static readonly LocString StatusHandingBack = new("run.status.handingBack", "Handing {0} back to AutoRetainer");
         public static readonly LocString StatusPausing = new("run.status.pausing", "Pausing after this item");
         public static readonly LocString StatusPausedInContent = new("run.status.pausedInContent", "Paused while you are in content");
         public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");
@@ -97,6 +99,8 @@ internal static partial class L
         public static readonly LocString BlockInCutscene = new("run.block.inCutscene", "Wait until the cutscene is over.");
         public static readonly LocString BlockTrading = new("run.block.trading", "Finish or cancel the trade first.");
         public static readonly LocString BlockAutoRetainerBusy = new("run.block.autoRetainerBusy", "AutoRetainer is busy; wait until it is done.");
+        public static readonly LocString BlockAutoRetainerNotHeld = new("run.block.autoRetainerNotHeld", "AutoRetainer could not be held back for the run; try again, or reload AutoRetainer if this keeps happening.");
+        public static readonly LocString BlockProtectListUnreadable = new("run.block.protectListUnreadable", "AutoRetainer cannot read its protect list for this character, so nothing is sold until it can. This happens when AutoRetainer has no data for the character; the Console has the details.");
         public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
@@ -164,6 +168,10 @@ internal static partial class L
         public static readonly LocString PurposeVnavmesh = new("plugins.purpose.vnavmesh", "Pathfinding and movement for walking to a summoning bell.");
         public static readonly LocString PurposeAutoRetainer = new("plugins.purpose.autoRetainer", "Runs Auto Seller after ventures, and shares its protect list and your alt characters.");
         public static readonly LocString PurposeMarketbuddy = new("plugins.purpose.marketbuddy", "Locked while Auto Seller types a price, so only one of them fills the sell window.");
+        public static readonly LocString StateReady = new("plugins.state.ready", "Ready");
+        public static readonly LocString StateBusy = new("plugins.state.busy", "Busy");
+        public static readonly LocString StateOutdated = new("plugins.state.outdated", "Outdated");
+        public static readonly LocString StateMissing = new("plugins.state.missing", "Not installed");
     }
 
     internal static class Log

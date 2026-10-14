@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Retainers;
-using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 
@@ -152,7 +151,7 @@ internal sealed class CharacterStore : IDisposable
 
     private void RefreshRoster(CharacterData data, long now)
     {
-        if (!CanReadRoster() || now - lastRosterMs < RosterIntervalMs)
+        if (!RetainerReader.CanReadRoster || now - lastRosterMs < RosterIntervalMs)
         {
             return;
         }
@@ -167,11 +166,6 @@ internal sealed class CharacterStore : IDisposable
         {
             RunLog.Info($"Retainer roster now has {roster.Length} retainers, read at the summoning bell.");
         }
-    }
-
-    private static bool CanReadRoster()
-    {
-        return Svc.Condition[ConditionFlag.OccupiedSummoningBell];
     }
 
     private void SaveWhenSettled(CharacterData data, long now)

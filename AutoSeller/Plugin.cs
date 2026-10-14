@@ -1,4 +1,5 @@
 using AutoSeller.Core;
+using AutoSeller.Core.AutoRetainer;
 using AutoSeller.Core.Characters;
 using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
@@ -16,6 +17,7 @@ using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows;
+using AutoSeller.Windows.Overlays;
 using AutoSeller.Windows.Shell;
 using clib;
 using Dalamud.Game.Command;
@@ -62,10 +64,15 @@ public sealed class Plugin : IDalamudPlugin
     internal BlockedScanner BlockedScanner { get; }
     internal PlanBuilder Plan { get; }
     internal ListingsBook Listings { get; }
+    internal AutoRetainerIpc AutoRetainer { get; }
+    internal MarketbuddyIpc Marketbuddy { get; }
+    internal AutoRetainerSuppression Suppression { get; }
+    internal PostprocessHost Postprocess { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
     private readonly AppWindow appWindow;
+    private readonly SellNowButton sellNowButton;
     private readonly CommandInfo primaryCommand;
     private readonly CommandInfo aliasCommand;
 
@@ -87,6 +94,12 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(CLibMain.Dispose);
 
             Configuration = LoadConfiguration();
+            AutoRetainer = new AutoRetainerIpc();
+            completed.Push(AutoRetainer.Dispose);
+            Marketbuddy = new MarketbuddyIpc();
+            completed.Push(Marketbuddy.Dispose);
+            Suppression = new AutoRetainerSuppression(AutoRetainer);
+            completed.Push(Suppression.ReleaseAny);
 
             History = new RunHistory(PluginInterface.ConfigDirectory.FullName);
             completed.Push(History.Dispose);
@@ -102,8 +115,8 @@ public sealed class Plugin : IDalamudPlugin
             RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
-            OwnSellers = new OwnSellersProvider(Retainers, Characters);
-            Bags = new BagReader(static _ => false);
+            OwnSellers = new OwnSellersProvider(Retainers, Characters, Configuration, AutoRetainer);
+            Bags = new BagReader(AutoRetainer.IsItemProtected);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
             Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller?.RunInput);
@@ -111,6 +124,10 @@ public sealed class Plugin : IDalamudPlugin
             Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
+            Postprocess = new PostprocessHost(this);
+            completed.Push(Postprocess.Dispose);
+            sellNowButton = new SellNowButton(Configuration, AutoRetainer, Postprocess, Controller);
+            completed.Push(sellNowButton.Dispose);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -161,6 +178,9 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Controller.Shutdown();
+        sellNowButton.Dispose();
+        Postprocess.Dispose();
+        Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
         PluginInterface.UiBuilder.Draw -= OnDraw;
@@ -185,6 +205,8 @@ public sealed class Plugin : IDalamudPlugin
 
         dutyWatcher.Dispose();
         gmAlertWatcher.Dispose();
+        Marketbuddy.Dispose();
+        AutoRetainer.Dispose();
 
         CLibMain.Dispose();
         ECommonsMain.Dispose();

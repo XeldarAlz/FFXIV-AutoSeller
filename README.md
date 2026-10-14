@@ -18,7 +18,7 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price. Vendoring, returns, the sales ledger, Assist and the AutoRetainer post-process are still being built.
+> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price. Vendoring, returns, the sales ledger and Assist are still being built.
 
 ## What it does
 
@@ -33,7 +33,7 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 - **Rules**: a sell list with a floor, ceiling, fixed price, lot size, bag keep count, listings to keep up and preferred retainer per item, plus category rules with a minimum value and vendor rules that stay off until you turn them on. Items on the never-sell list, in a gear set, equipped or protected in AutoRetainer are never sold, and the Rules page shows which matched items in your bags are blocked and why. Rules can be exported and imported as JSON, without any retainer names or ids.
 - **Sources**: your bags and crystals, and when you opt in, a retainer's own inventory, the saddlebag and the armoury chest (never items in a gear set).
 - **Three ways to run**: Start, which goes to a nearby summoning bell or the bell in your inn room; an AutoRetainer post-process after each venture; or Assist, which fills the suggested price when you open a sell window by hand and leaves Confirm to you.
-- **In-game buttons**: "Run all retainers" on the retainer list and "Reprice this retainer" on a retainer's sell list, so a run can start without opening the window.
+- **In-game buttons**: "Run all retainers" on the retainer list and "Reprice this retainer" on a retainer's sell list, so a run can start without opening the window. With AutoRetainer, a Sell now button on its retainer list sends every retainer through Auto Seller.
 - **Undercut watch**: your listings are checked against Universalis on a timer, with no game request, and a run can visit only the retainers that need it.
 - **Listings**: every listing of every character and retainer from their last visit, with its price, the lowest competitor, how long it has been listed, its last reprice and its state.
 - **Sales**: a ledger built from sale notices, the retainer sale history and listing changes, with daily, 7-day and 30-day totals, a daily chart, views per item, retainer and character, and hints when an item sells fast or sits unsold.
@@ -45,12 +45,12 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 ## How a run works
 
 1. Write your rules, check the plan on the Sell page and press **Start** (or type `/asell start`). The run keeps to the rules, floors, caps and edits you saw at that moment.
-2. It walks to a nearby summoning bell, or travels to the inn of your Grand Company's city and uses the bell in your room. AutoRetainer, when installed, is held back for the run and restored afterwards.
+2. It walks to a nearby summoning bell, or travels to the inn of your Grand Company's city and uses the bell in your room. AutoRetainer, when installed, is held back for the run and restored afterwards; while AutoRetainer is busy, Start stays off.
 3. For each enabled retainer it reads the listings and the sale history, compares prices, reprices what is due, lists the planned lots and, when your rules allow it, vendors junk.
 4. Every price is checked in the sell window before Confirm and read back from the retainer's listings after it. A write it cannot confirm stops the run and asks you to check.
 5. It closes the retainer windows and records the run in History and the sales in the ledger.
 
-As an AutoRetainer post-process it skips the walk, works on the one retainer AutoRetainer hands over after its venture, and always hands it back.
+As an AutoRetainer post-process it skips the walk, works on the one retainer AutoRetainer hands over after its venture, and always hands it back at the retainer's menu. Turn it on under Settings, AutoRetainer, which also shows what it is doing right now. A Stop while it works keeps the next retainers with AutoRetainer until you leave the bell.
 
 ## Safety
 
@@ -61,7 +61,7 @@ As an AutoRetainer post-process it skips the walk, works on the one retainer Aut
 - **The player's path.** Prices go through the game's sell window, the same one you use. There are no direct market writes.
 - **Checked twice.** Every write is checked before Confirm and read back after it, and a write whose listings cannot be read first is not made. A write it cannot confirm stops the run in a "needs you" state, nothing resumes on its own, and Start stays off until you answer its question on the Sell page.
 - **Menus by text.** Retainer menu entries are chosen by their text from the game data, never by their place in the menu, and there is no blanket Yes to prompts.
-- **Hands back.** As an AutoRetainer post-process it hands the retainer back on success, failure, Stop and unload.
+- **Hands back.** As an AutoRetainer post-process it hands the retainer back on success, failure, Stop, logout, a character change and unload, and when its time for that retainer runs out.
 - **What it never does**: list an item outside your rules, go below a floor, vendor anything your rules do not call junk, or recover on its own from a write it could not confirm. Its only network calls go to Universalis for price data.
 
 ## Install

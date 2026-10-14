@@ -141,6 +141,37 @@ public sealed class RunGuardTests
     }
 
     [Fact]
+    public void AnItemAutoRetainerProtectsIsRefusedRightBeforeTheWrite()
+    {
+        var verdict = RunGuard.Evaluate(dryRun, live, Row(Reprice()) with { Protected = true }, competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+
+        Assert.Equal(SaleRejection.ItemProtected, verdict.Rejection);
+        Assert.Equal(RunReaction.SkipItem, RunReactions.ForGuard(verdict.Rejection));
+        Assert.Equal(DriverHalt.None, DriverHalts.ForGuard(verdict.Rejection));
+    }
+
+    [Fact]
+    public void OnlyTheAuthorizedCharacterIsTheSameCharacter()
+    {
+        Assert.True(RunGuard.SameCharacter(dryRun, Character));
+        Assert.False(RunGuard.SameCharacter(dryRun, Character + 1));
+        Assert.False(RunGuard.SameCharacter(dryRun, 0));
+    }
+
+    [Fact]
+    public void ARunVisitsOnlyTheRetainersItIsAuthorizedForInTheirOrder()
+    {
+        var first = new RunRetainer(FirstRetainer, "First", 1, 0);
+        var second = new RunRetainer(SecondRetainer, "Second", 2, 0);
+        var stranger = new RunRetainer(StrangerRetainer, "Stranger", 3, 0);
+        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, [SecondRetainer], StartRules, StartPricing, PlanEdits.None, RunCaps.Default, true, SellAuthorization.CurrentPolicyVersion, [], Now, out var single);
+
+        Assert.Equal(AuthorizationProblem.None, problem);
+        Assert.Equal([first, second], RunPlanner.Visiting([first, stranger, second], dryRun).AsSpan().ToArray());
+        Assert.Equal([second], RunPlanner.Visiting([first, stranger, second], single!).AsSpan().ToArray());
+    }
+
+    [Fact]
     public void TheGameDayTurnsAtTheDailyReset()
     {
         var reset = new DateTime(2026, 10, 14, 15, 0, 0, DateTimeKind.Utc);
@@ -154,6 +185,6 @@ public sealed class RunGuardTests
     private static GuardedRow Row(SaleWrite write)
     {
         var reading = new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice);
-        return new GuardedRow(write, reading, reading, true, RuleFloor, VendorUnitPrice);
+        return new GuardedRow(write, reading, reading, true, RuleFloor, VendorUnitPrice, false);
     }
 }

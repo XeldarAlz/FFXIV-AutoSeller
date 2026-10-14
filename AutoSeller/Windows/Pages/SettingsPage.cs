@@ -119,7 +119,7 @@ internal sealed class SettingsPage
                 SourceSettings.Draw(configuration, plugin.Characters.Current);
                 break;
             case Tab.AutoRetainer:
-                AutoRetainerSettings.Draw(configuration);
+                AutoRetainerSettings.Draw(plugin);
                 break;
             case Tab.AssistWatch:
                 AssistSettings.Draw(configuration);

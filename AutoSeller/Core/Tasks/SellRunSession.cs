@@ -15,14 +15,16 @@ internal sealed class SellRunSession
     private readonly HashSet<PlanRowKey> handled = [];
     private readonly HashSet<ItemKey> replanned = [];
 
-    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal)
+    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal, RunMode mode)
     {
         Authorization = authorization;
         Input = input;
         PlanInputs = input.ToRunInputs();
         Review = review;
         Journal = journal;
-        Visits = new RetainerVisits(PlanInputs.Retainers.Length);
+        Mode = mode;
+        Retainers = RunPlanner.Visiting(PlanInputs.Retainers, authorization);
+        Visits = new RetainerVisits(Retainers.Length);
         Values = new ValueBook(authorization.Caps);
     }
 
@@ -30,7 +32,9 @@ internal sealed class SellRunSession
 
     public PlanInput Input { get; }
 
-    public ImmutableArray<RunRetainer> Retainers => PlanInputs.Retainers;
+    public RunMode Mode { get; }
+
+    public ImmutableArray<RunRetainer> Retainers { get; }
 
     public RunPlanInputs PlanInputs { get; set; }
 

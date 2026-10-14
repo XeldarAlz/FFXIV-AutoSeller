@@ -267,7 +267,7 @@ public sealed class AppWindow : Window, IDisposable
             case Page.Rules: rulesPage.Draw(plugin); break;
             case Page.Settings: settingsPage.Draw(plugin); break;
             case Page.History: historyPage.Draw(plugin.History); break;
-            case Page.Plugins: pluginsPage.Draw(); break;
+            case Page.Plugins: pluginsPage.Draw(plugin); break;
             case Page.Log: logPage.Draw(); break;
             case Page.Changelog: changelogPage.Draw(plugin.Configuration, pageShownTick); break;
             case Page.About: aboutPage.Draw(pageShownTick); break;

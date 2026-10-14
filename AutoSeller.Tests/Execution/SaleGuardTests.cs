@@ -51,6 +51,8 @@ public sealed class SaleGuardTests
         (SaleRejection.VendorGear, () => GuardInput(Vendor()) with { IsGear = true }),
         (SaleRejection.VendorProtected, () => GuardInput(Vendor()) with { IsProtected = true }),
         (SaleRejection.VendorOnSellList, () => GuardInput(Vendor()) with { OnSellList = true }),
+        (SaleRejection.ItemProtected, () => GuardInput(Reprice()) with { IsProtected = true }),
+        (SaleRejection.ItemProtected, () => GuardInput(List()) with { IsProtected = true }),
     ];
 
     [Fact]

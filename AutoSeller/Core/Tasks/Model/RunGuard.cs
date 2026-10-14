@@ -18,7 +18,7 @@ internal readonly record struct RunLiveFacts(
     bool JournalBlocksWrites,
     DateTime NowUtc);
 
-internal readonly record struct GuardedRow(SaleWrite Write, SlotReading Planned, SlotReading Observed, bool Eligible, uint RuleFloor, uint VendorPrice);
+internal readonly record struct GuardedRow(SaleWrite Write, SlotReading Planned, SlotReading Observed, bool Eligible, uint RuleFloor, uint VendorPrice, bool Protected);
 
 internal static class RunGuard
 {
@@ -57,7 +57,7 @@ internal static class RunGuard
             VendorPrice = row.VendorPrice,
             VendorRuleMatches = false,
             IsGear = false,
-            IsProtected = false,
+            IsProtected = row.Protected,
             OnSellList = authorization.Rules.IsOnSellList(row.Write.ItemId),
         });
         if (verdict.IsAllowed && authorization.DryRun && values.TryReserve(writeId, row.Write) == ValueBookResult.Applied)
@@ -68,9 +68,14 @@ internal static class RunGuard
         return verdict;
     }
 
+    public static bool SameCharacter(SellAuthorization authorization, ulong contentId)
+    {
+        return contentId != 0 && contentId == authorization.CharacterContentId;
+    }
+
     public static DriverHalt CheckBoundary(SellAuthorization authorization, in RunLiveFacts live)
     {
-        if (live.CharacterContentId != authorization.CharacterContentId)
+        if (!SameCharacter(authorization, live.CharacterContentId))
         {
             return DriverHalt.OtherCharacter;
         }

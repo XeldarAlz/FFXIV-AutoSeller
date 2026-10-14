@@ -30,6 +30,11 @@ internal sealed partial class RetainerDriver
             return StepResult.Cancelled;
         }
 
+        if (!decider.SameCharacter())
+        {
+            return StepResult.Halt(OtherCharacter(step));
+        }
+
         await ClickOnce(act);
         return await Watch(step, act, whileWaiting);
     }
@@ -44,6 +49,11 @@ internal sealed partial class RetainerDriver
         chain.Begin(step, Environment.TickCount64);
         while (!CancelToken.IsCancellationRequested)
         {
+            if (!decider.SameCharacter())
+            {
+                return StepResult.Halt(OtherCharacter(step));
+            }
+
             if (UnexpectedAddons.InCombat())
             {
                 return StepResult.Halt(new Stop(DriverHalt.CombatOrDutyPop, $"combat while waiting for {step.Window} to {Expected(step)}"));
@@ -108,6 +118,11 @@ internal sealed partial class RetainerDriver
     }
 
     private static string Expected(ChainStep step) => step.Expectation == ChainExpectation.Opens ? "open" : "close";
+
+    private static Stop OtherCharacter(ChainStep step)
+    {
+        return new Stop(DriverHalt.OtherCharacter, $"another character than the authorized one is logged in while waiting for {step.Window} to {Expected(step)}");
+    }
 
     private readonly record struct StepResult(StepEnd End, ChainWindow Window, Stop Stop)
     {

@@ -80,6 +80,11 @@ internal sealed partial class RetainerDriver
             {
                 await NextFrame();
                 state = tracker.Poll();
+                if (!decider.SameCharacter())
+                {
+                    return SearchResult.Halt(new Stop(DriverHalt.OtherCharacter, "another character than the authorized one is logged in during the price comparison"));
+                }
+
                 if (UnexpectedAddons.InCombat())
                 {
                     return SearchResult.Halt(new Stop(DriverHalt.CombatOrDutyPop, "combat during the price comparison"));

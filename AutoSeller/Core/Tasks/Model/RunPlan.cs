@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
@@ -58,6 +59,20 @@ internal static class RunPlanner
             Edits = inputs.Edits,
         });
         return new RunPlan { Lots = lots, Allocation = allocation };
+    }
+
+    public static ImmutableArray<RunRetainer> Visiting(ImmutableArray<RunRetainer> retainers, SellAuthorization authorization)
+    {
+        var visiting = ImmutableArray.CreateBuilder<RunRetainer>(retainers.Length);
+        for (var index = 0; index < retainers.Length; index++)
+        {
+            if (authorization.AllowsRetainer(retainers[index].RetainerId))
+            {
+                visiting.Add(retainers[index]);
+            }
+        }
+
+        return visiting.ToImmutable();
     }
 
     public static bool CanListFrom(SlotSource source)

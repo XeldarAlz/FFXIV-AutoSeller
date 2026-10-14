@@ -159,6 +159,8 @@ public sealed class RunOutcomeTests
     [InlineData((byte)RunState.Paused, (byte)RunPhase.Paused)]
     [InlineData((byte)RunState.StopRequested, (byte)RunPhase.Stopping)]
     [InlineData((byte)RunState.Finishing, (byte)RunPhase.Finishing)]
+    [InlineData((byte)RunState.ReadyForPostprocess, (byte)RunPhase.Selling)]
+    [InlineData((byte)RunState.FinishingPostprocess, (byte)RunPhase.Finishing)]
     [InlineData((byte)RunState.Completed, (byte)RunPhase.Finishing)]
     public void TheShownPhaseFollowsTheRunState(byte state, byte phase)
     {

@@ -48,7 +48,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
         }
 
         await ReadReferences();
-        if (CancelToken.IsCancellationRequested || !await ReachBell())
+        if (CancelToken.IsCancellationRequested || (session.Mode == RunMode.Standalone && !await ReachBell()))
         {
             return;
         }
@@ -200,6 +200,10 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             case RunReaction.EndRun:
                 session.Fail(FailureOf(halt), halt == DriverHalt.Fault);
                 return;
+            case RunReaction.PauseRun when session.Mode == RunMode.Postprocess:
+                Diag($"Run: {halt}; the retainer windows are closed and the retainer goes back to AutoRetainer.");
+                session.Conclude(RunState.Stopped);
+                return;
             case RunReaction.PauseRun:
                 Diag($"Run: {halt}; the retainer windows are closed and the run pauses until that is over.");
                 session.HoldAtBoundary(PauseReason.Interrupted);
@@ -224,7 +228,15 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
 
     private void Finish()
     {
-        session.Show(RunState.Finishing, Loc.T(L.Run.StatusClosing));
+        if (session.Mode == RunMode.Postprocess)
+        {
+            session.Show(RunState.FinishingPostprocess, Loc.T(L.Run.StatusHandingBack, session.Retainers[0].Name));
+        }
+        else
+        {
+            session.Show(RunState.Finishing, Loc.T(L.Run.StatusClosing));
+        }
+
         session.Conclude(RunOutcomeRule.Completion(session.Visits, session.Decisions));
     }
 }
