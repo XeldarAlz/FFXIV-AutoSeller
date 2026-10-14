@@ -113,7 +113,7 @@ internal sealed class SellRun
 
     public CompetitorSnapshot Search(ItemKey item, params ObservedListing[] rows)
     {
-        return Searches.TryReuse(item, Now, out var reused) ? reused : SearchAgain(item, rows);
+        return Searches.TryReuse(item, HomeWorld, Now, out var reused) ? reused : SearchAgain(item, rows);
     }
 
     public CompetitorSnapshot SearchAgain(ItemKey item, params ObservedListing[] rows)
@@ -131,7 +131,7 @@ internal sealed class SellRun
         };
         Assert.True(CompetitorSnapshotBuilder.TryBuild(capture, generation, out var built, out var refusal), $"search refused: {refusal}");
         Searches.Store(built, item.IsHq);
-        Assert.True(Searches.TryReuse(item, Now, out var stored));
+        Assert.True(Searches.TryReuse(item, HomeWorld, Now, out var stored));
         return stored;
     }
 

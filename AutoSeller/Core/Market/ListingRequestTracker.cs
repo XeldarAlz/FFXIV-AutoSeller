@@ -128,7 +128,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
             return State;
         }
 
-        if (allowReuse && reuse.TryReuse(item, DateTime.UtcNow, out var reused))
+        if (allowReuse && reuse.TryReuse(item, Svc.PlayerState.CurrentWorld.RowId, DateTime.UtcNow, out var reused))
         {
             outcome = RequestOutcome.Reused;
             snapshot = reused;
