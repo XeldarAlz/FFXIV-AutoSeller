@@ -43,7 +43,6 @@ internal static class ExecutionFixtures
     public static readonly ulong PricingHash = Fingerprint.OfPricing(StartPricing);
     public static readonly ulong PlanEditsHash = Fingerprint.OfPlanEdits(PlanEdits.None);
     public static readonly Guid RunId = new("6f1c2a4e-0d5b-4a8e-9a37-2f6a1b3c4d5e");
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
     public static readonly PlanRowKey ListingRow = new(FirstRetainer, MarketContainer, MarketSlot, 0, Ore, false);
     public static readonly DecisionEvidence Evidence = new(77, 901, SearchGeneration, 0, ReferenceSource.UniversalisWorld, 1_100, DecisionFloor);
 

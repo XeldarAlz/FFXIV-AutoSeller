@@ -16,7 +16,6 @@ internal static class AllocationFixtures
     public const ulong Gamma = 103;
     public const ulong Unknown = 999;
 
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
 
     public static AllocationRetainer Retainer(
         ulong retainerId,

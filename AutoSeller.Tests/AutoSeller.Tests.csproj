@@ -34,5 +34,6 @@
     <Using Include="System.Collections" />
     <Using Include="System.Collections.Generic" />
     <Using Include="Xunit" />
+    <Using Include="AutoSeller.Tests.TestClock" Static="true" />
   </ItemGroup>
 </Project>

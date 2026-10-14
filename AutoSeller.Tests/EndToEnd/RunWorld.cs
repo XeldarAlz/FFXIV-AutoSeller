@@ -32,10 +32,9 @@ internal static class RunWorld
     public const int FreeBagSlots = 10;
     public const int FirstGeneration = 7;
 
-    public static readonly DateTime StartedAt = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
     public static readonly ItemKey NormalOre = new(Ore, false);
     public static readonly ItemFacts OreFacts = new(Ore, OreStackSize, OreVendorPrice, OreSearchCategory, OreUiCategory, false, false, false, false);
-    public static readonly ReferencePrice WorldReference = new(NormalOre, ReferenceSource.UniversalisWorld, OreReference, 0, 980, 12f, StartedAt.AddHours(-1));
+    public static readonly ReferencePrice WorldReference = new(NormalOre, ReferenceSource.UniversalisWorld, OreReference, 0, 980, 12f, Now.AddHours(-1));
     public static readonly SlotFacts OreInTheBags = new(0, Ore, LotQuantity, BagContainer, BagSlot, 0, SlotSource.Bags, false, false, false);
 
     public static ItemRule OreRule(byte listingsToKeepUp = ItemRule.DefaultListingsToKeepUp)

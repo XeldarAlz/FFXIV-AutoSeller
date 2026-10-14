@@ -27,7 +27,7 @@ internal sealed class SellRun
         this.bags = [.. bags];
     }
 
-    public DateTime Now { get; private set; } = StartedAt;
+    public DateTime Now { get; private set; } = TestClock.Now;
 
     public MemoryJournal Journal { get; } = new();
 
@@ -47,7 +47,7 @@ internal sealed class SellRun
 
     public static StockSlot Stock(in SlotFacts slot)
     {
-        var reference = ReferenceSelector.Select(slot.Key, WorldReference, default, null, StartedAt);
+        var reference = ReferenceSelector.Select(slot.Key, WorldReference, default, null, TestClock.Now);
         return new StockSlot(slot, OreFacts, reference.AverageSalePrice);
     }
 

@@ -21,7 +21,7 @@ public sealed class SellRunTests
     [Fact]
     public void ANewLotIsListedReadBackAndItsSaleRecordedOnce()
     {
-        var run = new SellRun([OreRule()], [MarketOf(Alpha, StartedAt, 0), MarketOf(Beta, StartedAt, BetaGil)], SellRun.Stock(OreInTheBags));
+        var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0), MarketOf(Beta, Now, BetaGil)], SellRun.Stock(OreInTheBags));
         run.Start();
 
         var plannedLot = Assert.Single(run.Plan!.Lots);
@@ -60,14 +60,14 @@ public sealed class SellRunTests
 
         var gross = 1_049L * LotQuantity;
         var net = Gil.AfterTax(gross, BetaTaxPercent);
-        var nextVisit = MarketOf(Beta, StartedAt.AddHours(6), BetaGil + (uint)net);
+        var nextVisit = MarketOf(Beta, Now.AddHours(6), BetaGil + (uint)net);
         var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Beta, progress.Writes.AsSpan()).AsSpan());
         var inferred = Assert.Single(InferredSales.From(diff, BetaTaxPercent));
         Assert.Equal(SnapshotDiffCorroboration.Corroborated, diff.Corroboration);
         Assert.Equal((Ore, LotQuantity, 1_049u, net, SaleSource.Diff), (inferred.ItemId, inferred.Quantity, inferred.UnitPrice, inferred.NetGil, inferred.Source));
 
         Assert.True(SaleNoticeParser.TryRead(SaleNoticeLayout.StackSaleMessageId, [BetaTown, (int)Ore, (int)LotQuantity, 1_049, (int)net], out var notice));
-        var noticed = SaleNoticeParser.ToSaleRecord(notice, StartedAt.AddHours(3), Character, [afterListing]);
+        var noticed = SaleNoticeParser.ToSaleRecord(notice, Now.AddHours(3), Character, [afterListing]);
         var sale = Assert.Single(SaleMatcher.Merge([noticed, inferred]));
 
         Assert.Equal(SaleSource.Notice, sale.Source);
@@ -81,7 +81,7 @@ public sealed class SellRunTests
     [Fact]
     public void AListingIsRepricedDownWithinTheStepLimitAndThenCoolsDown()
     {
-        var run = new SellRun([OreRule()], [MarketOf(Alpha, StartedAt, 0, OreListing()), MarketOf(Beta, StartedAt, 0)]);
+        var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0, OreListing()), MarketOf(Beta, Now, 0)]);
         run.Start();
         Assert.Empty(run.Plan!.Lots);
 
@@ -110,7 +110,7 @@ public sealed class SellRunTests
         var cooling = run.DecideListing(Alpha, repriced, cheaper);
         Assert.Equal((SellAction.Keep, DecisionReason.Cooldown), (cooling.Action, cooling.Reason));
 
-        var nextVisit = MarketOf(Alpha, StartedAt.AddHours(6), 0, repriced);
+        var nextVisit = MarketOf(Alpha, Now.AddHours(6), 0, repriced);
         var diff = SnapshotDiff.Compute(visited, nextVisit, DiffWrites.For(Alpha, run.Replay().Writes.AsSpan()).AsSpan());
         var change = Assert.Single(diff.Changes);
         Assert.Equal(SnapshotDiffChangeKind.RepricedByUs, change.Kind);
@@ -121,7 +121,7 @@ public sealed class SellRunTests
     [Fact]
     public void ADropPastTheStepLimitWaitsForApprovalAndPassesOnceApproved()
     {
-        var run = new SellRun([OreRule()], [MarketOf(Alpha, StartedAt, 0, OreListing()), MarketOf(Beta, StartedAt, 0)]);
+        var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0, OreListing()), MarketOf(Beta, Now, 0)]);
         run.Start();
 
         run.Advance(TimeSpan.FromMinutes(5));
@@ -167,7 +167,7 @@ public sealed class SellRunTests
     [Fact]
     public void AListingBelowItsFloorIsKeptWithoutAWrite()
     {
-        var run = new SellRun([OreRule()], [MarketOf(Alpha, StartedAt, 0, OreListing()), MarketOf(Beta, StartedAt, 0)]);
+        var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0, OreListing()), MarketOf(Beta, Now, 0)]);
         run.Start();
 
         run.Advance(TimeSpan.FromMinutes(5));
@@ -187,7 +187,7 @@ public sealed class SellRunTests
     {
         var first = OreListing(0);
         var second = OreListing(1, 1_010);
-        var run = new SellRun([OreRule(listingsToKeepUp: 2)], [MarketOf(Alpha, StartedAt, 0, first, second), MarketOf(Beta, StartedAt, 0)]);
+        var run = new SellRun([OreRule(listingsToKeepUp: 2)], [MarketOf(Alpha, Now, 0, first, second), MarketOf(Beta, Now, 0)]);
         run.Start();
 
         run.Advance(TimeSpan.FromMinutes(5));

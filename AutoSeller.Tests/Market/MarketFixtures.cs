@@ -11,7 +11,6 @@ internal static class MarketFixtures
     public const ulong Seller = 2_002;
     public const ulong CompetitorRetainer = 501;
 
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
 
     public static ObservedListing Listing(uint quantity = 5, uint unitPrice = 1_000, uint totalTax = 50)
     {

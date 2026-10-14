@@ -20,7 +20,6 @@ internal static class PricingFixtures
     public const uint VendorPrice = 10;
     public const uint ReferenceGil = 1_000;
 
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
     public static readonly ItemKey Normal = new(ItemId, false);
     public static readonly ItemKey High = new(ItemId, true);
     public static readonly OwnSellers Sellers = OwnSellers.Create([OwnRetainer, AltRetainer], [OwnCharacter, AltCharacter]);

@@ -122,7 +122,7 @@ internal static class RuleFixtures
         {
             RetainerId = retainerId,
             CharacterContentId = 1,
-            ReadAtUtc = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc),
+            ReadAtUtc = Now,
             Town = 1,
             Gil = 0,
             Slots = ImmutableArray.Create(listings),

@@ -1,0 +1,6 @@
+namespace AutoSeller.Tests;
+
+internal static class TestClock
+{
+    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+}
