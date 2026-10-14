@@ -28,7 +28,7 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         var name = NameOf(item.Name, itemId);
         Status = Loc.T(L.Market.LookStatus, name);
         ItemKey[] keys = item.CanBeHq ? [new(itemId, false), new(itemId, true)] : [new(itemId, false)];
-        RunLog.Info($"Look: item {itemId}, Universalis refresh {plugin.References.TryRefresh(keys)}.");
+        RunLog.Info($"Look: item {itemId}, Universalis fetch {plugin.References.Fetch(keys)}.");
         var tracker = plugin.Market.Tracker;
         try
         {

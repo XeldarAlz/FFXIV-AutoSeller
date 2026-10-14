@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoSeller.Core.Market.Model;
@@ -23,19 +22,22 @@ internal sealed class ReferenceService : IDisposable
 
     private readonly UniversalisClient client;
     private readonly object gate = new();
+    private readonly ReferenceFetches fetches = new();
     private CancellationTokenSource? cancellation;
     private ReferenceSnapshot? latest;
     private Task? fetch;
-    private long generation;
-    private long lastStartMs = RefreshCooldown.NeverMs;
+    private long lastManualRefreshMs = RefreshCooldown.NeverMs;
     private volatile bool disposed;
 
     public ReferenceService(string version)
     {
         client = new UniversalisClient(version);
+        Svc.ClientState.Logout += OnLogout;
     }
 
     public ReferenceSnapshot? Latest => Volatile.Read(ref latest);
+
+    public ReferenceSnapshot? Current => ReferenceSnapshot.ForHomeWorld(Latest, HomeWorldId);
 
     public bool Fetching
     {
@@ -48,18 +50,36 @@ internal sealed class ReferenceService : IDisposable
         }
     }
 
-    public TimeSpan CooldownRemaining => RefreshCooldown.Remaining(Volatile.Read(ref lastStartMs), Environment.TickCount64, Cooldown);
+    public TimeSpan CooldownRemaining => RefreshCooldown.Remaining(Volatile.Read(ref lastManualRefreshMs), Environment.TickCount64, Cooldown);
+
+    private static uint HomeWorldId => Svc.PlayerState.HomeWorld.RowId;
 
     public ReferencePrice ReferenceFor(ItemKey item, CompetitorSnapshot? competition, DateTime nowUtc)
     {
-        return ReferenceSnapshot.ReferenceFor(Latest, Svc.PlayerState.HomeWorld.RowId, item, competition, nowUtc);
+        return ReferenceSnapshot.ReferenceFor(Latest, HomeWorldId, item, competition, nowUtc);
     }
 
-    public ReferenceRefresh TryRefresh(ReadOnlySpan<ItemKey> items)
+    public ReferenceRefresh RequestRefresh(ReadOnlySpan<ItemKey> items)
     {
         if (CooldownRemaining > TimeSpan.Zero)
         {
             return ReferenceRefresh.CoolingDown;
+        }
+
+        var refresh = Fetch(items);
+        if (refresh == ReferenceRefresh.Started)
+        {
+            Volatile.Write(ref lastManualRefreshMs, Environment.TickCount64);
+        }
+
+        return refresh;
+    }
+
+    public ReferenceRefresh Fetch(ReadOnlySpan<ItemKey> items)
+    {
+        if (items.IsEmpty)
+        {
+            return ReferenceRefresh.NothingToFetch;
         }
 
         if (!TryHomeWorld(out var scope))
@@ -73,12 +93,7 @@ internal sealed class ReferenceService : IDisposable
             itemIds[index] = items[index].ItemId;
         }
 
-        var chunks = ReferenceChunk.Split(scope, itemIds);
-        if (chunks.IsEmpty)
-        {
-            return ReferenceRefresh.NothingToFetch;
-        }
-
+        ReferenceFetchTicket ticket;
         lock (gate)
         {
             if (disposed)
@@ -86,28 +101,25 @@ internal sealed class ReferenceService : IDisposable
                 return ReferenceRefresh.NothingToFetch;
             }
 
-            cancellation?.Cancel();
-            cancellation?.Dispose();
+            CancelInFlight();
+            ticket = fetches.Begin(scope, itemIds);
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
-            var fetchGeneration = ++generation;
             var previous = latest;
-            Volatile.Write(ref lastStartMs, Environment.TickCount64);
-            fetch = Task.Run(() => FetchAsync(fetchGeneration, scope, chunks, previous, token), token);
+            fetch = Task.Run(() => FetchAsync(ticket, previous, token), token);
         }
 
-        RunLog.Info($"References: fetching Universalis prices for {itemIds.Length} item key(s) on {scope.Segment} in {chunks.Length} request(s), with its tax rates.");
+        RunLog.Info($"References: fetching Universalis prices for {ticket.ItemCount} item(s) on {scope.Segment} in {ticket.Chunks.Length} request(s), with its tax rates; {ticket.CarriedCount} item(s) carried over from the fetch it replaced.");
         return ReferenceRefresh.Started;
     }
 
     public void Dispose()
     {
+        Svc.ClientState.Logout -= OnLogout;
         lock (gate)
         {
             disposed = true;
-            cancellation?.Cancel();
-            cancellation?.Dispose();
-            cancellation = null;
+            CancelInFlight();
         }
 
         client.Dispose();
@@ -143,19 +155,38 @@ internal sealed class ReferenceService : IDisposable
         return $"tax rates Limsa Lominsa {rates.LimsaLominsa}%, Gridania {rates.Gridania}%, Ul'dah {rates.UlDah}%, Ishgard {rates.Ishgard}%, Kugane {rates.Kugane}%, Crystarium {rates.Crystarium}%, Old Sharlayan {rates.OldSharlayan}%, Tuliyollal {rates.Tuliyollal}%";
     }
 
-    private async Task FetchAsync(long fetchGeneration, UniversalisScope scope, ImmutableArray<ReferenceChunk> chunks, ReferenceSnapshot? previous, CancellationToken token)
+    private void OnLogout(int type, int code)
+    {
+        lock (gate)
+        {
+            CancelInFlight();
+            fetches.Reset();
+            Volatile.Write(ref latest, null);
+        }
+
+        RunLog.Info("References: the Universalis prices were dropped on logout.");
+    }
+
+    private void CancelInFlight()
+    {
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        cancellation = null;
+    }
+
+    private async Task FetchAsync(ReferenceFetchTicket ticket, ReferenceSnapshot? previous, CancellationToken token)
     {
         try
         {
-            var references = client.FetchAllReferencesAsync(chunks, token);
-            var taxes = client.FetchTaxRatesAsync(scope.Segment, token);
+            var references = client.FetchAllReferencesAsync(ticket.Chunks, token);
+            var taxes = client.FetchTaxRatesAsync(ticket.Scope.Segment, token);
             await Task.WhenAll(references, taxes).ConfigureAwait(false);
             var results = await references.ConfigureAwait(false);
             var rates = await taxes.ConfigureAwait(false);
-            var built = ReferenceSnapshot.Build(fetchGeneration, DateTime.UtcNow, scope, results, rates, previous);
+            var built = ReferenceSnapshot.Build(ticket.Generation, DateTime.UtcNow, ticket.Scope, results, rates, previous);
             lock (gate)
             {
-                if (fetchGeneration != generation || disposed)
+                if (disposed || !fetches.TryFinish(ticket.Generation))
                 {
                     return;
                 }
@@ -163,14 +194,19 @@ internal sealed class ReferenceService : IDisposable
                 Volatile.Write(ref latest, built);
             }
 
-            RunLog.Info($"References ready: generation {built.Generation}, {built.Table.Items.Length} item(s) on {scope.Segment}, {built.FailedRequestCount} of {built.RequestCount} request(s) failed, {DescribeTaxes(rates)}.");
+            RunLog.Info($"References ready: generation {built.Generation}, {built.Table.Items.Length} item(s) on {ticket.Scope.Segment}, {built.FailedRequestCount} of {built.RequestCount} request(s) failed, {DescribeTaxes(rates)}.");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            RunLog.Debug($"References: fetch {fetchGeneration} was replaced or stopped.");
+            RunLog.Debug($"References: fetch {ticket.Generation} was replaced or stopped.");
         }
         catch (Exception exception)
         {
+            lock (gate)
+            {
+                fetches.TryFinish(ticket.Generation);
+            }
+
             if (!disposed)
             {
                 RunLog.Error(exception, "References: the Universalis fetch failed");
