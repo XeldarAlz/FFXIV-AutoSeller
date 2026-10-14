@@ -24,6 +24,10 @@ internal readonly record struct SaleGuardInput
 
     public required int SearchGeneration { get; init; }
 
+    public required DateTime SearchCapturedAtUtc { get; init; }
+
+    public required DateTime NowUtc { get; init; }
+
     public required ValueState Value { get; init; }
 
     public required bool JournalBlocksWrites { get; init; }

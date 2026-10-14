@@ -2,6 +2,8 @@ namespace AutoSeller.Core.Execution.Model;
 
 internal static class SaleGuard
 {
+    public static readonly TimeSpan MaximumSearchAge = TimeSpan.FromSeconds(60);
+
     private const long PercentDenominator = 100;
 
     public static SaleVerdict Evaluate(in SaleGuardInput input)
@@ -100,6 +102,11 @@ internal static class SaleGuard
         if (write.SetsPrice && write.Evidence.SearchGeneration != input.SearchGeneration)
         {
             return SaleRejection.StaleSearch;
+        }
+
+        if (write.SetsPrice && input.NowUtc - input.SearchCapturedAtUtc > MaximumSearchAge)
+        {
+            return SaleRejection.SearchTooOld;
         }
 
         if (input.Value.HasPendingWrite)

@@ -7,6 +7,7 @@ internal enum RunReaction : byte
     EndRetainer,
     EndRun,
     NeedsReconciliation,
+    SearchAgain,
 }
 
 internal enum InterruptHandling : byte
@@ -30,7 +31,8 @@ internal static class RunReactions
         SaleRejection.RetainerNotAuthorized => RunReaction.EndRetainer,
         SaleRejection.WrongRetainer => RunReaction.EndRetainer,
         SaleRejection.WindowChainNotReady => RunReaction.EndRetainer,
-        SaleRejection.StaleSearch => RunReaction.SkipItem,
+        SaleRejection.StaleSearch => RunReaction.SearchAgain,
+        SaleRejection.SearchTooOld => RunReaction.SearchAgain,
         SaleRejection.WritePending => RunReaction.NeedsReconciliation,
         SaleRejection.JournalUnresolved => RunReaction.NeedsReconciliation,
         SaleRejection.ItemMismatch => RunReaction.SkipItem,

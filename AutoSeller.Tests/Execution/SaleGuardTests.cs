@@ -17,6 +17,7 @@ public sealed class SaleGuardTests
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
         (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
         (SaleRejection.StaleSearch, () => GuardInput(Reprice()) with { SearchGeneration = SearchGeneration + 1 }),
+        (SaleRejection.SearchTooOld, () => GuardInput(Reprice()) with { NowUtc = Now + SaleGuard.MaximumSearchAge + TimeSpan.FromMilliseconds(1) }),
         (SaleRejection.WritePending, () => GuardInput(Reprice()) with { Value = new ValueState(0, 0, 0, Guid.NewGuid()) }),
         (SaleRejection.JournalUnresolved, () => GuardInput(Reprice()) with { JournalBlocksWrites = true }),
         (SaleRejection.ItemMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 })),
@@ -217,10 +218,23 @@ public sealed class SaleGuardTests
     }
 
     [Fact]
-    public void WritesWithoutAPriceIgnoreTheSearchGeneration()
+    public void WritesWithoutAPriceIgnoreTheSearchGenerationAndAge()
     {
-        Assert.True(SaleGuard.Evaluate(GuardInput(Vendor()) with { SearchGeneration = SearchGeneration + 5 }).IsAllowed);
-        Assert.True(SaleGuard.Evaluate(GuardInput(Return()) with { SearchGeneration = SearchGeneration + 5 }).IsAllowed);
+        Assert.True(SaleGuard.Evaluate(GuardInput(Vendor()) with { SearchGeneration = SearchGeneration + 5, SearchCapturedAtUtc = default }).IsAllowed);
+        Assert.True(SaleGuard.Evaluate(GuardInput(Return()) with { SearchGeneration = SearchGeneration + 5, SearchCapturedAtUtc = default }).IsAllowed);
+    }
+
+    [Fact]
+    public void ASearchMayBeAMinuteOldWhenThePriceIsTypedButNoOlder()
+    {
+        var atTheLimit = GuardInput(List()) with { NowUtc = Now + SaleGuard.MaximumSearchAge };
+        var tooOld = atTheLimit with { NowUtc = atTheLimit.NowUtc + TimeSpan.FromMilliseconds(1) };
+        var neverCaptured = GuardInput(List()) with { SearchCapturedAtUtc = default };
+
+        Assert.True(SaleGuard.Evaluate(atTheLimit).IsAllowed);
+        Assert.Equal(SaleRejection.SearchTooOld, SaleGuard.Evaluate(tooOld).Rejection);
+        Assert.Equal(SaleRejection.SearchTooOld, SaleGuard.Evaluate(neverCaptured).Rejection);
+        Assert.Equal(RunReaction.SearchAgain, RunReactions.ForGuard(SaleGuard.Evaluate(tooOld).Rejection));
     }
 
     [Fact]
@@ -304,6 +318,8 @@ public sealed class SaleGuardTests
             OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
             WindowChainReady = true,
             SearchGeneration = SearchGeneration,
+            SearchCapturedAtUtc = Now,
+            NowUtc = Now,
             Value = default,
             JournalBlocksWrites = false,
             Write = write,

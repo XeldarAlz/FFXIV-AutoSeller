@@ -13,6 +13,7 @@ internal enum SaleRejection : byte
     WrongRetainer,
     WindowChainNotReady,
     StaleSearch,
+    SearchTooOld,
     WritePending,
     JournalUnresolved,
     ItemMismatch,
