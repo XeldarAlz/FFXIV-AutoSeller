@@ -7,7 +7,8 @@ internal static class SaleHistoryParser
 {
     public static bool TryParse(ReadOnlySpan<byte> packet, ulong characterContentId, ulong retainerId, int sellerTaxPercent, out ImmutableArray<SaleRecord> sales)
     {
-        if (packet.Length < SaleHistoryLayout.PacketLength)
+        if (packet.Length < SaleHistoryLayout.PacketLength
+            || BinaryPrimitives.ReadUInt64LittleEndian(packet[SaleHistoryLayout.RetainerIdOffset..]) != retainerId)
         {
             sales = ImmutableArray<SaleRecord>.Empty;
             return false;

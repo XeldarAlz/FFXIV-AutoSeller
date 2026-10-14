@@ -7,6 +7,8 @@ internal static class SaleHistoryLayout
     public const int RecordLength = 52;
     public const int PacketLength = HeaderLength + RecordCount * RecordLength;
 
+    public const int RetainerIdOffset = 0;
+
     public const int ItemIdOffset = 0;
     public const int PriceOffset = 4;
     public const int SoldAtUnixSecondsOffset = 8;

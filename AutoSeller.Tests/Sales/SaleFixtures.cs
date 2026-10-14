@@ -35,10 +35,16 @@ internal static class SaleFixtures
 
     public static readonly DateTime Morning = new(2026, 10, 14, 9, 0, 0, DateTimeKind.Utc);
 
-    public static byte[] HistoryPacket()
+    public static byte[] EmptyHistoryPacket()
     {
         var packet = new byte[8 + 20 * 52];
         Convert.FromHexString(HistoryHeaderHex).CopyTo(packet, 0);
+        return packet;
+    }
+
+    public static byte[] HistoryPacket()
+    {
+        var packet = EmptyHistoryPacket();
         for (var recordIndex = 0; recordIndex < HistoryRecordHex.Length; recordIndex++)
         {
             Convert.FromHexString(HistoryRecordHex[recordIndex]).CopyTo(packet, 8 + recordIndex * 52);

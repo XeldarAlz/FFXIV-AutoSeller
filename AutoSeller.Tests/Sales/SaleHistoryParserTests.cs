@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using AutoSeller.Core.Sales.Model;
 using static AutoSeller.Tests.Sales.SaleFixtures;
 
@@ -74,7 +75,20 @@ public sealed class SaleHistoryParserTests
     [Fact]
     public void AllEmptyRecordsGiveNoSales()
     {
-        Assert.True(SaleHistoryParser.TryParse(new byte[SaleHistoryLayout.PacketLength], CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
+        Assert.True(SaleHistoryParser.TryParse(EmptyHistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
+        Assert.Empty(sales);
+    }
+
+    [Fact]
+    public void HeaderNamesTheRetainerTheHistoryBelongsTo()
+    {
+        Assert.Equal(FirstRetainerId, BinaryPrimitives.ReadUInt64LittleEndian(HistoryPacket().AsSpan(SaleHistoryLayout.RetainerIdOffset)));
+    }
+
+    [Fact]
+    public void HistoryOfAnotherRetainerIsRefused()
+    {
+        Assert.False(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, SecondRetainerId, CityTaxPercent, out var sales));
         Assert.Empty(sales);
     }
 
