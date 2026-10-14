@@ -75,13 +75,16 @@ internal sealed partial class SellController
             return;
         }
 
-        if (reason == PauseReason.Manual && currentTask is { HoldsWindows: true })
+        var writing = RunReactions.ForInterruption(active.State) != InterruptHandling.Immediate;
+        if (currentTask is { HoldsWindows: true } && (reason == PauseReason.Manual || writing))
         {
             if (!active.PauseRequested)
             {
                 active.PauseRequested = true;
                 deferredPause = reason;
-                RunLog.Info("Pause requested; the run pauses after the current item and closes the retainer windows first.");
+                RunLog.Info(writing
+                    ? $"Pause asked for ({reason}) while a price is being written; the run settles that write before it pauses."
+                    : "Pause requested; the run pauses after the current item and closes the retainer windows first.");
             }
 
             return;
@@ -168,7 +171,7 @@ internal sealed partial class SellController
                 return;
             }
 
-            PauseReason = deferredPause == PauseReason.Manual || active.PausedFor == PauseReason.None ? PauseReason.Manual : active.PausedFor;
+            PauseReason = deferredPause != PauseReason.None ? deferredPause : active.PausedFor != PauseReason.None ? active.PausedFor : PauseReason.Manual;
             deferredPause = PauseReason.None;
             active.Enter(RunState.Paused);
             RunLog.Info($"Run paused at an item boundary ({PauseReason}); Resume reads the game again and carries on.");
@@ -256,7 +259,12 @@ internal sealed partial class SellController
 
         var authorization = active.Authorization;
         var endedAtUtc = active.EndedAtUtc;
-        active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State });
+        if (!active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State }))
+        {
+            RunLog.Warning($"The journal refused the end of run {authorization.RunId}: {active.Journal.LastError}");
+        }
+
+        plugin.Ledger.Invalidate();
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);

@@ -98,6 +98,7 @@ public sealed class Plugin : IDalamudPlugin
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
             Ledger = new SellLedger(PluginInterface.ConfigDirectory.FullName);
+            PrepareLedger();
             RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
@@ -330,6 +331,28 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnLogout(int type, int code) => Controller.Interrupt();
+
+    private void PrepareLedger()
+    {
+        var nowUtc = DateTime.UtcNow;
+        var ended = Ledger.EndInterrupted(nowUtc);
+        if (ended > 0)
+        {
+            RunLog.Warning($"Journal: {ended} run(s) the last session left open were ended.");
+        }
+
+        var rotation = Ledger.Rotate(nowUtc);
+        if (!rotation.Succeeded)
+        {
+            RunLog.Warning($"Journal: moving finished runs to the archive failed: {rotation.Error}.");
+            return;
+        }
+
+        if (rotation.ArchivedRuns > 0)
+        {
+            RunLog.Info($"Journal: {rotation.ArchivedRuns} finished run(s) moved to {rotation.ArchivePath}; {rotation.KeptRuns} kept.");
+        }
+    }
 
     private static void Undo(Stack<Action> completed)
     {

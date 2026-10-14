@@ -218,6 +218,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
         DriverHalt.LeftHomeWorld => Loc.T(L.Run.FailedLeftHomeWorld),
         DriverHalt.DayChanged => Loc.T(L.Run.FailedDayChanged),
         DriverHalt.GuardEndedRun => Loc.T(L.Run.FailedGuard),
+        DriverHalt.JournalWriteFailed => Loc.T(L.Run.FailedJournal),
         _ => Loc.T(L.Run.FailedFault),
     };
 

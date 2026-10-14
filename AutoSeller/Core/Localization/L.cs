@@ -113,7 +113,9 @@ internal static partial class L
         public static readonly LocString FailedLeftHomeWorld = new("run.failed.leftHomeWorld", "the character left its home world");
         public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after Start; start again for the new day");
         public static readonly LocString FailedGuard = new("run.failed.guard", "a safety check refused the run's next step; the Console has the details");
+        public static readonly LocString FailedJournal = new("run.failed.journal", "the journal could not be written, so nothing more is typed; the Console has the details");
         public static readonly LocPlural ChatStarted = new("run.chat.started", "Dry run started for {0} retainer: prices are compared and nothing is listed or repriced.", "Dry run started for {0} retainers: prices are compared and nothing is listed or repriced.");
+        public static readonly LocPlural ChatStartedLive = new("run.chat.startedLive", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
         public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
         public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
     }

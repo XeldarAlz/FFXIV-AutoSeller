@@ -4,6 +4,7 @@ using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Planning.Model;
+using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks.Model;
 
 namespace AutoSeller.Core.Tasks;
@@ -12,13 +13,15 @@ internal sealed class SellRunSession
 {
     private readonly List<RunDecision> decisions = [];
     private readonly HashSet<PlanRowKey> handled = [];
+    private readonly HashSet<ItemKey> replanned = [];
 
-    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review)
+    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal)
     {
         Authorization = authorization;
         Input = input;
         PlanInputs = input.ToRunInputs();
         Review = review;
+        Journal = journal;
         Visits = new RetainerVisits(PlanInputs.Retainers.Length);
         Values = new ValueBook(authorization.Caps);
     }
@@ -33,7 +36,9 @@ internal sealed class SellRunSession
 
     public JournalReview Review { get; }
 
-    public MemoryJournal Journal { get; } = new();
+    public IRunJournal Journal { get; }
+
+    public ListedStock Listed { get; } = new();
 
     public RetainerVisits Visits { get; }
 
@@ -115,6 +120,11 @@ internal sealed class SellRunSession
         handled.Add(decision.Row);
         DidWork = true;
         Revision++;
+    }
+
+    public bool TryReplan(ItemKey item)
+    {
+        return replanned.Add(item);
     }
 
     public void HoldAtBoundary(PauseReason reason)

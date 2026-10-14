@@ -33,7 +33,7 @@ internal static class ActionDock
         }
         else
         {
-            DrawStart(controller, innerWidth, buttonHeight);
+            DrawStart(plugin, innerWidth, buttonHeight);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -59,10 +59,11 @@ internal static class ActionDock
         }
     }
 
-    private static void DrawStart(SellController controller, float innerWidth, float height)
+    private static void DrawStart(Plugin plugin, float innerWidth, float height)
     {
+        var controller = plugin.Controller;
         var readiness = RunReadiness.Evaluate();
-        var showTile = controller.DryRun;
+        var showTile = plugin.Configuration.DryRun;
         var gap = ButtonGap * ImGuiHelpers.GlobalScale;
         var tileWidth = showTile ? DryRunTile.Width(innerWidth) : 0f;
         var buttonWidth = showTile ? innerWidth - tileWidth - gap : innerWidth;
