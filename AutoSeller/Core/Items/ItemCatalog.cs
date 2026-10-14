@@ -77,7 +77,7 @@ internal sealed partial class ItemCatalog
         {
             var built = Build();
             snapshot = built;
-            RunLog.Info($"{AsellConstants.LogPrefix} Item catalog ready: {built.Ids.Length} marketable items in {built.Categories.Length} categories.");
+            RunLog.Info($"Item catalog ready: {built.Ids.Length} marketable items in {built.Categories.Length} categories.");
         }
         catch (Exception exception)
         {

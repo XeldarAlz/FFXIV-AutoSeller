@@ -45,7 +45,7 @@ internal sealed unsafe class BagReader
             if (container == null || !container->IsLoaded)
             {
                 skipped++;
-                RunLog.Info($"{AsellConstants.LogPrefix} Bags: container {source.Container} ({source.Source}) is not loaded; skipped.");
+                RunLog.Info($"Bags: container {source.Container} ({source.Source}) is not loaded; skipped.");
                 continue;
             }
 
@@ -78,7 +78,7 @@ internal sealed unsafe class BagReader
         }
 
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
-        RunLog.Info($"{AsellConstants.LogPrefix} Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
+        RunLog.Info($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
         return new BagRead(slots.ToImmutable(), freeBagSlots, openRetainerId);
     }
 
@@ -90,7 +90,7 @@ internal sealed unsafe class BagReader
         var retainerObjectId = retainers == null ? 0 : retainers->RetainerObjectId;
         var firstPage = manager->GetInventoryContainer(InventoryType.RetainerPage1);
         var pageLoaded = firstPage != null && firstPage->IsLoaded;
-        RunLog.Info($"{AsellConstants.LogPrefix} Bags: retainer open check: at bell {atBell}, last selected retainer {lastSelected}, retainer object 0x{retainerObjectId:X}, first retainer page loaded {pageLoaded}.");
+        RunLog.Info($"Bags: retainer open check: at bell {atBell}, last selected retainer {lastSelected}, retainer object 0x{retainerObjectId:X}, first retainer page loaded {pageLoaded}.");
         return atBell && pageLoaded ? lastSelected : 0;
     }
 

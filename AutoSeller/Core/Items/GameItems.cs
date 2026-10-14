@@ -25,7 +25,7 @@ internal sealed class GameItems
     {
         if (Svc.Data.GetExcelSheet<Item>().GetRowOrDefault(itemId) is not { } row)
         {
-            RunLog.Warning($"{AsellConstants.LogPrefix} Item {itemId} is not in the game data; it is treated as untradable.");
+            RunLog.Warning($"Item {itemId} is not in the game data; it is treated as untradable.");
             return new GameItem(new ItemFacts(itemId, 1, 0, 0, 0, true, false, false, false), string.Empty, 0, false);
         }
 
@@ -46,7 +46,7 @@ internal sealed class GameItems
     {
         if (row.IsCollectable || row.AlwaysCollectable)
         {
-            RunLog.Info($"{AsellConstants.LogPrefix} Item {row.RowId} collectable flags: IsCollectable={row.IsCollectable} AlwaysCollectable={row.AlwaysCollectable}; read as collectable={row.AlwaysCollectable}.");
+            RunLog.Info($"Item {row.RowId} collectable flags: IsCollectable={row.IsCollectable} AlwaysCollectable={row.AlwaysCollectable}; read as collectable={row.AlwaysCollectable}.");
         }
 
         return row.AlwaysCollectable;

@@ -13,7 +13,7 @@ internal static unsafe class GearsetGuard
         var module = RaptureGearsetModule.Instance();
         if (module == null)
         {
-            RunLog.Info($"{AsellConstants.LogPrefix} Gear sets: the gear set module is not loaded; no item counts as in a gear set.");
+            RunLog.Info($"Gear sets: the gear set module is not loaded; no item counts as in a gear set.");
             return GearsetItems.Empty;
         }
 
@@ -52,7 +52,7 @@ internal static unsafe class GearsetGuard
         }
 
         var guarded = GearsetItems.From(rawItemIds[..count]);
-        RunLog.Info($"{AsellConstants.LogPrefix} Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {GearsetItems.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
+        RunLog.Info($"Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {GearsetItems.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
         return guarded;
     }
 }

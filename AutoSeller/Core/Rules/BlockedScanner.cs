@@ -91,7 +91,7 @@ internal sealed class BlockedScanner : IDisposable
             rows.Add(new BlockedRow(blocked[index], item.Name, item.IconId));
         }
 
-        RunLog.Info($"{AsellConstants.LogPrefix} Rules check: {read.Slots.Length} stacks read, {blocked.Length} matched stacks blocked.");
+        RunLog.Info($"Rules check: {read.Slots.Length} stacks read, {blocked.Length} matched stacks blocked.");
         return new BlockedScan { Rows = rows.MoveToImmutable(), LoggedIn = true, Revision = revision };
     }
 

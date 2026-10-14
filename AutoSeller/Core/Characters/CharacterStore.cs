@@ -75,7 +75,7 @@ internal sealed unsafe class CharacterStore : IDisposable
     private void OnLogout(int type, int code)
     {
         Flush();
-        RunLog.Info($"{AsellConstants.LogPrefix} Character data flushed on logout.");
+        RunLog.Info($"Character data flushed on logout.");
         Current = null;
         store = null;
     }
@@ -86,13 +86,13 @@ internal sealed unsafe class CharacterStore : IDisposable
         var load = store.Load();
         if (load.PrimaryDamaged)
         {
-            RunLog.Warning($"{AsellConstants.LogPrefix} The character file {store.FilePath} could not be read ({store.LastError}); {(load.Value is null ? "starting empty" : "using its backup")}.");
+            RunLog.Warning($"The character file {store.FilePath} could not be read ({store.LastError}); {(load.Value is null ? "starting empty" : "using its backup")}.");
         }
 
         var record = load.Value;
         if (record is not null && (record.ContentId != contentId || record.Version > CharacterRecord.CurrentVersion))
         {
-            RunLog.Warning($"{AsellConstants.LogPrefix} The character file {store.FilePath} belongs to {record.ContentId} at version {record.Version}; starting empty.");
+            RunLog.Warning($"The character file {store.FilePath} belongs to {record.ContentId} at version {record.Version}; starting empty.");
             record = null;
         }
 
@@ -100,7 +100,7 @@ internal sealed unsafe class CharacterStore : IDisposable
         savedRevision = Current.Revision;
         observedRevision = Current.Revision;
         lastRosterMs = 0;
-        RunLog.Info($"{AsellConstants.LogPrefix} Character data loaded from {load.Source}: {Current.Retainers.Count} retainers, {Current.Snapshots.Count} snapshots, {Current.RepriceCount} reprice records, {Current.Approvals.Count} approvals.");
+        RunLog.Info($"Character data loaded from {load.Source}: {Current.Retainers.Count} retainers, {Current.Snapshots.Count} snapshots, {Current.RepriceCount} reprice records, {Current.Approvals.Count} approvals.");
     }
 
     private void RefreshRoster(CharacterData data, long now)
@@ -133,7 +133,7 @@ internal sealed unsafe class CharacterStore : IDisposable
 
         if (data.UpdateRoster(roster.AsSpan(0, count)))
         {
-            RunLog.Info($"{AsellConstants.LogPrefix} Retainer roster now has {count} retainers.");
+            RunLog.Info($"Retainer roster now has {count} retainers.");
         }
     }
 
@@ -163,6 +163,6 @@ internal sealed unsafe class CharacterStore : IDisposable
             return;
         }
 
-        RunLog.Error($"{AsellConstants.LogPrefix} The character file {target.FilePath} could not be saved: {target.LastError}");
+        RunLog.Error($"The character file {target.FilePath} could not be saved: {target.LastError}");
     }
 }
