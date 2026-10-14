@@ -82,6 +82,23 @@ internal static class RunPlanner
         return planned.Key == item && planned.Quantity == quantity;
     }
 
+    public static RunPlanInputs Replan(RunPlanInputs inputs, ItemKey item, ReadOnlySpan<SlotFacts> fresh, int freeBagSlots)
+    {
+        return new RunPlanInputs
+        {
+            Stock = Restock(inputs.Stock, item, fresh),
+            FreeBagSlots = freeBagSlots,
+            Rules = inputs.Rules,
+            Edits = inputs.Edits,
+            Retainers = inputs.Retainers,
+        };
+    }
+
+    public static void ForgetLots(HashSet<PlanRowKey> handled, ItemKey item)
+    {
+        handled.RemoveWhere(row => !row.IsListing && row.Item == item);
+    }
+
     public static ImmutableArray<StockSlot> Restock(ImmutableArray<StockSlot> stock, ItemKey item, ReadOnlySpan<SlotFacts> fresh)
     {
         var restocked = ImmutableArray.CreateBuilder<StockSlot>(stock.Length + fresh.Length);

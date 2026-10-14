@@ -35,6 +35,14 @@ internal sealed class ListedStock
                 listed.Remove(addresses[index]);
             }
         }
+
+        for (var index = lots.Count - 1; index >= 0; index--)
+        {
+            if (lots[index] == item)
+            {
+                lots.RemoveAt(index);
+            }
+        }
     }
 
     private readonly record struct StockAddress(uint Container, ushort Slot, ItemKey Item);
