@@ -11,18 +11,12 @@ internal static class MarketEstimate
 
     public static CompetitorSnapshot For(ItemKey item, in ReferencePrice world, ReadOnlySpan<uint> ownPrices, uint worldId, DateTime nowUtc)
     {
-        if (!IsKnown(world, item, nowUtc))
+        if (!IsKnown(world, item, nowUtc) || ownPrices.Contains(world.LowestListing))
         {
             return Unknown(item.ItemId, worldId, nowUtc);
         }
 
-        var lowest = world.LowestListing;
-        if (ownPrices.Contains(lowest))
-        {
-            return Snapshot(item.ItemId, worldId, nowUtc, []);
-        }
-
-        return Snapshot(item.ItemId, worldId, nowUtc, [new CompetitorListing(0, 0, 0, item.ItemId, item.IsHq, lowest, EstimatedQuantity, false, false)]);
+        return Snapshot(item.ItemId, worldId, nowUtc, new CompetitorListing(0, 0, 0, item.ItemId, item.IsHq, world.LowestListing, EstimatedQuantity, false, false));
     }
 
     public static bool IsKnown(in ReferencePrice world, ItemKey item, DateTime nowUtc)
@@ -47,7 +41,7 @@ internal static class MarketEstimate
         };
     }
 
-    private static CompetitorSnapshot Snapshot(uint itemId, uint worldId, DateTime nowUtc, CompetitorListing[] listings)
+    private static CompetitorSnapshot Snapshot(uint itemId, uint worldId, DateTime nowUtc, in CompetitorListing lowest)
     {
         return new CompetitorSnapshot
         {
@@ -55,8 +49,8 @@ internal static class MarketEstimate
             WorldId = worldId,
             Generation = 0,
             CapturedAtUtc = nowUtc,
-            ExpectedCount = listings.Length,
-            Listings = [.. listings],
+            ExpectedCount = 1,
+            Listings = [lowest],
             History = [],
         };
     }

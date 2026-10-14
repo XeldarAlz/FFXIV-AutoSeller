@@ -24,12 +24,13 @@ public sealed class MarketEstimateTests
     }
 
     [Fact]
-    public void ALowestListingAtOneOfOurPricesIsOurs()
+    public void ALowestListingAtOneOfOurPricesLeavesTheNextSellerUnknown()
     {
         var estimate = MarketEstimate.For(NormalOre, world, [1_200, Lowest], HomeWorld, Now);
 
         Assert.Empty(estimate.Listings);
-        Assert.True(estimate.IsComplete);
+        Assert.False(estimate.IsComplete);
+        Assert.Equal(Ore, estimate.ItemId);
     }
 
     [Fact]

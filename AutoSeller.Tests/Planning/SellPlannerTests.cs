@@ -13,6 +13,7 @@ namespace AutoSeller.Tests.Planning;
 public sealed class SellPlannerTests
 {
     private const uint StrangerItem = 9_999;
+    private const uint FarAboveReference = 5_000;
 
     private static readonly ListingSlot listedAtReference = OreListing(0, ListedPrice);
     private static readonly PlanRowKey listingKey = PlanRowKey.ForListing(Alpha, listedAtReference);
@@ -61,16 +62,52 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
-    public void AListingThatIsTheWorldLowestStaysAsTheLowest()
+    public void AnOwnListingThatIsTheWorldLowestWaitsForTheBoardWhateverTheReference()
     {
         var lowest = OreListing(0, WorldLowest);
+        var input = Input([OreRule()], [MarketAt(Alpha, lowest), MarketAt(Beta)]) with { References = References(OreReferences(FarAboveReference, WorldLowest)) };
 
-        var plan = Build(Input([OreRule()], [MarketAt(Alpha, lowest), MarketAt(Beta)]));
+        var plan = Build(input);
 
         var row = Row(plan, PlanRowKey.ForListing(Alpha, lowest));
         Assert.Equal(SellAction.Keep, row.Decision.Action);
-        Assert.Equal(DecisionReason.AlreadyLowest, row.Decision.Reason);
+        Assert.Equal(DecisionReason.UnknownCompetition, row.Decision.Reason);
         Assert.Equal(WorldLowest, row.Decision.Price);
+        Assert.True(row.Searches);
+        Assert.Equal(0, plan.Totals.ListingsToChange);
+        Assert.Equal(0L, plan.Totals.ListedValue);
+    }
+
+    [Fact]
+    public void AnOwnListingAboveOurWorldLowestWaitsForTheBoard()
+    {
+        var lowest = OreListing(0, WorldLowest);
+        var above = OreListing(1, 1_400);
+        var input = Input([OreRule()], [MarketAt(Alpha, lowest, above), MarketAt(Beta)]) with { References = References(OreReferences(FarAboveReference, WorldLowest)) };
+
+        var row = Row(Build(input), PlanRowKey.ForListing(Alpha, above));
+
+        Assert.Equal(SellAction.Keep, row.Decision.Action);
+        Assert.Equal(DecisionReason.UnknownCompetition, row.Decision.Reason);
+        Assert.Equal(1_400u, row.Decision.Price);
+    }
+
+    [Fact]
+    public void ANewLotOfAnItemWeListLowestWaitsForTheBoard()
+    {
+        var input = Input([OreRule(listingsToKeepUp: 2)], [MarketAt(Alpha, OreListing(0, WorldLowest)), MarketAt(Beta)], Captured(OreInTheBags)) with
+        {
+            References = References(OreReferences(FarAboveReference, WorldLowest)),
+        };
+
+        var plan = Build(input);
+
+        var row = Row(plan, LotKey());
+        Assert.True(row.IsPlaced);
+        Assert.Equal(SellAction.Keep, row.Decision.Action);
+        Assert.Equal(DecisionReason.UnknownCompetition, row.Decision.Reason);
+        Assert.True(row.Searches);
+        Assert.Equal(0, plan.Totals.NewListings);
     }
 
     [Fact]
