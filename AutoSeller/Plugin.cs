@@ -109,7 +109,7 @@ public sealed class Plugin : IDalamudPlugin
             RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
-            OwnSellers = new OwnSellersProvider(Retainers, Characters);
+            OwnSellers = new OwnSellersProvider(Retainers, Characters, Configuration, AutoRetainer);
             Bags = new BagReader(AutoRetainer.IsItemProtected);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);

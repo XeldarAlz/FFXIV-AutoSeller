@@ -94,6 +94,7 @@ internal sealed partial class PlanBuilder : IDisposable
         }
 
         var markets = data.SnapshotArray();
+        ownSellers.ReadAlts();
         return new PlanInput
         {
             Generation = 0,
