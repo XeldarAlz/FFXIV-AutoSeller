@@ -1,3 +1,5 @@
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 
@@ -26,11 +28,11 @@ internal readonly record struct SaleGuardInput
 
     public required uint CurrentWorldId { get; init; }
 
-    public required ulong CurrentRulesHash { get; init; }
+    public required RuleBook CurrentRules { get; init; }
 
-    public required ulong CurrentPricingHash { get; init; }
+    public required PricingSettings CurrentPricing { get; init; }
 
-    public required ulong CurrentPlanEditsHash { get; init; }
+    public required PlanEdits CurrentPlanEdits { get; init; }
 
     public required ulong OpenRetainerId { get; init; }
 

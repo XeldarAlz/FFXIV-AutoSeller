@@ -120,17 +120,17 @@ internal static class SaleGuard
     private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
     {
         var authorization = input.Authorization;
-        if (input.CurrentRulesHash != authorization.RulesHash)
+        if (Fingerprint.OfRuleBook(input.CurrentRules) != authorization.RulesHash)
         {
             return SaleRejection.RulesChanged;
         }
 
-        if (input.CurrentPricingHash != authorization.PricingHash)
+        if (Fingerprint.OfPricing(input.CurrentPricing) != authorization.PricingHash)
         {
             return SaleRejection.PricingChanged;
         }
 
-        return input.CurrentPlanEditsHash != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
+        return Fingerprint.OfPlanEdits(input.CurrentPlanEdits) != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
     }
 
     private static SaleRejection CheckIdentity(in SaleGuardInput input)

@@ -10,14 +10,18 @@ namespace AutoSeller.Tests.Execution;
 
 public sealed class SaleGuardTests
 {
+    private static readonly RuleBook LoweredFloorRules = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor - 1 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+    private static readonly PricingSettings WiderStepLimit = StartPricing with { StepLimitPercent = 90 };
+    private static readonly PlanEdits EditedPlan = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now)]);
+
     private static readonly (SaleRejection Expected, Func<SaleGuardInput> Breaker)[] Breakers =
     [
         (SaleRejection.WrongRun, () => GuardInput(Reprice()) with { ActiveRunId = Guid.NewGuid() }),
         (SaleRejection.WrongCharacter, () => GuardInput(Reprice()) with { CharacterContentId = Character + 1 }),
         (SaleRejection.NotOnHomeWorld, () => GuardInput(Reprice()) with { CurrentWorldId = HomeWorld + 1 }),
-        (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRulesHash = RulesHash + 1 }),
-        (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricingHash = PricingHash + 1 }),
-        (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEditsHash = PlanEditsHash + 1 }),
+        (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRules = LoweredFloorRules }),
+        (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricing = WiderStepLimit }),
+        (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEdits = EditedPlan }),
         (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
         (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
@@ -103,7 +107,7 @@ public sealed class SaleGuardTests
         SaleWrite[] writes = [Reprice(), List(), Return(), Vendor(), Move()];
         for (var index = 0; index < writes.Length; index++)
         {
-            var loweredFloor = GuardInput(writes[index]) with { CurrentRulesHash = RulesHash + 1, RuleFloor = 1 };
+            var loweredFloor = GuardInput(writes[index]) with { CurrentRules = LoweredFloorRules, RuleFloor = 1 };
 
             Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(loweredFloor).Rejection);
             Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(SaleGuard.Evaluate(loweredFloor).Rejection));
@@ -115,15 +119,13 @@ public sealed class SaleGuardTests
     {
         var input = GuardInput(Reprice());
         var rebuilt = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
-        var loweredFloor = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor - 1 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
         var vendoringOn = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []);
-        var editedPlan = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now)]);
 
-        Assert.True(SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(rebuilt), CurrentPricingHash = Fingerprint.OfPricing(new PricingSettings()) }).IsAllowed);
-        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(loweredFloor) }).Rejection);
-        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRulesHash = Fingerprint.OfRuleBook(vendoringOn) }).Rejection);
-        Assert.Equal(SaleRejection.PricingChanged, SaleGuard.Evaluate(input with { CurrentPricingHash = Fingerprint.OfPricing(StartPricing with { StepLimitPercent = 90 }) }).Rejection);
-        Assert.Equal(SaleRejection.PlanEditsChanged, SaleGuard.Evaluate(input with { CurrentPlanEditsHash = Fingerprint.OfPlanEdits(editedPlan) }).Rejection);
+        Assert.True(SaleGuard.Evaluate(input with { CurrentRules = rebuilt, CurrentPricing = new PricingSettings(), CurrentPlanEdits = PlanEdits.Restore([]) }).IsAllowed);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRules = LoweredFloorRules }).Rejection);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRules = vendoringOn }).Rejection);
+        Assert.Equal(SaleRejection.PricingChanged, SaleGuard.Evaluate(input with { CurrentPricing = WiderStepLimit }).Rejection);
+        Assert.Equal(SaleRejection.PlanEditsChanged, SaleGuard.Evaluate(input with { CurrentPlanEdits = EditedPlan }).Rejection);
     }
 
     [Fact]
