@@ -20,6 +20,8 @@ internal sealed class MarketbuddyIpc : IDisposable
     private readonly Func<string, bool> lockCall;
     private readonly Func<string, bool> unlockCall;
     private readonly Func<string, bool> isLockedCall;
+    private LockAnswer reported;
+    private bool answerReported;
 
     public MarketbuddyIpc()
     {
@@ -51,7 +53,8 @@ internal sealed class MarketbuddyIpc : IDisposable
 
         Held = true;
         var added = IpcGate.Invoke(true, lockCall, AsellConstants.InternalName, false, LockFailed);
-        RunLog.Debug($"Marketbuddy: locked while the sell window is open (new lock {added}).");
+        var locked = IpcGate.Invoke(isLockedGate.HasFunction, isLockedCall, AsellConstants.InternalName, false, IsLockedFailed);
+        Report(new LockAnswer(added, locked));
     }
 
     public void Release()
@@ -66,6 +69,19 @@ internal sealed class MarketbuddyIpc : IDisposable
         RunLog.Debug($"Marketbuddy: unlocked (lock found {removed}).");
     }
 
+    private void Report(in LockAnswer answer)
+    {
+        if (answerReported && answer == reported)
+        {
+            RunLog.Debug($"Marketbuddy: locked while the sell window is open (new lock {answer.Added}, locked {answer.Locked}).");
+            return;
+        }
+
+        answerReported = true;
+        reported = answer;
+        RunLog.Info($"Marketbuddy: locked while the sell window is open; Lock answered {answer.Added} and IsLocked answers {answer.Locked}.");
+    }
+
     private void ReleaseLeftover()
     {
         if (!IpcGate.Invoke(isLockedGate.HasFunction, isLockedCall, AsellConstants.InternalName, false, IsLockedFailed))
@@ -76,4 +92,6 @@ internal sealed class MarketbuddyIpc : IDisposable
         IpcGate.Invoke(unlockGate.HasFunction, unlockCall, AsellConstants.InternalName, false, UnlockFailed);
         RunLog.Info("Marketbuddy: a lock an earlier session of Auto Seller left behind was released.");
     }
+
+    private readonly record struct LockAnswer(bool Added, bool Locked);
 }
