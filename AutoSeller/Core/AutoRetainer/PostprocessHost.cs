@@ -62,10 +62,10 @@ internal sealed class PostprocessHost : IDisposable
 
     private void OnAdditionalTask(string retainerName)
     {
-        var skip = Decide(retainerName, out var retainerId, out var work);
+        var skip = Decide(retainerName, out var retainerId, out var block, out var work);
         if (skip != PostprocessSkip.None)
         {
-            RunLog.Info($"AutoRetainer post-process: {retainerName} stays with AutoRetainer ({skip}).");
+            RunLog.Info($"AutoRetainer post-process: {retainerName} ({retainerId}) stays with AutoRetainer ({skip}{(skip == PostprocessSkip.Blocked ? $": {block}" : string.Empty)}).");
             return;
         }
 
@@ -85,20 +85,28 @@ internal sealed class PostprocessHost : IDisposable
         RunLog.Info($"AutoRetainer post-process: asked for {retainerName} ({retainerId}) with {work} planned item(s){(handshake.SellNowArmed ? " for Sell now" : string.Empty)}.");
     }
 
-    private PostprocessSkip Decide(string retainerName, out ulong retainerId, out int work)
+    private PostprocessSkip Decide(string retainerName, out ulong retainerId, out StartBlock block, out int work)
     {
         work = 0;
+        block = StartBlock.None;
         retainerId = ResolveRetainer(retainerName);
-        var enabled = retainerId != 0 && plugin.Characters.Current?.EnabledRetainerIds().Contains(retainerId) == true;
         var facts = new PostprocessRequestFacts(
             plugin.Configuration.AutoRetainerPostprocess,
             handshake.SellNowArmed,
             handshake.StoodDown,
             controller.Running,
             retainerId != 0,
-            controller.CheckStart(RunMode.Postprocess, enabled),
-            0);
+            block,
+            work);
         var skip = PostprocessRequestRule.Evaluate(facts);
+        if (skip != PostprocessSkip.NoWork)
+        {
+            return skip;
+        }
+
+        block = controller.CheckStart(RunMode.Postprocess, plugin.Characters.Current?.EnabledRetainerIds().Contains(retainerId) == true);
+        facts = facts with { Block = block };
+        skip = PostprocessRequestRule.Evaluate(facts);
         if (skip != PostprocessSkip.NoWork)
         {
             return skip;
