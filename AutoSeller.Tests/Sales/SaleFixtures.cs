@@ -84,6 +84,11 @@ internal static class SaleFixtures
         return Sale(SaleSource.Notice, receivedAtUtc, soldAfterUtc, retainerId, itemId, quantity, unitPrice, netGil);
     }
 
+    public static SaleRecord UnmatchedNotice(DateTime receivedAtUtc, uint itemId, uint quantity, uint unitPrice, long netGil)
+    {
+        return SaleNoticeParser.ToSaleRecord(new SaleNotice(Gridania, itemId, false, quantity, unitPrice, netGil), receivedAtUtc, CharacterId, []);
+    }
+
     public static SaleRecord Diff(DateTime previousReadAtUtc, DateTime currentReadAtUtc, uint itemId, uint quantity, uint unitPrice, ulong retainerId = FirstRetainerId, DateTime listedAtUtc = default)
     {
         return Sale(SaleSource.Diff, currentReadAtUtc, previousReadAtUtc, retainerId, itemId, quantity, unitPrice, NetOf(unitPrice, quantity)) with { ListedAtUtc = listedAtUtc };

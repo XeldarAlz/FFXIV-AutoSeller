@@ -10,6 +10,8 @@ internal readonly record struct SaleNotice(byte Town, uint ItemId, bool IsHq, ui
 
 internal static class SaleNoticeParser
 {
+    public static readonly TimeSpan CatchUpLimit = TimeSpan.FromDays(7);
+
     private const int NoMatch = 0;
     private const int SameLot = 1;
     private const int SameLotAndPrice = 2;
@@ -46,10 +48,17 @@ internal static class SaleNoticeParser
 
     public static SaleRecord ToSaleRecord(in SaleNotice notice, DateTime receivedAtUtc, ulong characterContentId, ReadOnlySpan<RetainerSnapshot> lastSnapshots)
     {
-        var retainerId = ResolveRetainer(notice, characterContentId, lastSnapshots, out var lastSeenListedUtc);
+        var retainerId = SaleRecord.UnknownRetainer;
+        var soldAfterUtc = receivedAtUtc - CatchUpLimit;
+        if (TryFindListing(notice, characterContentId, lastSnapshots, out var listingRetainerId, out var lastSeenListedUtc))
+        {
+            retainerId = listingRetainerId;
+            soldAfterUtc = lastSeenListedUtc;
+        }
+
         return new SaleRecord(
             receivedAtUtc,
-            lastSeenListedUtc,
+            soldAfterUtc,
             default,
             characterContentId,
             retainerId,
@@ -77,12 +86,12 @@ internal static class SaleNoticeParser
         }
     }
 
-    private static ulong ResolveRetainer(in SaleNotice notice, ulong characterContentId, ReadOnlySpan<RetainerSnapshot> snapshots, out DateTime lastSeenListedUtc)
+    private static bool TryFindListing(in SaleNotice notice, ulong characterContentId, ReadOnlySpan<RetainerSnapshot> snapshots, out ulong retainerId, out DateTime lastSeenListedUtc)
     {
         var bestScore = NoMatch;
         var bestRetainerId = SaleRecord.UnknownRetainer;
         var ambiguous = false;
-        lastSeenListedUtc = DateTime.MinValue;
+        lastSeenListedUtc = default;
         for (var index = 0; index < snapshots.Length; index++)
         {
             var snapshot = snapshots[index];
@@ -113,7 +122,8 @@ internal static class SaleNoticeParser
             }
         }
 
-        return ambiguous ? SaleRecord.UnknownRetainer : bestRetainerId;
+        retainerId = ambiguous ? SaleRecord.UnknownRetainer : bestRetainerId;
+        return bestScore != NoMatch;
     }
 
     private static int MatchScore(in SaleNotice notice, ReadOnlySpan<ListingSlot> slots)

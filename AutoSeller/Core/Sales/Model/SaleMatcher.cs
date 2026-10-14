@@ -121,17 +121,20 @@ internal static class SaleMatcher
     private static int FindPartner(in SaleRecord primary, IReadOnlyList<SaleRecord> secondaries, bool[] taken)
     {
         var best = NotFound;
+        var bestDistance = TimeSpan.MaxValue;
         for (var index = 0; index < secondaries.Count; index++)
         {
             var candidate = secondaries[index];
-            if (taken[index] || !AreCompatibleRetainers(primary, candidate) || !Overlap(primary, candidate))
+            if (taken[index] || !AreCompatibleRetainers(primary, candidate) || !CouldHaveSoldAt(candidate, primary.SoldAtUtc))
             {
                 continue;
             }
 
-            if (best == NotFound || candidate.SoldAtUtc < secondaries[best].SoldAtUtc)
+            var distance = (candidate.SoldAtUtc - primary.SoldAtUtc).Duration();
+            if (distance < bestDistance)
             {
                 best = index;
+                bestDistance = distance;
             }
         }
 
@@ -158,11 +161,11 @@ internal static class SaleMatcher
         };
     }
 
-    private static bool Overlap(in SaleRecord first, in SaleRecord second)
+    private static bool CouldHaveSoldAt(in SaleRecord record, DateTime atUtc)
     {
         var toleranceTicks = ClockTolerance.Ticks;
-        return first.SoldAfterUtc.Ticks <= second.SoldAtUtc.Ticks + toleranceTicks
-            && second.SoldAfterUtc.Ticks <= first.SoldAtUtc.Ticks + toleranceTicks;
+        return record.SoldAfterUtc.Ticks - toleranceTicks <= atUtc.Ticks
+            && atUtc.Ticks <= record.SoldAtUtc.Ticks + toleranceTicks;
     }
 
     private static bool AreCompatibleRetainers(in SaleRecord first, in SaleRecord second)

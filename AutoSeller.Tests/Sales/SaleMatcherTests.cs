@@ -39,7 +39,7 @@ public sealed class SaleMatcherTests
     {
         var merged = SaleMatcher.Merge(Of(
             Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200, listedAtUtc: ListedAt),
-            Notice(NoticedAt, DateTime.MinValue, DarksteelOre, 10, 200, NoticedNet, SaleRecord.UnknownRetainer)).AsSpan());
+            UnmatchedNotice(NoticedAt, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
 
         var sale = Assert.Single(merged);
         Assert.Equal(SaleSource.Notice, sale.Source);
@@ -78,6 +78,71 @@ public sealed class SaleMatcherTests
         Assert.Equal(NoticedNet, sale.NetGil);
         Assert.Equal(ListedAt, sale.ListedAtUtc);
         Assert.Equal(FirstRetainerId, sale.RetainerId);
+    }
+
+    [Fact]
+    public void NoticeForALotNoSnapshotShowedDoesNotSwallowAnOlderInferredSale()
+    {
+        var oldRead = Morning.AddDays(-10);
+        var oldDiff = Diff(oldRead, oldRead.AddDays(1), DarksteelOre, 10, 200);
+
+        var merged = SaleMatcher.Merge(Of(oldDiff, UnmatchedNotice(NoticedAt, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
+
+        Assert.Equal(2, merged.Length);
+        Assert.Equal(SaleSource.Diff, merged[0].Source);
+        Assert.Equal(oldRead.AddDays(1), merged[0].SoldAtUtc);
+        Assert.Equal(SaleSource.Notice, merged[1].Source);
+        Assert.Equal(NoticedAt, merged[1].SoldAtUtc);
+    }
+
+    [Fact]
+    public void NoticeForALotNoSnapshotShowedDoesNotSwallowAnOldSaleFromTheHistory()
+    {
+        var oldSale = History(NoticedAt - SaleNoticeParser.CatchUpLimit - TimeSpan.FromHours(1), DarksteelOre, 10, 200);
+
+        var merged = SaleMatcher.Merge(Of(oldSale, UnmatchedNotice(NoticedAt, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
+
+        Assert.Equal(2, merged.Length);
+        Assert.Equal(oldSale.SoldAtUtc, merged[0].SoldAtUtc);
+        Assert.Equal(NoticedAt, merged[1].SoldAtUtc);
+    }
+
+    [Fact]
+    public void CatchUpNoticeForALotNoSnapshotShowedMergesWithItsHistory()
+    {
+        var soldWhileAway = NoticedAt.AddDays(-3);
+
+        var merged = SaleMatcher.Merge(Of(History(soldWhileAway, DarksteelOre, 10, 200), UnmatchedNotice(NoticedAt, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
+
+        var sale = Assert.Single(merged);
+        Assert.Equal(SaleSource.History, sale.Source);
+        Assert.Equal(soldWhileAway, sale.SoldAtUtc);
+        Assert.Equal(NoticedNet, sale.NetGil);
+    }
+
+    [Fact]
+    public void NoticeReceivedAfterTheReadThatFoundTheLotGoneIsAnotherSale()
+    {
+        var merged = SaleMatcher.Merge(Of(
+            Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200),
+            Notice(CurrentRead.AddHours(1), PreviousRead, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
+
+        Assert.Equal(2, merged.Length);
+        Assert.Equal(CurrentRead, merged[0].SoldAtUtc);
+        Assert.Equal(CurrentRead.AddHours(1), merged[1].SoldAtUtc);
+    }
+
+    [Fact]
+    public void CatchUpNoticeAtTheVisitThatFoundTheLotGoneMergesWithTheDiff()
+    {
+        var merged = SaleMatcher.Merge(Of(
+            Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200),
+            Notice(CurrentRead.AddMinutes(-1), PreviousRead, DarksteelOre, 10, 200, NoticedNet)).AsSpan());
+
+        var sale = Assert.Single(merged);
+        Assert.Equal(SaleSource.Notice, sale.Source);
+        Assert.Equal(CurrentRead.AddMinutes(-1), sale.SoldAtUtc);
+        Assert.Equal(PreviousRead, sale.SoldAfterUtc);
     }
 
     [Fact]
@@ -185,7 +250,7 @@ public sealed class SaleMatcherTests
             Notice(NoticedAt, PreviousRead, DarksteelOre, 10, 200, NoticedNet),
             History(SoldAt, DarksteelOre, 10, 200),
             Diff(PreviousRead, CurrentRead, CottonBoll, 99, 15),
-            Notice(Morning.AddDays(-2), DateTime.MinValue, MythriteIngot, 5, 900, 4_275, SaleRecord.UnknownRetainer)).AsSpan());
+            UnmatchedNotice(Morning.AddDays(-2), MythriteIngot, 5, 900, 4_275)).AsSpan());
 
         var twice = SaleMatcher.Merge(once.AsSpan());
 

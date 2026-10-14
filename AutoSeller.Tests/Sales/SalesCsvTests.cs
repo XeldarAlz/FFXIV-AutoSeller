@@ -20,7 +20,7 @@ public sealed class SalesCsvTests
             Of(
                 History(SoldAt, DarksteelOre, 10, 1_999) with { ListedAtUtc = SoldAt.AddHours(-26) },
                 Diff(SoldAt.AddHours(-8), SoldAt.AddHours(1), MythriteIngot, 5, 900, SecondRetainerId) with { IsHq = true },
-                Notice(SoldAt.AddHours(2), DateTime.MinValue, CottonBoll, 99, 15, 1_411, SaleRecord.UnknownRetainer)).AsSpan(),
+                UnmatchedNotice(SoldAt.AddHours(2), CottonBoll, 99, 15, 1_411)).AsSpan(),
             Names);
     }
 

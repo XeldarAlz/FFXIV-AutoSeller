@@ -108,7 +108,7 @@ public sealed class SaleNoticeParserTests
     }
 
     [Fact]
-    public void NoticeWithoutAKnownListingHasNoLowerTimeBound()
+    public void NoticeWithoutAKnownListingLooksBackOnlyAsFarAsTheCatchUpLimit()
     {
         RetainerSnapshot[] snapshots =
         [
@@ -128,6 +128,7 @@ public sealed class SaleNoticeParserTests
         var record = SaleNoticeParser.ToSaleRecord(notice, Morning, CharacterId, snapshots);
 
         Assert.Equal(SaleRecord.UnknownRetainer, record.RetainerId);
-        Assert.Equal(DateTime.MinValue, record.SoldAfterUtc);
+        Assert.Equal(Morning - SaleNoticeParser.CatchUpLimit, record.SoldAfterUtc);
+        Assert.Equal(Morning, record.SoldAtUtc);
     }
 }
