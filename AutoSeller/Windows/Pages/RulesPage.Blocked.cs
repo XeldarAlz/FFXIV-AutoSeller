@@ -138,7 +138,7 @@ internal sealed partial class RulesPage
             var item = scan.Rows[index].Item;
             var quantity = item.Slot.Quantity.ToString("N0", Loc.Culture);
             blockedCaptions[index] = Loc.T(L.Rules.BlockedCaption, Loc.T(SourceLabel(item.Slot.Source)), quantity);
-            blockedReasons[index] = Loc.T(item.WaitsForReference ? L.Rules.ReasonNoReference : ReasonLabel(item.Reason));
+            blockedReasons[index] = Loc.T(BlockedLabel(item));
         }
     }
 
@@ -149,6 +149,24 @@ internal sealed partial class RulesPage
         SlotSource.Saddlebag => L.Rules.SourceSaddlebag,
         SlotSource.Armoury => L.Rules.SourceArmoury,
         _ => L.Rules.SourceBags,
+    };
+
+    private static LocString BlockedLabel(in BlockedItem item)
+    {
+        if (item.IsHeld)
+        {
+            return HoldLabel(item.Hold);
+        }
+
+        return item.WaitsForReference ? L.Rules.ReasonNoReference : ReasonLabel(item.Reason);
+    }
+
+    private static LocString HoldLabel(LotHold hold) => hold switch
+    {
+        LotHold.KeptInBags => L.Rules.HoldKeptInBags,
+        LotHold.BelowLotSize => L.Rules.HoldBelowLotSize,
+        LotHold.BagsFull => L.Rules.HoldBagsFull,
+        _ => L.Rules.HoldListingsUp,
     };
 
     private static LocString ReasonLabel(EligibilityReason reason) => reason switch

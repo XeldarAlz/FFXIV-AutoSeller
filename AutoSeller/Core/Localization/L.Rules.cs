@@ -121,5 +121,9 @@ internal static partial class L
         public static readonly LocString ReasonQualityNotAllowed = new("rules.reason.qualityNotAllowed", "Its rule does not cover this quality");
         public static readonly LocString ReasonUniqueListed = new("rules.reason.uniqueListed", "Unique and already listed");
         public static readonly LocString ReasonNoLot = new("rules.reason.noLot", "Nothing left after the keep count and lot size");
+        public static readonly LocString HoldKeptInBags = new("rules.hold.keptInBags", "Kept in your bags by the keep count");
+        public static readonly LocString HoldBelowLotSize = new("rules.hold.belowLotSize", "Less than one lot left after the keep count");
+        public static readonly LocString HoldListingsUp = new("rules.hold.listingsUp", "Enough listings of it are up already");
+        public static readonly LocString HoldBagsFull = new("rules.hold.bagsFull", "No free bag slot to take it out of the saddlebag");
     }
 }
