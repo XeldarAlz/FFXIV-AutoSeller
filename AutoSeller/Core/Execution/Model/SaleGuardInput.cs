@@ -1,6 +1,20 @@
+using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
+
 namespace AutoSeller.Core.Execution.Model;
 
-internal readonly record struct SlotReading(uint ItemId, bool IsHq, uint Quantity, uint UnitPrice);
+internal readonly record struct SlotReading(uint ItemId, bool IsHq, uint Quantity, uint UnitPrice)
+{
+    public static SlotReading Of(in ListingSlot listing)
+    {
+        return new SlotReading(listing.ItemId, listing.IsHq, listing.Quantity, listing.UnitPrice);
+    }
+
+    public static SlotReading Of(in SlotFacts slot)
+    {
+        return new SlotReading(slot.ItemId, slot.IsHq, slot.Quantity, 0);
+    }
+}
 
 internal readonly record struct SaleGuardInput
 {
