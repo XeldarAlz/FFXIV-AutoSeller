@@ -59,6 +59,7 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             await UnwindToBell(stop);
         }
 
+        plugin.Marketbuddy.Release();
         Finish(stop);
     }
 

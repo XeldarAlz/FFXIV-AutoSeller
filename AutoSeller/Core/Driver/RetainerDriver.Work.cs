@@ -48,7 +48,17 @@ internal sealed partial class RetainerDriver
 
             session.WorkOn(retainerIndex, PlanRowKey.ForListing(retainer.RetainerId, listing));
             session.Show(RunState.Repricing, Loc.T(L.Run.StatusListing, retainer.Name, decider.ItemName(listing.ItemId), index + 1, listings.Length));
-            var stop = await CheckListing(retainer, current, listing);
+            plugin.Marketbuddy.Hold();
+            Stop stop;
+            try
+            {
+                stop = await CheckListing(retainer, current, listing);
+            }
+            finally
+            {
+                plugin.Marketbuddy.Release();
+            }
+
             if (stop.Halted)
             {
                 return stop;
@@ -156,7 +166,17 @@ internal sealed partial class RetainerDriver
 
                 session.WorkOn(retainerIndex, lot.Row);
                 session.Show(RunState.Listing, Loc.T(L.Run.StatusLot, retainer.Name, decider.ItemName(lot.Item.ItemId), index + 1, assigned.Length));
-                var step = await CheckLot(retainer, assignment);
+                plugin.Marketbuddy.Hold();
+                LotStep step;
+                try
+                {
+                    step = await CheckLot(retainer, assignment);
+                }
+                finally
+                {
+                    plugin.Marketbuddy.Release();
+                }
+
                 if (step.Stop.Halted)
                 {
                     return step.Stop;
