@@ -1,5 +1,6 @@
 using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Retainers.Model;
 using static AutoSeller.Tests.EndToEnd.RunWorld;
 using static AutoSeller.Tests.Listings.ListingFixtures;
 using static AutoSeller.Tests.Planning.PlanFixtures;
@@ -51,7 +52,20 @@ public sealed class ListingTableTests
 
         Assert.Equal(ListingState.Lowest, row.State);
         Assert.True(row.HasRepriced);
-        Assert.Equal(Now.AddMinutes(-10), row.PricedSinceUtc);
+        Assert.Equal(Now.AddMinutes(-10), row.LastRepriceUtc);
+    }
+
+    [Fact]
+    public void AListingIsListedSinceTheFirstVisitThatSawItOrElseSinceItsLastVisit()
+    {
+        var listing = OreListing(0);
+        var firstSeen = Now.AddDays(-4);
+        var main = MainCharacter(MarketAt(Alpha, listing), MarketAt(Beta, OreListing(1))) with { ListingAges = [new ListingAge(Alpha, listing, firstSeen)] };
+
+        var table = ListingTable.Build(Inputs(main));
+
+        Assert.Equal(firstSeen, Single(table, Alpha, 0).ListedSinceUtc);
+        Assert.Equal(MarketAt(Beta).ReadAtUtc, Single(table, Beta, 1).ListedSinceUtc);
     }
 
     [Fact]

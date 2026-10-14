@@ -29,9 +29,11 @@ internal static partial class L
         public static readonly LocString ColumnPrice = new("listings.column.price", "Price");
         public static readonly LocString ColumnCompetitor = new("listings.column.competitor", "Lowest seller");
         public static readonly LocString ColumnValue = new("listings.column.value", "Value");
-        public static readonly LocString ColumnAge = new("listings.column.age", "Age");
+        public static readonly LocString ColumnListed = new("listings.column.listed", "Listed");
+        public static readonly LocString ColumnLastReprice = new("listings.column.lastReprice", "Last reprice");
         public static readonly LocString ColumnState = new("listings.column.state", "State");
-        public static readonly LocString AgeHelp = new("listings.ageHelp", "How long ago a run last set this price, or when the listing was last seen at a bell.");
+        public static readonly LocString ListedHelp = new("listings.listedHelp", "How long the listing has been up, counted from the first bell visit that saw it. A reprice does not reset it.");
+        public static readonly LocString LastRepriceHelp = new("listings.lastRepriceHelp", "How long ago a run last changed this price.");
         public static readonly LocString CompetitorHelp = new("listings.competitorHelp", "The lowest price of another seller on your world in the latest Universalis data.");
         public static readonly LocString TipSeen = new("listings.tip.seen", "Seen at a bell {0}");
         public static readonly LocString TipRepriced = new("listings.tip.repriced", "Last repriced by a run {0}");

@@ -74,7 +74,7 @@ internal static class ListingQuery
             var leftRow = rows[left];
             var rightRow = rows[right];
             var order = sort == ListingSort.Age
-                ? leftRow.PricedSinceUtc.CompareTo(rightRow.PricedSinceUtc)
+                ? leftRow.ListedSinceUtc.CompareTo(rightRow.ListedSinceUtc)
                 : rightRow.Value.CompareTo(leftRow.Value);
             return order != 0 ? order : left.CompareTo(right);
         }

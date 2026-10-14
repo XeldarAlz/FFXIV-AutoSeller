@@ -32,9 +32,10 @@ internal sealed partial class ListingsPage
             order = new int[rows.Length];
         }
 
+        var nowUtc = DateTime.UtcNow;
         for (var index = 0; index < rows.Length; index++)
         {
-            texts[index] = Build(table, view, index);
+            texts[index] = Build(table, view, index, nowUtc);
         }
 
         if (!revised)
@@ -113,7 +114,7 @@ internal sealed partial class ListingsPage
         }
     }
 
-    private RowText Build(ListingTable table, ListingsView view, int index)
+    private RowText Build(ListingTable table, ListingsView view, int index, DateTime nowUtc)
     {
         var row = table.Rows[index];
         var name = view.ItemNames[index];
@@ -128,7 +129,8 @@ internal sealed partial class ListingsPage
             Price = PlanLabels.Gil(row.UnitPrice),
             Competitor = PlanLabels.Gil(row.CompetitorPrice),
             Value = Formatting.Gil(row.Value),
-            Age = Formatting.RelativeTime(row.PricedSinceUtc),
+            Listed = Formatting.Duration(nowUtc - row.ListedSinceUtc),
+            LastReprice = row.HasRepriced ? Formatting.RelativeTime(row.LastRepriceUtc, nowUtc) : PlanLabels.NoValue,
             State = StateLabel(row.State),
             StateColor = StateColor(row.State),
             IconId = view.IconIds[index],
@@ -136,15 +138,15 @@ internal sealed partial class ListingsPage
         };
 
         tooltip.Clear().Append(text.Name).Append('\n').Append(text.Caption).Append("\n\n").Append(StateHelp(row.State));
-        tooltip.Append('\n').Append(Loc.T(L.Listings.TipSeen, Formatting.RelativeTime(row.SeenAtUtc)));
+        tooltip.Append('\n').Append(Loc.T(L.Listings.TipSeen, Formatting.RelativeTime(row.SeenAtUtc, nowUtc)));
         if (row.HasRepriced)
         {
-            tooltip.Append('\n').Append(Loc.T(L.Listings.TipRepriced, Formatting.RelativeTime(row.LastRepriceUtc)));
+            tooltip.Append('\n').Append(Loc.T(L.Listings.TipRepriced, text.LastReprice));
         }
 
         if (row.DataUploadedAtUtc != default)
         {
-            tooltip.Append('\n').Append(Loc.T(L.Listings.TipData, Formatting.RelativeTime(row.DataUploadedAtUtc)));
+            tooltip.Append('\n').Append(Loc.T(L.Listings.TipData, Formatting.RelativeTime(row.DataUploadedAtUtc, nowUtc)));
         }
 
         tooltip.Append('\n').Append(Loc.T(L.Listings.TipFloor, PlanLabels.Gil(row.Floor)));
@@ -229,7 +231,12 @@ internal sealed partial class ListingsPage
         }
 
         TextDraw.Right(text.Value, columns.ValueRight, lineY, Styling.TextSecondary);
-        TextDraw.Right(text.Age, columns.AgeRight, lineY, Styling.TextDim);
+        if (columns.ShowRepriced)
+        {
+            TextDraw.Right(text.LastReprice, columns.RepricedRight, lineY, Styling.TextDim);
+        }
+
+        TextDraw.Right(text.Listed, columns.ListedRight, lineY, Styling.TextDim);
         using (Fonts.PushCaption())
         {
             Badge.DrawLeft(drawList, text.State, text.StateColor, columns.State, midY);
@@ -255,7 +262,12 @@ internal sealed partial class ListingsPage
         }
 
         Header(L.Listings.ColumnValue, columns.ValueRight, origin.Y, PriceWidth * scale, height, true, null);
-        Header(L.Listings.ColumnAge, columns.AgeRight, origin.Y, AgeWidth * scale, height, true, L.Listings.AgeHelp);
+        if (columns.ShowRepriced)
+        {
+            Header(L.Listings.ColumnLastReprice, columns.RepricedRight, origin.Y, RepricedWidth * scale, height, true, L.Listings.LastRepriceHelp);
+        }
+
+        Header(L.Listings.ColumnListed, columns.ListedRight, origin.Y, ListedWidth * scale, height, true, L.Listings.ListedHelp);
         Header(L.Listings.ColumnState, columns.State, origin.Y, StateWidth * scale, height, false, null);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(columns.Right - columns.Left, height));
@@ -292,13 +304,17 @@ internal sealed partial class ListingsPage
         var icon = left + PadX * scale;
         var name = icon + IconSize * scale + gap;
         var state = right - PadX * scale - StateWidth * scale;
-        var ageRight = state - gap;
-        var valueRight = ageRight - AgeWidth * scale - gap;
-        var showCompetitor = valueRight - name - (PriceWidth * 3f + QuantityWidth) * scale - gap * 4f >= MinimumNameWidth * scale;
+        var listedRight = state - gap;
+        var minimumName = MinimumNameWidth * scale;
+        var spare = listedRight - name - (ListedWidth + PriceWidth * 2f + QuantityWidth) * scale - gap * 4f;
+        var showCompetitor = spare - PriceWidth * scale - gap >= minimumName;
+        var showRepriced = spare - (showCompetitor ? PriceWidth * scale + gap : 0f) - RepricedWidth * scale - gap >= minimumName;
+        var repricedRight = listedRight - ListedWidth * scale - gap;
+        var valueRight = showRepriced ? repricedRight - RepricedWidth * scale - gap : repricedRight;
         var competitorRight = valueRight - PriceWidth * scale - gap;
         var priceRight = showCompetitor ? competitorRight - PriceWidth * scale - gap : competitorRight;
         var quantityRight = priceRight - PriceWidth * scale - gap;
         var nameRight = quantityRight - QuantityWidth * scale - gap;
-        return new Columns(left, icon, name, nameRight, quantityRight, priceRight, competitorRight, valueRight, ageRight, state, right, showCompetitor);
+        return new Columns(left, icon, name, nameRight, quantityRight, priceRight, competitorRight, valueRight, repricedRight, listedRight, state, right, showCompetitor, showRepriced);
     }
 }

@@ -27,7 +27,8 @@ internal sealed partial class ListingsPage
     private const float CaptionGap = 2f;
     private const float QuantityWidth = 48f;
     private const float PriceWidth = 92f;
-    private const float AgeWidth = 72f;
+    private const float ListedWidth = 76f;
+    private const float RepricedWidth = 84f;
     private const float StateWidth = 104f;
     private const float MinimumNameWidth = 150f;
     private const long TextRefreshMs = 60_000;
@@ -66,7 +67,7 @@ internal sealed partial class ListingsPage
 
     private readonly record struct QueryKey(int Revision, int Character, int Retainer, int State, int Sort, string Search);
 
-    private readonly record struct Columns(float Left, float Icon, float Name, float NameRight, float QuantityRight, float PriceRight, float CompetitorRight, float ValueRight, float AgeRight, float State, float Right, bool ShowCompetitor);
+    private readonly record struct Columns(float Left, float Icon, float Name, float NameRight, float QuantityRight, float PriceRight, float CompetitorRight, float ValueRight, float RepricedRight, float ListedRight, float State, float Right, bool ShowCompetitor, bool ShowRepriced);
 
     private sealed class RowText
     {
@@ -79,7 +80,8 @@ internal sealed partial class ListingsPage
         public string Price = string.Empty;
         public string Competitor = string.Empty;
         public string Value = string.Empty;
-        public string Age = string.Empty;
+        public string Listed = string.Empty;
+        public string LastReprice = string.Empty;
         public string State = string.Empty;
         public Vector4 StateColor;
         public string Tooltip = string.Empty;

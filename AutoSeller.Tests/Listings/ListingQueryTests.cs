@@ -26,22 +26,22 @@ public sealed class ListingQueryTests
     }
 
     [Fact]
-    public void AgeSortsTheOldestPriceFirst()
+    public void AgeSortsTheLongestListedFirst()
     {
-        var oldestFirst = Query(ListingFilter.All with { Sort = ListingSort.Age });
+        var longestFirst = Query(ListingFilter.All with { Sort = ListingSort.Age });
 
-        Assert.Equal([0, 2, 1, 3], oldestFirst);
+        Assert.Equal([0, 2, 1, 3], longestFirst);
     }
 
     [Fact]
-    public void ARepriceTimeCountsAsTheListingsAge()
+    public void ARepriceDoesNotChangeTheListingsAge()
     {
         var repriced = rows.SetItem(0, rows[0] with { LastRepriceUtc = Now.AddMinutes(-1) });
         var destination = new int[repriced.Length];
 
         var count = ListingQuery.Apply(repriced, names, ListingFilter.All with { Sort = ListingSort.Age }, destination);
 
-        Assert.Equal([2, 1, 3, 0], destination[..count]);
+        Assert.Equal([0, 2, 1, 3], destination[..count]);
     }
 
     [Fact]
@@ -69,8 +69,8 @@ public sealed class ListingQueryTests
         return destination[..count];
     }
 
-    private static ListingRow Row(ulong contentId, ulong retainerId, byte slot, uint price, uint quantity, ListingState state, DateTime seenAtUtc)
+    private static ListingRow Row(ulong contentId, ulong retainerId, byte slot, uint price, uint quantity, ListingState state, DateTime listedSinceUtc)
     {
-        return new ListingRow(contentId, retainerId, slot, new ItemKey(Ore, false), quantity, price, 0, default, seenAtUtc, default, 0, state);
+        return new ListingRow(contentId, retainerId, slot, new ItemKey(Ore, false), quantity, price, 0, default, Now, listedSinceUtc, default, 0, state);
     }
 }

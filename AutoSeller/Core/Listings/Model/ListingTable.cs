@@ -32,6 +32,7 @@ internal readonly record struct ListingRow(
     uint CompetitorPrice,
     DateTime DataUploadedAtUtc,
     DateTime SeenAtUtc,
+    DateTime ListedSinceUtc,
     DateTime LastRepriceUtc,
     uint Floor,
     ListingState State)
@@ -39,8 +40,6 @@ internal readonly record struct ListingRow(
     public long Value => Gil.SaturatingMultiply(UnitPrice, Quantity);
 
     public bool HasRepriced => LastRepriceUtc != default;
-
-    public DateTime PricedSinceUtc => HasRepriced ? LastRepriceUtc : SeenAtUtc;
 }
 
 internal sealed class ListingInputs
@@ -189,6 +188,7 @@ internal sealed class ListingTable
             competitor,
             known ? world.UpdatedAtUtc : default,
             snapshot.ReadAtUtc,
+            ListingAges.ListedSince(record.ListingAges.IsDefault ? [] : record.ListingAges.AsSpan(), snapshot.RetainerId, listing, snapshot.ReadAtUtc),
             history.LastRepriceUtc,
             floor,
             state);

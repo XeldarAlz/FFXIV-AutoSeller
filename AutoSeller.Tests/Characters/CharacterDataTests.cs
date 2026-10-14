@@ -79,6 +79,7 @@ public sealed class CharacterDataTests : IDisposable
 
         Assert.False(data.TryGetSnapshot(SecondRetainer, out _));
         Assert.Empty(data.Approvals);
+        Assert.Empty(data.ToRecord(Now).ListingAges);
     }
 
     [Fact]
@@ -111,6 +112,32 @@ public sealed class CharacterDataTests : IDisposable
         Assert.True(data.TryGetSnapshot(FirstRetainer, out var kept));
         Assert.Same(latest, kept);
         Assert.Single(data.Snapshots);
+    }
+
+    [Fact]
+    public void AListingKeepsTheTimeItWasFirstSeenThroughARepriceAndANewOneStartsItsOwn()
+    {
+        var data = new CharacterData(Character);
+        var nextDay = Now.AddDays(1);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, nextDay, Listing(0, Ore, 900), Listing(1, Potion, 50)));
+
+        Assert.Equal<ListingAge>(
+            [new ListingAge(FirstRetainer, Listing(0, Ore, 900), Now), new ListingAge(FirstRetainer, Listing(1, Potion, 50), nextDay)],
+            data.ToRecord(nextDay).ListingAges);
+    }
+
+    [Fact]
+    public void AListingGoneFromItsSlotTakesItsTimeAlong()
+    {
+        var data = new CharacterData(Character);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+        data.RecordSnapshot(Snapshot(SecondRetainer, Listing(0, Potion, 50)));
+
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, Now.AddDays(1)));
+
+        Assert.Equal<ListingAge>([new ListingAge(SecondRetainer, Listing(0, Potion, 50), Now)], data.ToRecord(Now).ListingAges);
     }
 
     [Fact]
@@ -228,6 +255,8 @@ public sealed class CharacterDataTests : IDisposable
         Assert.Equal(DateTimeKind.Utc, snapshot.ReadAtUtc.Kind);
         Assert.Equal(new[] { Listing(0, Ore, 1_000), Listing(3, Potion, 60) }, snapshot.Slots);
         Assert.Equal(data.Approvals, restored.Approvals);
+        Assert.Equal(2, restored.ToRecord(Now).ListingAges.Length);
+        Assert.Equal<ListingAge>(data.ToRecord(Now).ListingAges, restored.ToRecord(Now).ListingAges);
         Assert.Equal<PlanEdit>(data.PlanEdits.Items, restored.PlanEdits.Items);
         var key = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
         Assert.Equal(data.RepriceEntryFor(key).LastRepriceUtc, restored.RepriceEntryFor(key).LastRepriceUtc);
@@ -352,11 +381,16 @@ public sealed class CharacterDataTests : IDisposable
 
     private static RetainerSnapshot Snapshot(ulong retainerId, params ListingSlot[] listings)
     {
+        return SnapshotAt(retainerId, Now, listings);
+    }
+
+    private static RetainerSnapshot SnapshotAt(ulong retainerId, DateTime readAtUtc, params ListingSlot[] listings)
+    {
         return new RetainerSnapshot
         {
             RetainerId = retainerId,
             CharacterContentId = Character,
-            ReadAtUtc = Now,
+            ReadAtUtc = readAtUtc,
             Town = 1,
             Gil = 10_000,
             Slots = ImmutableArray.Create(listings),

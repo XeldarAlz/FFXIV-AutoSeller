@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
@@ -15,6 +16,7 @@ internal sealed class CharacterData
     private readonly List<RetainerSetting> retainers = [];
     private readonly List<RetainerSnapshot> snapshots = [];
     private readonly List<ApprovedPrice> approvals = [];
+    private readonly List<ListingAge> listingAges = [];
     private RepriceHistory reprices = new();
 
     public CharacterData(ulong contentId)
@@ -72,6 +74,11 @@ internal sealed class CharacterData
             }
         }
 
+        if (!record.ListingAges.IsDefault)
+        {
+            data.listingAges.AddRange(record.ListingAges);
+        }
+
         var savedReprices = record.Reprices.IsDefault ? [] : record.Reprices;
         data.reprices = RepriceHistory.Restore(savedReprices.AsSpan());
         if (!record.Approvals.IsDefault)
@@ -104,6 +111,7 @@ internal sealed class CharacterData
             SavedAtUtc = nowUtc,
             Retainers = [.. retainers],
             Snapshots = [.. snapshots],
+            ListingAges = [.. listingAges],
             Reprices = kept.ToImmutable(),
             Approvals = [.. approvals],
             PlanEdits = PlanEdits.Items,
@@ -180,6 +188,7 @@ internal sealed class CharacterData
         retainers.Clear();
         retainers.AddRange(updated);
         snapshots.RemoveAll(snapshot => IndexOfRetainer(snapshot.RetainerId) < 0);
+        listingAges.RemoveAll(age => IndexOfRetainer(age.RetainerId) < 0);
         approvals.RemoveAll(approval => IndexOfRetainer(approval.RetainerId) < 0);
         Revision++;
         return true;
@@ -204,6 +213,10 @@ internal sealed class CharacterData
             throw new ArgumentException("A snapshot of another character's retainer cannot be kept here.", nameof(snapshot));
         }
 
+        TryGetSnapshot(snapshot.RetainerId, out var previous);
+        var ages = ListingAges.Carry(previous, snapshot, CollectionsMarshal.AsSpan(listingAges));
+        listingAges.RemoveAll(age => age.RetainerId == snapshot.RetainerId);
+        listingAges.AddRange(ages);
         PutSnapshot(snapshot);
         approvals.RemoveAll(approval => approval.RetainerId == snapshot.RetainerId && !StillListed(approval, snapshot));
         Revision++;

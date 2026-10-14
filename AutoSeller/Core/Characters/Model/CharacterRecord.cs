@@ -39,6 +39,8 @@ internal sealed record CharacterRecord
 
     public ImmutableArray<RetainerSnapshot> Snapshots { get; init; } = [];
 
+    public ImmutableArray<ListingAge> ListingAges { get; init; } = [];
+
     public ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> Reprices { get; init; } = [];
 
     public ImmutableArray<ApprovedPrice> Approvals { get; init; } = [];

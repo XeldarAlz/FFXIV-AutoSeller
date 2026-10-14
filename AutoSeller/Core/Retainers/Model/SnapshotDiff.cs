@@ -14,6 +14,8 @@ internal enum SnapshotDiffCorroboration : byte
 
 internal sealed class SnapshotDiff
 {
+    public const int Unpaired = -1;
+
     private const int StackWriteLimit = 128;
 
     public required ulong RetainerId { get; init; }
@@ -61,6 +63,28 @@ internal sealed class SnapshotDiff
             InferredSoldGross = soldGross,
             Corroboration = Corroborate(soldCount, soldGross, previous.Gil, gilGrowth),
         };
+    }
+
+    public static void PairListings(RetainerSnapshot previous, RetainerSnapshot current, ReadOnlySpan<SnapshotDiffWrite> writes, Span<int> previousOfCurrent)
+    {
+        if (previous.RetainerId != current.RetainerId)
+        {
+            throw new ArgumentException("Snapshots of different retainers cannot be compared.", nameof(current));
+        }
+
+        Span<int> partners = stackalloc int[previous.Slots.Length];
+        Span<bool> currentPaired = stackalloc bool[current.Slots.Length];
+        Span<int> currentListedBy = stackalloc int[current.Slots.Length];
+        Span<WriteState> writeStates = writes.Length <= StackWriteLimit ? stackalloc WriteState[writes.Length] : new WriteState[writes.Length];
+        new Walk(previous, current, writes, partners, currentPaired, currentListedBy, writeStates).PairListings();
+        previousOfCurrent.Fill(Unpaired);
+        for (var previousIndex = 0; previousIndex < partners.Length; previousIndex++)
+        {
+            if (partners[previousIndex] != Unpaired)
+            {
+                previousOfCurrent[partners[previousIndex]] = previousIndex;
+            }
+        }
     }
 
     private static long SoldGross(ImmutableArray<SnapshotDiffChange>.Builder changes, out int soldCount)
@@ -120,7 +144,6 @@ internal sealed class SnapshotDiff
 
     private readonly ref struct Walk
     {
-        private const int Unpaired = -1;
         private const int NoWrite = -1;
         private const uint AnyPrice = 0;
 
