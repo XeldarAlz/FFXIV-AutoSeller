@@ -1,0 +1,177 @@
+using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Tasks;
+using AutoSeller.Core.Tasks.Model;
+using ECommons;
+using ECommons.DalamudServices;
+using System.Threading.Tasks;
+
+namespace AutoSeller.Core.Driver;
+
+internal enum DriverOutcome : byte
+{
+    Running,
+    Completed,
+    Paused,
+    Halted,
+    Cancelled,
+}
+
+internal sealed partial class RetainerDriver(SellRunSession session, RunDecider decider, Plugin plugin) : AutoCommon
+{
+    public const int WatchdogMs = 4 * 60 * 60 * TimeUnits.MillisecondsPerSecond;
+    public const int CleanupBoundMs = 30_000;
+
+    private static readonly Func<bool> unloaded = static () => ECommonsMain.Disposed;
+
+    private readonly RetainerChain chain = new();
+    private bool engaged;
+
+    public DriverOutcome Outcome { get; private set; } = DriverOutcome.Running;
+
+    public DriverHalt Halt { get; private set; } = DriverHalt.None;
+
+    public bool Settled { get; private set; }
+
+    public bool HoldsWindows => engaged && !Settled;
+
+    protected override async Task Execute()
+    {
+        var stop = Stop.None;
+        try
+        {
+            stop = await Run();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            RunLog.Error(exception, "Driver: faulted");
+            stop = new Stop(DriverHalt.Fault, exception.Message);
+        }
+
+        if (engaged && (CancelToken.IsCancellationRequested || stop.Halted))
+        {
+            await SettleWindows();
+        }
+
+        Finish(stop);
+    }
+
+    private async Task<Stop> Run()
+    {
+        var authorization = session.Authorization;
+        if (Svc.PlayerState.ContentId != authorization.CharacterContentId)
+        {
+            return new Stop(DriverHalt.OtherCharacter, $"character {Svc.PlayerState.ContentId} is logged in, the run is for {authorization.CharacterContentId}");
+        }
+
+        var stop = await OpenRetainerList();
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return stop;
+        }
+
+        while (!CancelToken.IsCancellationRequested)
+        {
+            if (session.PauseRequested)
+            {
+                session.PausedAtBoundary = true;
+                break;
+            }
+
+            var index = session.Visits.NextPending();
+            if (index == RetainerVisits.NoRetainer)
+            {
+                break;
+            }
+
+            var visit = await VisitRetainer(index);
+            if (CancelToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            switch (DriverHalts.ReactionTo(visit.Stop.Reason))
+            {
+                case HaltReaction.Continue:
+                    if (visit.Finished)
+                    {
+                        session.Visits.MarkVisited(index);
+                    }
+
+                    break;
+                case HaltReaction.SkipRetainer:
+                    session.Visits.MarkSkipped(index, visit.Stop.Reason);
+                    Warn($"Driver: {session.Retainers[index].Name} skipped ({visit.Stop.Reason}): {visit.Stop.Detail}");
+                    var back = await BackToRetainerList();
+                    if (back.Halted)
+                    {
+                        return back;
+                    }
+
+                    break;
+                default:
+                    return visit.Stop;
+            }
+
+            if (session.Visits.NextPending() != RetainerVisits.NoRetainer && !session.PauseRequested)
+            {
+                await DelayMs(PacingPlan.BetweenRetainersMs(Random.Shared.NextDouble()));
+            }
+        }
+
+        if (CancelToken.IsCancellationRequested)
+        {
+            return Stop.None;
+        }
+
+        return await CloseRetainerList();
+    }
+
+    private async Task SettleWindows()
+    {
+        try
+        {
+            if (CancelToken.IsCancellationRequested)
+            {
+                Diag("Driver: stopped at the retainer; closing the sell window, the search results and the sell list");
+            }
+
+            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, "Driver: closing the retainer windows failed");
+        }
+    }
+
+    private void Finish(in Stop stop)
+    {
+        Halt = stop.Reason;
+        Outcome = CancelToken.IsCancellationRequested ? DriverOutcome.Cancelled
+            : stop.Halted ? DriverOutcome.Halted
+            : session.PausedAtBoundary ? DriverOutcome.Paused
+            : DriverOutcome.Completed;
+        Settled = true;
+        var visits = session.Visits;
+        var tally = session.Tally;
+        var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.WouldReprice} would reprice, {tally.WouldList} would list, {tally.Kept} kept, {tally.Skipped} skipped";
+        if (stop.Halted)
+        {
+            Warn($"{summary}; halted ({stop.Reason}): {stop.Detail}");
+            return;
+        }
+
+        Diag(summary);
+    }
+
+    private readonly record struct Stop(DriverHalt Reason, string Detail)
+    {
+        public static Stop None { get; } = new(DriverHalt.None, string.Empty);
+
+        public bool Halted => Reason != DriverHalt.None;
+    }
+
+    private readonly record struct Visit(Stop Stop, bool Finished);
+}
