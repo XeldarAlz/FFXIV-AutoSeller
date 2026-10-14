@@ -96,7 +96,7 @@ internal static partial class L
         public static readonly LocString BlockInCutscene = new("run.block.inCutscene", "Wait until the cutscene is over.");
         public static readonly LocString BlockTrading = new("run.block.trading", "Finish or cancel the trade first.");
         public static readonly LocString BlockAutoRetainerBusy = new("run.block.autoRetainerBusy", "AutoRetainer is busy; wait until it is done.");
-        public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet.");
+        public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
@@ -105,7 +105,7 @@ internal static partial class L
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
         public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
         public static readonly LocString NeedsGilLimit = new("run.needs.gilLimit", "a retainer is close to its gil limit");
-        public static readonly LocString NeedsUnknownWrite = new("run.needs.unknownWrite", "a listing change from this run is not confirmed yet");
+        public static readonly LocString NeedsUnknownWrite = new("run.needs.unknownWrite", "a listing change from this run is not confirmed yet; answer the question on the Sell page");
         public static readonly LocString FailedFault = new("run.failed.fault", "an unexpected error; the Console has the details");
         public static readonly LocString FailedOtherCharacter = new("run.failed.otherCharacter", "another character is logged in than the one the run started for");
         public static readonly LocString FailedMenuText = new("run.failed.menuText", "the retainer menu text could not be read from the game data");
