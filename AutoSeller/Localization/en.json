@@ -264,6 +264,8 @@
   "run.status.lot": "{0}: pricing {1} for a new listing ({2} of {3})",
   "run.status.leaving": "{0}: closing the sell list",
   "run.status.closing": "Closing the retainer list",
+  "run.status.postprocess": "{0}: selling for AutoRetainer",
+  "run.status.handingBack": "Handing {0} back to AutoRetainer",
   "run.status.pausing": "Pausing after this item",
   "run.status.pausedInContent": "Paused while you are in content",
   "run.status.pausedInterrupted": "Paused: combat or a duty pop interrupted the run; it carries on once that is over",

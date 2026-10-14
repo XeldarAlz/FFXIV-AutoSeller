@@ -264,6 +264,8 @@
   "run.status.lot": "{0}: definindo o preço de um novo anúncio de {1} ({2} de {3})",
   "run.status.leaving": "{0}: fechando a lista de venda",
   "run.status.closing": "Fechando a lista de ajudantes",
+  "run.status.postprocess": "{0}: vendendo para o AutoRetainer",
+  "run.status.handingBack": "Devolvendo {0} ao AutoRetainer",
   "run.status.pausing": "Pausando depois deste item",
   "run.status.pausedInContent": "Pausado enquanto você está em conteúdo",
   "run.status.pausedInterrupted": "Pausado: um combate ou um aviso de conteúdo interrompeu a rodada; ela continua quando isso acabar",

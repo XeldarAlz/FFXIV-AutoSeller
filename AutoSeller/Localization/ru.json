@@ -264,6 +264,8 @@
   "run.status.lot": "{0}: цена нового лота {1} ({2} из {3})",
   "run.status.leaving": "{0}: закрытие списка продаж",
   "run.status.closing": "Закрытие списка помощников",
+  "run.status.postprocess": "{0}: продажа для AutoRetainer",
+  "run.status.handingBack": "{0} возвращается AutoRetainer",
   "run.status.pausing": "Пауза после этого предмета",
   "run.status.pausedInContent": "Пауза, пока вы в контенте",
   "run.status.pausedInterrupted": "Пауза: бой или приглашение в контент прервали продажу; она продолжится, когда это закончится",

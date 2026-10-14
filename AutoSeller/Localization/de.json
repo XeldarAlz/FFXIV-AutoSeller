@@ -264,6 +264,8 @@
   "run.status.lot": "{0}: Preis für ein neues Angebot von {1} ({2} von {3})",
   "run.status.leaving": "{0}: Verkaufsliste wird geschlossen",
   "run.status.closing": "Gehilfenliste wird geschlossen",
+  "run.status.postprocess": "{0}: Verkauf für AutoRetainer",
+  "run.status.handingBack": "{0} wird an AutoRetainer zurückgegeben",
   "run.status.pausing": "Pause nach diesem Gegenstand",
   "run.status.pausedInContent": "Pausiert, solange du in einem Inhalt bist",
   "run.status.pausedInterrupted": "Pausiert: Ein Kampf oder eine Inhaltsbestätigung hat den Lauf unterbrochen; er geht weiter, sobald das vorbei ist",

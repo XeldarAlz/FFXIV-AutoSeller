@@ -18,9 +18,37 @@ internal sealed partial class SellController
     private long settlingUntilMs;
     private PauseReason deferredPause = PauseReason.None;
 
+    public event Action? PostprocessStoppedByPlayer;
+
     public bool Settling => settlingTask is not null && Environment.TickCount64 < settlingUntilMs;
 
+    public bool IsRunning(Guid runId)
+    {
+        return runId != Guid.Empty && session is { } active && active.Authorization.RunId == runId;
+    }
+
     public void Stop()
+    {
+        if (session is { Ended: false, Mode: RunMode.Postprocess })
+        {
+            PostprocessStoppedByPlayer?.Invoke();
+        }
+
+        StopRun();
+    }
+
+    public void StopPostprocessJob()
+    {
+        if (session is not { Ended: false, Mode: RunMode.Postprocess })
+        {
+            return;
+        }
+
+        RunLog.Info("AutoRetainer post-process: the job ran out of time; it stops at the next safe point and hands the retainer back.");
+        StopRun();
+    }
+
+    private void StopRun()
     {
         if (session is not { Ended: false } active)
         {
@@ -61,6 +89,19 @@ internal sealed partial class SellController
     {
         if (reason == PauseReason.None || session is not { Ended: false } active)
         {
+            return;
+        }
+
+        if (active.Mode == RunMode.Postprocess)
+        {
+            RunLog.Info($"Pause asked for ({reason}) during an AutoRetainer post-process; AutoRetainer waits for the retainer, so the job stops instead and hands it back.");
+            if (reason == PauseReason.Manual)
+            {
+                Stop();
+                return;
+            }
+
+            StopRun();
             return;
         }
 
@@ -164,7 +205,7 @@ internal sealed partial class SellController
 
         if (!active.Ended && active.PausedAtBoundary)
         {
-            if (active.StopRequested)
+            if (active.StopRequested || active.Mode == RunMode.Postprocess)
             {
                 active.Conclude(RunState.Stopped);
                 Settle(active);
@@ -184,7 +225,7 @@ internal sealed partial class SellController
             active.Fail(Loc.T(L.Run.FailedFault), true);
         }
 
-        if (active.State == RunState.Failed && active.FailureRestartable && TryAutoResumeAfterFault(active))
+        if (active.State == RunState.Failed && active.FailureRestartable && active.Mode == RunMode.Standalone && TryAutoResumeAfterFault(active))
         {
             return;
         }
@@ -290,14 +331,19 @@ internal sealed partial class SellController
             return;
         }
 
+        if (active.Mode == RunMode.Postprocess)
+        {
+            return;
+        }
+
         Svc.Chat.Print($"{AsellConstants.LogPrefix} {message}");
     }
 
     private void Record(SellRunSession active, in RunTally tally, DateTime endedAtUtc)
     {
-        if (!active.DidWork && active.State == RunState.Stopped)
+        if (!active.DidWork && (active.State == RunState.Stopped || active.Mode == RunMode.Postprocess))
         {
-            RunLog.Info("The run was stopped before it decided anything; nothing is recorded.");
+            RunLog.Info("The run decided nothing; nothing is recorded.");
             return;
         }
 

@@ -264,6 +264,8 @@
   "run.status.lot": "{0} : prix d'une nouvelle annonce de {1} ({2} sur {3})",
   "run.status.leaving": "{0} : fermeture de la liste de vente",
   "run.status.closing": "Fermeture de la liste des servants",
+  "run.status.postprocess": "{0} : vente pour AutoRetainer",
+  "run.status.handingBack": "{0} est rendu à AutoRetainer",
   "run.status.pausing": "Pause après cet objet",
   "run.status.pausedInContent": "En pause pendant que vous êtes en contenu",
   "run.status.pausedInterrupted": "En pause : un combat ou une invitation de contenu a interrompu la tournée ; elle reprend une fois terminé",

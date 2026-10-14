@@ -264,6 +264,8 @@
   "run.status.lot": "{0}：正在为 {1} 的新挂单定价（{2}/{3}）",
   "run.status.leaving": "{0}：正在关闭出售列表",
   "run.status.closing": "正在关闭雇员列表",
+  "run.status.postprocess": "{0}：正在为 AutoRetainer 出售",
+  "run.status.handingBack": "正在将 {0} 交还给 AutoRetainer",
   "run.status.pausing": "将在此物品后暂停",
   "run.status.pausedInContent": "你在副本中，已暂停",
   "run.status.pausedInterrupted": "已暂停：战斗或副本确认打断了运行；结束后会继续",

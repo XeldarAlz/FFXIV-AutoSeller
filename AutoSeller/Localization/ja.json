@@ -264,6 +264,8 @@
   "run.status.lot": "{0}：{1} の新規出品の価格を決定中（{2}/{3}）",
   "run.status.leaving": "{0}：販売リストを閉じています",
   "run.status.closing": "リテイナー一覧を閉じています",
+  "run.status.postprocess": "{0}：AutoRetainer のために出品中",
+  "run.status.handingBack": "{0} を AutoRetainer に戻しています",
   "run.status.pausing": "このアイテムの後で一時停止します",
   "run.status.pausedInContent": "コンテンツ中のため一時停止中",
   "run.status.pausedInterrupted": "一時停止中：戦闘またはコンテンツの突入確認で実行が中断されました。終わり次第再開します",

@@ -80,6 +80,8 @@ internal static partial class L
         public static readonly LocString StatusLot = new("run.status.lot", "{0}: pricing {1} for a new listing ({2} of {3})");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
+        public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");
+        public static readonly LocString StatusHandingBack = new("run.status.handingBack", "Handing {0} back to AutoRetainer");
         public static readonly LocString StatusPausing = new("run.status.pausing", "Pausing after this item");
         public static readonly LocString StatusPausedInContent = new("run.status.pausedInContent", "Paused while you are in content");
         public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");

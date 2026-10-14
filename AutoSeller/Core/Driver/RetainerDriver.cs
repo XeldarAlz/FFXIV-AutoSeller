@@ -54,6 +54,10 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         {
             await SettleWindows();
         }
+        else if (engaged && stop.Halted && session.Mode == RunMode.Postprocess)
+        {
+            await UnwindToMenu(stop);
+        }
         else if (engaged && stop.Halted)
         {
             await UnwindToBell(stop);
@@ -69,6 +73,11 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         if (boundary != DriverHalt.None)
         {
             return new Stop(boundary, "the run is no longer authorized at its start");
+        }
+
+        if (session.Mode == RunMode.Postprocess)
+        {
+            return await WorkHandedOverRetainer();
         }
 
         var stop = await OpenRetainerList();
@@ -164,6 +173,21 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         catch (Exception exception)
         {
             RunLog.Warning(exception, "Driver: closing the retainer windows failed");
+        }
+    }
+
+    private async Task UnwindToMenu(Stop stop)
+    {
+        try
+        {
+            Diag($"Driver: halted ({stop.Reason}); closing the sell windows and going back to the retainer menu for AutoRetainer");
+            await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
+            await WaitUntilTimed(BackAtRetainerMenu, MenuReturnMs, "driver-unwind-to-menu", StepPollFrames);
+            Diag($"Driver: after the unwind the open windows are {UnexpectedAddons.View().Visible}");
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, "Driver: going back to the retainer menu after a halt failed");
         }
     }
 

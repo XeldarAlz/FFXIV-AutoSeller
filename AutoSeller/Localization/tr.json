@@ -264,6 +264,8 @@
   "run.status.lot": "{0}: {1} için yeni ilan fiyatı belirleniyor ({2}/{3})",
   "run.status.leaving": "{0}: satış listesi kapatılıyor",
   "run.status.closing": "Yardımcı listesi kapatılıyor",
+  "run.status.postprocess": "{0}: AutoRetainer için satış yapılıyor",
+  "run.status.handingBack": "{0} AutoRetainer'a geri veriliyor",
   "run.status.pausing": "Bu eşyadan sonra duraklatılacak",
   "run.status.pausedInContent": "İçerikteyken duraklatıldı",
   "run.status.pausedInterrupted": "Duraklatıldı: bir savaş ya da içerik daveti turu kesti; o bitince tur devam eder",
