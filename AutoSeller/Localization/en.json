@@ -243,6 +243,7 @@
   "dock.inContent": "in content",
   "dock.reason.install": "install the required plugins",
   "dock.reason.loggedOut": "log in first",
+  "dock.reason.journal": "answer the card on the Sell page first",
   "dock.state.running": "running",
   "dock.state.paused": "paused",
   "run.phase.preparing": "Getting ready",

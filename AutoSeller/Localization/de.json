@@ -243,6 +243,7 @@
   "dock.inContent": "im Inhalt",
   "dock.reason.install": "installiere die benötigten Plugins",
   "dock.reason.loggedOut": "melde dich zuerst an",
+  "dock.reason.journal": "beantworte zuerst die Karte auf der Seite Verkaufen",
   "dock.state.running": "läuft",
   "dock.state.paused": "pausiert",
   "run.phase.preparing": "Vorbereitung",

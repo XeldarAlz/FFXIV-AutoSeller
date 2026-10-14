@@ -74,7 +74,7 @@ internal static class HeaderBar
             }
         }
 
-        var info = ReadyState.Resolve(plugin.Controller);
+        var info = ReadyState.Resolve(plugin);
         var pillEnd = DrawStatusPill(drawList, info, x, buttonsLeft, midY);
         if (pillEnd > x)
         {

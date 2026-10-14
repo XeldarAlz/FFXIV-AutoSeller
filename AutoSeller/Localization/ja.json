@@ -243,6 +243,7 @@
   "dock.inContent": "コンテンツ中",
   "dock.reason.install": "必要なプラグインを導入してください",
   "dock.reason.loggedOut": "まずログインしてください",
+  "dock.reason.journal": "先に販売ページのカードに答えてください",
   "dock.state.running": "実行中",
   "dock.state.paused": "一時停止中",
   "run.phase.preparing": "準備中",

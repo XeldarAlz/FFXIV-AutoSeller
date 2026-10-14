@@ -243,6 +243,7 @@
   "dock.inContent": "в контенте",
   "dock.reason.install": "установите необходимые плагины",
   "dock.reason.loggedOut": "сначала войдите в игру",
+  "dock.reason.journal": "сначала ответьте на карточку на странице «Продажа»",
   "dock.state.running": "выполняется",
   "dock.state.paused": "пауза",
   "run.phase.preparing": "Подготовка",

@@ -243,6 +243,7 @@
   "dock.inContent": "副本中",
   "dock.reason.install": "请先安装所需插件",
   "dock.reason.loggedOut": "请先登录",
+  "dock.reason.journal": "请先回答出售页面上的卡片",
   "dock.state.running": "运行中",
   "dock.state.paused": "已暂停",
   "run.phase.preparing": "准备中",

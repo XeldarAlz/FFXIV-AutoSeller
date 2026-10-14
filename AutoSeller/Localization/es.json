@@ -243,6 +243,7 @@
   "dock.inContent": "en contenido",
   "dock.reason.install": "instala los plugins necesarios",
   "dock.reason.loggedOut": "inicia sesión primero",
+  "dock.reason.journal": "responde primero la tarjeta de la página Vender",
   "dock.state.running": "en curso",
   "dock.state.paused": "en pausa",
   "run.phase.preparing": "Preparando",

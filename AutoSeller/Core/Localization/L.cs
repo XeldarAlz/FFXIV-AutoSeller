@@ -55,6 +55,7 @@ internal static partial class L
         public static readonly LocString InContent = new("dock.inContent", "in content");
         public static readonly LocString ReasonInstall = new("dock.reason.install", "install the required plugins");
         public static readonly LocString ReasonLoggedOut = new("dock.reason.loggedOut", "log in first");
+        public static readonly LocString ReasonJournal = new("dock.reason.journal", "answer the card on the Sell page first");
         public static readonly LocString StateRunning = new("dock.state.running", "running");
         public static readonly LocString StatePaused = new("dock.state.paused", "paused");
     }

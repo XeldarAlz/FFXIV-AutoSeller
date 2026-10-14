@@ -40,7 +40,7 @@ internal static class MiniPlayer
         var end = origin + size;
         var drawList = ImGui.GetWindowDrawList();
         var controller = plugin.Controller;
-        var info = ReadyState.Resolve(controller);
+        var info = ReadyState.Resolve(plugin);
 
         Dock.Background(drawList, origin, end, windowRounding);
 

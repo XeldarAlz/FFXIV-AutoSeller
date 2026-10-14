@@ -59,7 +59,7 @@ As an AutoRetainer post-process it skips the walk, works on the one retainer Aut
 - **Floors and step limit.** No price is written below the item's floor, and no reprice drops a price further than the step limit without your approval.
 - **Never against yourself.** Your own listings are never undercut, and neither are your alts' listings when AutoRetainer knows them.
 - **The player's path.** Prices go through the game's sell window, the same one you use. There are no direct market writes.
-- **Checked twice.** Every write is checked before Confirm and read back after it. A write it cannot confirm stops the run in a "needs you" state, and nothing resumes on its own.
+- **Checked twice.** Every write is checked before Confirm and read back after it, and a write whose listings cannot be read first is not made. A write it cannot confirm stops the run in a "needs you" state, nothing resumes on its own, and Start stays off until you answer its question on the Sell page.
 - **Menus by text.** Retainer menu entries are chosen by their text from the game data, never by their place in the menu, and there is no blanket Yes to prompts.
 - **Hands back.** As an AutoRetainer post-process it hands the retainer back on success, failure, Stop and unload.
 - **What it never does**: list an item outside your rules, go below a floor, vendor anything your rules do not call junk, or recover on its own from a write it could not confirm. Its only network calls go to Universalis for price data.

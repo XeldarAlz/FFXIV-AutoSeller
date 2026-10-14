@@ -243,6 +243,7 @@
   "dock.inContent": "içerikte",
   "dock.reason.install": "gerekli eklentileri kurun",
   "dock.reason.loggedOut": "önce giriş yapın",
+  "dock.reason.journal": "önce Satış sayfasındaki kartı yanıtlayın",
   "dock.state.running": "çalışıyor",
   "dock.state.paused": "duraklatıldı",
   "run.phase.preparing": "Hazırlanıyor",

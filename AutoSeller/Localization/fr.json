@@ -243,6 +243,7 @@
   "dock.inContent": "en instance",
   "dock.reason.install": "installez les plugins requis",
   "dock.reason.loggedOut": "connectez-vous d'abord",
+  "dock.reason.journal": "répondez d'abord à la carte de la page Vendre",
   "dock.state.running": "en cours",
   "dock.state.paused": "en pause",
   "run.phase.preparing": "Préparation",

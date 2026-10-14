@@ -243,6 +243,7 @@
   "dock.inContent": "em conteúdo",
   "dock.reason.install": "instale os plugins necessários",
   "dock.reason.loggedOut": "entre no jogo primeiro",
+  "dock.reason.journal": "responda primeiro ao cartão na página Vender",
   "dock.state.running": "em andamento",
   "dock.state.paused": "pausado",
   "run.phase.preparing": "Preparando",
