@@ -396,6 +396,26 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void OnlyTheRetainersWithAnUndercutListingNeedAVisit()
+    {
+        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta, OreListing(1, WorldLowest - 10))]);
+
+        Assert.Equal<ulong>([Alpha], input.RetainersToVisit(true));
+        Assert.Equal<ulong>([Alpha, Beta], input.RetainersToVisit(false));
+    }
+
+    [Fact]
+    public void ADisabledRetainerIsNotVisitedEvenWhenUndercut()
+    {
+        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]) with
+        {
+            Retainers = [new PlanRetainer(Alpha, AlphaName, false), new PlanRetainer(Beta, BetaName, true)],
+        };
+
+        Assert.Empty(input.RetainersToVisit(true));
+    }
+
+    [Fact]
     public void ACancelledPlanThrows()
     {
         using var cancellation = new CancellationTokenSource();
