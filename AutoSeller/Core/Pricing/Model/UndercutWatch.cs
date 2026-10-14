@@ -3,7 +3,10 @@ using System.Collections.Immutable;
 
 namespace AutoSeller.Core.Pricing.Model;
 
-internal readonly record struct WatchedListing(ulong RetainerId, byte Slot, ItemKey Item, uint UnitPrice, DateTime LastRepricedAtUtc);
+internal readonly record struct WatchedListing(ulong RetainerId, byte Slot, ItemKey Item, uint UnitPrice, DateTime ListedAtUtc, DateTime LastRepricedAtUtc)
+{
+    public DateTime PricedAtUtc => LastRepricedAtUtc > ListedAtUtc ? LastRepricedAtUtc : ListedAtUtc;
+}
 
 internal readonly record struct WorldListing(ItemKey Item, uint UnitPrice, ulong RetainerId, DateTime UploadedAtUtc);
 
@@ -94,7 +97,7 @@ internal static class UndercutWatch
         for (var worldIndex = 0; worldIndex < world.Length; worldIndex++)
         {
             var candidate = world[worldIndex];
-            if (!competing[worldIndex] || candidate.Item != listing.Item || candidate.UploadedAtUtc <= listing.LastRepricedAtUtc)
+            if (!competing[worldIndex] || candidate.Item != listing.Item || candidate.UploadedAtUtc <= listing.PricedAtUtc)
             {
                 continue;
             }

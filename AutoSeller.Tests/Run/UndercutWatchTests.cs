@@ -17,6 +17,7 @@ public sealed class UndercutWatchTests
     private static readonly ItemKey highOre = new(5_111, true);
     private static readonly ItemKey cloth = new(5_330, false);
     private static readonly DateTime repricedAt = new(2026, 10, 14, 9, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime listedAt = repricedAt.AddDays(-1);
     private static readonly DateTime uploadedAt = repricedAt.AddHours(2);
     private static readonly DateTime checkedAt = repricedAt.AddHours(3);
     private static readonly ulong[] alts = [AltRetainer];
@@ -35,7 +36,7 @@ public sealed class UndercutWatchTests
     }
 
     [Fact]
-    public void DataNotNewerThanOurLastRepriceMarksNothing()
+    public void DataNotNewerThanOurPriceMarksNothing()
     {
         WatchedListing[] ours = [Ours(FirstRetainer, 0, normalOre, 1_000)];
         WorldListing[] older = [World(normalOre, 950, Stranger) with { UploadedAtUtc = repricedAt.AddMinutes(-5) }];
@@ -43,6 +44,26 @@ public sealed class UndercutWatchTests
 
         Assert.Empty(UndercutWatch.Mark(ours, older, alts, checkedAt));
         Assert.Empty(UndercutWatch.Mark(ours, same, alts, checkedAt));
+    }
+
+    [Fact]
+    public void AListingNeverRepricedIsJudgedFromWhenItWasListed()
+    {
+        var neverRepriced = Ours(FirstRetainer, 0, normalOre, 1_000) with { ListedAtUtc = uploadedAt.AddMinutes(10), LastRepricedAtUtc = default };
+        WorldListing[] world = [World(normalOre, 950, Stranger)];
+
+        Assert.Equal(uploadedAt.AddMinutes(10), neverRepriced.PricedAtUtc);
+        Assert.Empty(UndercutWatch.Mark([neverRepriced], world, alts, checkedAt));
+        Assert.Single(UndercutWatch.Mark([neverRepriced with { ListedAtUtc = uploadedAt.AddMinutes(-10) }], world, alts, checkedAt));
+    }
+
+    [Fact]
+    public void ARepriceOlderThanTheListingCountsFromTheListing()
+    {
+        var relisted = Ours(FirstRetainer, 0, normalOre, 1_000) with { ListedAtUtc = uploadedAt.AddMinutes(10) };
+
+        Assert.Equal(uploadedAt.AddMinutes(10), relisted.PricedAtUtc);
+        Assert.Empty(UndercutWatch.Mark([relisted], [World(normalOre, 950, Stranger)], alts, checkedAt));
     }
 
     [Theory]
@@ -134,7 +155,7 @@ public sealed class UndercutWatchTests
     }
 
     [Fact]
-    public void EachListingIsJudgedAgainstItsOwnLastReprice()
+    public void EachListingIsJudgedAgainstItsOwnPriceTime()
     {
         WatchedListing[] ours =
         [
@@ -175,7 +196,7 @@ public sealed class UndercutWatchTests
     }
 
     private static WatchedListing Ours(ulong retainerId, byte slot, ItemKey item, uint unitPrice)
-        => new(retainerId, slot, item, unitPrice, repricedAt);
+        => new(retainerId, slot, item, unitPrice, listedAt, repricedAt);
 
     private static WorldListing World(ItemKey item, uint unitPrice, ulong retainerId)
         => new(item, unitPrice, retainerId, uploadedAt);
