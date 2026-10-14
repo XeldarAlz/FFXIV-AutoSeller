@@ -166,7 +166,7 @@ public sealed class PostprocessHandshakeTests
     public void TheSellNowButtonAndAStopLastUntilTheBellIsLeft()
     {
         var handshake = Requested();
-        handshake.ArmSellNow();
+        handshake.ArmSellNow(StartMs);
         Assert.True(handshake.SellNowArmed);
 
         handshake.StandDown();
@@ -185,10 +185,56 @@ public sealed class PostprocessHandshakeTests
         var handshake = new PostprocessHandshake();
         handshake.StandDown();
 
-        handshake.ArmSellNow();
+        handshake.ArmSellNow(StartMs);
 
         Assert.False(handshake.StoodDown);
         Assert.True(handshake.SellNowArmed);
+    }
+
+    [Fact]
+    public void SellNowEndsOnceAutoRetainerIsIdleAfterItsWalk()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+
+        Assert.False(handshake.SellNowWalkEnded(false, StartMs + 500));
+        Assert.False(handshake.SellNowWalkEnded(true, StartMs + 1_000));
+        Assert.False(handshake.SellNowWalkEnded(true, StartMs + 60_000));
+        Assert.True(handshake.SellNowArmed);
+
+        Assert.True(handshake.SellNowWalkEnded(false, StartMs + 61_000));
+        Assert.False(handshake.SellNowArmed);
+        Assert.False(handshake.SellNowWalkEnded(false, StartMs + 62_000));
+    }
+
+    [Fact]
+    public void SellNowThatAutoRetainerNeverTakesUpEndsAfterTheTakeUpBound()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+
+        Assert.False(handshake.SellNowWalkEnded(false, StartMs + PostprocessHandshake.SellNowTakeUpMs - 1));
+        Assert.True(handshake.SellNowWalkEnded(false, StartMs + PostprocessHandshake.SellNowTakeUpMs));
+        Assert.False(handshake.SellNowArmed);
+    }
+
+    [Fact]
+    public void PressingSellNowAgainStartsANewWalk()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+        handshake.SellNowWalkEnded(true, StartMs + 1_000);
+
+        handshake.ArmSellNow(StartMs + 2_000);
+
+        Assert.False(handshake.SellNowWalkEnded(false, StartMs + 2_500));
+        Assert.True(handshake.SellNowArmed);
+    }
+
+    [Fact]
+    public void NothingEndsWhenSellNowWasNeverPressed()
+    {
+        Assert.False(new PostprocessHandshake().SellNowWalkEnded(false, StartMs + PostprocessHandshake.SellNowTakeUpMs));
     }
 
     [Fact]

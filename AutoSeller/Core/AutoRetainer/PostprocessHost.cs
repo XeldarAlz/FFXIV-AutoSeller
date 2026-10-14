@@ -50,14 +50,14 @@ internal sealed class PostprocessHost : IDisposable
 
     public void SellNow()
     {
-        handshake.ArmSellNow();
-        if (autoRetainer.RunSellNowTask())
+        if (!autoRetainer.RunSellNowTask())
         {
-            RunLog.Info("AutoRetainer post-process: Sell now pressed; AutoRetainer offers each available retainer to Auto Seller until the bell is left.");
+            RunLog.Warning("AutoRetainer post-process: Sell now pressed but AutoRetainer did not take the task.");
             return;
         }
 
-        RunLog.Warning("AutoRetainer post-process: Sell now pressed but AutoRetainer did not take the task.");
+        handshake.ArmSellNow(Environment.TickCount64);
+        RunLog.Info("AutoRetainer post-process: Sell now pressed; AutoRetainer offers each available retainer to Auto Seller once.");
     }
 
     private void OnAdditionalTask(string retainerName)
@@ -187,6 +187,11 @@ internal sealed class PostprocessHost : IDisposable
         }
 
         atBell = atBellNow;
+        if (handshake.SellNowArmed && handshake.SellNowWalkEnded(autoRetainer.Status.Busy, Environment.TickCount64))
+        {
+            RunLog.Info("AutoRetainer post-process: AutoRetainer is done with the Sell now walk; later offers follow the Run after ventures switch again.");
+        }
+
         if (!handshake.OwesFinish)
         {
             return;

@@ -12,7 +12,10 @@ internal sealed class PostprocessHandshake
 {
     public const long UnwindGraceMs = 60_000;
     public const long ReturnBoundMs = 45_000;
+    public const long SellNowTakeUpMs = 5_000;
 
+    private long sellNowArmedAtMs;
+    private bool sellNowWalkSeen;
     private long startedAtMs;
     private long phaseSinceMs;
     private PostprocessBudget budget;
@@ -36,10 +39,34 @@ internal sealed class PostprocessHandshake
 
     public TimeSpan Allowance => budget.Allowance;
 
-    public void ArmSellNow()
+    public void ArmSellNow(long nowMs)
     {
         SellNowArmed = true;
         StoodDown = false;
+        sellNowArmedAtMs = nowMs;
+        sellNowWalkSeen = false;
+    }
+
+    public bool SellNowWalkEnded(bool autoRetainerBusy, long nowMs)
+    {
+        if (!SellNowArmed)
+        {
+            return false;
+        }
+
+        if (autoRetainerBusy)
+        {
+            sellNowWalkSeen = true;
+            return false;
+        }
+
+        if (!sellNowWalkSeen && nowMs - sellNowArmedAtMs < SellNowTakeUpMs)
+        {
+            return false;
+        }
+
+        SellNowArmed = false;
+        return true;
     }
 
     public void StandDown()
