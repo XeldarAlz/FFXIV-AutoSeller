@@ -246,6 +246,10 @@ public sealed class Plugin : IDalamudPlugin
         {
             MarketDebugCommands.Look(trimmed[MarketDebugCommands.LookSubcommand.Length..].Trim(), this);
         }
+        else if (HasSubcommand(trimmed, MarketDebugCommands.SendPathSubcommand))
+        {
+            MarketDebugCommands.SetSendPath(trimmed[MarketDebugCommands.SendPathSubcommand.Length..].Trim(), this);
+        }
         else
         {
             ToggleMainUi();

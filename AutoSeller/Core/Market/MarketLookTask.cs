@@ -33,6 +33,11 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         try
         {
             var state = await Search(tracker);
+            if (state.Status == ListingRequestStatus.Waiting)
+            {
+                tracker.Cancel();
+            }
+
             await WaitFor(tracker.CloseResultWindow, CloseBudgetMs);
             await WaitFor(() => !plugin.References.Fetching, ReferenceBudgetMs);
             Report(state, item, keys, name);
@@ -40,12 +45,8 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         finally
         {
             tracker.Cancel();
+            tracker.ReleaseResultWindow();
         }
-    }
-
-    private static string Quality(bool isHq)
-    {
-        return isHq ? "HQ" : "NQ";
     }
 
     private static string Age(DateTime updatedAtUtc, DateTime nowUtc)
@@ -53,20 +54,12 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         return updatedAtUtc == default ? "never" : $"{(nowUtc - updatedAtUtc).TotalHours:0.#} h ago";
     }
 
-    private static ItemRuleSnapshot RuleFor(RuleBook rules, ItemKey key, out bool listed)
+    private static ItemRuleSnapshot RuleFor(RuleBook rules, ItemKey key, out string match)
     {
         var entries = rules.EntriesFor(key.ItemId);
-        for (var index = 0; index < entries.Length; index++)
-        {
-            if (entries[index].Covers(key.IsHq))
-            {
-                listed = true;
-                return entries[index];
-            }
-        }
-
-        listed = false;
-        return new ItemRuleSnapshot(0, key.ItemId, 0, 0, 0, 0, 0, QualityFilter.Both, ItemRule.DefaultListingsToKeepUp, false);
+        var reason = Eligibility.MatchSellList(entries, key.IsHq, out var rule);
+        match = entries.IsEmpty ? "no sell list entry" : $"sell list {reason}";
+        return rule ?? new ItemRuleSnapshot(0, key.ItemId, 0, 0, 0, 0, 0, QualityFilter.Both, ItemRule.DefaultListingsToKeepUp, false);
     }
 
     private static void WriteSnapshot(CompetitorSnapshot snapshot, in OwnSellers sellers, string name)
@@ -79,7 +72,7 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
             var own = sellers.Owns(listing) ? ", own" : string.Empty;
             var mannequin = listing.IsMannequin ? ", mannequin" : string.Empty;
             var set = listing.IsSellingAsSet ? ", set" : string.Empty;
-            RunLog.Info($"Look listing #{index + 1}: {Quality(listing.IsHq)} {listing.Quantity} x {listing.UnitPrice} gil, retainer {listing.RetainerId}, listing {listing.ListingId}{own}{mannequin}{set}.");
+            RunLog.Info($"Look listing #{index + 1}: {QualityLabel.Of(listing.IsHq)} {listing.Quantity} x {listing.UnitPrice} gil, retainer {listing.RetainerId}, listing {listing.ListingId}{own}{mannequin}{set}.");
         }
 
         var history = snapshot.History;
@@ -87,7 +80,7 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         {
             var sale = history[index];
             var mannequin = sale.OnMannequin ? ", mannequin" : string.Empty;
-            RunLog.Info($"Look sale #{index + 1}: {Quality(sale.IsHq)} {sale.Quantity} x {sale.UnitPrice} gil at {RunLog.Time(sale.SoldAtUtc)}{mannequin}.");
+            RunLog.Info($"Look sale #{index + 1}: {QualityLabel.Of(sale.IsHq)} {sale.Quantity} x {sale.UnitPrice} gil at {RunLog.Time(sale.SoldAtUtc)}{mannequin}.");
         }
     }
 
@@ -125,7 +118,7 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         if (state.Snapshot is not { } snapshot)
         {
             RunLog.Info($"Look: the search for item {itemId} ended {state.Status} ({state.Failure}).");
-            MarketDebugCommands.PrintError(Loc.T(L.Market.LookFailed, name, state.Failure));
+            MarketDebugCommands.PrintError(Loc.T(L.Market.LookFailed, name, MarketDebugCommands.FailureText(state.Failure)));
             return;
         }
 
@@ -145,8 +138,8 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
 
     private void WriteDecisionInputs(ItemKey key, CompetitorSnapshot snapshot, in OwnSellers sellers, PricingSettings settings, RuleBook rules, uint vendorPrice, DateTime nowUtc)
     {
-        var quality = Quality(key.IsHq);
-        if (plugin.References.Latest is { } latest && latest.Table.TryGet(key.ItemId, out var universalis))
+        var quality = QualityLabel.Of(key.IsHq);
+        if (plugin.References.Current is { } current && current.Table.TryGet(key.ItemId, out var universalis))
         {
             var world = universalis.World(key.IsHq);
             var dataCenter = universalis.DataCenter(key.IsHq);
@@ -154,14 +147,14 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         }
         else
         {
-            RunLog.Info($"Look {quality}: no Universalis prices for item {key.ItemId} yet.");
+            RunLog.Info($"Look {quality}: no Universalis prices for item {key.ItemId} on the home world yet.");
         }
 
         var reference = plugin.References.ReferenceFor(key, snapshot, nowUtc);
         RunLog.Info($"Look {quality}: reference {reference.Source}, average {reference.AverageSalePrice}, lowest listing {reference.LowestListing}, {reference.DailySaleVelocity:0.##} sold a day, updated {Age(reference.UpdatedAtUtc, nowUtc)}.");
-        var rule = RuleFor(rules, key, out var listed);
+        var rule = RuleFor(rules, key, out var match);
         var floor = FloorCalculator.Calculate(rule.Floor, vendorPrice, reference, settings.MinimumReferenceRatioPercent);
-        RunLog.Info($"Look {quality}: {(listed ? "sell list entry" : "no sell list entry")}, rule floor {rule.Floor}, ceiling {rule.Ceiling}, fixed price {rule.FixedPrice}; vendor price {vendorPrice}; floor {floor}; mode {settings.Mode}.");
+        RunLog.Info($"Look {quality}: {match}, rule floor {rule.Floor}, ceiling {rule.Ceiling}, fixed price {rule.FixedPrice}; vendor price {vendorPrice}; floor {floor}; mode {settings.Mode}.");
         var decision = PriceDecision.Decide(new PriceDecisionInput
         {
             Item = key,

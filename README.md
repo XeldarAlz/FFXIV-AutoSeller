@@ -99,8 +99,9 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell stop` | Stop the run |
 | `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
 | `/asell target` | Log the targeted NPC's BaseId (debug helper) |
-| `/asell look <item id>` | Compare market prices for one item once, through the open sell window's Compare prices when one is open, and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices) |
-| `/asell mbstatus` | Write the market checks, the search state and the age of the Universalis reference data to the Console (debug helper) |
+| `/asell look <item id>` | Compare market prices for one item once and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices). With the default send path it needs that item's sell window open at a retainer; with `proxy` it needs a summoning bell or an open market board |
+| `/asell mbstatus` | Write the market checks, the search state, the age of the Universalis reference data and, with a retainer's sell list open, that retainer's listings to the Console (debug helper) |
+| `/asell sendpath compare\|proxy` | Send market searches through the sell window's Compare prices button (`compare`, the default) or the item search proxy (`proxy`); without an argument it says which one is in use (debug helper) |
 
 ## Known limits
 
