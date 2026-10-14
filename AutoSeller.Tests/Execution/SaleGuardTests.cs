@@ -5,33 +5,33 @@ namespace AutoSeller.Tests.Execution;
 
 public sealed class SaleGuardTests
 {
-    private static readonly Dictionary<SaleRejection, Func<SaleGuardInput>> Breakers = new()
-    {
-        [SaleRejection.WrongRun] = () => GuardInput(Reprice()) with { ActiveRunId = Guid.NewGuid() },
-        [SaleRejection.WrongCharacter] = () => GuardInput(Reprice()) with { CharacterContentId = Character + 1 },
-        [SaleRejection.NotOnHomeWorld] = () => GuardInput(Reprice()) with { CurrentWorldId = HomeWorld + 1 },
-        [SaleRejection.RetainerNotAuthorized] = () => GuardInput(Reprice() with { RetainerId = StrangerRetainer }),
-        [SaleRejection.WrongRetainer] = () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer },
-        [SaleRejection.WindowChainNotReady] = () => GuardInput(Reprice()) with { WindowChainReady = false },
-        [SaleRejection.StaleSearch] = () => GuardInput(Reprice()) with { SearchGeneration = SearchGeneration + 1 },
-        [SaleRejection.WritePending] = () => GuardInput(Reprice()) with { Value = new ValueState(0, 0, 0, Guid.NewGuid()) },
-        [SaleRejection.JournalUnresolved] = () => GuardInput(Reprice()) with { JournalBlocksWrites = true },
-        [SaleRejection.ItemMismatch] = () => WithObserved(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 }),
-        [SaleRejection.QualityMismatch] = () => WithObserved(GuardInput(Reprice()), slot => slot with { IsHq = true }),
-        [SaleRejection.QuantityMismatch] = () => WithObserved(GuardInput(Reprice()), slot => slot with { Quantity = LotQuantity + 1 }),
-        [SaleRejection.ListingChanged] = () => WithObserved(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 }),
-        [SaleRejection.NotEligible] = () => GuardInput(Reprice()) with { Eligible = false },
-        [SaleRejection.BelowFloor] = () => GuardInput(Reprice(DecisionFloor - 1)),
-        [SaleRejection.OverStepLimit] = () => GuardInput(Reprice(700)),
-        [SaleRejection.PriceOutOfRange] = () => GuardInput(Reprice(PriceRange.Maximum + 1)),
-        [SaleRejection.RepriceCapReached] = () => GuardInput(Reprice()) with { Value = new ValueState(RunCaps.DefaultMaxReprices, 0, 0, Guid.Empty) },
-        [SaleRejection.ListingCapReached] = () => GuardInput(List()) with { Value = new ValueState(0, RunCaps.DefaultMaxNewListings, 0, Guid.Empty) },
-        [SaleRejection.VendorValueCapReached] = () => GuardInput(Vendor()) with { Value = new ValueState(0, 0, RunCaps.DefaultMaxVendoredValue - 1, Guid.Empty) },
-        [SaleRejection.NoVendorRule] = () => GuardInput(Vendor()) with { VendorRuleMatches = false },
-        [SaleRejection.VendorHighQuality] = () => GuardInput(Vendor() with { IsHq = true }),
-        [SaleRejection.VendorGear] = () => GuardInput(Vendor()) with { IsGear = true },
-        [SaleRejection.VendorProtected] = () => GuardInput(Vendor()) with { IsProtected = true },
-    };
+    private static readonly (SaleRejection Expected, Func<SaleGuardInput> Breaker)[] Breakers =
+    [
+        (SaleRejection.WrongRun, () => GuardInput(Reprice()) with { ActiveRunId = Guid.NewGuid() }),
+        (SaleRejection.WrongCharacter, () => GuardInput(Reprice()) with { CharacterContentId = Character + 1 }),
+        (SaleRejection.NotOnHomeWorld, () => GuardInput(Reprice()) with { CurrentWorldId = HomeWorld + 1 }),
+        (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
+        (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
+        (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
+        (SaleRejection.StaleSearch, () => GuardInput(Reprice()) with { SearchGeneration = SearchGeneration + 1 }),
+        (SaleRejection.WritePending, () => GuardInput(Reprice()) with { Value = new ValueState(0, 0, 0, Guid.NewGuid()) }),
+        (SaleRejection.JournalUnresolved, () => GuardInput(Reprice()) with { JournalBlocksWrites = true }),
+        (SaleRejection.ItemMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 })),
+        (SaleRejection.QualityMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { IsHq = true })),
+        (SaleRejection.QuantityMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { Quantity = LotQuantity + 1 })),
+        (SaleRejection.ListingChanged, () => WithObserved(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 })),
+        (SaleRejection.NotEligible, () => GuardInput(Reprice()) with { Eligible = false }),
+        (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
+        (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
+        (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(PriceRange.Maximum + 1))),
+        (SaleRejection.RepriceCapReached, () => GuardInput(Reprice()) with { Value = new ValueState(RunCaps.DefaultMaxReprices, 0, 0, Guid.Empty) }),
+        (SaleRejection.ListingCapReached, () => GuardInput(List()) with { Value = new ValueState(0, RunCaps.DefaultMaxNewListings, 0, Guid.Empty) }),
+        (SaleRejection.VendorValueCapReached, () => GuardInput(Vendor()) with { Value = new ValueState(0, 0, RunCaps.DefaultMaxVendoredValue - 1, Guid.Empty) }),
+        (SaleRejection.NoVendorRule, () => GuardInput(Vendor()) with { VendorRuleMatches = false }),
+        (SaleRejection.VendorHighQuality, () => GuardInput(Vendor() with { IsHq = true })),
+        (SaleRejection.VendorGear, () => GuardInput(Vendor()) with { IsGear = true }),
+        (SaleRejection.VendorProtected, () => GuardInput(Vendor()) with { IsProtected = true }),
+    ];
 
     [Fact]
     public void EveryKindOfWriteIsAllowedWhenNothingIsWrong()
@@ -48,11 +48,12 @@ public sealed class SaleGuardTests
     [Fact]
     public void EveryRejectionReasonHasACase()
     {
-        foreach (var rejection in Enum.GetValues<SaleRejection>())
+        var rejections = Enum.GetValues<SaleRejection>();
+        for (var index = 0; index < rejections.Length; index++)
         {
-            if (rejection != SaleRejection.None)
+            if (rejections[index] != SaleRejection.None)
             {
-                Assert.True(Breakers.ContainsKey(rejection), $"no case for {rejection}");
+                Assert.True(HasBreaker(rejections[index]), $"no case for {rejections[index]}");
             }
         }
     }
@@ -60,11 +61,12 @@ public sealed class SaleGuardTests
     [Fact]
     public void EachBrokenCheckIsRejectedWithItsOwnReason()
     {
-        foreach (var (expected, breaker) in Breakers)
+        for (var index = 0; index < Breakers.Length; index++)
         {
+            var (expected, breaker) = Breakers[index];
             var verdict = SaleGuard.Evaluate(breaker());
 
-            Assert.False(verdict.IsAllowed, $"{expected} was allowed");
+            Assert.False(verdict.IsAllowed, $"case {index} for {expected} was allowed");
             Assert.Equal(expected, verdict.Rejection);
         }
     }
@@ -214,6 +216,19 @@ public sealed class SaleGuardTests
 
         Assert.True(SaleGuard.Evaluate(input with { Value = new ValueState(1, 0, 0, Guid.Empty) }).IsAllowed);
         Assert.Equal(SaleRejection.RepriceCapReached, SaleGuard.Evaluate(input with { Value = new ValueState(2, 0, 0, Guid.Empty) }).Rejection);
+    }
+
+    private static bool HasBreaker(SaleRejection rejection)
+    {
+        for (var index = 0; index < Breakers.Length; index++)
+        {
+            if (Breakers[index].Expected == rejection)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static SaleGuardInput GuardInput(SaleWrite write)

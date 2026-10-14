@@ -60,30 +60,33 @@ public sealed class RunReactionsTests
     [Fact]
     public void EveryGuardRejectionHasItsReaction()
     {
-        foreach (var value in Enum.GetValues<SaleRejection>())
+        var values = Enum.GetValues<SaleRejection>();
+        for (var index = 0; index < values.Length; index++)
         {
-            Assert.True(GuardReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
-            Assert.Equal(expected, RunReactions.ForGuard(value));
+            Assert.True(GuardReactions.TryGetValue(values[index], out var expected), $"no reaction for {values[index]}");
+            Assert.Equal(expected, RunReactions.ForGuard(values[index]));
         }
     }
 
     [Fact]
     public void EveryWindowVerdictHasItsReaction()
     {
-        foreach (var value in Enum.GetValues<SellWindowVerdict>())
+        var values = Enum.GetValues<SellWindowVerdict>();
+        for (var index = 0; index < values.Length; index++)
         {
-            Assert.True(WindowReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
-            Assert.Equal(expected, RunReactions.ForWindow(value));
+            Assert.True(WindowReactions.TryGetValue(values[index], out var expected), $"no reaction for {values[index]}");
+            Assert.Equal(expected, RunReactions.ForWindow(values[index]));
         }
     }
 
     [Fact]
     public void EveryReadBackOutcomeHasItsReaction()
     {
-        foreach (var value in Enum.GetValues<ReadBackOutcome>())
+        var values = Enum.GetValues<ReadBackOutcome>();
+        for (var index = 0; index < values.Length; index++)
         {
-            Assert.True(ReadBackReactions.TryGetValue(value, out var expected), $"no reaction for {value}");
-            Assert.Equal(expected, RunReactions.ForReadBack(value));
+            Assert.True(ReadBackReactions.TryGetValue(values[index], out var expected), $"no reaction for {values[index]}");
+            Assert.Equal(expected, RunReactions.ForReadBack(values[index]));
         }
     }
 
