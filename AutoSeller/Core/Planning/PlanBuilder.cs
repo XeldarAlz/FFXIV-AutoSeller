@@ -102,7 +102,7 @@ internal sealed partial class PlanBuilder : IDisposable
             NowUtc = nowUtc,
             Stock = stock.MoveToImmutable(),
             FreeBagSlots = read.FreeBagSlots,
-            BagsComplete = read.Complete,
+            BagsComplete = read.ListableComplete,
             Rules = rules,
             Pricing = configuration.BuildPricingSettings(),
             Edits = data.PlanEdits,
