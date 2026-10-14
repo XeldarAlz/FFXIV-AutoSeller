@@ -122,7 +122,12 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
     private static string Outcome(in RunDecision row, string done, string intended) => row.Write switch
     {
         RunWrite.Confirmed => done,
-        RunWrite.Rejected => $"tried to {intended}, which the game did not take",
+        RunWrite.Rejected => row.Rejection switch
+        {
+            WriteRejection.Cancelled => $"was going to {intended} but cancelled before Confirm",
+            WriteRejection.PromptRefused => $"tried to {intended}; the gil limit question was answered No and nothing changed",
+            _ => $"tried to {intended}, which the game did not take",
+        },
         RunWrite.Unknown => $"tried to {intended}, which could not be confirmed",
         _ => $"would {intended}",
     };

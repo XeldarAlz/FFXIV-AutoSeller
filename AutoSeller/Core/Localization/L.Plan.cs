@@ -71,8 +71,11 @@ internal static partial class L
         public static readonly LocString DoneListed = new("plan.done.listed", "Listed");
         public static readonly LocString DoneRejected = new("plan.done.rejected", "Not changed");
         public static readonly LocString DoneUnknown = new("plan.done.unknown", "Unconfirmed");
+        public static readonly LocString DoneCancelled = new("plan.done.cancelled", "Cancelled");
         public static readonly LocString DoneRejectedReason = new("plan.done.rejectedReason", "The listing did not change after Confirm");
         public static readonly LocString DoneUnknownReason = new("plan.done.unknownReason", "Not confirmed; answer the question on the Sell page");
+        public static readonly LocString DoneCancelledReason = new("plan.done.cancelledReason", "Cancelled before Confirm; nothing was changed");
+        public static readonly LocString DonePromptRefusedReason = new("plan.done.promptRefusedReason", "The retainer's gil limit question was answered No; nothing was changed");
         public static readonly LocString DoneHelp = new("plan.done.help", "Decided by the run at the board.");
 
         public static readonly LocString ReasonAlreadyLowest = new("plan.reason.alreadyLowest", "Already lowest");
@@ -109,6 +112,7 @@ internal static partial class L
         public static readonly LocString SkipSearchFailed = new("plan.skip.searchFailed", "The price search failed");
         public static readonly LocString SkipSlotChanged = new("plan.skip.slotChanged", "The bag slot changed");
         public static readonly LocString SkipQuantity = new("plan.skip.quantity", "The quantity is outside the window's limits");
+        public static readonly LocString SkipReadBackUnavailable = new("plan.skip.readBackUnavailable", "The listings or the bag slot could not be read before the change, so nothing was typed");
         public static readonly LocString SkipRefused = new("plan.skip.refused", "A safety check refused it; the Console has the details");
 
         public static readonly LocString BadgeExcluded = new("plan.badge.excluded", "Left out");
