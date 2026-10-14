@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using AutoSeller.Core.Travel.Model;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.Types;
@@ -80,12 +81,24 @@ internal static unsafe class SummoningBells
             return false;
         }
 
-        return gameObject->ObjectKind switch
+        switch (gameObject->ObjectKind)
         {
-            ObjectKind.EventObj => bells.IsBellBaseId(gameObject->BaseId),
-            ObjectKind.HousingEventObject => bells.IsBellName(gameObject->NameString),
-            _ => false,
-        };
+            case ObjectKind.EventObj:
+                return bells.IsBellBaseId(gameObject->BaseId);
+            case ObjectKind.HousingEventObject:
+                var raw = gameObject->Name;
+                Span<char> name = stackalloc char[raw.Length];
+                return bells.IsBellName(ShownName(raw, name));
+            default:
+                return false;
+        }
+    }
+
+    private static ReadOnlySpan<char> ShownName(ReadOnlySpan<byte> raw, Span<char> buffer)
+    {
+        var end = raw.IndexOf((byte)0);
+        var bytes = end < 0 ? raw : raw[..end];
+        return buffer[..Encoding.UTF8.GetChars(bytes, buffer)];
     }
 
     private static void ReportWhenChanged(bool found, in BellSighting sighting)
