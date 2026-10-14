@@ -18,7 +18,7 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start only runs a dry run: it goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price.
+> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price. Vendoring, returns, the sales ledger, Assist and the AutoRetainer post-process are still being built.
 
 ## What it does
 
@@ -54,7 +54,7 @@ As an AutoRetainer post-process it skips the walk, works on the one retainer Aut
 
 ## Safety
 
-- **Dry run.** On by default, it goes through the whole run up to typing a price and marks what it would change. Turning it off asks first.
+- **Dry run.** On by default, it goes through the whole run up to typing a price and marks what it would change. It is the switch beside Start and in Settings, Pricing, Limits per run, and turning it off asks first.
 - **Nothing sold without a rule.** Only items your sell list or category rules allow are listed or vendored.
 - **Floors and step limit.** No price is written below the item's floor, and no reprice drops a price further than the step limit without your approval.
 - **Never against yourself.** Your own listings are never undercut, and neither are your alts' listings when AutoRetainer knows them.
