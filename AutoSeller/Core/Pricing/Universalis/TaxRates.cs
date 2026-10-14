@@ -23,6 +23,7 @@ internal readonly record struct TaxRatesResult(TaxRates Rates, UniversalisFailur
     public const byte KuganeTown = 7;
     public const byte CrystariumTown = 10;
     public const byte OldSharlayanTown = 12;
+    public const byte TuliyollalTown = 14;
 
     public static TaxRatesResult FailedWith(UniversalisFailure failure)
     {
@@ -45,6 +46,7 @@ internal readonly record struct TaxRatesResult(TaxRates Rates, UniversalisFailur
             KuganeTown => Rates.Kugane,
             CrystariumTown => Rates.Crystarium,
             OldSharlayanTown => Rates.OldSharlayan,
+            TuliyollalTown => Rates.Tuliyollal,
             _ => MarketLimits.HighestSellerTaxPercent,
         };
     }

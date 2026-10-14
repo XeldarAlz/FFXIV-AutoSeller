@@ -5,7 +5,7 @@ namespace AutoSeller.Tests.Universalis;
 
 public sealed class TaxRatesTests
 {
-    private static readonly TaxRatesResult rates = new(new TaxRates(1, 2, 3, 4, 0, 5, 1, 2), UniversalisFailure.None);
+    private static readonly TaxRatesResult rates = new(new TaxRates(1, 2, 3, 4, 0, 5, 1, 3), UniversalisFailure.None);
 
     [Theory]
     [InlineData(TaxRatesResult.LimsaLominsaTown, 1)]
@@ -15,6 +15,7 @@ public sealed class TaxRatesTests
     [InlineData(TaxRatesResult.KuganeTown, 0)]
     [InlineData(TaxRatesResult.CrystariumTown, 5)]
     [InlineData(TaxRatesResult.OldSharlayanTown, 1)]
+    [InlineData(TaxRatesResult.TuliyollalTown, 3)]
     public void ARetainerPaysTheTaxOfItsTown(byte town, byte percent)
     {
         Assert.Equal(percent, rates.SellerTaxPercentFor(town));
@@ -22,7 +23,7 @@ public sealed class TaxRatesTests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(14)]
+    [InlineData(13)]
     public void AnUnknownTownCountsAtTheHighestTax(byte town)
     {
         Assert.Equal(MarketLimits.HighestSellerTaxPercent, rates.SellerTaxPercentFor(town));
