@@ -52,6 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     internal RetainerReader Retainers { get; }
     internal MarketReader RetainerMarket { get; }
     internal ReferenceService References { get; }
+    internal OwnSellersProvider OwnSellers { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -93,6 +94,7 @@ public sealed class Plugin : IDalamudPlugin
             RetainerMarket = new MarketReader(Retainers, Characters, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
+            OwnSellers = new OwnSellersProvider(Retainers, Characters);
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
