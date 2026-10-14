@@ -114,7 +114,12 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
     {
         var mode = Authorization.DryRun ? "Dry run" : "Run";
         var item = $"{ItemName(row.Row.ItemId)} {QualityLabel.Of(row.Row.IsHq)} x{row.Quantity}";
-        var where = row.Kind == RunRowKind.Listing ? $"listing in slot {row.Row.Slot} at {row.CurrentPrice} gil" : $"new lot from container {row.Row.Container} slot {row.Row.Slot}";
+        var where = row.Kind switch
+        {
+            RunRowKind.Listing => $"listing in slot {row.Row.Slot} at {row.CurrentPrice} gil",
+            RunRowKind.Vendor => $"stack in container {row.Row.Container} slot {row.Row.Slot}",
+            _ => $"new lot from container {row.Row.Container} slot {row.Row.Slot}",
+        };
         if (row.Skip != RunSkip.None)
         {
             return $"{mode}, {retainerName}: {item}, {where}: skipped ({row.Skip}{(row.Write == RunWrite.None ? string.Empty : $", write {row.Write}")}).";
@@ -126,6 +131,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         {
             SellAction.RepriceDown or SellAction.RepriceUp => Outcome(row, $"repriced to {decision.Price} gil", $"reprice to {decision.Price} gil"),
             SellAction.List => Outcome(row, $"listed at {decision.Price} gil", $"list at {decision.Price} gil"),
+            SellAction.Return => Outcome(row, "returned it to the retainer", "return it to the retainer"),
+            SellAction.Vendor => Outcome(row, $"vendored it for {decision.Price} gil each", $"vendor it for {decision.Price} gil each"),
             SellAction.Keep => decision.ProposedPrice > 0 && decision.ProposedPrice != decision.Price ? $"keeps it (proposed {decision.ProposedPrice} gil)" : "keeps it",
             _ => $"leaves it ({decision.Action})",
         };
