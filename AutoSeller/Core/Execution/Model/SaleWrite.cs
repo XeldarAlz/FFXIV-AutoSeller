@@ -26,9 +26,6 @@ internal readonly record struct SaleWrite(
     DecisionEvidence Evidence)
 {
     [JsonIgnore]
-    public ItemKey Item => new(ItemId, IsHq);
-
-    [JsonIgnore]
     public bool SetsPrice => Kind is WriteKind.List or WriteKind.Reprice;
 
     [JsonIgnore]

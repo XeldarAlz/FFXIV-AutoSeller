@@ -2,9 +2,9 @@ namespace AutoSeller.Core.Execution.Model;
 
 internal static class SaleGuard
 {
-    public static readonly TimeSpan MaximumSearchAge = TimeSpan.FromSeconds(60);
-
     private const long PercentDenominator = 100;
+
+    public static readonly TimeSpan MaximumSearchAge = TimeSpan.FromSeconds(60);
 
     public static SaleVerdict Evaluate(in SaleGuardInput input)
     {
