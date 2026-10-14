@@ -45,14 +45,10 @@ internal sealed class SellHeader
 
         var padX = PadX * scale;
         var midY = origin.Y + CardHeight * scale * 0.5f;
-        var right = end.X - padX;
-        var dryRun = Loc.T(L.Plan.DryRun);
-        right -= DrawChip(drawList, dryRun, Styling.AccentBlue, right, midY, Loc.T(L.Plan.DryRunHelp), plugin.Controller.DryRun);
-        right -= ChipGap * scale;
-        right = DrawRefresh(plugin, right, midY);
-        right -= DrawChip(drawList, prices, plugin.References.Fetching ? Styling.AccentBlueSoft : Styling.TextDim, right, midY, null, true) + ChipGap * scale;
-        right -= DrawChip(drawList, listings, Styling.TextDim, right, midY, null, true) + ChipGap * scale;
-        right -= DrawChip(drawList, retainers, Styling.TextDim, right, midY, null, true) + ChipGap * scale;
+        var right = DrawRefresh(plugin, end.X - padX, midY);
+        right -= DrawChip(drawList, prices, plugin.References.Fetching ? Styling.AccentBlueSoft : Styling.TextDim, right, midY) + ChipGap * scale;
+        right -= DrawChip(drawList, listings, Styling.TextDim, right, midY) + ChipGap * scale;
+        right -= DrawChip(drawList, retainers, Styling.TextDim, right, midY) + ChipGap * scale;
 
         var textWidth = MathF.Max(0f, right - origin.X - padX);
         float titleHeight;
@@ -112,9 +108,9 @@ internal sealed class SellHeader
         }
     }
 
-    private static float DrawChip(ImDrawListPtr drawList, string label, Vector4 color, float right, float midY, string? tooltip, bool shown)
+    private static float DrawChip(ImDrawListPtr drawList, string label, Vector4 color, float right, float midY)
     {
-        if (!shown || label.Length == 0)
+        if (label.Length == 0)
         {
             return 0f;
         }
@@ -128,11 +124,6 @@ internal sealed class SellHeader
             var max = new Vector2(right, midY + ChipHeight * scale * 0.5f);
             Paint.Pill(drawList, min, max, Styling.WithAlpha(color, 0.12f), Styling.WithAlpha(color, 0.40f));
             TextDraw.At(label, new Vector2(min.X + ChipPadX * scale, midY - size.Y * 0.5f), Styling.Lighten(color, 0.2f));
-            if (tooltip is not null && Hit.HoveringRect(min, max))
-            {
-                Tooltip.Show(tooltip);
-            }
-
             return width;
         }
     }

@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Preise werden für deine Heimatwelt abgerufen, sobald du eingeloggt bist",
   "plan.dryRun": "Testlauf",
   "plan.dryRunHelp": "In dieser Version bleiben Läufe Testläufe: Sie gehen zur Glocke, vergleichen Preise und halten fest, was sie ändern würden. Nichts wird eingegeben, eingestellt oder neu bepreist.",
+  "plan.dryRunCaption": "Nichts wird eingetippt oder gelistet",
   "plan.strip.listed": "{0} von {1} eingestellt",
   "plan.strip.visited": "Besucht {0}",
   "plan.strip.notVisited": "Noch nicht besucht",

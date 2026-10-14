@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "ログインすると、ホームワールドの価格を取得します",
   "plan.dryRun": "テスト実行",
   "plan.dryRunHelp": "このバージョンでは実行は常にテスト実行です。呼び鈴へ向かい、価格を比較し、変更する内容を記録します。価格の入力、出品、価格改定は一切行いません。",
+  "plan.dryRunCaption": "価格の入力も出品もしません",
   "plan.strip.listed": "出品 {0}/{1}",
   "plan.strip.visited": "訪問 {0}",
   "plan.strip.notVisited": "未訪問",

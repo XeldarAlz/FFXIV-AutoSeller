@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Fiyatlar, oturum açtığınızda ana dünyanız için alınır",
   "plan.dryRun": "Deneme",
   "plan.dryRunHelp": "Bu sürümde turlar her zaman denemedir: çana gider, fiyatları karşılaştırır ve neyi değiştireceklerini kaydeder. Hiçbir şey yazılmaz, ilana çıkarılmaz veya yeniden fiyatlanmaz.",
+  "plan.dryRunCaption": "Hiçbir şey yazılmaz veya ilana konmaz",
   "plan.strip.listed": "{1} ilandan {0}",
   "plan.strip.visited": "Ziyaret {0}",
   "plan.strip.notVisited": "Henüz ziyaret edilmedi",

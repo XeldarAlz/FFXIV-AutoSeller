@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Os preços são buscados para o seu mundo de origem quando você estiver conectado",
   "plan.dryRun": "Teste",
   "plan.dryRunHelp": "Nesta versão as rodadas são sempre testes: vão até o sino, comparam preços e registram o que mudariam. Nada é digitado, anunciado ou reajustado.",
+  "plan.dryRunCaption": "Nada é digitado nem anunciado",
   "plan.strip.listed": "{0} de {1} anunciados",
   "plan.strip.visited": "Visitado {0}",
   "plan.strip.notVisited": "Ainda não visitado",

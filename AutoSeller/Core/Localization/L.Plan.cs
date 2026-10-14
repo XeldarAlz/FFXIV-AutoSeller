@@ -16,6 +16,7 @@ internal static partial class L
         public static readonly LocString RefreshNoWorld = new("plan.refreshNoWorld", "Prices are fetched for your home world once you are logged in");
         public static readonly LocString DryRun = new("plan.dryRun", "Dry run");
         public static readonly LocString DryRunHelp = new("plan.dryRunHelp", "Runs stay dry in this version: they go to the bell, compare prices and record what they would change. Nothing is typed, listed or repriced.");
+        public static readonly LocString DryRunCaption = new("plan.dryRunCaption", "Nothing is typed or listed");
 
         public static readonly LocString StripListed = new("plan.strip.listed", "{0} of {1} listed");
         public static readonly LocString StripVisited = new("plan.strip.visited", "Visited {0}");

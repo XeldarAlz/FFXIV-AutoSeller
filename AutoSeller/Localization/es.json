@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Los precios se obtienen para tu mundo de origen una vez que hayas iniciado sesión",
   "plan.dryRun": "Prueba",
   "plan.dryRunHelp": "En esta versión las rondas son siempre pruebas: van a la campana, comparan precios y anotan lo que cambiarían. No se escribe, anuncia ni reajusta nada.",
+  "plan.dryRunCaption": "No se escribe ni se publica nada",
   "plan.strip.listed": "{0} de {1} anunciados",
   "plan.strip.visited": "Visitado {0}",
   "plan.strip.notVisited": "Aún no visitado",

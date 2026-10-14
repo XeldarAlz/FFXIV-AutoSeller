@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "登录后会获取你所属服务器的价格",
   "plan.dryRun": "试运行",
   "plan.dryRunHelp": "此版本中的运行都是试运行：会前往传唤铃、比较价格并记录将要做出的更改。不会输入价格、上架或改价。",
+  "plan.dryRunCaption": "不会输入价格或上架",
   "plan.strip.listed": "已上架 {0}/{1}",
   "plan.strip.visited": "上次访问 {0}",
   "plan.strip.notVisited": "尚未访问",

@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Les prix sont récupérés pour votre monde d'origine une fois connecté",
   "plan.dryRun": "Essai",
   "plan.dryRunHelp": "Dans cette version, les tournées restent des essais : elles vont à la sonnette, comparent les prix et notent ce qu'elles changeraient. Rien n'est saisi, mis en vente ni réajusté.",
+  "plan.dryRunCaption": "Rien n'est saisi ni mis en vente",
   "plan.strip.listed": "{0} sur {1} en vente",
   "plan.strip.visited": "Visité {0}",
   "plan.strip.notVisited": "Pas encore visité",

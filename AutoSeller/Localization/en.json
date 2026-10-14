@@ -43,6 +43,7 @@
   "plan.refreshNoWorld": "Prices are fetched for your home world once you are logged in",
   "plan.dryRun": "Dry run",
   "plan.dryRunHelp": "Runs stay dry in this version: they go to the bell, compare prices and record what they would change. Nothing is typed, listed or repriced.",
+  "plan.dryRunCaption": "Nothing is typed or listed",
   "plan.strip.listed": "{0} of {1} listed",
   "plan.strip.visited": "Visited {0}",
   "plan.strip.notVisited": "Not visited yet",
