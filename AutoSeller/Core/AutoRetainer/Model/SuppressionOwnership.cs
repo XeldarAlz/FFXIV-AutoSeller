@@ -1,6 +1,6 @@
 namespace AutoSeller.Core.AutoRetainer.Model;
 
-internal enum SuppressStep : byte { LeaveAlone, Suppress }
+internal enum SuppressStep : byte { LeaveAlone, Suppress, Unreadable }
 
 internal enum RestoreStep : byte { Nothing, Unsuppress }
 
@@ -12,7 +12,17 @@ internal sealed class SuppressionOwnership
 
     public SuppressStep Claim(Guid runId, in AutoRetainerStatus status, bool? suppressed)
     {
-        if (runId == Guid.Empty || Owned || status.Readiness != AutoRetainerState.Available || suppressed != false)
+        if (runId == Guid.Empty || Owned || status.Readiness != AutoRetainerState.Available)
+        {
+            return SuppressStep.LeaveAlone;
+        }
+
+        if (suppressed is not { } heldBack)
+        {
+            return SuppressStep.Unreadable;
+        }
+
+        if (heldBack)
         {
             return SuppressStep.LeaveAlone;
         }

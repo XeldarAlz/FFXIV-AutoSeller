@@ -12,7 +12,14 @@ internal sealed class AutoRetainerSuppression(AutoRetainerIpc autoRetainer)
     {
         var status = autoRetainer.Status;
         var suppressed = status.Readiness == AutoRetainerState.Available ? autoRetainer.IsSuppressed() : null;
-        if (ownership.Claim(runId, status, suppressed) != SuppressStep.Suppress)
+        var step = ownership.Claim(runId, status, suppressed);
+        if (step == SuppressStep.Unreadable)
+        {
+            RunLog.Warning($"AutoRetainer: GetSuppressed did not answer for run {runId}, so it cannot be held back safely; the run does not start.");
+            return false;
+        }
+
+        if (step == SuppressStep.LeaveAlone)
         {
             RunLog.Info($"AutoRetainer: left as it is for run {runId} ({status.Readiness}, suppressed {suppressed?.ToString() ?? "unknown"}).");
             return true;

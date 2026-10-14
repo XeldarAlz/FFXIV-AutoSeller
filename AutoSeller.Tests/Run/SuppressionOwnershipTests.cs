@@ -38,11 +38,23 @@ public sealed class SuppressionOwnershipTests
     }
 
     [Fact]
-    public void AnUnreadSuppressionIsLeftAlone()
+    public void AnUnreadSuppressionOfAnAvailableAutoRetainerRefusesTheClaim()
     {
         var ownership = new SuppressionOwnership();
 
-        Assert.Equal(SuppressStep.LeaveAlone, ownership.Claim(firstRun, idle, suppressed: null));
+        Assert.Equal(SuppressStep.Unreadable, ownership.Claim(firstRun, idle, suppressed: null));
+        Assert.False(ownership.Owned);
+        Assert.Equal(RestoreStep.Nothing, ownership.ReleaseAny());
+    }
+
+    [Theory]
+    [InlineData((int)AutoRetainerState.Missing)]
+    [InlineData((int)AutoRetainerState.Outdated)]
+    public void AnUnreadSuppressionOfAMissingOrOutdatedAutoRetainerIsLeftAlone(int readiness)
+    {
+        var ownership = new SuppressionOwnership();
+
+        Assert.Equal(SuppressStep.LeaveAlone, ownership.Claim(firstRun, new AutoRetainerStatus((AutoRetainerState)readiness, Busy: false), suppressed: null));
     }
 
     [Fact]
