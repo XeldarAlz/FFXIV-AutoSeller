@@ -18,6 +18,7 @@ internal static class PlaceNames
         var name = townId == 0 ? null : Svc.Data.GetExcelSheet<Town>().GetRowOrDefault(townId)?.Name.ExtractText();
         var resolved = string.IsNullOrWhiteSpace(name) ? string.Empty : name;
         towns[townId] = resolved;
+        RunLog.Info($"Retainer town {townId} reads as '{resolved}' from the Town sheet.");
         return resolved;
     }
 
