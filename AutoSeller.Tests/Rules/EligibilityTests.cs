@@ -74,6 +74,22 @@ public sealed class EligibilityTests
     }
 
     [Fact]
+    public void RetainerInventoryIsOptInPerRetainer()
+    {
+        var rules = Book([SellRule()], null, null, SellSources.Default | SellSources.RetainerPages, [SecondRetainer]);
+        var switchedOff = Book([SellRule()], null, null, SellSources.Default, [SecondRetainer]);
+
+        EligibilityReason Check(RuleBook book, ulong retainerId)
+        {
+            return Eligibility.Check(In(SlotSource.RetainerPage, Ore, 5, retainerId: retainerId), Material(), 100, book, ListingCounts.Empty).Reason;
+        }
+
+        Assert.Equal(EligibilityReason.Eligible, Check(rules, SecondRetainer));
+        Assert.Equal(EligibilityReason.SourceDisabled, Check(rules, FirstRetainer));
+        Assert.Equal(EligibilityReason.SourceDisabled, Check(switchedOff, SecondRetainer));
+    }
+
+    [Fact]
     public void PausedSellListEntryBlocksTheItemEvenWhenACategoryRuleWouldMatch()
     {
         var rules = Book([SellRule(paused: true)], [Category(MaterialCategory)]);

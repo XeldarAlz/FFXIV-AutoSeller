@@ -291,7 +291,7 @@ public sealed class SlotAllocatorTests
     [Fact]
     public void PlannedLotsCarryTheirTermsIntoTheAllocator()
     {
-        var rules = RuleFixtures.Book([RuleFixtures.SellRule(lotSize: 10, listingsToKeepUp: 2, preferredRetainerId: Beta)], null, null, RuleFixtures.AllSources);
+        var rules = RuleFixtures.Book([RuleFixtures.SellRule(lotSize: 10, listingsToKeepUp: 2, preferredRetainerId: Beta)], null, null, RuleFixtures.AllSources, [Gamma]);
         var stock = ImmutableArray.Create(
             RuleFixtures.Stock(RuleFixtures.Bag(Ore, 20), RuleFixtures.Material()),
             RuleFixtures.Stock(RuleFixtures.In(SlotSource.RetainerPage, Potion, 5, retainerId: Gamma), RuleFixtures.Material(Potion)));

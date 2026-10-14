@@ -8,10 +8,17 @@ internal sealed class RuleBook
     private const int ItemIdShift = 32;
 
     private readonly ImmutableArray<ItemRuleSnapshot> sellListByItem;
+    private readonly ImmutableArray<ulong> inventoryRetainerIds;
 
-    private RuleBook(ImmutableArray<ItemRuleSnapshot> sellListByItem, ImmutableArray<CategoryRuleSnapshot> categoryRules, ItemIdSet neverSell, SellSources sources)
+    private RuleBook(
+        ImmutableArray<ItemRuleSnapshot> sellListByItem,
+        ImmutableArray<CategoryRuleSnapshot> categoryRules,
+        ItemIdSet neverSell,
+        SellSources sources,
+        ImmutableArray<ulong> inventoryRetainerIds)
     {
         this.sellListByItem = sellListByItem;
+        this.inventoryRetainerIds = inventoryRetainerIds;
         CategoryRules = categoryRules;
         NeverSell = neverSell;
         Sources = sources;
@@ -23,15 +30,25 @@ internal sealed class RuleBook
 
     public SellSources Sources { get; }
 
-    public static RuleBook Create(IEnumerable<ItemRule> sellList, IEnumerable<CategoryRule> categoryRules, ItemIdSet neverSell, SellSources sources)
+    public static RuleBook Create(
+        IEnumerable<ItemRule> sellList,
+        IEnumerable<CategoryRule> categoryRules,
+        ItemIdSet neverSell,
+        SellSources sources,
+        IEnumerable<ulong> inventoryRetainerIds)
     {
-        return new RuleBook(SortedByItem(sellList), EnabledCategoryRules(categoryRules), neverSell, sources);
+        return new RuleBook(SortedByItem(sellList), EnabledCategoryRules(categoryRules), neverSell, sources, [.. inventoryRetainerIds]);
     }
 
-    public bool Allows(SlotSource source)
+    public bool Allows(in SlotFacts slot)
     {
-        var flag = (SellSources)(1 << (int)source);
-        return (Sources & flag) != 0;
+        var flag = (SellSources)(1 << (int)slot.Source);
+        if ((Sources & flag) == 0)
+        {
+            return false;
+        }
+
+        return slot.Source != SlotSource.RetainerPage || inventoryRetainerIds.AsSpan().Contains(slot.RetainerId);
     }
 
     public bool IsOnSellList(uint itemId)

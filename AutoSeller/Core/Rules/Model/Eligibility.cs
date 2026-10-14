@@ -89,7 +89,7 @@ internal static class Eligibility
 
     private static EligibilityReason CheckHolding(in SlotFacts slot, in ItemFacts item, RuleBook rules)
     {
-        if (!rules.Allows(slot.Source))
+        if (!rules.Allows(slot))
         {
             return EligibilityReason.SourceDisabled;
         }
