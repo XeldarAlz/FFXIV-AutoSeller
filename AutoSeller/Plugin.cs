@@ -4,6 +4,7 @@ using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
+using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Listings;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market;
@@ -47,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     internal Configuration Configuration { get; }
     internal WindowSystem WindowSystem { get; } = new("AutoSeller");
     internal RunHistory History { get; }
+    internal SellLedger Ledger { get; }
     internal SellController Controller { get; }
     internal ItemCatalog Items { get; }
     internal GameItems GameItems { get; }
@@ -95,7 +97,8 @@ public sealed class Plugin : IDalamudPlugin
             Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
-            RetainerMarket = new MarketReader(Retainers, Characters, Retainers.Available);
+            Ledger = new SellLedger(PluginInterface.ConfigDirectory.FullName);
+            RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
             OwnSellers = new OwnSellersProvider(Retainers, Characters);

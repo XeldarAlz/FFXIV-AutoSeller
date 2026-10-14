@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using AutoSeller.Core.Characters;
 using AutoSeller.Core.Driver.Model;
@@ -32,14 +33,16 @@ internal sealed unsafe class MarketReader
     private readonly RawMarketSlot[] reportedSlots = new RawMarketSlot[RetainerSnapshot.SlotCount];
     private readonly RetainerReader retainers;
     private readonly CharacterStore characters;
+    private readonly Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites;
     private readonly StringBuilder line = new();
     private RawReadSummary reportedSummary;
     private MarketReadNotice lastNotice;
 
-    public MarketReader(RetainerReader retainers, CharacterStore characters, bool available)
+    public MarketReader(RetainerReader retainers, CharacterStore characters, Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites, bool available)
     {
         this.retainers = retainers;
         this.characters = characters;
+        this.confirmedWrites = confirmedWrites;
         Available = available;
     }
 
@@ -109,7 +112,7 @@ internal sealed unsafe class MarketReader
 
         lastNotice = default;
         data.TryGetSnapshot(retainer.RetainerId, out var previous);
-        data.RecordSnapshot(snapshot);
+        data.RecordSnapshot(snapshot, confirmedWrites(retainer.RetainerId).AsSpan());
         var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
         RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");
         return new MarketRead(MarketReadStatus.Read, MarketReadRefusal.None, retainer.RetainerId, snapshot, previous);

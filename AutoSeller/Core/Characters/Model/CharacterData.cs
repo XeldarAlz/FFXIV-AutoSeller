@@ -206,7 +206,7 @@ internal sealed class CharacterData
         return snapshot is not null;
     }
 
-    public void RecordSnapshot(RetainerSnapshot snapshot)
+    public void RecordSnapshot(RetainerSnapshot snapshot, ReadOnlySpan<SnapshotDiffWrite> writes)
     {
         if (snapshot.CharacterContentId != ContentId)
         {
@@ -214,7 +214,7 @@ internal sealed class CharacterData
         }
 
         TryGetSnapshot(snapshot.RetainerId, out var previous);
-        var ages = ListingAges.Carry(previous, snapshot, CollectionsMarshal.AsSpan(listingAges));
+        var ages = ListingAges.Carry(previous, snapshot, CollectionsMarshal.AsSpan(listingAges), writes);
         listingAges.RemoveAll(age => age.RetainerId == snapshot.RetainerId);
         listingAges.AddRange(ages);
         PutSnapshot(snapshot);
