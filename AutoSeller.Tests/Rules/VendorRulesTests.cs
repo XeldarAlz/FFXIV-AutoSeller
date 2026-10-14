@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Rules.Model;
 using static AutoSeller.Tests.Rules.RuleFixtures;
 
@@ -153,6 +154,47 @@ public sealed class VendorRulesTests
 
         Assert.Equal(long.MaxValue, VendorRules.VendorValue(stock));
         Assert.Equal(VendorReason.NotJunk, VendorRules.Check(stock with { ReferenceUnitPrice = uint.MaxValue }, Book(vendor: On())));
+    }
+
+    [Fact]
+    public void ARunVendorsWhatIsDueInsideWhatIsLeftOfItsCapAndNotWhatItHandled()
+    {
+        var first = Stock(Bag(Junk, 30, 0), Material(Junk, vendorPrice: 2), 5);
+        var second = Stock(Bag(Junk, 30, 1), Material(Junk, vendorPrice: 2), 5);
+        var kept = Stock(Bag(Ore, 30, 2), Material(Ore, vendorPrice: 2), 500);
+        var stock = ImmutableArray.Create(first, second, kept);
+
+        var due = VendorRules.Due(stock, Book(vendor: On()), 100, new HashSet<PlanRowKey>());
+        var afterTheFirst = VendorRules.Due(stock, Book(vendor: On()), 100, new HashSet<PlanRowKey> { PlanRowKey.ForVendor(first.Slot) });
+        var capSpent = VendorRules.Due(stock, Book(vendor: On()), -5, new HashSet<PlanRowKey>());
+
+        Assert.Equal([first.Slot], Slots(due));
+        Assert.Equal([second.Slot], Slots(afterTheFirst));
+        Assert.Empty(capSpent);
+    }
+
+    [Fact]
+    public void ThePlannedVendorValueSumsWhatTheCapLets()
+    {
+        var stock = ImmutableArray.Create(
+            Stock(Bag(Junk, 30, 0), Material(Junk, vendorPrice: 2), 5),
+            Stock(Bag(Junk, 30, 1), Material(Junk, vendorPrice: 2), 5),
+            Stock(Bag(Shard, 40, 2), Material(Shard, vendorPrice: 1), 5));
+
+        Assert.Equal(160, VendorRules.PlannedValue(stock, Book(vendor: On()), 1_000));
+        Assert.Equal(100, VendorRules.PlannedValue(stock, Book(vendor: On()), 100));
+        Assert.Equal(0, VendorRules.PlannedValue(stock, Book(), 1_000));
+    }
+
+    private static SlotFacts[] Slots(ImmutableArray<VendorVerdict> verdicts)
+    {
+        var slots = new SlotFacts[verdicts.Length];
+        for (var index = 0; index < slots.Length; index++)
+        {
+            slots[index] = verdicts[index].Slot;
+        }
+
+        return slots;
     }
 
     private static VendorSettings On()

@@ -52,6 +52,40 @@ public sealed class RunGuardTests
     }
 
     [Fact]
+    public void AVendorRowCarriesItsVendorFactsIntoTheGuard()
+    {
+        var vendoringOn = Authorization(dryRun: true, rules: RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []));
+        var vendorLive = live with { Rules = vendoringOn.Rules };
+        var junk = new SlotReading(Ore, false, JunkQuantity, 0);
+        var row = new GuardedRow(Vendor(), junk, junk, true, 0, VendorUnitPrice, false, VendorRuleMatches: true);
+
+        var allowed = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
+        var noRule = RunGuard.Evaluate(vendoringOn, vendorLive, row with { VendorRuleMatches = false }, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
+        var gear = RunGuard.Evaluate(vendoringOn, vendorLive, row with { IsGear = true }, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
+
+        Assert.True(allowed.IsAllowed);
+        Assert.Equal(SaleRejection.NoVendorRule, noRule.Rejection);
+        Assert.Equal(SaleRejection.VendorGear, gear.Rejection);
+    }
+
+    [Fact]
+    public void ADryRunVendorCountsItsValueAgainstTheCap()
+    {
+        var vendoringOn = Authorization(caps: new RunCaps(80, 100, VendorUnitPrice * JunkQuantity), dryRun: true, rules: RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []));
+        var vendorLive = live with { Rules = vendoringOn.Rules };
+        var junk = new SlotReading(Ore, false, JunkQuantity, 0);
+        var row = new GuardedRow(Vendor(), junk, junk, true, 0, VendorUnitPrice, false, VendorRuleMatches: true);
+        var values = new ValueBook(vendoringOn.Caps);
+
+        var first = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, values, Guid.NewGuid());
+        var second = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, values, Guid.NewGuid());
+
+        Assert.True(first.IsAllowed);
+        Assert.Equal(VendorUnitPrice * JunkQuantity, values.VendoredValue);
+        Assert.Equal(SaleRejection.VendorValueCapReached, second.Rejection);
+    }
+
+    [Fact]
     public void AnAllowedRealWriteIsLeftToTheWritePathToReserveAndCount()
     {
         var real = Authorization();
