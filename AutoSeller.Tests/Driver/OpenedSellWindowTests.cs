@@ -54,6 +54,32 @@ public sealed class OpenedSellWindowTests
     }
 
     [Fact]
+    public void TheTypedWindowMatchesTheWriteItWasTypedFor()
+    {
+        var write = new SaleWrite(WriteKind.List, Alpha, BagContainer, BagSlot, Ore, false, LotQuantity, 0, 1_049, default);
+        var shown = Shown(OreName, (int)LotQuantity, 1_049);
+
+        var sample = OpenedSellWindow.Typed(shown, OreName, write, (int)LotQuantity, 1_049);
+
+        Assert.Equal(new SellWindowSample(true, Ore, false, LotQuantity, 1_049), sample);
+        Assert.Equal(SellWindowVerdict.Matches, SellWindowCheck.Judge(sample, write));
+    }
+
+    [Fact]
+    public void ATypedWindowShowingAnotherItemQualityQuantityOrPriceDoesNotMatch()
+    {
+        var write = new SaleWrite(WriteKind.List, Alpha, BagContainer, BagSlot, Ore, false, LotQuantity, 0, 1_049, default);
+        var shown = Shown(OreName, (int)LotQuantity, 1_049);
+
+        Assert.Equal(SellWindowVerdict.OtherItem, SellWindowCheck.Judge(OpenedSellWindow.Typed(shown, "Iron Ore", write, (int)LotQuantity, 1_049), write));
+        Assert.Equal(SellWindowVerdict.OtherQuality, SellWindowCheck.Judge(OpenedSellWindow.Typed(shown with { ItemName = highQualityOreName }, OreName, write, (int)LotQuantity, 1_049), write));
+        Assert.Equal(SellWindowVerdict.OtherQuantity, SellWindowCheck.Judge(OpenedSellWindow.Typed(shown, OreName, write, (int)LotQuantity - 1, 1_049), write));
+        Assert.Equal(SellWindowVerdict.OtherPrice, SellWindowCheck.Judge(OpenedSellWindow.Typed(shown, OreName, write, (int)LotQuantity, 1_048), write));
+        Assert.Equal(SellWindowVerdict.OtherPrice, SellWindowCheck.Judge(OpenedSellWindow.Typed(shown, OreName, write, (int)LotQuantity, -1), write));
+        Assert.Equal(SellWindowVerdict.Unreadable, SellWindowCheck.Judge(OpenedSellWindow.Typed(SellWindowShown.Unreadable, OreName, write, (int)LotQuantity, 1_049), write));
+    }
+
+    [Fact]
     public void ALotOutsideTheWindowsQuantityBoundsIsRefused()
     {
         var shown = Shown(OreName, LotQuantity, 0) with { Bounds = new QuantityBounds(1, 99) };
