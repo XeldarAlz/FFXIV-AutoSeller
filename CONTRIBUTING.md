@@ -55,7 +55,7 @@ Some code started as a copy of my other plugins, under the same license, and was
 | `Core/Ledger/` and the journal events, replayer and review in `Core/Execution/Model/`, with their tests | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Ledger/` and `Core/Execution/Model/` | Copied; events replaced with sale writes |
 | `Core/Sales/Model/SalesCsv` field quoting | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Shopping/Import/Csv.cs` | Copied |
 | `SaleGuard`, `ValueBook`, `SellAuthorization`, `SaleReadBack`, `RunReactions` | Auto Shopper's purchase guard, spend book, run authorization, reconciliation and reactions | Written new on the same shape |
-| `PromptText`, `StartBlockRule`, `RunEnd`, `SellWindowCheck`, the tracked window names | Auto GC Supply `master` (`1c4f8dd`) | Written new on the same shape |
+| `PromptText`, `StartBlockRule`, `SellWindowCheck`, the tracked window names | Auto GC Supply `master` (`1c4f8dd`) | Written new on the same shape |
 
 The retainer sale history byte layout was checked against [Thaliak.Network](https://github.com/menphina/Thaliak.Network) (MIT). No code was taken from it.
 
