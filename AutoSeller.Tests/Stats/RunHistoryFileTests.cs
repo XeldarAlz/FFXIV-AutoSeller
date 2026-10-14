@@ -75,6 +75,19 @@ public sealed class RunHistoryFileTests : IDisposable
         var loaded = Assert.Single(store.Load().Value!.Records);
 
         Assert.Equal((3, 2, 0L, 4, 1), (loaded.Repriced, loaded.Listed, loaded.ListedValue, loaded.Kept, loaded.Skipped));
+        Assert.Equal((0, 0, 0L), (loaded.Returned, loaded.Vendored, loaded.VendoredValue));
+    }
+
+    [Fact]
+    public void ReturnsAndVendoredStacksSurviveTheFile()
+    {
+        var store = new CheckpointStore<RunHistoryFile>(directory.Path, RunHistoryFile.FileName);
+        var record = Record(1) with { Returned = 2, Vendored = 3, VendoredValue = 1_250 };
+
+        Assert.True(store.TrySave(new RunHistoryFile { Records = [record] }));
+        var loaded = Assert.Single(store.Load().Value!.Records);
+
+        Assert.Equal((2, 3, 1_250L), (loaded.Returned, loaded.Vendored, loaded.VendoredValue));
     }
 
     [Fact]
