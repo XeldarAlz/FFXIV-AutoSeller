@@ -68,6 +68,7 @@ internal static unsafe class RetainerClicks
     private static uint reportedOwner;
     private static ushort reportedSellList;
     private static string reportedInventory = string.Empty;
+    private static ItemMenuTarget reportedItemMenu;
 
     public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
 
@@ -193,6 +194,24 @@ internal static unsafe class RetainerClicks
         }
     }
 
+    public static bool ItemMenuShows(uint container, ushort slot)
+    {
+        var agent = AgentInventoryContext.Instance();
+        if (agent == null || !IsReady(ContextMenuAddon))
+        {
+            return false;
+        }
+
+        var target = new ItemMenuTarget((uint)agent->TargetInventoryId, agent->TargetInventorySlotId);
+        if (target != reportedItemMenu)
+        {
+            reportedItemMenu = target;
+            RunLog.Info($"Retainer: the open item menu is for container {target.Container} slot {target.Slot}.");
+        }
+
+        return target.Container == container && target.Slot == slot;
+    }
+
     private static bool ChooseEntry(int entry, Func<string, bool> matches, string throttleKey, string what)
     {
         if (!NpcInteraction.TryGetReadyAddon(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
@@ -278,4 +297,6 @@ internal static unsafe class RetainerClicks
         addon->Close(true);
         return true;
     }
+
+    private readonly record struct ItemMenuTarget(uint Container, int Slot);
 }

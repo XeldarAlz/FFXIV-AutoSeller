@@ -87,7 +87,11 @@ internal sealed partial class RetainerDriver
 
         session.Enter(RunState.Guarding);
         var verdict = decider.GuardReturn(retainer.RetainerId, listing, pending.Write, DateTime.UtcNow);
-        return await ConcludeThroughMenu(pending.Outcome with { Guard = verdict.Rejection }, pending.Write, retainer, () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning);
+        return await ConcludeThroughMenu(
+            pending.Outcome with { Guard = verdict.Rejection },
+            pending.Write,
+            retainer,
+            new MenuChoice(static () => RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon), () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning));
     }
 
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
@@ -160,7 +164,11 @@ internal sealed partial class RetainerDriver
         var write = SaleWrite.ForVendor(retainer.RetainerId, slot, stock.Item.VendorPrice);
         var observed = TryReadVendorSlot(slot, out var reading) ? reading : default;
         var guard = decider.GuardVendor(retainer.RetainerId, stock, observed, write, DateTime.UtcNow);
-        return await ConcludeThroughMenu(planned with { Guard = guard.Rejection }, write, retainer, () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring);
+        return await ConcludeThroughMenu(
+            planned with { Guard = guard.Rejection },
+            write,
+            retainer,
+            new MenuChoice(() => RetainerClicks.ItemMenuShows(slot.Container, slot.Slot), () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring));
     }
 
     private bool TryReadVendorSlot(in SlotFacts slot, out SlotReading observed)
@@ -176,7 +184,7 @@ internal sealed partial class RetainerDriver
         return false;
     }
 
-    private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, Func<bool> choose, RunState pressing)
+    private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, MenuChoice choice)
     {
         if (!outcome.Clear)
         {
@@ -191,7 +199,7 @@ internal sealed partial class RetainerDriver
             return await UnwindAboveSellList();
         }
 
-        var written = await ChooseAndConfirm(write, retainer, choose, pressing);
+        var written = await ChooseAndConfirm(write, retainer, choice);
         var settlement = written.Settlement;
         Record(outcome with { Skip = written.Skip, Write = settlement.Write, Rejection = settlement.Rejection }, retainer);
         var unwound = RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon) ? await UnwindAboveSellList() : Stop.None;
@@ -203,12 +211,20 @@ internal sealed partial class RetainerDriver
         return written.Stop.Halted ? written.Stop : unwound;
     }
 
-    private async Task<Written> ChooseAndConfirm(SaleWrite write, RunRetainer retainer, Func<bool> choose, RunState pressing)
+    private async Task<Written> ChooseAndConfirm(SaleWrite write, RunRetainer retainer, MenuChoice choice)
     {
         var begun = BeginWrite(write, retainer);
         if (begun.Intent is not { } intent)
         {
             return begun.Refused;
+        }
+
+        session.Enter(RunState.CheckingWindow);
+        if (!choice.Shows())
+        {
+            Warn($"Driver: before the menu entry is chosen the menu does not show write {intent.WriteId}; it is cancelled.");
+            var mismatch = WriteSettlement.NotConfirmed(WriteRejection.WindowMismatch);
+            return new Written(mismatch, RunSkip.WindowMismatch, Settle(intent, mismatch, retainer));
         }
 
         if (session.StopRequested)
@@ -217,12 +233,12 @@ internal sealed partial class RetainerDriver
             return NotConfirmed(intent, retainer);
         }
 
-        session.Enter(pressing);
+        session.Enter(choice.Pressing);
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
             stopped = session.StopRequested;
-            return stopped || choose();
+            return stopped || choice.Choose();
         });
         if (stopped || !pressed)
         {
@@ -259,4 +275,6 @@ internal sealed partial class RetainerDriver
     }
 
     private readonly record struct PendingReturn(RunDecision Outcome, SaleWrite Write, ListingSlot Listing);
+
+    private readonly record struct MenuChoice(Func<bool> Shows, Func<bool> Choose, RunState Pressing);
 }
