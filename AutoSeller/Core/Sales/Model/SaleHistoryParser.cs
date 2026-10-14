@@ -3,6 +3,8 @@ using System.Collections.Immutable;
 
 namespace AutoSeller.Core.Sales.Model;
 
+internal readonly record struct SaleHistoryFields(uint ItemId, bool IsHq, uint Price, uint Quantity, uint SoldAtUnixSeconds, bool OnMannequin);
+
 internal static class SaleHistoryParser
 {
     public static bool TryParse(ReadOnlySpan<byte> packet, ulong characterContentId, ulong retainerId, int sellerTaxPercent, out ImmutableArray<SaleRecord> sales)
@@ -47,30 +49,43 @@ internal static class SaleHistoryParser
         SalePriceMeaning priceMeaning,
         out SaleRecord sale)
     {
-        var itemId = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.ItemIdOffset..]);
-        var price = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.PriceOffset..]);
-        var soldAtSeconds = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.SoldAtUnixSecondsOffset..]);
-        var quantity = BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.QuantityOffset..]);
-        if (itemId == 0 || quantity == 0 || soldAtSeconds == 0 || !SalePrice.IsListable(price, quantity, priceMeaning))
+        var entry = new SaleHistoryFields(
+            BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.ItemIdOffset..]),
+            record[SaleHistoryLayout.HighQualityOffset] != 0,
+            BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.PriceOffset..]),
+            BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.QuantityOffset..]),
+            BinaryPrimitives.ReadUInt32LittleEndian(record[SaleHistoryLayout.SoldAtUnixSecondsOffset..]),
+            record[SaleHistoryLayout.MannequinOffset] != 0);
+        return TryBuild(entry, characterContentId, retainerId, sellerTaxPercent, priceMeaning, out sale);
+    }
+
+    public static bool TryBuild(
+        in SaleHistoryFields entry,
+        ulong characterContentId,
+        ulong retainerId,
+        int sellerTaxPercent,
+        SalePriceMeaning priceMeaning,
+        out SaleRecord sale)
+    {
+        if (entry.ItemId == 0 || entry.Quantity == 0 || entry.SoldAtUnixSeconds == 0 || !SalePrice.IsListable(entry.Price, entry.Quantity, priceMeaning))
         {
             sale = default;
             return false;
         }
 
-        var onMannequin = record[SaleHistoryLayout.MannequinOffset] != 0;
-        var taxPercent = onMannequin ? SalePrice.MannequinSellerTaxPercent : sellerTaxPercent;
-        var soldAtUtc = DateTime.UnixEpoch.AddSeconds(soldAtSeconds);
+        var taxPercent = entry.OnMannequin ? SalePrice.MannequinSellerTaxPercent : sellerTaxPercent;
+        var soldAtUtc = DateTime.UnixEpoch.AddSeconds(entry.SoldAtUnixSeconds);
         sale = new SaleRecord(
             soldAtUtc,
             soldAtUtc,
             default,
             characterContentId,
             retainerId,
-            itemId,
-            record[SaleHistoryLayout.HighQualityOffset] != 0,
-            quantity,
-            SalePrice.ToUnitPrice(price, quantity, priceMeaning),
-            SalePrice.ToNet(price, quantity, priceMeaning, taxPercent),
+            entry.ItemId,
+            entry.IsHq,
+            entry.Quantity,
+            SalePrice.ToUnitPrice(entry.Price, entry.Quantity, priceMeaning),
+            SalePrice.ToNet(entry.Price, entry.Quantity, priceMeaning, taxPercent),
             SaleSource.History);
         return true;
     }
