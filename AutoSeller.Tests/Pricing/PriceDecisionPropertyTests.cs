@@ -36,7 +36,7 @@ public sealed class PriceDecisionPropertyTests
 
             writes++;
             Assert.True(decision.Price >= floor, $"case {caseIndex}: {decision} under floor {floor}");
-            Assert.InRange(decision.Price, PriceMath.MinimumPrice, PriceMath.MaximumPrice);
+            Assert.InRange(decision.Price, MarketLimits.MinimumUnitPrice, MarketLimits.MaximumUnitPrice);
         }
 
         Assert.True(writes >= MinimumCoverage, $"only {writes} price writes");
@@ -87,7 +87,7 @@ public sealed class PriceDecisionPropertyTests
             var input = RandomInput(random);
             var referenceGil = (uint)random.Next(MinimumBasePrice, MaximumBasePrice);
             input = input with { Reference = FreshWorldReference(input.Item, referenceGil) };
-            var highestBait = ((long)referenceGil * input.Settings.BaitRatioPercent - 1) / PriceMath.PercentScale;
+            var highestBait = ((long)referenceGil * input.Settings.BaitRatioPercent - 1) / Gil.PercentScale;
             var baits = new CompetitorListing[random.Next(1, 4)];
             for (var index = 0; index < baits.Length; index++)
             {
@@ -162,7 +162,7 @@ public sealed class PriceDecisionPropertyTests
         for (var caseIndex = 0; caseIndex < CaseCount; caseIndex++)
         {
             var input = RandomInput(random);
-            input = input with { Rule = new ItemRule { ItemId = ItemId, Floor = input.Rule.Floor }, Override = PriceOverride.None };
+            input = input with { Rule = input.Rule with { Ceiling = 0, FixedPrice = 0 }, Override = PriceOverride.None };
             var decision = PriceDecision.Decide(input);
             var lowestCompetitor = decision.Evidence.CompetitorPrice;
             if (input.CurrentListing is not { } listing || lowestCompetitor == 0 || listing.UnitPrice >= lowestCompetitor)
@@ -234,7 +234,7 @@ public sealed class PriceDecisionPropertyTests
                 continue;
             }
 
-            var dropShare = (long)(current - decision.Price) * PriceMath.PercentScale;
+            var dropShare = (long)(current - decision.Price) * Gil.PercentScale;
             Assert.True(dropShare <= (long)current * input.Settings.StepLimitPercent, $"case {caseIndex}: {decision} from {current}");
         }
 
@@ -261,7 +261,7 @@ public sealed class PriceDecisionPropertyTests
 
             Assert.Equal(released, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed) }));
             Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed + 1) }));
-            if (proposed > PriceMath.MinimumPrice)
+            if (proposed > MarketLimits.MinimumUnitPrice)
             {
                 Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed - 1) }));
             }
@@ -342,7 +342,7 @@ public sealed class PriceDecisionPropertyTests
 
             raises++;
             var current = input.CurrentListing!.Value.UnitPrice;
-            var highestRaise = Math.Max(current + 1L, (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent) / PriceMath.PercentScale);
+            var highestRaise = Math.Max(current + 1L, (long)current * (Gil.PercentScale + input.Settings.MaximumRaisePercent) / Gil.PercentScale);
             Assert.True(decision.Price > current);
             Assert.True(decision.Price <= Math.Max(highestRaise, decision.Evidence.Floor), $"case {caseIndex}: {decision} from {current}");
         }
@@ -441,7 +441,7 @@ public sealed class PriceDecisionPropertyTests
 
     private static CompetitorListing[] Cluster(Random random, bool isHq, uint clusterLow)
     {
-        var highest = (long)clusterLow * (PriceMath.PercentScale + ClusterSpreadPercent) / PriceMath.PercentScale;
+        var highest = (long)clusterLow * (Gil.PercentScale + ClusterSpreadPercent) / Gil.PercentScale;
         var cluster = new CompetitorListing[random.Next(1, 11)];
         cluster[0] = Competitor(clusterLow, isHq);
         for (var index = 1; index < cluster.Length; index++)
@@ -459,7 +459,7 @@ public sealed class PriceDecisionPropertyTests
         {
             0 => default,
             1 => FreshWorldReference(item, price),
-            2 => new ReferencePrice(item, ReferenceSource.UniversalisDataCenter, price, price, price, 1f, Now - TimeSpan.FromHours(random.Next(72, 200))),
+            2 => new ReferencePrice(item, ReferenceSource.UniversalisDataCenter, price, 0, price, 1f, Now - TimeSpan.FromHours(random.Next(72, 200))),
             3 => new ReferencePrice(item, ReferenceSource.GameHistory, price, 0, 0, 0f, Now),
             _ => FreshWorldReference(new ItemKey(ItemId, !item.IsHq), price),
         };
@@ -467,18 +467,18 @@ public sealed class PriceDecisionPropertyTests
 
     private static ReferencePrice FreshWorldReference(ItemKey item, uint price)
     {
-        return new ReferencePrice(item, ReferenceSource.UniversalisWorld, price, price, price, 1f, Now - TimeSpan.FromHours(5));
+        return new ReferencePrice(item, ReferenceSource.UniversalisWorld, price, 0, price, 1f, Now - TimeSpan.FromHours(5));
     }
 
-    private static ItemRule RandomRule(Random random, uint basePrice)
+    private static ItemRuleSnapshot RandomRule(Random random, uint basePrice)
     {
-        return new ItemRule
+        return ItemRuleSnapshot.From(new ItemRule
         {
             ItemId = ItemId,
             Floor = random.Next(3) == 0 ? PriceNear(random, basePrice) : 0,
             Ceiling = random.Next(4) == 0 ? PriceNear(random, basePrice) : 0,
             FixedPrice = random.Next(8) == 0 ? PriceNear(random, basePrice) : 0,
-        };
+        });
     }
 
     private static PricingSettings RandomSettings(Random random)
@@ -564,10 +564,10 @@ public sealed class PriceDecisionPropertyTests
         if (reference.Exists && reference.Item == input.Item && fresh)
         {
             var share = (long)reference.AverageSalePrice * input.Settings.MinimumReferenceRatioPercent;
-            floor = Math.Max(floor, (share + PriceMath.PercentScale - 1) / PriceMath.PercentScale);
+            floor = Math.Max(floor, (share + Gil.PercentScale - 1) / Gil.PercentScale);
         }
 
-        return (uint)Math.Clamp(floor, PriceMath.MinimumPrice, PriceMath.MaximumPrice);
+        return (uint)Math.Clamp(floor, MarketLimits.MinimumUnitPrice, MarketLimits.MaximumUnitPrice);
     }
 
     private static int DropsInsideTheWindow(in PriceDecisionInput input)

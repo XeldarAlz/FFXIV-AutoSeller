@@ -34,4 +34,7 @@ internal readonly record struct PlanEdit(PlanRowKey Row, PlanEditKind Kind, ulon
     }
 }
 
-internal readonly record struct PlanEditTarget(PlanRowKey Row, uint Floor, ulong BoundRetainerId, bool IsListing);
+internal readonly record struct PlanEditTarget(PlanRowKey Row, uint Floor, ulong BoundRetainerId)
+{
+    public bool IsListing => Row.IsListing;
+}

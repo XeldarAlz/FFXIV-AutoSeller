@@ -1,3 +1,6 @@
+using System.Collections.Immutable;
+using System.Text.Json;
+using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Rules.Model;
 using static AutoSeller.Tests.Rules.RuleFixtures;
 
@@ -261,6 +264,74 @@ public sealed class EligibilityTests
         Assert.False(set.Contains(Ring));
         Assert.False(ItemIdSet.Empty.Contains(Ore));
         Assert.False(default(ItemIdSet).Contains(Ore));
+        Assert.Equal([Sword, Potion, Ore], set.Ids.AsSpan().ToArray());
+        Assert.Empty(default(ItemIdSet).Ids);
+    }
+
+    [Fact]
+    public void RuleBookFreezesEverySetSortedAndWithoutRepeats()
+    {
+        var vendor = VendorSettings.Off with { Enabled = true, VendorList = ItemIdSet.From([Sword, Potion, Sword]) };
+        var category = new CategoryRule { ItemUiCategoryIds = [MaterialCategory, MedicineCategory, MaterialCategory] };
+        var rules = Book(
+            [SellRule(Potion), SellRule(Ore, QualityFilter.High), SellRule(Ore, QualityFilter.Normal)],
+            [category],
+            [Sword, Ore, Sword],
+            SellSources.Bags,
+            [SecondRetainer, FirstRetainer, SecondRetainer],
+            vendor);
+
+        Assert.Equal([Potion, Ore, Ore], ItemIds(rules.SellList));
+        Assert.Equal(QualityFilter.High, rules.SellList[1].Qualities);
+        Assert.Equal([MedicineCategory, MaterialCategory], rules.CategoryRules[0].ItemUiCategoryIds.AsSpan().ToArray());
+        Assert.Equal([Sword, Ore], rules.NeverSell.Ids.AsSpan().ToArray());
+        Assert.Equal([Sword, Potion], rules.Vendor.VendorList.Ids.AsSpan().ToArray());
+        Assert.True(rules.Vendor.Enabled);
+        Assert.Equal(SellSources.Bags, rules.Sources);
+        Assert.Equal([FirstRetainer, SecondRetainer], rules.InventoryRetainerIds.AsSpan().ToArray());
+    }
+
+    [Fact]
+    public void RuleBookRestoredFromItsOwnValuesReadsTheSame()
+    {
+        var rules = Book([SellRule(Potion), SellRule(Ore)], [Category(MaterialCategory, 50)], [Sword], AllSources, [SecondRetainer], VendorSettings.Off with { JunkThreshold = 700 });
+
+        var restored = RuleBook.Restore(rules.SellList, rules.CategoryRules, rules.NeverSell, rules.Vendor, rules.Sources, rules.InventoryRetainerIds);
+
+        Assert.Equal(rules.SellList.AsSpan().ToArray(), restored.SellList.AsSpan().ToArray());
+        Assert.Equal(rules.CategoryRules.AsSpan().ToArray(), restored.CategoryRules.AsSpan().ToArray());
+        Assert.Equal(rules.Vendor, restored.Vendor);
+        Assert.True(restored.Allows(In(SlotSource.RetainerPage, Ore, 1, retainerId: SecondRetainer)));
+        Assert.False(restored.Allows(In(SlotSource.RetainerPage, Ore, 1, retainerId: FirstRetainer)));
+    }
+
+    [Fact]
+    public void RuleBookRestoredWithCategoryIdsOutOfOrderStillCoversEveryCategory()
+    {
+        var unsorted = new CategoryRuleSnapshot([MaterialCategory, MedicineCategory, MaterialCategory], 50);
+        var fromJournal = JsonSerializer.Deserialize<CategoryRuleSnapshot>($$"""{"ItemUiCategoryIds":[{{MaterialCategory}},{{MedicineCategory}}],"MinimumReferenceValue":50}""", RunJournal.SerializerOptions);
+
+        var restored = RuleBook.Restore([], [unsorted, fromJournal], ItemIdSet.Empty, VendorSettings.Off, AllSources, []);
+
+        for (var index = 0; index < restored.CategoryRules.Length; index++)
+        {
+            var category = restored.CategoryRules[index];
+            Assert.Equal([MedicineCategory, MaterialCategory], category.ItemUiCategoryIds.AsSpan().ToArray());
+            Assert.Equal(50u, category.MinimumReferenceValue);
+            Assert.True(category.Covers(MaterialCategory));
+            Assert.True(category.Covers(MedicineCategory));
+        }
+    }
+
+    private static uint[] ItemIds(ImmutableArray<ItemRuleSnapshot> sellList)
+    {
+        var itemIds = new uint[sellList.Length];
+        for (var index = 0; index < itemIds.Length; index++)
+        {
+            itemIds[index] = sellList[index].ItemId;
+        }
+
+        return itemIds;
     }
 
     [Fact]

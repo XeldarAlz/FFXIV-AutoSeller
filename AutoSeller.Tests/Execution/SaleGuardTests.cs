@@ -1,23 +1,32 @@
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
 namespace AutoSeller.Tests.Execution;
 
 public sealed class SaleGuardTests
 {
+    private static readonly RuleBook LoweredFloorRules = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor - 1 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+    private static readonly PricingSettings WiderStepLimit = StartPricing with { StepLimitPercent = 90 };
+    private static readonly PlanEdits EditedPlan = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now)]);
+
     private static readonly (SaleRejection Expected, Func<SaleGuardInput> Breaker)[] Breakers =
     [
         (SaleRejection.WrongRun, () => GuardInput(Reprice()) with { ActiveRunId = Guid.NewGuid() }),
         (SaleRejection.WrongCharacter, () => GuardInput(Reprice()) with { CharacterContentId = Character + 1 }),
         (SaleRejection.NotOnHomeWorld, () => GuardInput(Reprice()) with { CurrentWorldId = HomeWorld + 1 }),
-        (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRulesHash = RulesHash + 1 }),
-        (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricingHash = PricingHash + 1 }),
-        (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEditsHash = PlanEditsHash + 1 }),
+        (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRules = LoweredFloorRules }),
+        (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricing = WiderStepLimit }),
+        (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEdits = EditedPlan }),
         (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
         (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
         (SaleRejection.StaleSearch, () => GuardInput(Reprice()) with { SearchGeneration = SearchGeneration + 1 }),
-        (SaleRejection.SearchTooOld, () => GuardInput(Reprice()) with { NowUtc = Now + SaleGuard.MaximumSearchAge + TimeSpan.FromMilliseconds(1) }),
+        (SaleRejection.SearchTooOld, () => GuardInput(Reprice()) with { NowUtc = Now + SearchReuse.TypingWindow + TimeSpan.FromMilliseconds(1) }),
         (SaleRejection.WritePending, () => GuardInput(Reprice()) with { Value = new ValueState(0, 0, 0, Guid.NewGuid()) }),
         (SaleRejection.JournalUnresolved, () => GuardInput(Reprice()) with { JournalBlocksWrites = true }),
         (SaleRejection.ItemMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 })),
@@ -32,7 +41,7 @@ public sealed class SaleGuardTests
         (SaleRejection.PriceUnchanged, () => GuardInput(Reprice(ListedPrice))),
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
-        (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(PriceRange.Maximum + 1))),
+        (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(MarketLimits.MaximumUnitPrice + 1))),
         (SaleRejection.VendorPriceMismatch, () => GuardInput(Vendor() with { NewPrice = VendorUnitPrice - 1 })),
         (SaleRejection.RepriceCapReached, () => GuardInput(Reprice()) with { Value = new ValueState(RunCaps.DefaultMaxReprices, 0, 0, Guid.Empty) }),
         (SaleRejection.ListingCapReached, () => GuardInput(List()) with { Value = new ValueState(0, RunCaps.DefaultMaxNewListings, 0, Guid.Empty) }),
@@ -98,11 +107,25 @@ public sealed class SaleGuardTests
         SaleWrite[] writes = [Reprice(), List(), Return(), Vendor(), Move()];
         for (var index = 0; index < writes.Length; index++)
         {
-            var loweredFloor = GuardInput(writes[index]) with { CurrentRulesHash = RulesHash + 1, RuleFloor = 1 };
+            var loweredFloor = GuardInput(writes[index]) with { CurrentRules = LoweredFloorRules, RuleFloor = 1 };
 
             Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(loweredFloor).Rejection);
             Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(SaleGuard.Evaluate(loweredFloor).Rejection));
         }
+    }
+
+    [Fact]
+    public void TheLiveConfigurationIsComparedWithWhatStartFroze()
+    {
+        var input = GuardInput(Reprice());
+        var rebuilt = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+        var vendoringOn = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor }], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []);
+
+        Assert.True(SaleGuard.Evaluate(input with { CurrentRules = rebuilt, CurrentPricing = new PricingSettings(), CurrentPlanEdits = PlanEdits.Restore([]) }).IsAllowed);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRules = LoweredFloorRules }).Rejection);
+        Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(input with { CurrentRules = vendoringOn }).Rejection);
+        Assert.Equal(SaleRejection.PricingChanged, SaleGuard.Evaluate(input with { CurrentPricing = WiderStepLimit }).Rejection);
+        Assert.Equal(SaleRejection.PlanEditsChanged, SaleGuard.Evaluate(input with { CurrentPlanEdits = EditedPlan }).Rejection);
     }
 
     [Fact]
@@ -227,13 +250,15 @@ public sealed class SaleGuardTests
     [Fact]
     public void ASearchMayBeAMinuteOldWhenThePriceIsTypedButNoOlder()
     {
-        var atTheLimit = GuardInput(List()) with { NowUtc = Now + SaleGuard.MaximumSearchAge };
+        var atTheLimit = GuardInput(List()) with { NowUtc = Now + SearchReuse.TypingWindow };
         var tooOld = atTheLimit with { NowUtc = atTheLimit.NowUtc + TimeSpan.FromMilliseconds(1) };
         var neverCaptured = GuardInput(List()) with { SearchCapturedAtUtc = default };
+        var capturedAfterNow = GuardInput(List()) with { SearchCapturedAtUtc = Now + TimeSpan.FromMilliseconds(1) };
 
         Assert.True(SaleGuard.Evaluate(atTheLimit).IsAllowed);
         Assert.Equal(SaleRejection.SearchTooOld, SaleGuard.Evaluate(tooOld).Rejection);
         Assert.Equal(SaleRejection.SearchTooOld, SaleGuard.Evaluate(neverCaptured).Rejection);
+        Assert.Equal(SaleRejection.SearchTooOld, SaleGuard.Evaluate(capturedAfterNow).Rejection);
         Assert.Equal(RunReaction.SearchAgain, RunReactions.ForGuard(SaleGuard.Evaluate(tooOld).Rejection));
     }
 
@@ -301,48 +326,6 @@ public sealed class SaleGuardTests
         }
 
         return false;
-    }
-
-    private static SaleGuardInput GuardInput(SaleWrite write)
-    {
-        var slot = SlotFor(write);
-        return new SaleGuardInput
-        {
-            Authorization = Authorization(),
-            ActiveRunId = RunId,
-            CharacterContentId = Character,
-            CurrentWorldId = HomeWorld,
-            CurrentRulesHash = RulesHash,
-            CurrentPricingHash = PricingHash,
-            CurrentPlanEditsHash = PlanEditsHash,
-            OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
-            WindowChainReady = true,
-            SearchGeneration = SearchGeneration,
-            SearchCapturedAtUtc = Now,
-            NowUtc = Now,
-            Value = default,
-            JournalBlocksWrites = false,
-            Write = write,
-            Planned = slot,
-            Observed = slot,
-            EligibleForWrite = true,
-            RuleFloor = RuleFloor,
-            VendorPrice = VendorUnitPrice,
-            VendorRuleMatches = write.Kind == WriteKind.Vendor,
-            IsGear = false,
-            IsProtected = false,
-            OnSellList = write.Kind != WriteKind.Vendor,
-        };
-    }
-
-    private static SlotReading SlotFor(in SaleWrite write)
-    {
-        return write.Kind switch
-        {
-            WriteKind.Reprice or WriteKind.Return => new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice),
-            WriteKind.List => new SlotReading(write.ItemId, write.IsHq, BagStack, 0),
-            _ => new SlotReading(write.ItemId, write.IsHq, write.Quantity, 0),
-        };
     }
 
     private static SaleGuardInput WithObserved(SaleGuardInput input, Func<SlotReading, SlotReading> change)

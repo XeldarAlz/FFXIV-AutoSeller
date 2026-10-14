@@ -14,7 +14,7 @@ internal static class ReferenceSelector
         ItemKey item,
         in ReferencePrice world,
         in ReferencePrice dataCenter,
-        CompetitorSnapshot competition,
+        CompetitorSnapshot? competition,
         DateTime nowUtc)
     {
         if (IsUsable(world, item, nowUtc))
@@ -27,7 +27,7 @@ internal static class ReferenceSelector
             return dataCenter;
         }
 
-        if (competition.ItemId != item.ItemId)
+        if (competition is null || competition.ItemId != item.ItemId)
         {
             return default;
         }

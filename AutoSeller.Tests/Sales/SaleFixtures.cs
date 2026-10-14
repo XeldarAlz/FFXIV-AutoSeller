@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Collections.Immutable;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Sales.Model;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Tests.Sales;
 
@@ -118,7 +119,7 @@ internal static class SaleFixtures
 
     public static long NetOf(uint unitPrice, uint quantity)
     {
-        return SalePrice.NetAfterSellerTax((long)unitPrice * quantity, CityTaxPercent);
+        return Gil.AfterTax((long)unitPrice * quantity, CityTaxPercent);
     }
 
     public static ImmutableArray<SaleRecord> Of(params SaleRecord[] records)

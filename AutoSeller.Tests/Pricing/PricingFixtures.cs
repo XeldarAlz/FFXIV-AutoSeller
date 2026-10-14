@@ -20,7 +20,6 @@ internal static class PricingFixtures
     public const uint VendorPrice = 10;
     public const uint ReferenceGil = 1_000;
 
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
     public static readonly ItemKey Normal = new(ItemId, false);
     public static readonly ItemKey High = new(ItemId, true);
     public static readonly OwnSellers Sellers = OwnSellers.Create([OwnRetainer, AltRetainer], [OwnCharacter, AltCharacter]);
@@ -87,7 +86,7 @@ internal static class PricingFixtures
         TimeSpan age = default)
     {
         var updatedAt = Now - (age == default ? TimeSpan.FromHours(1) : age);
-        return new ReferencePrice(new ItemKey(ItemId, isHq), source, price, price, price, 1f, updatedAt);
+        return new ReferencePrice(new ItemKey(ItemId, isHq), source, price, 0, price, 1f, updatedAt);
     }
 
     public static MarketSale Sale(uint price, TimeSpan ago, bool isHq = false, bool onMannequin = false)
@@ -108,7 +107,7 @@ internal static class PricingFixtures
             Competition = competition,
             Reference = reference,
             VendorPrice = VendorPrice,
-            Rule = new ItemRule { ItemId = ItemId },
+            Rule = ItemRuleSnapshot.From(new ItemRule { ItemId = ItemId }),
             Settings = new PricingSettings(),
             OwnSellers = Sellers,
             NowUtc = Now,

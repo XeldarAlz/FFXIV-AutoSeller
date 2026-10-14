@@ -2,7 +2,8 @@ namespace AutoSeller.Core.Shared;
 
 internal static class Gil
 {
-    private const int PercentDenominator = 100;
+    public const int PercentScale = 100;
+
     private const int DigitGroupLength = 3;
     private const int DecimalBase = 10;
 
@@ -45,23 +46,36 @@ internal static class Gil
         return true;
     }
 
-    public static bool TryPercentFloor(long amount, int percent, out long portion)
+    public static long ScaleDown(long amount, long numerator, long denominator)
     {
-        if (amount < 0 || percent < 0)
+        return Saturate((Int128)amount * numerator / denominator);
+    }
+
+    public static long ScaleUp(long amount, long numerator, long denominator)
+    {
+        var product = (Int128)amount * numerator;
+        var quotient = product / denominator;
+        return Saturate(product % denominator > 0 ? quotient + 1 : quotient);
+    }
+
+    public static bool ExceedsRatio(long amount, long baseline, long numerator, long denominator)
+    {
+        return (Int128)amount * denominator > (Int128)baseline * numerator;
+    }
+
+    public static bool BelowRatio(long amount, long baseline, long numerator, long denominator)
+    {
+        return (Int128)amount * denominator < (Int128)baseline * numerator;
+    }
+
+    public static long AfterTax(long gross, int taxPercent)
+    {
+        if (gross < 0 || taxPercent < 0)
         {
-            portion = 0;
-            return false;
+            return gross;
         }
 
-        var wide = (Int128)amount * percent / PercentDenominator;
-        if (wide > long.MaxValue)
-        {
-            portion = 0;
-            return false;
-        }
-
-        portion = (long)wide;
-        return true;
+        return gross - ScaleDown(gross, taxPercent, PercentScale);
     }
 
     public static bool TryStackPayable(long unitPrice, int quantity, long fee, out long payable)
@@ -137,6 +151,11 @@ internal static class Gil
 
         amount = value;
         return true;
+    }
+
+    private static long Saturate(Int128 value)
+    {
+        return (long)Int128.Clamp(value, long.MinValue, long.MaxValue);
     }
 
     private static bool IsCompleteGroup(int groupLength, bool separatorSeen)

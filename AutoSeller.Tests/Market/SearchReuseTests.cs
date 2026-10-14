@@ -220,10 +220,10 @@ public sealed class SearchReuseTests
     {
         var snapshot = Snapshot(Now, Competitor(1, 900));
 
-        Assert.True(SearchReuse.IsFreshForTyping(snapshot, Now));
-        Assert.True(SearchReuse.IsFreshForTyping(snapshot, Now + SearchReuse.TypingWindow));
-        Assert.False(SearchReuse.IsFreshForTyping(snapshot, Now + SearchReuse.TypingWindow + Tick));
-        Assert.False(SearchReuse.IsFreshForTyping(snapshot, Now - Tick));
+        Assert.True(SearchReuse.IsFreshForTyping(snapshot.CapturedAtUtc, Now));
+        Assert.True(SearchReuse.IsFreshForTyping(snapshot.CapturedAtUtc, Now + SearchReuse.TypingWindow));
+        Assert.False(SearchReuse.IsFreshForTyping(snapshot.CapturedAtUtc, Now + SearchReuse.TypingWindow + Tick));
+        Assert.False(SearchReuse.IsFreshForTyping(snapshot.CapturedAtUtc, Now - Tick));
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public sealed class SearchReuseTests
         Assert.True(reuse.TryReuse(NormalOre, decidedAt, out var reused));
         Assert.Equal(builtGeneration, reused.Generation);
         Assert.NotEqual(machine.Generation, reused.Generation);
-        Assert.True(SearchReuse.IsFreshForTyping(reused, decidedAt));
+        Assert.True(SearchReuse.IsFreshForTyping(reused.CapturedAtUtc, decidedAt));
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public sealed class SearchReuseTests
 
         Assert.True(reuse.TryReuse(NormalOre, decidedAt, out var snapshot));
 
-        Assert.False(SearchReuse.IsFreshForTyping(snapshot, decidedAt));
+        Assert.False(SearchReuse.IsFreshForTyping(snapshot.CapturedAtUtc, decidedAt));
     }
 
     private static CompetitorListing[] CappedRows()

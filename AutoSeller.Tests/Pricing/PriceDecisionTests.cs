@@ -1,6 +1,7 @@
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Pricing.PricingFixtures;
 
 namespace AutoSeller.Tests.Pricing;
@@ -399,7 +400,7 @@ public sealed class PriceDecisionTests
     [Fact]
     public void SearchIsCurrentFromItsCaptureToTheEndOfItsLifetime()
     {
-        var lifetime = PricingSettings.CompetitionLifetime;
+        var lifetime = SearchReuse.ReuseWindow;
         var tick = TimeSpan.FromTicks(1);
 
         Assert.False(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now + tick), Normal, Now));
@@ -487,15 +488,39 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
-    public void PlayerPriceSkipsTheStepLimitAndCooldown()
+    public void PlayerPriceSkipsTheStepLimit()
+    {
+        var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.SetByPlayer(700) };
+
+        AssertDecision(Decide(input), SellAction.RepriceDown, 700, 700, DecisionReason.PlayerPrice);
+    }
+
+    [Theory]
+    [InlineData(700u)]
+    [InlineData(1_300u)]
+    public void PlayerPriceStillWaitsForTheCooldown(uint playerPrice)
+    {
+        var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with
+        {
+            Override = PriceOverride.SetByPlayer(playerPrice),
+            History = RepricedAgo(TimeSpan.FromMinutes(10)),
+        };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_000, playerPrice, DecisionReason.Cooldown);
+        AssertDecision(Decide(input with { History = RepricedAgo(TimeSpan.FromHours(2)) }), playerPrice < 1_000 ? SellAction.RepriceDown : SellAction.RepriceUp, playerPrice, playerPrice, DecisionReason.PlayerPrice);
+    }
+
+    [Fact]
+    public void PlayerPriceDropStillWaitsOutAPriceWar()
     {
         var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with
         {
             Override = PriceOverride.SetByPlayer(700),
-            History = RepricedAgo(TimeSpan.FromMinutes(5)),
+            History = RepricedAgo(TimeSpan.FromHours(3), TimeSpan.FromHours(3), TimeSpan.FromHours(10), TimeSpan.FromHours(20)),
         };
 
-        AssertDecision(Decide(input), SellAction.RepriceDown, 700, 700, DecisionReason.PlayerPrice);
+        AssertDecision(Decide(input), SellAction.Keep, 1_000, 700, DecisionReason.PriceWar);
+        AssertDecision(Decide(input with { Override = PriceOverride.SetByPlayer(1_300) }), SellAction.RepriceUp, 1_300, 1_300, DecisionReason.PlayerPrice);
     }
 
     [Fact]
@@ -544,6 +569,17 @@ public sealed class PriceDecisionTests
         var decision = Decide(NewLot(Snapshot(), FreshReference));
 
         AssertDecision(decision, SellAction.List, 1_000, 1_000, DecisionReason.NoCompetition);
+    }
+
+    [Fact]
+    public void LotMatchedByACategoryRulePricesWithoutAnItemRule()
+    {
+        var input = NewLot(Snapshot(Competitors(1_100, 1_000)), FreshReference) with { Rule = default };
+
+        var decision = Decide(input);
+
+        AssertDecision(decision, SellAction.List, 999, 999, DecisionReason.Undercut);
+        Assert.Equal(ReferenceFloor, decision.Evidence.Floor);
     }
 
     [Fact]
@@ -656,7 +692,7 @@ public sealed class PriceDecisionTests
     {
         var input = NewLot(Snapshot(), FreshReference) with { Rule = Rule(fixedPrice: uint.MaxValue) };
 
-        AssertDecision(Decide(input), SellAction.List, PriceMath.MaximumPrice, PriceMath.MaximumPrice, DecisionReason.FixedPrice);
+        AssertDecision(Decide(input), SellAction.List, MarketLimits.MaximumUnitPrice, MarketLimits.MaximumUnitPrice, DecisionReason.FixedPrice);
     }
 
     [Fact]
@@ -668,6 +704,29 @@ public sealed class PriceDecisionTests
 
         AssertDecision(decision, SellAction.List, 999, 999, DecisionReason.Undercut);
         Assert.Equal(1_000u, decision.Evidence.CompetitorPrice);
+    }
+
+    [Fact]
+    public void MedianListingNeverChangesADecision()
+    {
+        var withoutMedian = FreshReference with { MedianListing = 0 };
+        var withMedian = FreshReference with { MedianListing = 3 * ReferenceGil };
+        PriceDecisionInput[] inputs =
+        [
+            NewLot(Snapshot(Competitors(1_100, 1_000)), withoutMedian),
+            NewLot(Snapshot(), withoutMedian),
+            Existing(1_000, Snapshot(Competitors(600, 700)), withoutMedian),
+            Existing(400, Snapshot(Competitors(2_000)), withoutMedian),
+            Existing(1_000, Snapshot(Competitors(100, 900, 950)), withoutMedian),
+        ];
+
+        for (var index = 0; index < inputs.Length; index++)
+        {
+            Assert.Equal(Decide(inputs[index]), Decide(inputs[index] with { Reference = withMedian }));
+        }
+
+        Assert.Equal(FloorCalculator.Calculate(0, VendorPrice, withoutMedian, 50), FloorCalculator.Calculate(0, VendorPrice, withMedian, 50));
+        Assert.Equal(ReferenceSelector.Select(Normal, withoutMedian, default, Snapshot(), Now), withoutMedian);
     }
 
     [Fact]
@@ -737,9 +796,9 @@ public sealed class PriceDecisionTests
         return PriceDecision.Decide(input);
     }
 
-    private static ItemRule Rule(uint ceiling = 0, uint fixedPrice = 0)
+    private static ItemRuleSnapshot Rule(uint ceiling = 0, uint fixedPrice = 0)
     {
-        return new ItemRule { ItemId = ItemId, Ceiling = ceiling, FixedPrice = fixedPrice };
+        return ItemRuleSnapshot.From(new ItemRule { ItemId = ItemId, Ceiling = ceiling, FixedPrice = fixedPrice });
     }
 
     private static CompetitorSnapshot BlindSnapshot(BlindSearch search)
@@ -750,7 +809,7 @@ public sealed class PriceDecisionTests
             BlindSearch.Capped => Snapshot(CappedListings()),
             BlindSearch.Incomplete => Expecting(listings, listings.Length + 1),
             BlindSearch.CountUnknown => Expecting(listings, -1),
-            BlindSearch.Stale => Snapshot(listings, [], Now - PricingSettings.CompetitionLifetime - TimeSpan.FromTicks(1)),
+            BlindSearch.Stale => Snapshot(listings, [], Now - SearchReuse.ReuseWindow - TimeSpan.FromTicks(1)),
             BlindSearch.FromTheFuture => Snapshot(listings, [], Now + TimeSpan.FromMinutes(1)),
             _ => new CompetitorSnapshot
             {

@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using AutoSeller.Core.Sales.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Sales.SaleFixtures;
 
 namespace AutoSeller.Tests.Sales;
@@ -48,7 +49,7 @@ public sealed class SaleHistoryParserTests
         Assert.True(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
 
         Assert.DoesNotContain(sales, sale => sale.ItemId == MythriteIngot);
-        Assert.All(sales, sale => Assert.InRange(sale.UnitPrice, 1u, SalePrice.MaximumUnitPrice));
+        Assert.All(sales, sale => Assert.InRange(sale.UnitPrice, 1u, MarketLimits.MaximumUnitPrice));
     }
 
     [Fact]
@@ -162,15 +163,5 @@ public sealed class SaleHistoryParserTests
     public void NetIsPossibleOnlyBetweenTheHighestTaxAndNoTax(long gross, long net, bool possible)
     {
         Assert.Equal(possible, SalePrice.CouldNetTo(gross, net));
-    }
-
-    [Theory]
-    [InlineData(19_990, 5, 18_991)]
-    [InlineData(19_990, 3, 19_391)]
-    [InlineData(19_990, 0, 19_990)]
-    [InlineData(1, 5, 1)]
-    public void SellerTaxIsTakenFromTheGrossRoundedDown(long gross, int taxPercent, long expectedNet)
-    {
-        Assert.Equal(expectedNet, SalePrice.NetAfterSellerTax(gross, taxPercent));
     }
 }

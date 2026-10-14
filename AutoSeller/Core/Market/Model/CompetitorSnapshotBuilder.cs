@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Market.Model;
 
@@ -31,8 +32,6 @@ internal readonly ref struct CompetitorCapture
 
 internal static class CompetitorSnapshotBuilder
 {
-    public const uint MaximumUnitPrice = 999_999_999;
-
     public static bool TryBuild(
         in CompetitorCapture capture,
         int currentGeneration,
@@ -93,7 +92,7 @@ internal static class CompetitorSnapshotBuilder
 
     private static bool IsListable(uint quantity, uint unitPrice)
     {
-        return quantity > 0 && unitPrice is > 0 and <= MaximumUnitPrice;
+        return quantity > 0 && MarketLimits.IsListableUnitPrice(unitPrice);
     }
 
     private static ImmutableArray<MarketSale> ListableSales(ReadOnlySpan<MarketSale> history)

@@ -1,11 +1,11 @@
+using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Shared;
+
 namespace AutoSeller.Core.Execution.Model;
 
 internal static class SaleGuard
 {
-    private const long PercentDenominator = 100;
-
-    public static readonly TimeSpan MaximumSearchAge = TimeSpan.FromSeconds(60);
-
     public static SaleVerdict Evaluate(in SaleGuardInput input)
     {
         var floor = Floor(input);
@@ -104,7 +104,7 @@ internal static class SaleGuard
             return SaleRejection.StaleSearch;
         }
 
-        if (write.SetsPrice && input.NowUtc - input.SearchCapturedAtUtc > MaximumSearchAge)
+        if (write.SetsPrice && !SearchReuse.IsFreshForTyping(input.SearchCapturedAtUtc, input.NowUtc))
         {
             return SaleRejection.SearchTooOld;
         }
@@ -120,17 +120,17 @@ internal static class SaleGuard
     private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
     {
         var authorization = input.Authorization;
-        if (input.CurrentRulesHash != authorization.RulesHash)
+        if (Fingerprint.OfRuleBook(input.CurrentRules) != authorization.RulesHash)
         {
             return SaleRejection.RulesChanged;
         }
 
-        if (input.CurrentPricingHash != authorization.PricingHash)
+        if (Fingerprint.OfPricing(input.CurrentPricing) != authorization.PricingHash)
         {
             return SaleRejection.PricingChanged;
         }
 
-        return input.CurrentPlanEditsHash != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
+        return Fingerprint.OfPlanEdits(input.CurrentPlanEdits) != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
     }
 
     private static SaleRejection CheckIdentity(in SaleGuardInput input)
@@ -187,23 +187,12 @@ internal static class SaleGuard
             return SaleRejection.BelowFloor;
         }
 
-        if (write.Kind == WriteKind.Reprice && !WithinStepLimit(write, input.Authorization.StepLimitPercent) && !IsApproved(input))
+        if (write.Kind == WriteKind.Reprice && PriceMath.ExceedsStepLimit(write.OldPrice, write.NewPrice, input.Authorization.StepLimitPercent) && !IsApproved(input))
         {
             return SaleRejection.OverStepLimit;
         }
 
-        return PriceRange.Contains(write.NewPrice) ? SaleRejection.None : SaleRejection.PriceOutOfRange;
-    }
-
-    private static bool WithinStepLimit(in SaleWrite write, int stepLimitPercent)
-    {
-        if (write.NewPrice >= write.OldPrice)
-        {
-            return true;
-        }
-
-        long drop = write.OldPrice - write.NewPrice;
-        return drop * PercentDenominator <= (long)write.OldPrice * stepLimitPercent;
+        return MarketLimits.IsListableUnitPrice(write.NewPrice) ? SaleRejection.None : SaleRejection.PriceOutOfRange;
     }
 
     private static bool IsApproved(in SaleGuardInput input)

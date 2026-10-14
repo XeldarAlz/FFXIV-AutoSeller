@@ -1,3 +1,5 @@
+using AutoSeller.Core.Shared;
+
 namespace AutoSeller.Core.Pricing.Model;
 
 internal enum PriceOverrideKind : byte
@@ -23,11 +25,11 @@ internal readonly record struct PriceOverride
 
     public static PriceOverride ApprovedAt(uint price)
     {
-        return new PriceOverride(PriceOverrideKind.Approved, PriceMath.Clamp(price));
+        return new PriceOverride(PriceOverrideKind.Approved, MarketLimits.ClampUnitPrice(price));
     }
 
     public static PriceOverride SetByPlayer(uint price)
     {
-        return new PriceOverride(PriceOverrideKind.Player, PriceMath.Clamp(price));
+        return new PriceOverride(PriceOverrideKind.Player, MarketLimits.ClampUnitPrice(price));
     }
 }

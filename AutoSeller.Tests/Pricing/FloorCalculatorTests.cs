@@ -1,4 +1,5 @@
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Pricing.PricingFixtures;
 
 namespace AutoSeller.Tests.Pricing;
@@ -34,13 +35,13 @@ public sealed class FloorCalculatorTests
     [Fact]
     public void FloorIsNeverBelowOneGil()
     {
-        Assert.Equal(PriceMath.MinimumPrice, FloorCalculator.Calculate(0, 0, default, HalfReference));
+        Assert.Equal(MarketLimits.MinimumUnitPrice, FloorCalculator.Calculate(0, 0, default, HalfReference));
     }
 
     [Fact]
     public void FloorClampsToTheMaximumPrice()
     {
-        Assert.Equal(PriceMath.MaximumPrice, FloorCalculator.Calculate(uint.MaxValue, uint.MaxValue, Reference(uint.MaxValue), 100));
+        Assert.Equal(MarketLimits.MaximumUnitPrice, FloorCalculator.Calculate(uint.MaxValue, uint.MaxValue, Reference(uint.MaxValue), 100));
     }
 
     [Theory]
@@ -51,6 +52,6 @@ public sealed class FloorCalculatorTests
     [InlineData(long.MaxValue, 999_999_999u)]
     public void PricesClampIntoTheMarketRange(long value, uint expected)
     {
-        Assert.Equal(expected, PriceMath.Clamp(value));
+        Assert.Equal(expected, MarketLimits.ClampUnitPrice(value));
     }
 }

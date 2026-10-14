@@ -16,7 +16,6 @@ internal static class AllocationFixtures
     public const ulong Gamma = 103;
     public const ulong Unknown = 999;
 
-    public static readonly DateTime Now = new(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
 
     public static AllocationRetainer Retainer(
         ulong retainerId,
@@ -67,7 +66,7 @@ internal static class AllocationFixtures
         for (var index = 0; index < edits.Length; index++)
         {
             var edit = edits[index];
-            var target = new PlanEditTarget(edit.Row, 0, 0, false);
+            var target = new PlanEditTarget(edit.Row, 0, 0);
             Assert.Equal(PlanEditRefusal.None, result.TryApply(edit, target, out result));
         }
 

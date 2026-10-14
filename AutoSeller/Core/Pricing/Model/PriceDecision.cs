@@ -32,13 +32,7 @@ internal static class PriceDecision
         return competition.ItemId == item.ItemId
             && competition.IsComplete
             && !competition.IsCapped
-            && IsFresh(competition.CapturedAtUtc, nowUtc);
-    }
-
-    private static bool IsFresh(DateTime capturedAtUtc, DateTime nowUtc)
-    {
-        var age = nowUtc - capturedAtUtc;
-        return age >= TimeSpan.Zero && age <= PricingSettings.CompetitionLifetime;
+            && SearchReuse.IsFreshForReuse(competition.CapturedAtUtc, nowUtc);
     }
 
     private static bool IsPricedWithoutCompetition(in PriceDecisionInput input)
@@ -94,7 +88,7 @@ internal static class PriceDecision
 
         if (target.Reason == DecisionReason.PlayerPrice)
         {
-            return DecidePlayerPrice(current, target.Price, floor, evidence);
+            return DecidePlayerPrice(input, current, target.Price, floor, evidence);
         }
 
         var drops = CallsForDrop(target, current, marketPrice);
@@ -118,18 +112,13 @@ internal static class PriceDecision
 
     private static Decision DecideDrop(in PriceDecisionInput input, uint current, PriceTarget target, in DecisionEvidence evidence)
     {
-        var settings = input.Settings;
-        if (input.History.IsInPriceWar(input.NowUtc, settings.PriceWarDropCount, settings.PriceWarWindow))
+        var wait = WaitReason(input, drops: true);
+        if (wait != DecisionReason.None)
         {
-            return Keep(current, target.Price, DecisionReason.PriceWar, evidence);
+            return Keep(current, target.Price, wait, evidence);
         }
 
-        if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
-        {
-            return Keep(current, target.Price, DecisionReason.Cooldown, evidence);
-        }
-
-        if (!ExceedsStepLimit(current, target.Price, settings.StepLimitPercent))
+        if (!PriceMath.ExceedsStepLimit(current, target.Price, input.Settings.StepLimitPercent))
         {
             return Change(SellAction.RepriceDown, target.Price, target.Reason, evidence);
         }
@@ -161,15 +150,16 @@ internal static class PriceDecision
                 : Keep(current, current, DecisionReason.AlreadyLowest, evidence);
         }
 
-        if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
+        var wait = WaitReason(input, drops: false);
+        if (wait != DecisionReason.None)
         {
-            return Keep(current, raised, DecisionReason.Cooldown, evidence);
+            return Keep(current, raised, wait, evidence);
         }
 
         return Change(SellAction.RepriceUp, raised, followsRule ? target.Reason : DecisionReason.RaisedToMarket, evidence);
     }
 
-    private static Decision DecidePlayerPrice(uint current, uint price, uint floor, in DecisionEvidence evidence)
+    private static Decision DecidePlayerPrice(in PriceDecisionInput input, uint current, uint price, uint floor, in DecisionEvidence evidence)
     {
         if (price < floor)
         {
@@ -181,8 +171,25 @@ internal static class PriceDecision
             return Keep(current, current, DecisionReason.PlayerPrice, evidence);
         }
 
-        var action = price < current ? SellAction.RepriceDown : SellAction.RepriceUp;
-        return Change(action, price, DecisionReason.PlayerPrice, evidence);
+        var drops = price < current;
+        var wait = WaitReason(input, drops);
+        if (wait != DecisionReason.None)
+        {
+            return Keep(current, price, wait, evidence);
+        }
+
+        return Change(drops ? SellAction.RepriceDown : SellAction.RepriceUp, price, DecisionReason.PlayerPrice, evidence);
+    }
+
+    private static DecisionReason WaitReason(in PriceDecisionInput input, bool drops)
+    {
+        var settings = input.Settings;
+        if (drops && input.History.IsInPriceWar(input.NowUtc, settings.PriceWarDropCount, settings.PriceWarWindow))
+        {
+            return DecisionReason.PriceWar;
+        }
+
+        return input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown) ? DecisionReason.Cooldown : DecisionReason.None;
     }
 
     private static Decision BelowFloor(in PriceDecisionInput input, uint current, uint proposed, in DecisionEvidence evidence)
@@ -213,24 +220,24 @@ internal static class PriceDecision
         return target;
     }
 
-    private static PriceTarget RuleOrMarketTarget(ItemRule rule, PricingSettings settings, in SaneCompetition sane, in ReferencePrice reference)
+    private static PriceTarget RuleOrMarketTarget(in ItemRuleSnapshot rule, PricingSettings settings, in SaneCompetition sane, in ReferencePrice reference)
     {
         if (rule.FixedPrice > 0)
         {
-            return new PriceTarget(PriceMath.Clamp(rule.FixedPrice), DecisionReason.FixedPrice);
+            return new PriceTarget(MarketLimits.ClampUnitPrice(rule.FixedPrice), DecisionReason.FixedPrice);
         }
 
         if (!sane.IsEmpty)
         {
             var lowest = sane.Lowest.UnitPrice;
             return settings.Mode == PricingMode.Match
-                ? new PriceTarget(PriceMath.Clamp(lowest), DecisionReason.Matched)
+                ? new PriceTarget(MarketLimits.ClampUnitPrice(lowest), DecisionReason.Matched)
                 : new PriceTarget(Undercut(lowest, settings), DecisionReason.Undercut);
         }
 
         if (reference.Exists)
         {
-            return new PriceTarget(PriceMath.Clamp(reference.AverageSalePrice), DecisionReason.NoCompetition);
+            return new PriceTarget(MarketLimits.ClampUnitPrice(reference.AverageSalePrice), DecisionReason.NoCompetition);
         }
 
         return default;
@@ -239,9 +246,9 @@ internal static class PriceDecision
     private static uint Undercut(uint lowest, PricingSettings settings)
     {
         var amount = settings.UndercutUnit == UndercutUnit.Percent
-            ? Math.Max(1, PriceMath.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))
+            ? Math.Max(1, Gil.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))
             : settings.UndercutGil;
-        return PriceMath.Clamp(Gil.SaturatingAdd(lowest, -amount));
+        return MarketLimits.ClampUnitPrice(Gil.SaturatingAdd(lowest, -amount));
     }
 
     private static bool CallsForDrop(PriceTarget target, uint current, uint marketPrice)
@@ -259,12 +266,6 @@ internal static class PriceDecision
         };
     }
 
-    private static bool ExceedsStepLimit(uint current, uint target, int stepLimitPercent)
-    {
-        var drop = Gil.SaturatingAdd(current, -(long)target);
-        return PriceMath.ExceedsRatio(drop, current, stepLimitPercent, PriceMath.PercentScale);
-    }
-
     private static bool FollowsTheMarketUp(PricingSettings settings, uint current, uint marketPrice, bool belowFloor)
     {
         return settings.RaisePrices && (belowFloor || IsBeyondRaiseGap(current, marketPrice, settings.RaiseGapPercent));
@@ -272,13 +273,13 @@ internal static class PriceDecision
 
     private static bool IsBeyondRaiseGap(uint current, uint marketPrice, int raiseGapPercent)
     {
-        return PriceMath.ExceedsRatio(marketPrice, current, PriceMath.PercentScale + raiseGapPercent, PriceMath.PercentScale);
+        return Gil.ExceedsRatio(marketPrice, current, Gil.PercentScale + raiseGapPercent, Gil.PercentScale);
     }
 
     private static uint RaiseLimit(uint current, int maximumRaisePercent)
     {
-        var limit = PriceMath.ScaleDown(current, PriceMath.PercentScale + maximumRaisePercent, PriceMath.PercentScale);
-        return PriceMath.Clamp(Math.Max(Gil.SaturatingAdd(current, 1), limit));
+        var limit = Gil.ScaleDown(current, Gil.PercentScale + maximumRaisePercent, Gil.PercentScale);
+        return MarketLimits.ClampUnitPrice(Math.Max(Gil.SaturatingAdd(current, 1), limit));
     }
 
     private static bool IsApproved(PriceOverride priceOverride, uint target)

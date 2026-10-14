@@ -1,6 +1,11 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Ledger;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
 namespace AutoSeller.Tests.Execution;
@@ -65,11 +70,9 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.NoRetainers, Create(out _, retainers: []));
         Assert.Equal(AuthorizationProblem.InvalidRetainer, Create(out _, retainers: [FirstRetainer, 0]));
         Assert.Equal(AuthorizationProblem.DuplicateRetainer, Create(out _, retainers: [FirstRetainer, SecondRetainer, FirstRetainer]));
-        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 4));
-        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 91));
         Assert.Equal(AuthorizationProblem.InvalidCaps, Create(out _, caps: new RunCaps(-1, 100, 20_000)));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = 0 }]));
-        Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = PriceRange.Maximum + 1 }]));
+        Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = MarketLimits.MaximumUnitPrice + 1 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { OldPrice = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { ItemId = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { RetainerId = StrangerRetainer }]));
@@ -77,12 +80,31 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.None, Create(out _));
     }
 
-    [Fact]
-    public void StepLimitMayBeFrozenAnywhereInsideThePlansRange()
+    [Theory]
+    [InlineData(1, 5)]
+    [InlineData(40, 40)]
+    [InlineData(100, 90)]
+    public void StepLimitIsThePricingStepLimitInsideThePlansRange(int configured, int frozen)
     {
-        Assert.Equal(AuthorizationProblem.None, Create(out _, stepLimitPercent: 5));
-        Assert.Equal(AuthorizationProblem.None, Create(out _, stepLimitPercent: 90));
-        Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 100));
+        var authorization = Authorization(pricing: new PricingSettings { StepLimitPercent = configured });
+
+        Assert.Equal(frozen, authorization.StepLimitPercent);
+    }
+
+    [Fact]
+    public void StartFreezesTheRuleBookPricingAndPlanEditsWithTheirFingerprints()
+    {
+        var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now)]);
+        var pricing = new PricingSettings { Mode = PricingMode.Match };
+
+        var authorization = Authorization(pricing: pricing, planEdits: edits);
+
+        Assert.Same(StartRules, authorization.Rules);
+        Assert.Same(pricing, authorization.Pricing);
+        Assert.Same(edits, authorization.PlanEdits);
+        Assert.Equal(Fingerprint.OfRuleBook(StartRules), authorization.RulesHash);
+        Assert.Equal(Fingerprint.OfPricing(pricing), authorization.PricingHash);
+        Assert.Equal(Fingerprint.OfPlanEdits(edits), authorization.PlanEditsHash);
     }
 
     [Fact]
@@ -95,9 +117,20 @@ public sealed class SellAuthorizationTests
     [Fact]
     public void JournalEventRoundTripsTheAuthorization()
     {
-        var authorization = Authorization(new RunCaps(10, 20, 3_000), [FirstApproval], dryRun: true);
+        var rules = RuleBook.Create(
+            [new ItemRule { ItemId = Ore, Floor = 400, Ceiling = 9_000, LotSize = 5, KeepCount = 2, PreferredRetainerId = SecondRetainer }, new ItemRule { ItemId = Ore + 1, Qualities = QualityFilter.High, Paused = true }],
+            [new CategoryRule { ItemUiCategoryIds = [48, 44], MinimumReferenceValue = 300 }],
+            ItemIdSet.From([Ore + 2, Ore + 3]),
+            new VendorSettings(true, ItemIdSet.From([Ore + 4]), 1_500),
+            SellSources.Bags | SellSources.RetainerPages,
+            [SecondRetainer]);
+        var pricing = new PricingSettings { UndercutUnit = UndercutUnit.Percent, RepriceCooldown = TimeSpan.FromHours(3), BelowFloorListing = BelowFloorListing.ReturnAfterDelay };
+        var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now), PlanEdit.Exclude(ListingRow with { Slot = MarketSlot + 1 }, Now)]);
+        var authorization = Authorization(new RunCaps(10, 20, 3_000), [FirstApproval], dryRun: true, rules, pricing, edits);
 
-        var recorded = authorization.ToJournalEvent(1, Now);
+        var line = JsonSerializer.Serialize<JournalEvent>(authorization.ToJournalEvent(1, Now), RunJournal.SerializerOptions);
+        var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(line, RunJournal.SerializerOptions));
+        Assert.True(recorded.IsWellFormed());
         Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
 
         Assert.Equal(authorization.RunId, restored!.RunId);
@@ -108,11 +141,31 @@ public sealed class SellAuthorizationTests
         Assert.Equal(authorization.RulesHash, restored.RulesHash);
         Assert.Equal(authorization.PricingHash, restored.PricingHash);
         Assert.Equal(authorization.PlanEditsHash, restored.PlanEditsHash);
+        Assert.Equal(rules.SellList.AsSpan().ToArray(), restored.Rules.SellList.AsSpan().ToArray());
+        Assert.Equal([44, 48], restored.Rules.CategoryRules[0].ItemUiCategoryIds.AsSpan().ToArray());
+        Assert.Equal(rules.NeverSell.Ids.AsSpan().ToArray(), restored.Rules.NeverSell.Ids.AsSpan().ToArray());
+        Assert.Equal(rules.Vendor.VendorList.Ids.AsSpan().ToArray(), restored.Rules.Vendor.VendorList.Ids.AsSpan().ToArray());
+        Assert.Equal(1_500u, restored.Rules.Vendor.JunkThreshold);
+        Assert.True(restored.Rules.Vendor.Enabled);
+        Assert.Equal(rules.Sources, restored.Rules.Sources);
+        Assert.Equal([SecondRetainer], restored.Rules.InventoryRetainerIds.AsSpan().ToArray());
+        Assert.Equal(pricing, restored.Pricing);
+        Assert.Equal(edits.Items.AsSpan().ToArray(), restored.PlanEdits.Items.AsSpan().ToArray());
         Assert.Equal(authorization.StepLimitPercent, restored.StepLimitPercent);
         Assert.Equal(authorization.Caps, restored.Caps);
         Assert.Equal(authorization.PolicyVersion, restored.PolicyVersion);
         Assert.Equal(authorization.CreatedAtUtc, restored.CreatedAtUtc);
         Assert.True(restored.DryRun);
+    }
+
+    [Fact]
+    public void AJournalPlanPriceOutsideTheMarketRangeIsNotRestored()
+    {
+        var recorded = Authorization().ToJournalEvent(1, Now) with { PlanEdits = [new PlanEdit(ListingRow, PlanEditKind.Price, (ulong)uint.MaxValue + 2, Now)] };
+
+        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
+        Assert.Empty(restored!.PlanEdits.Items);
+        Assert.Equal(PriceOverride.None, restored.OverrideForLot(ListingRow));
     }
 
     [Fact]
@@ -122,62 +175,12 @@ public sealed class SellAuthorizationTests
         Assert.True(RunCaps.Default.IsValid);
     }
 
-    [Fact]
-    public void RuleFingerprintIgnoresOrderButSeesEveryField()
-    {
-        var first = new ItemRule { ItemId = Ore, Floor = 500 };
-        var second = new ItemRule { ItemId = Ore + 1, Ceiling = 9_000 };
-        var baseline = Fingerprint.OfRules([first, second]);
-
-        Assert.Equal(baseline, Fingerprint.OfRules([second, first]));
-        Assert.NotEqual(baseline, Fingerprint.OfRules([first]));
-        Assert.NotEqual(Fingerprint.OfRules([]), Fingerprint.OfRules([first]));
-        Assert.All(RuleVariants(first), variant => Assert.NotEqual(Fingerprint.OfRule(first), Fingerprint.OfRule(variant)));
-    }
-
-    private static ItemRule[] RuleVariants(ItemRule rule)
-    {
-        return
-        [
-            Copy(rule, copy => copy.ItemId++),
-            Copy(rule, copy => copy.Qualities = QualityFilter.High),
-            Copy(rule, copy => copy.Floor++),
-            Copy(rule, copy => copy.Ceiling++),
-            Copy(rule, copy => copy.FixedPrice++),
-            Copy(rule, copy => copy.LotSize++),
-            Copy(rule, copy => copy.KeepCount++),
-            Copy(rule, copy => copy.ListingsToKeepUp++),
-            Copy(rule, copy => copy.PreferredRetainerId++),
-            Copy(rule, copy => copy.Paused = true),
-        ];
-    }
-
-    private static ItemRule Copy(ItemRule rule, Action<ItemRule> change)
-    {
-        var copy = new ItemRule
-        {
-            ItemId = rule.ItemId,
-            Qualities = rule.Qualities,
-            Floor = rule.Floor,
-            Ceiling = rule.Ceiling,
-            FixedPrice = rule.FixedPrice,
-            LotSize = rule.LotSize,
-            KeepCount = rule.KeepCount,
-            ListingsToKeepUp = rule.ListingsToKeepUp,
-            PreferredRetainerId = rule.PreferredRetainerId,
-            Paused = rule.Paused,
-        };
-        change(copy);
-        return copy;
-    }
-
     private static AuthorizationProblem Create(
         out SellAuthorization? authorization,
         Guid? runId = null,
         ulong character = Character,
         uint homeWorld = HomeWorld,
         ImmutableArray<ulong>? retainers = null,
-        int stepLimitPercent = StepLimitPercent,
         RunCaps? caps = null,
         ImmutableArray<ApprovedPrice>? approvedPrices = null)
     {
@@ -186,10 +189,9 @@ public sealed class SellAuthorizationTests
             character,
             homeWorld,
             retainers ?? [FirstRetainer, SecondRetainer],
-            RulesHash,
-            PricingHash,
-            PlanEditsHash,
-            stepLimitPercent,
+            StartRules,
+            StartPricing,
+            PlanEdits.None,
             caps ?? RunCaps.Default,
             false,
             SellAuthorization.CurrentPolicyVersion,

@@ -230,6 +230,27 @@ public sealed class UniversalisTranslatorTests
     }
 
     [Fact]
+    public void MedianListingLeftOutOrZeroReadsAsAbsentWithoutFlaggingTheItem()
+    {
+        const string json = """
+            {"results":[{"itemId":5057,
+              "nq":{"medianListing":{"world":{"price":0}},
+                    "averageSalePrice":{"world":{"price":1450}}},
+              "hq":{"averageSalePrice":{"world":{"price":2900}}},
+              "worldUploadTimes":[{"worldId":56,"timestamp":1791973797080}]}],
+             "failedItems":[]}
+            """;
+
+        var reference = Item(UniversalisTranslator.TranslateReferences(Utf8(json), Chunk(PhoenixScope, BusyItem)), BusyItem);
+
+        Assert.Equal(0u, reference.WorldNormal.MedianListing);
+        Assert.Equal(0u, reference.WorldHigh.MedianListing);
+        Assert.True(reference.WorldNormal.Exists);
+        Assert.True(reference.WorldHigh.Exists);
+        Assert.Equal(ReferenceCoverage.None, reference.Coverage);
+    }
+
+    [Fact]
     public void OutOfRangeNumbersAreDroppedAndFlagged()
     {
         const string json = """

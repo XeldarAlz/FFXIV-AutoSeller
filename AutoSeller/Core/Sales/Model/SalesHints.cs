@@ -89,7 +89,6 @@ internal static class SalesHints
 
     private static int CompareItems(SalesHint first, SalesHint second)
     {
-        var order = first.Item.ItemId.CompareTo(second.Item.ItemId);
-        return order != 0 ? order : first.Item.IsHq.CompareTo(second.Item.IsHq);
+        return first.Item.CompareTo(second.Item);
     }
 }

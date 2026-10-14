@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Model;
 
 namespace AutoSeller.Core.Execution.Model;
 
@@ -28,13 +30,11 @@ internal sealed record RunAuthorized : JournalEvent
 
     public required ImmutableArray<ulong> RetainerIds { get; init; }
 
-    public required ulong RulesHash { get; init; }
+    public required AuthorizedRules Rules { get; init; }
 
-    public required ulong PricingHash { get; init; }
+    public required PricingSettings Pricing { get; init; }
 
-    public required ulong PlanEditsHash { get; init; }
-
-    public required int StepLimitPercent { get; init; }
+    public required ImmutableArray<PlanEdit> PlanEdits { get; init; }
 
     public required RunCaps Caps { get; init; }
 
@@ -48,7 +48,14 @@ internal sealed record RunAuthorized : JournalEvent
 
     public override bool IsWellFormed()
     {
-        return base.IsWellFormed() && CharacterContentId != 0 && !RetainerIds.IsDefaultOrEmpty && !ApprovedPrices.IsDefault;
+        return base.IsWellFormed()
+            && CharacterContentId != 0
+            && !RetainerIds.IsDefaultOrEmpty
+            && Rules is not null
+            && Rules.IsWellFormed()
+            && Pricing is not null
+            && !PlanEdits.IsDefault
+            && !ApprovedPrices.IsDefault;
     }
 }
 

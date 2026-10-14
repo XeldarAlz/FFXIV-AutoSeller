@@ -1,5 +1,10 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
 
@@ -12,7 +17,6 @@ internal enum AuthorizationProblem : byte
     NoRetainers,
     InvalidRetainer,
     DuplicateRetainer,
-    InvalidStepLimit,
     InvalidCaps,
     InvalidApprovedPrice,
     DuplicateApprovedPrice,
@@ -20,9 +24,7 @@ internal enum AuthorizationProblem : byte
 
 internal sealed class SellAuthorization
 {
-    public const int CurrentPolicyVersion = 1;
-    public const int MinimumStepLimitPercent = 5;
-    public const int MaximumStepLimitPercent = 90;
+    public const int CurrentPolicyVersion = 2;
 
     private SellAuthorization()
     {
@@ -36,13 +38,17 @@ internal sealed class SellAuthorization
 
     public required ImmutableArray<ulong> RetainerIds { get; init; }
 
+    public required RuleBook Rules { get; init; }
+
+    public required PricingSettings Pricing { get; init; }
+
+    public required PlanEdits PlanEdits { get; init; }
+
     public required ulong RulesHash { get; init; }
 
     public required ulong PricingHash { get; init; }
 
     public required ulong PlanEditsHash { get; init; }
-
-    public required int StepLimitPercent { get; init; }
 
     public required RunCaps Caps { get; init; }
 
@@ -54,15 +60,16 @@ internal sealed class SellAuthorization
 
     public required DateTime CreatedAtUtc { get; init; }
 
+    public int StepLimitPercent => Pricing.StepLimitPercent;
+
     public static AuthorizationProblem TryCreate(
         Guid runId,
         ulong characterContentId,
         uint homeWorldId,
         ImmutableArray<ulong> retainerIds,
-        ulong rulesHash,
-        ulong pricingHash,
-        ulong planEditsHash,
-        int stepLimitPercent,
+        RuleBook rules,
+        PricingSettings pricing,
+        PlanEdits planEdits,
         RunCaps caps,
         bool dryRun,
         int policyVersion,
@@ -75,7 +82,7 @@ internal sealed class SellAuthorization
         var frozenPrices = approvedPrices.IsDefault ? [] : approvedPrices.AsSpan().ToArray();
         Array.Sort(frozenRetainers);
         Array.Sort(frozenPrices, ApprovedPrice.Compare);
-        var problem = Validate(runId, characterContentId, homeWorldId, frozenRetainers, stepLimitPercent, caps);
+        var problem = Validate(runId, characterContentId, homeWorldId, frozenRetainers, caps);
         if (problem == AuthorizationProblem.None)
         {
             problem = ValidateApprovedPrices(frozenPrices, frozenRetainers);
@@ -92,10 +99,12 @@ internal sealed class SellAuthorization
             CharacterContentId = characterContentId,
             HomeWorldId = homeWorldId,
             RetainerIds = ImmutableCollectionsMarshal.AsImmutableArray(frozenRetainers),
-            RulesHash = rulesHash,
-            PricingHash = pricingHash,
-            PlanEditsHash = planEditsHash,
-            StepLimitPercent = stepLimitPercent,
+            Rules = rules,
+            Pricing = pricing,
+            PlanEdits = planEdits,
+            RulesHash = Fingerprint.OfRuleBook(rules),
+            PricingHash = Fingerprint.OfPricing(pricing),
+            PlanEditsHash = Fingerprint.OfPlanEdits(planEdits),
             Caps = caps,
             DryRun = dryRun,
             PolicyVersion = policyVersion,
@@ -112,10 +121,9 @@ internal sealed class SellAuthorization
             recorded.CharacterContentId,
             recorded.HomeWorldId,
             recorded.RetainerIds,
-            recorded.RulesHash,
-            recorded.PricingHash,
-            recorded.PlanEditsHash,
-            recorded.StepLimitPercent,
+            recorded.Rules.ToRuleBook(),
+            recorded.Pricing,
+            PlanEdits.Restore(recorded.PlanEdits.AsSpan()),
             recorded.Caps,
             recorded.DryRun,
             recorded.PolicyVersion,
@@ -134,10 +142,9 @@ internal sealed class SellAuthorization
             CharacterContentId = CharacterContentId,
             HomeWorldId = HomeWorldId,
             RetainerIds = RetainerIds,
-            RulesHash = RulesHash,
-            PricingHash = PricingHash,
-            PlanEditsHash = PlanEditsHash,
-            StepLimitPercent = StepLimitPercent,
+            Rules = AuthorizedRules.From(Rules),
+            Pricing = Pricing,
+            PlanEdits = PlanEdits.Items,
             Caps = Caps,
             DryRun = DryRun,
             PolicyVersion = PolicyVersion,
@@ -153,10 +160,15 @@ internal sealed class SellAuthorization
 
     public bool TryGetApprovedPrice(in SaleWrite write, out uint price)
     {
+        return TryGetApprovedPrice(write.RetainerId, write.Slot, new ItemKey(write.ItemId, write.IsHq), write.OldPrice, out price);
+    }
+
+    public bool TryGetApprovedPrice(ulong retainerId, ushort slot, ItemKey item, uint oldPrice, out uint price)
+    {
         for (var index = 0; index < ApprovedPrices.Length; index++)
         {
             var approved = ApprovedPrices[index];
-            if (approved.Covers(write))
+            if (approved.Covers(retainerId, slot, item, oldPrice))
             {
                 price = approved.Price;
                 return true;
@@ -167,12 +179,27 @@ internal sealed class SellAuthorization
         return false;
     }
 
+    public PriceOverride OverrideForLot(PlanRowKey row)
+    {
+        return PlanEdits.TryGetPrice(row, out var price) ? PriceOverride.SetByPlayer(price) : PriceOverride.None;
+    }
+
+    public PriceOverride OverrideForListing(ulong retainerId, in ListingSlot listing)
+    {
+        if (!TryGetApprovedPrice(retainerId, listing.Slot, listing.Key, listing.UnitPrice, out var approvedPrice))
+        {
+            return PriceOverride.None;
+        }
+
+        var setInThePlan = PlanEdits.TryGetPrice(PlanRowKey.ForListing(retainerId, listing), out var planPrice) && planPrice == approvedPrice;
+        return setInThePlan ? PriceOverride.SetByPlayer(approvedPrice) : PriceOverride.ApprovedAt(approvedPrice);
+    }
+
     private static AuthorizationProblem Validate(
         Guid runId,
         ulong characterContentId,
         uint homeWorldId,
         ulong[] sortedRetainers,
-        int stepLimitPercent,
         RunCaps caps)
     {
         if (runId == Guid.Empty)
@@ -208,11 +235,6 @@ internal sealed class SellAuthorization
             }
         }
 
-        if (stepLimitPercent is < MinimumStepLimitPercent or > MaximumStepLimitPercent)
-        {
-            return AuthorizationProblem.InvalidStepLimit;
-        }
-
         return caps.IsValid ? AuthorizationProblem.None : AuthorizationProblem.InvalidCaps;
     }
 
@@ -222,8 +244,8 @@ internal sealed class SellAuthorization
         {
             var approved = sortedPrices[index];
             if (approved.ItemId == 0
-                || !PriceRange.Contains(approved.OldPrice)
-                || !PriceRange.Contains(approved.Price)
+                || !MarketLimits.IsListableUnitPrice(approved.OldPrice)
+                || !MarketLimits.IsListableUnitPrice(approved.Price)
                 || Array.BinarySearch(sortedRetainers, approved.RetainerId) < 0)
             {
                 return AuthorizationProblem.InvalidApprovedPrice;

@@ -1,26 +1,39 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
-internal readonly record struct CategoryRuleSnapshot(ImmutableArray<byte> ItemUiCategoryIds, uint MinimumReferenceValue)
+internal readonly record struct CategoryRuleSnapshot
 {
+    [JsonConstructor]
+    public CategoryRuleSnapshot(ImmutableArray<byte> itemUiCategoryIds, uint minimumReferenceValue)
+    {
+        ItemUiCategoryIds = SortedIds.Of(itemUiCategoryIds.AsSpan());
+        MinimumReferenceValue = minimumReferenceValue;
+    }
+
+    public ImmutableArray<byte> ItemUiCategoryIds { get; }
+
+    public uint MinimumReferenceValue { get; }
+
     public static CategoryRuleSnapshot From(CategoryRule rule)
     {
         var configured = rule.ItemUiCategoryIds;
-        var builder = ImmutableArray.CreateBuilder<byte>(configured.Length);
+        var categories = ImmutableArray.CreateBuilder<byte>(configured.Length);
         for (var index = 0; index < configured.Length; index++)
         {
             if (configured[index] <= byte.MaxValue)
             {
-                builder.Add((byte)configured[index]);
+                categories.Add((byte)configured[index]);
             }
         }
 
-        return new CategoryRuleSnapshot(builder.ToImmutable(), rule.MinimumReferenceValue);
+        return new CategoryRuleSnapshot(categories.ToImmutable(), rule.MinimumReferenceValue);
     }
 
     public bool Covers(byte itemUiCategory)
     {
-        return ItemUiCategoryIds.AsSpan().Contains(itemUiCategory);
+        return ItemUiCategoryIds.AsSpan().BinarySearch(itemUiCategory) >= 0;
     }
 }

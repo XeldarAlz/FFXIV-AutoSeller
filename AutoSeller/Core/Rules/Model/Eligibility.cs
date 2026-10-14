@@ -132,7 +132,7 @@ internal static class Eligibility
         return EligibilityReason.Eligible;
     }
 
-    private static EligibilityReason MatchSellList(ReadOnlySpan<ItemRuleSnapshot> entries, bool isHq, out ItemRuleSnapshot? match)
+    public static EligibilityReason MatchSellList(ReadOnlySpan<ItemRuleSnapshot> entries, bool isHq, out ItemRuleSnapshot? match)
     {
         var pausedMatch = false;
         for (var index = 0; index < entries.Length; index++)

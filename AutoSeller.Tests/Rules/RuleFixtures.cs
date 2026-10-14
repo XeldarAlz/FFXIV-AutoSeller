@@ -89,9 +89,16 @@ internal static class RuleFixtures
         IEnumerable<CategoryRule>? categoryRules = null,
         IEnumerable<uint>? neverSell = null,
         SellSources sources = SellSources.Default,
-        IEnumerable<ulong>? inventoryRetainerIds = null)
+        IEnumerable<ulong>? inventoryRetainerIds = null,
+        VendorSettings? vendor = null)
     {
-        return RuleBook.Create(sellList ?? [], categoryRules ?? [], ItemIdSet.From(neverSell ?? []), sources, inventoryRetainerIds ?? [FirstRetainer, SecondRetainer]);
+        return RuleBook.Create(
+            sellList ?? [],
+            categoryRules ?? [],
+            ItemIdSet.From(neverSell ?? []),
+            vendor ?? VendorSettings.Off,
+            sources,
+            inventoryRetainerIds ?? [FirstRetainer, SecondRetainer]);
     }
 
     public static RuleBook BookSelling(params ItemRule[] sellList)
@@ -115,7 +122,7 @@ internal static class RuleFixtures
         {
             RetainerId = retainerId,
             CharacterContentId = 1,
-            ReadAtUtc = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc),
+            ReadAtUtc = Now,
             Town = 1,
             Gil = 0,
             Slots = ImmutableArray.Create(listings),

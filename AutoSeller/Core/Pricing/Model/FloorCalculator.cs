@@ -9,10 +9,10 @@ internal static class FloorCalculator
         var floor = Math.Max(ruleFloor, Gil.SaturatingAdd(vendorPrice, 1));
         if (reference.Exists)
         {
-            var referenceFloor = PriceMath.ScaleUp(reference.AverageSalePrice, minimumReferenceRatioPercent, PriceMath.PercentScale);
+            var referenceFloor = Gil.ScaleUp(reference.AverageSalePrice, minimumReferenceRatioPercent, Gil.PercentScale);
             floor = Math.Max(floor, referenceFloor);
         }
 
-        return PriceMath.Clamp(floor);
+        return MarketLimits.ClampUnitPrice(floor);
     }
 }

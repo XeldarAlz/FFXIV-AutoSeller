@@ -11,7 +11,6 @@ internal static class SaleNoticeLayout
 {
     public const uint StackSaleMessageId = 745;
     public const uint SingleSaleMessageId = 748;
-    public const int HighQualityItemIdOffset = 1_000_000;
     public const int EventItemIdStart = 2_000_000;
 
     public static readonly SaleNoticeParameterOrder StackSale = new(Town: 0, Item: 1, Quantity: 2, ListedPrice: 3, NetGil: 4);

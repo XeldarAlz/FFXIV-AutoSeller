@@ -1,3 +1,4 @@
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 
@@ -30,15 +31,20 @@ internal static class SaleNoticeParser
             return false;
         }
 
-        var isHq = rawItemId > SaleNoticeLayout.HighQualityItemIdOffset;
-        var itemId = isHq ? rawItemId - SaleNoticeLayout.HighQualityItemIdOffset : rawItemId;
-        var unitPrice = SalePrice.ToUnitPrice((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning);
-        if (!SalePrice.IsListableUnitPrice(unitPrice) || netGil > SalePrice.ToGross((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning))
+        var isHq = MarketItemId.HasHighQualityOffset((uint)rawItemId);
+        var itemId = MarketItemId.Normalize((uint)rawItemId);
+        if (itemId == 0)
         {
             return false;
         }
 
-        notice = new SaleNotice((byte)town, (uint)itemId, isHq, (uint)quantity, unitPrice, netGil);
+        var unitPrice = SalePrice.ToUnitPrice((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning);
+        if (!MarketLimits.IsListableUnitPrice(unitPrice) || netGil > SalePrice.ToGross((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning))
+        {
+            return false;
+        }
+
+        notice = new SaleNotice((byte)town, itemId, isHq, (uint)quantity, unitPrice, netGil);
         return true;
     }
 

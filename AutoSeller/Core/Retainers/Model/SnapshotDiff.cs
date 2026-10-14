@@ -14,9 +14,6 @@ internal enum SnapshotDiffCorroboration : byte
 
 internal sealed class SnapshotDiff
 {
-    public const int HighestSellerTaxPercent = 5;
-    public const long RetainerGilCap = 999_999_999;
-
     private const int StackWriteLimit = 128;
 
     public required ulong RetainerId { get; init; }
@@ -92,14 +89,13 @@ internal sealed class SnapshotDiff
             return SnapshotDiffCorroboration.NoInferredSales;
         }
 
-        var headroom = RetainerGilCap - previousGil;
+        var headroom = MarketLimits.RetainerGilCap - previousGil;
         if (headroom <= 0)
         {
             return SnapshotDiffCorroboration.GilAtCap;
         }
 
-        Gil.TryPercentFloor(soldGross, HighestSellerTaxPercent, out var highestTax);
-        if (gilGrowth >= Math.Min(soldGross - highestTax, headroom))
+        if (gilGrowth >= Math.Min(Gil.AfterTax(soldGross, MarketLimits.HighestSellerTaxPercent), headroom))
         {
             return SnapshotDiffCorroboration.Corroborated;
         }

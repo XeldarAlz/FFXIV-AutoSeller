@@ -1,7 +1,15 @@
+using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Shared;
+
 namespace AutoSeller.Core.Execution.Model;
 
 internal readonly record struct ApprovedPrice(ulong RetainerId, ushort Slot, uint ItemId, bool IsHq, uint OldPrice, uint Price)
 {
+    public static ApprovedPrice For(ulong retainerId, in ListingSlot listing, uint price)
+    {
+        return new ApprovedPrice(retainerId, listing.Slot, listing.ItemId, listing.IsHq, listing.UnitPrice, price);
+    }
+
     public static int Compare(ApprovedPrice left, ApprovedPrice right)
     {
         var order = left.RetainerId.CompareTo(right.RetainerId);
@@ -31,12 +39,12 @@ internal readonly record struct ApprovedPrice(ulong RetainerId, ushort Slot, uin
         return Compare(this, other) == 0;
     }
 
-    public bool Covers(in SaleWrite write)
+    public bool Covers(ulong retainerId, ushort slot, ItemKey item, uint oldPrice)
     {
-        return RetainerId == write.RetainerId
-            && Slot == write.Slot
-            && ItemId == write.ItemId
-            && IsHq == write.IsHq
-            && OldPrice == write.OldPrice;
+        return RetainerId == retainerId
+            && Slot == slot
+            && ItemId == item.ItemId
+            && IsHq == item.IsHq
+            && OldPrice == oldPrice;
     }
 }
