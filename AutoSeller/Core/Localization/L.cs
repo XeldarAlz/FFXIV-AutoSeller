@@ -20,6 +20,7 @@ internal static partial class L
     {
         public static readonly LocString NavSell = new("shell.nav.sell", "Sell");
         public static readonly LocString NavListings = new("shell.nav.listings", "Listings");
+        public static readonly LocString NavSales = new("shell.nav.sales", "Sales");
         public static readonly LocString NavRules = new("shell.nav.rules", "Rules");
         public static readonly LocString NavSettings = new("shell.nav.settings", "Settings");
         public static readonly LocString NavHistory = new("shell.nav.history", "History");

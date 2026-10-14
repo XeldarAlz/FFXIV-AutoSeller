@@ -244,6 +244,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ToggleHistoryUi() => appWindow.TogglePage(AppWindow.Page.History);
 
+    public void ToggleSalesUi() => appWindow.TogglePage(AppWindow.Page.Sales);
+
     public void ToggleLogUi() => appWindow.TogglePage(AppWindow.Page.Log);
 
     public void ToggleChangelogUi() => appWindow.TogglePage(AppWindow.Page.Changelog);
@@ -266,6 +268,10 @@ public sealed class Plugin : IDalamudPlugin
         else if (trimmed.Equals("stats", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("history", StringComparison.OrdinalIgnoreCase))
         {
             ToggleHistoryUi();
+        }
+        else if (trimmed.Equals("sales", StringComparison.OrdinalIgnoreCase))
+        {
+            ToggleSalesUi();
         }
         else if (trimmed.Equals("log", StringComparison.OrdinalIgnoreCase))
         {

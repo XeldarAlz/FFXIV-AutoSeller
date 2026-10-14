@@ -9,7 +9,7 @@ namespace AutoSeller.Windows.Shell;
 
 public sealed class AppWindow : Window, IDisposable
 {
-    public enum Page { Sell, Listings, Rules, History, Plugins, Log, Settings, Changelog, About }
+    public enum Page { Sell, Listings, Sales, Rules, History, Plugins, Log, Settings, Changelog, About }
 
     private const float PageRevealMs = 260f;
     private const float PageSlide = 12f;
@@ -36,6 +36,7 @@ public sealed class AppWindow : Window, IDisposable
     private readonly Plugin plugin;
     private readonly SellPage sellPage = new();
     private readonly ListingsPage listingsPage = new();
+    private readonly SalesPage salesPage = new();
     private readonly RulesPage rulesPage = new();
     private readonly SettingsPage settingsPage = new();
     private readonly HistoryPage historyPage = new();
@@ -264,6 +265,7 @@ public sealed class AppWindow : Window, IDisposable
         {
             case Page.Sell: sellPage.Draw(plugin); break;
             case Page.Listings: listingsPage.Draw(plugin); break;
+            case Page.Sales: salesPage.Draw(plugin); break;
             case Page.Rules: rulesPage.Draw(plugin); break;
             case Page.Settings: settingsPage.Draw(plugin); break;
             case Page.History: historyPage.Draw(plugin.History); break;

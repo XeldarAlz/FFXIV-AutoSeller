@@ -20,6 +20,7 @@ internal static class NavRail
     [
         new(AppWindow.Page.Sell,      FontAwesomeIcon.Tags,          "##asell_nav_sell",      L.Shell.NavSell),
         new(AppWindow.Page.Listings,  FontAwesomeIcon.ThList,        "##asell_nav_listings",  L.Shell.NavListings),
+        new(AppWindow.Page.Sales,     FontAwesomeIcon.Coins,         "##asell_nav_sales",     L.Shell.NavSales),
         new(AppWindow.Page.Rules,     FontAwesomeIcon.ListUl,        "##asell_nav_rules",     L.Shell.NavRules),
         new(AppWindow.Page.History,   FontAwesomeIcon.ChartLine,     "##asell_nav_history",   L.Shell.NavHistory),
         new(AppWindow.Page.Plugins,   FontAwesomeIcon.Plug,          "##asell_nav_plugins",   L.Shell.NavPlugins),
