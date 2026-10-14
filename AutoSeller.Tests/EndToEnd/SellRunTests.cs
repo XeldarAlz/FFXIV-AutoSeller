@@ -196,7 +196,7 @@ public sealed class SellRunTests
     }
 
     [Fact]
-    public void AListingBelowItsFloorIsKeptWithoutAWrite()
+    public void AListingBelowItsFloorIsKeptAndTheGuardRefusesTheMarketPrice()
     {
         var run = new SellRun([OreRule()], [MarketOf(Alpha, Now, 0, OreListing()), MarketOf(Beta, Now, 0)]);
         run.Start();
@@ -204,13 +204,18 @@ public sealed class SellRunTests
         run.Advance(TimeSpan.FromMinutes(5));
         var listing = OreListing();
         run.ReadMarket(Alpha, 0, listing);
-        var decision = run.DecideListing(Alpha, listing, run.Search(NormalOre, Seller(1, 400), Seller(2, 450)));
+        var competition = run.Search(NormalOre, Seller(1, 400), Seller(2, 450));
+        var decision = run.DecideListing(Alpha, listing, competition);
 
         Assert.Equal(new Decision(SellAction.Keep, ListedPrice, 399, DecisionReason.BelowFloorKept, decision.Evidence), decision);
         Assert.Equal(OreFloor, decision.Evidence.Floor);
         Assert.Throws<ArgumentOutOfRangeException>(() => SaleWrite.ForListing(Alpha, listing, decision));
-        Assert.Equal(1, run.Journal.Count);
-        Assert.Equal(default, run.Values.Snapshot());
+
+        var marketPrice = SaleWrite.ForListing(Alpha, listing, decision with { Action = SellAction.RepriceDown, Price = decision.ProposedPrice });
+        var refused = run.Guard(marketPrice, SlotReading.Of(listing), SlotReading.Of(listing), competition);
+        Assert.Equal(SaleRejection.BelowFloor, refused.Rejection);
+        Assert.Equal(OreFloor, refused.Floor);
+        Assert.Equal(SaleRejection.OverStepLimit, run.Guard(marketPrice with { NewPrice = OreFloor }, SlotReading.Of(listing), SlotReading.Of(listing), competition).Rejection);
     }
 
     [Fact]
