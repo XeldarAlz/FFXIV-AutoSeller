@@ -50,6 +50,11 @@ internal sealed partial class RetainerDriver
         var retainer = session.Retainers[index];
         session.WorkOn(index, default);
         session.Show(RunState.OpeningRetainer, Loc.T(L.Run.StatusRetainer, index + 1, session.Retainers.Length, retainer.Name));
+        if (NotRegisteredToAMarket(retainer.RetainerId))
+        {
+            return new Visit(new Stop(DriverHalt.RetainerNotRegistered, $"{retainer.Name} is not registered to any market, so it has nothing to sell"), false);
+        }
+
         var names = RetainerReads.RetainerNames();
         var row = PromptText.From(retainer.Name).FirstMatchIn(names);
         if (row == PromptText.NoMatch)
@@ -246,6 +251,24 @@ internal sealed partial class RetainerDriver
         }
 
         return Failed(closed, DriverHalt.WindowsDidNotClose, "the retainer list did not close");
+    }
+
+    private bool NotRegisteredToAMarket(ulong retainerId)
+    {
+        if (!plugin.Retainers.TryRead(out var roster))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < roster.Length; index++)
+        {
+            if (roster[index].RetainerId == retainerId)
+            {
+                return roster[index].Town == 0;
+            }
+        }
+
+        return false;
     }
 
     private bool OpenRetainerIs(ulong retainerId)
