@@ -18,7 +18,7 @@ internal readonly record struct RunLiveFacts(
     bool JournalBlocksWrites,
     DateTime NowUtc);
 
-internal readonly record struct GuardedRow(SaleWrite Write, SlotReading Planned, SlotReading Observed, bool Eligible, uint RuleFloor, uint VendorPrice);
+internal readonly record struct GuardedRow(SaleWrite Write, SlotReading Planned, SlotReading Observed, bool Eligible, uint RuleFloor, uint VendorPrice, bool Protected);
 
 internal static class RunGuard
 {
@@ -57,7 +57,7 @@ internal static class RunGuard
             VendorPrice = row.VendorPrice,
             VendorRuleMatches = false,
             IsGear = false,
-            IsProtected = false,
+            IsProtected = row.Protected,
             OnSellList = authorization.Rules.IsOnSellList(row.Write.ItemId),
         });
         if (verdict.IsAllowed && authorization.DryRun && values.TryReserve(writeId, row.Write) == ValueBookResult.Applied)

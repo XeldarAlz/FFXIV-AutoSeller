@@ -78,7 +78,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             observed,
             PricingRule.Manages(Authorization.Rules, listing.Key, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc)),
             PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
-            facts.VendorPrice);
+            facts.VendorPrice,
+            plugin.AutoRetainer.IsItemProtected(listing.ItemId));
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 
@@ -92,7 +93,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             observed,
             Eligibility.Check(held, stock.Item, stock.ReferenceUnitPrice, Authorization.Rules, ListingCounts.From(markets)).IsEligible,
             PricingRule.For(Authorization.Rules, stock.Slot.Key, out _).Floor,
-            stock.Item.VendorPrice);
+            stock.Item.VendorPrice,
+            plugin.AutoRetainer.IsItemProtected(stock.Slot.ItemId));
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 

@@ -175,6 +175,6 @@ public sealed class RunGuardTests
     private static GuardedRow Row(SaleWrite write)
     {
         var reading = new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice);
-        return new GuardedRow(write, reading, reading, true, RuleFloor, VendorUnitPrice);
+        return new GuardedRow(write, reading, reading, true, RuleFloor, VendorUnitPrice, false);
     }
 }
