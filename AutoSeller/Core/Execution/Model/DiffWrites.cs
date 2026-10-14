@@ -7,7 +7,7 @@ internal static class DiffWrites
 {
     private const byte UnknownMarketSlot = byte.MaxValue;
 
-    public static ImmutableArray<SnapshotDiffWrite> For(ulong retainerId, JournalReview review)
+    public static ImmutableArray<SnapshotDiffWrite> For(ulong retainerId, JournalReview review, ReadOnlySpan<WriteRecord> confirmedSinceReview = default)
     {
         var writes = ImmutableArray.CreateBuilder<SnapshotDiffWrite>();
         var runs = review.Runs;
@@ -16,7 +16,13 @@ internal static class DiffWrites
             Collect(retainerId, runs[runIndex].Writes.AsSpan(), writes);
         }
 
+        Collect(retainerId, confirmedSinceReview, writes);
         return writes.ToImmutable();
+    }
+
+    public static WriteRecord Confirmed(WriteIntent intent)
+    {
+        return new WriteRecord(intent.WriteId, intent.Sequence, intent, WriteStatus.Confirmed, intent.Write.Quantity, intent.Write.NewPrice);
     }
 
     private static void Collect(ulong retainerId, ReadOnlySpan<WriteRecord> records, ImmutableArray<SnapshotDiffWrite>.Builder writes)

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Retainers.Model;
 
@@ -13,6 +14,7 @@ internal enum LedgerAnswer : byte
 
 internal sealed class SellLedger
 {
+    private readonly List<WriteRecord> confirmedSinceRead = [];
     private JournalReview? review;
 
     public SellLedger(string directoryPath)
@@ -104,14 +106,21 @@ internal sealed class SellLedger
         return moved;
     }
 
+    public void NoteConfirmed(WriteIntent intent)
+    {
+        confirmedSinceRead.Add(DiffWrites.Confirmed(intent));
+    }
+
     public ImmutableArray<SnapshotDiffWrite> ConfirmedWritesFor(ulong retainerId)
     {
-        return DiffWrites.For(retainerId, Review);
+        var current = Review;
+        return DiffWrites.For(retainerId, current, CollectionsMarshal.AsSpan(confirmedSinceRead));
     }
 
     private JournalReview Load()
     {
         Revision++;
+        confirmedSinceRead.Clear();
         var read = Journal.Read();
         if (read.Failed)
         {
