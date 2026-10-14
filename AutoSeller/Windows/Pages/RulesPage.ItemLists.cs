@@ -95,7 +95,7 @@ internal sealed partial class RulesPage
 
             ImGui.PushID(index);
             ImGui.SetCursorScreenPos(new Vector2(end.X - RowPadX * scale - buttonSize, origin.Y + (size.Y - buttonSize) * 0.5f));
-            if (IconButton.Draw(FontAwesomeIcon.Times, "##remove", buttonSize, Styling.AccentRose, removeTooltip))
+            if (IconButton.Draw(FontAwesomeIcon.Times, "##asell_item_remove", buttonSize, Styling.AccentRose, removeTooltip))
             {
                 removeIndex = index;
             }

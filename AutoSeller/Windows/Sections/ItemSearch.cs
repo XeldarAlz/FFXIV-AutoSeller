@@ -164,8 +164,8 @@ internal sealed class ItemSearch
         var item = catalog.At(results[index]);
 
         ImGui.PushID(index);
-        var hit = Hit.Area("##result", size);
-        var hover = Motion.Hover(Motion.Key("##result"), hit.Hovered || index == highlight);
+        var hit = Hit.Area("##asell_search_result", size);
+        var hover = Motion.Hover(Motion.Key("##asell_search_result"), hit.Hovered || index == highlight);
         ImGui.PopID();
         if (hit.Hovered)
         {

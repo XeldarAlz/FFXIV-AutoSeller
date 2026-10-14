@@ -90,7 +90,7 @@ internal sealed partial class RulesPage
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         var enabled = row.Rule.Enabled;
-        if (ToggleSwitch.Draw("##enabled", ref enabled))
+        if (ToggleSwitch.Draw("##asell_category_enabled", ref enabled))
         {
             row.Rule.Enabled = enabled;
             row.Configuration.RulesChanged();
@@ -99,7 +99,7 @@ internal sealed partial class RulesPage
         var buttonSize = ImGui.GetFrameHeight();
         var toggleSize = ToggleSwitch.Size();
         ImGui.SetCursorScreenPos(new Vector2(origin.X + toggleSize.X + FieldGap * scale, origin.Y + (toggleSize.Y - buttonSize) * 0.5f));
-        if (IconButton.Draw(FontAwesomeIcon.Times, "##remove", buttonSize, Styling.AccentRose, Loc.T(L.Rules.RemoveCategoryRule)))
+        if (IconButton.Draw(FontAwesomeIcon.Times, "##asell_category_remove", buttonSize, Styling.AccentRose, Loc.T(L.Rules.RemoveCategoryRule)))
         {
             removeCategoryRule = row.Rule;
         }
@@ -113,7 +113,7 @@ internal sealed partial class RulesPage
             minimumBuffers[row.Rule] = buffer;
         }
 
-        if (GilField.Draw("##minimum", buffer, row.Rule.MinimumReferenceValue, MarketLimits.MaximumUnitPrice, ZeroHint, GilControlWidth, out var minimum))
+        if (GilField.Draw("##asell_category_minimum", buffer, row.Rule.MinimumReferenceValue, MarketLimits.MaximumUnitPrice, ZeroHint, GilControlWidth, out var minimum))
         {
             row.Rule.MinimumReferenceValue = (uint)minimum;
             row.Configuration.RulesChanged();
@@ -145,7 +145,7 @@ internal sealed partial class RulesPage
 
             ImGui.SetCursorScreenPos(new Vector2(x, y));
             ImGui.PushID((int)categoryId);
-            if (FilterChip.Draw("##chip", label, null, Styling.AccentBlue, true, chipHeight, FontAwesomeIcon.Times, removeTooltip))
+            if (FilterChip.Draw("##asell_category_chip", label, null, Styling.AccentBlue, true, chipHeight, FontAwesomeIcon.Times, removeTooltip))
             {
                 removeId = categoryId;
             }
@@ -163,7 +163,7 @@ internal sealed partial class RulesPage
 
         ImGui.SetCursorScreenPos(new Vector2(x, y + (chipHeight - ImGui.GetFrameHeight()) * 0.5f));
         var picked = PickerPlaceholder;
-        if (Dropdown.Draw("##picker", categoryPickerLabels, ref picked, CategoryPickerWidth, CategoryPickerPanelWidth, true, Loc.T(L.Rules.CategorySearchHint))
+        if (Dropdown.Draw("##asell_category_picker", categoryPickerLabels, ref picked, CategoryPickerWidth, CategoryPickerPanelWidth, true, Loc.T(L.Rules.CategorySearchHint))
             && picked != PickerPlaceholder)
         {
             rule.ItemUiCategoryIds = [.. rule.ItemUiCategoryIds, categoryPickerIds[picked]];

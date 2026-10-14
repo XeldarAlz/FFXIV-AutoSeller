@@ -162,7 +162,7 @@ internal sealed partial class RulesPage
         var midY = origin.Y + height * 0.5f;
         var x = origin.X + width - RowPadX * scale - buttonSize;
         ImGui.SetCursorScreenPos(new Vector2(x, midY - buttonSize * 0.5f));
-        if (IconButton.Draw(FontAwesomeIcon.Times, "##remove", buttonSize, Styling.AccentRose, Loc.T(L.Rules.RemoveSellRule)))
+        if (IconButton.Draw(FontAwesomeIcon.Times, "##asell_rule_remove", buttonSize, Styling.AccentRose, Loc.T(L.Rules.RemoveSellRule)))
         {
             removeRule = rule;
         }
@@ -171,7 +171,7 @@ internal sealed partial class RulesPage
         x -= gap + toggleSize.X;
         ImGui.SetCursorScreenPos(new Vector2(x, midY - toggleSize.Y * 0.5f));
         var active = !rule.Paused;
-        if (ToggleSwitch.Draw("##active", ref active))
+        if (ToggleSwitch.Draw("##asell_rule_active", ref active))
         {
             rule.Paused = !active;
             configuration.RulesChanged();
@@ -186,7 +186,7 @@ internal sealed partial class RulesPage
         ImGui.SetCursorScreenPos(new Vector2(x, midY - ImGui.GetFrameHeight() * 0.5f));
         var selected = Array.IndexOf(qualityChoices, rule.Qualities);
         var mask = canBeHq ? 0u : 1u << HighOnlyIndex;
-        if (Dropdown.Draw("##quality", qualityLabels, ref selected, QualityWidth, 0f, false, null, mask))
+        if (Dropdown.Draw("##asell_rule_quality", qualityLabels, ref selected, QualityWidth, 0f, false, null, mask))
         {
             rule.Qualities = qualityChoices[selected];
             configuration.RulesChanged();
@@ -220,21 +220,21 @@ internal sealed partial class RulesPage
         switch (field)
         {
             case SellField.Floor:
-                if (GilField.Draw("##floor", buffers.Floor, rule.Floor, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_floor", buffers.Floor, rule.Floor, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
                 {
                     TrySetFloor(configuration, rule, buffers, (uint)value);
                 }
 
                 break;
             case SellField.Ceiling:
-                if (GilField.Draw("##ceiling", buffers.Ceiling, rule.Ceiling, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_ceiling", buffers.Ceiling, rule.Ceiling, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
                 {
                     TrySetCeiling(configuration, rule, buffers, (uint)value);
                 }
 
                 break;
             case SellField.FixedPrice:
-                if (GilField.Draw("##fixed", buffers.FixedPrice, rule.FixedPrice, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_fixed", buffers.FixedPrice, rule.FixedPrice, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
                 {
                     rule.FixedPrice = (uint)value;
                     configuration.RulesChanged();
@@ -242,7 +242,7 @@ internal sealed partial class RulesPage
 
                 break;
             case SellField.LotSize:
-                if (GilField.Draw("##lot", buffers.LotSize, rule.LotSize, MaximumLotSize, Loc.T(L.Rules.WholeStackHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_lot", buffers.LotSize, rule.LotSize, MaximumLotSize, Loc.T(L.Rules.WholeStackHint), width, out value, help))
                 {
                     rule.LotSize = (uint)value;
                     configuration.RulesChanged();
@@ -250,7 +250,7 @@ internal sealed partial class RulesPage
 
                 break;
             case SellField.KeepCount:
-                if (GilField.Draw("##keep", buffers.KeepCount, rule.KeepCount, MaximumKeepCount, ZeroHint, width, out value, help))
+                if (GilField.Draw("##asell_rule_keep", buffers.KeepCount, rule.KeepCount, MaximumKeepCount, ZeroHint, width, out value, help))
                 {
                     rule.KeepCount = (uint)value;
                     configuration.RulesChanged();
@@ -259,7 +259,7 @@ internal sealed partial class RulesPage
                 break;
             case SellField.ListingsToKeepUp:
                 var listings = (int)rule.ListingsToKeepUp;
-                if (Stepper.Draw("##keepup", ref listings, 1, 1, ItemRule.MaximumListingsToKeepUp, "%d", width))
+                if (Stepper.Draw("##asell_rule_keepup", ref listings, 1, 1, ItemRule.MaximumListingsToKeepUp, "%d", width))
                 {
                     rule.ListingsToKeepUp = (byte)listings;
                     configuration.RulesChanged();
@@ -307,7 +307,7 @@ internal sealed partial class RulesPage
             selected = otherIndex;
         }
 
-        if (!Dropdown.Draw("##retainer", retainerLabels, ref selected, width, 0f, false, null, 1u << otherIndex) || selected == otherIndex)
+        if (!Dropdown.Draw("##asell_rule_retainer", retainerLabels, ref selected, width, 0f, false, null, 1u << otherIndex) || selected == otherIndex)
         {
             return;
         }
