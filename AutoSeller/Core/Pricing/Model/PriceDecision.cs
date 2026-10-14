@@ -141,11 +141,6 @@ internal static class PriceDecision
                 : Keep(current, current, DecisionReason.AlreadyLowest, evidence);
         }
 
-        if (raised <= current)
-        {
-            return Keep(current, current, StayReason(target.Reason), evidence);
-        }
-
         if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
         {
             return Keep(current, raised, DecisionReason.Cooldown, evidence);
@@ -262,7 +257,8 @@ internal static class PriceDecision
 
     private static uint RaiseLimit(uint current, int maximumRaisePercent)
     {
-        return PriceMath.Clamp(PriceMath.ScaleDown(current, PriceMath.PercentScale + maximumRaisePercent, PriceMath.PercentScale));
+        var limit = PriceMath.ScaleDown(current, PriceMath.PercentScale + maximumRaisePercent, PriceMath.PercentScale);
+        return PriceMath.Clamp(Math.Max(Gil.SaturatingAdd(current, 1), limit));
     }
 
     private static bool IsApproved(PriceOverride priceOverride, uint target)

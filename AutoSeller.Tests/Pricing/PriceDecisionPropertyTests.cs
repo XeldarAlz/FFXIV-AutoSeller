@@ -313,7 +313,7 @@ public sealed class PriceDecisionPropertyTests
 
             raises++;
             var current = input.CurrentListing!.Value.UnitPrice;
-            var highestRaise = (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent) / PriceMath.PercentScale;
+            var highestRaise = Math.Max(current + 1L, (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent) / PriceMath.PercentScale);
             Assert.True(decision.Price > current);
             Assert.True(decision.Price <= Math.Max(highestRaise, decision.Evidence.Floor), $"case {caseIndex}: {decision} from {current}");
         }

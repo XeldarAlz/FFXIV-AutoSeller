@@ -54,6 +54,21 @@ public sealed class PriceDecisionTests
         AssertDecision(decision, SellAction.RepriceUp, 900, 900, DecisionReason.RaisedToMarket);
     }
 
+    [Theory]
+    [InlineData(1u, 50, 2u)]
+    [InlineData(19u, 5, 20u)]
+    [InlineData(20u, 5, 21u)]
+    public void CheapListingRisesByAtLeastOneGil(uint ownPrice, int maximumRaisePercent, uint expectedPrice)
+    {
+        var input = Existing(ownPrice, Snapshot(Competitors(1_000))) with
+        {
+            VendorPrice = 0,
+            Settings = new PricingSettings { MaximumRaisePercent = maximumRaisePercent },
+        };
+
+        AssertDecision(Decide(input), SellAction.RepriceUp, expectedPrice, expectedPrice, DecisionReason.RaisedToMarket);
+    }
+
     [Fact]
     public void RaisesWaitWhileRaisingIsOff()
     {
