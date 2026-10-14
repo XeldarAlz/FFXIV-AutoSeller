@@ -4,7 +4,6 @@ namespace AutoSeller.Core.Pricing.Model;
 
 internal static class PriceMath
 {
-    public const int PercentScale = 100;
     public const int BasisPointScale = 10_000;
 
     public static long ScaleDown(long amount, long numerator, long denominator)
@@ -22,6 +21,16 @@ internal static class PriceMath
     public static bool ExceedsRatio(long amount, long baseline, long numerator, long denominator)
     {
         return Gil.SaturatingMultiply(amount, denominator) > Gil.SaturatingMultiply(baseline, numerator);
+    }
+
+    public static bool ExceedsStepLimit(uint current, uint target, int stepLimitPercent)
+    {
+        if (target >= current)
+        {
+            return false;
+        }
+
+        return ExceedsRatio(current - target, current, stepLimitPercent, Gil.PercentScale);
     }
 
     public static bool BelowRatio(long amount, long baseline, long numerator, long denominator)

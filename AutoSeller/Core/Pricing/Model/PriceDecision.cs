@@ -123,7 +123,7 @@ internal static class PriceDecision
             return Keep(current, target.Price, DecisionReason.Cooldown, evidence);
         }
 
-        if (!ExceedsStepLimit(current, target.Price, settings.StepLimitPercent))
+        if (!PriceMath.ExceedsStepLimit(current, target.Price, settings.StepLimitPercent))
         {
             return Change(SellAction.RepriceDown, target.Price, target.Reason, evidence);
         }
@@ -253,12 +253,6 @@ internal static class PriceDecision
         };
     }
 
-    private static bool ExceedsStepLimit(uint current, uint target, int stepLimitPercent)
-    {
-        var drop = Gil.SaturatingAdd(current, -(long)target);
-        return PriceMath.ExceedsRatio(drop, current, stepLimitPercent, PriceMath.PercentScale);
-    }
-
     private static bool FollowsTheMarketUp(PricingSettings settings, uint current, uint marketPrice, bool belowFloor)
     {
         return settings.RaisePrices && (belowFloor || IsBeyondRaiseGap(current, marketPrice, settings.RaiseGapPercent));
@@ -266,12 +260,12 @@ internal static class PriceDecision
 
     private static bool IsBeyondRaiseGap(uint current, uint marketPrice, int raiseGapPercent)
     {
-        return PriceMath.ExceedsRatio(marketPrice, current, PriceMath.PercentScale + raiseGapPercent, PriceMath.PercentScale);
+        return PriceMath.ExceedsRatio(marketPrice, current, Gil.PercentScale + raiseGapPercent, Gil.PercentScale);
     }
 
     private static uint RaiseLimit(uint current, int maximumRaisePercent)
     {
-        var limit = PriceMath.ScaleDown(current, PriceMath.PercentScale + maximumRaisePercent, PriceMath.PercentScale);
+        var limit = PriceMath.ScaleDown(current, Gil.PercentScale + maximumRaisePercent, Gil.PercentScale);
         return MarketLimits.ClampUnitPrice(Math.Max(Gil.SaturatingAdd(current, 1), limit));
     }
 

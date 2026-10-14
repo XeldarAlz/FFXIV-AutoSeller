@@ -87,7 +87,7 @@ public sealed class PriceDecisionPropertyTests
             var input = RandomInput(random);
             var referenceGil = (uint)random.Next(MinimumBasePrice, MaximumBasePrice);
             input = input with { Reference = FreshWorldReference(input.Item, referenceGil) };
-            var highestBait = ((long)referenceGil * input.Settings.BaitRatioPercent - 1) / PriceMath.PercentScale;
+            var highestBait = ((long)referenceGil * input.Settings.BaitRatioPercent - 1) / Gil.PercentScale;
             var baits = new CompetitorListing[random.Next(1, 4)];
             for (var index = 0; index < baits.Length; index++)
             {
@@ -234,7 +234,7 @@ public sealed class PriceDecisionPropertyTests
                 continue;
             }
 
-            var dropShare = (long)(current - decision.Price) * PriceMath.PercentScale;
+            var dropShare = (long)(current - decision.Price) * Gil.PercentScale;
             Assert.True(dropShare <= (long)current * input.Settings.StepLimitPercent, $"case {caseIndex}: {decision} from {current}");
         }
 
@@ -342,7 +342,7 @@ public sealed class PriceDecisionPropertyTests
 
             raises++;
             var current = input.CurrentListing!.Value.UnitPrice;
-            var highestRaise = Math.Max(current + 1L, (long)current * (PriceMath.PercentScale + input.Settings.MaximumRaisePercent) / PriceMath.PercentScale);
+            var highestRaise = Math.Max(current + 1L, (long)current * (Gil.PercentScale + input.Settings.MaximumRaisePercent) / Gil.PercentScale);
             Assert.True(decision.Price > current);
             Assert.True(decision.Price <= Math.Max(highestRaise, decision.Evidence.Floor), $"case {caseIndex}: {decision} from {current}");
         }
@@ -441,7 +441,7 @@ public sealed class PriceDecisionPropertyTests
 
     private static CompetitorListing[] Cluster(Random random, bool isHq, uint clusterLow)
     {
-        var highest = (long)clusterLow * (PriceMath.PercentScale + ClusterSpreadPercent) / PriceMath.PercentScale;
+        var highest = (long)clusterLow * (Gil.PercentScale + ClusterSpreadPercent) / Gil.PercentScale;
         var cluster = new CompetitorListing[random.Next(1, 11)];
         cluster[0] = Competitor(clusterLow, isHq);
         for (var index = 1; index < cluster.Length; index++)
@@ -564,7 +564,7 @@ public sealed class PriceDecisionPropertyTests
         if (reference.Exists && reference.Item == input.Item && fresh)
         {
             var share = (long)reference.AverageSalePrice * input.Settings.MinimumReferenceRatioPercent;
-            floor = Math.Max(floor, (share + PriceMath.PercentScale - 1) / PriceMath.PercentScale);
+            floor = Math.Max(floor, (share + Gil.PercentScale - 1) / Gil.PercentScale);
         }
 
         return (uint)Math.Clamp(floor, MarketLimits.MinimumUnitPrice, MarketLimits.MaximumUnitPrice);

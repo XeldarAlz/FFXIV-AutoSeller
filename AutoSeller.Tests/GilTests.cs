@@ -16,6 +16,16 @@ public sealed class GilTests
     }
 
     [Theory]
+    [InlineData(19_990, 5, 18_991)]
+    [InlineData(19_990, 3, 19_391)]
+    [InlineData(19_990, 0, 19_990)]
+    [InlineData(1, 5, 1)]
+    public void TaxIsTakenFromTheGrossRoundedDown(long gross, int taxPercent, long expectedNet)
+    {
+        Assert.Equal(expectedNet, Gil.AfterTax(gross, taxPercent));
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("abc")]
     [InlineData("-5")]

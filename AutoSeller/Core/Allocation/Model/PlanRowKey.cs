@@ -28,12 +28,6 @@ internal readonly record struct PlanRowKey(ulong RetainerId, uint Container, ush
         }
 
         order = LotIndex.CompareTo(other.LotIndex);
-        if (order != 0)
-        {
-            return order;
-        }
-
-        order = ItemId.CompareTo(other.ItemId);
-        return order != 0 ? order : IsHq.CompareTo(other.IsHq);
+        return order != 0 ? order : Item.CompareTo(other.Item);
     }
 }

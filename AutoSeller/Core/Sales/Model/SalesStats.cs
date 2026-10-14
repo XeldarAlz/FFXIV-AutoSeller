@@ -170,12 +170,7 @@ internal sealed class SalesStats
     private static int CompareItems(ItemSales first, ItemSales second)
     {
         var order = second.Totals.NetGil.CompareTo(first.Totals.NetGil);
-        if (order == 0)
-        {
-            order = first.Item.ItemId.CompareTo(second.Item.ItemId);
-        }
-
-        return order != 0 ? order : first.Item.IsHq.CompareTo(second.Item.IsHq);
+        return order != 0 ? order : first.Item.CompareTo(second.Item);
     }
 
     private static int CompareRetainers(RetainerSales first, RetainerSales second)

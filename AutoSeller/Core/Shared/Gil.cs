@@ -2,7 +2,8 @@ namespace AutoSeller.Core.Shared;
 
 internal static class Gil
 {
-    private const int PercentDenominator = 100;
+    public const int PercentScale = 100;
+
     private const int DigitGroupLength = 3;
     private const int DecimalBase = 10;
 
@@ -53,7 +54,7 @@ internal static class Gil
             return false;
         }
 
-        var wide = (Int128)amount * percent / PercentDenominator;
+        var wide = (Int128)amount * percent / PercentScale;
         if (wide > long.MaxValue)
         {
             portion = 0;
@@ -62,6 +63,12 @@ internal static class Gil
 
         portion = (long)wide;
         return true;
+    }
+
+    public static long AfterTax(long gross, int taxPercent)
+    {
+        TryPercentFloor(gross, taxPercent, out var tax);
+        return gross - tax;
     }
 
     public static bool TryStackPayable(long unitPrice, int quantity, long fee, out long payable)

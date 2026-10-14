@@ -238,12 +238,7 @@ internal static class SaleMatcher
         var order = first.CharacterContentId.CompareTo(second.CharacterContentId);
         if (order == 0)
         {
-            order = first.ItemId.CompareTo(second.ItemId);
-        }
-
-        if (order == 0)
-        {
-            order = first.IsHq.CompareTo(second.IsHq);
+            order = first.Key.CompareTo(second.Key);
         }
 
         if (order == 0)

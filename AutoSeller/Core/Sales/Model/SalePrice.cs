@@ -45,18 +45,11 @@ internal static class SalePrice
             return price;
         }
 
-        return NetAfterSellerTax(ToGross(price, quantity, meaning), sellerTaxPercent);
-    }
-
-    public static long NetAfterSellerTax(long gross, int sellerTaxPercent)
-    {
-        Gil.TryPercentFloor(gross, sellerTaxPercent, out var tax);
-        return gross - tax;
+        return Gil.AfterTax(ToGross(price, quantity, meaning), sellerTaxPercent);
     }
 
     public static bool CouldNetTo(long gross, long netGil)
     {
-        Gil.TryPercentFloor(gross, MarketLimits.HighestSellerTaxPercent, out var highestTax);
-        return netGil <= gross && netGil >= gross - highestTax;
+        return netGil <= gross && netGil >= Gil.AfterTax(gross, MarketLimits.HighestSellerTaxPercent);
     }
 }

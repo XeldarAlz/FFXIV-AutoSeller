@@ -95,8 +95,7 @@ internal sealed class SnapshotDiff
             return SnapshotDiffCorroboration.GilAtCap;
         }
 
-        Gil.TryPercentFloor(soldGross, MarketLimits.HighestSellerTaxPercent, out var highestTax);
-        if (gilGrowth >= Math.Min(soldGross - highestTax, headroom))
+        if (gilGrowth >= Math.Min(Gil.AfterTax(soldGross, MarketLimits.HighestSellerTaxPercent), headroom))
         {
             return SnapshotDiffCorroboration.Corroborated;
         }

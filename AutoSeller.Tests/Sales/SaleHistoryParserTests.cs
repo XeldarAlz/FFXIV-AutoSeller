@@ -164,14 +164,4 @@ public sealed class SaleHistoryParserTests
     {
         Assert.Equal(possible, SalePrice.CouldNetTo(gross, net));
     }
-
-    [Theory]
-    [InlineData(19_990, 5, 18_991)]
-    [InlineData(19_990, 3, 19_391)]
-    [InlineData(19_990, 0, 19_990)]
-    [InlineData(1, 5, 1)]
-    public void SellerTaxIsTakenFromTheGrossRoundedDown(long gross, int taxPercent, long expectedNet)
-    {
-        Assert.Equal(expectedNet, SalePrice.NetAfterSellerTax(gross, taxPercent));
-    }
 }

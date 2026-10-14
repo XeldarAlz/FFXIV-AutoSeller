@@ -30,7 +30,7 @@ internal static class InferredSales
                 listing.IsHq,
                 listing.Quantity,
                 listing.UnitPrice,
-                SalePrice.NetAfterSellerTax(gross, sellerTaxPercent),
+                Gil.AfterTax(gross, sellerTaxPercent),
                 SaleSource.Diff)
             {
                 GilCorroboration = diff.Corroboration,

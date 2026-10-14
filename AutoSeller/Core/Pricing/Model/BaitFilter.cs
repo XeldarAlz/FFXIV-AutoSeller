@@ -72,7 +72,7 @@ internal static class BaitFilter
 
         var count = 0;
         while (count < sorted.Length
-            && PriceMath.BelowRatio(sorted[count].UnitPrice, reference.AverageSalePrice, baitRatioPercent, PriceMath.PercentScale))
+            && PriceMath.BelowRatio(sorted[count].UnitPrice, reference.AverageSalePrice, baitRatioPercent, Gil.PercentScale))
         {
             count++;
         }
