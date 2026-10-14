@@ -488,15 +488,39 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
-    public void PlayerPriceSkipsTheStepLimitAndCooldown()
+    public void PlayerPriceSkipsTheStepLimit()
+    {
+        var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.SetByPlayer(700) };
+
+        AssertDecision(Decide(input), SellAction.RepriceDown, 700, 700, DecisionReason.PlayerPrice);
+    }
+
+    [Theory]
+    [InlineData(700u)]
+    [InlineData(1_300u)]
+    public void PlayerPriceStillWaitsForTheCooldown(uint playerPrice)
+    {
+        var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with
+        {
+            Override = PriceOverride.SetByPlayer(playerPrice),
+            History = RepricedAgo(TimeSpan.FromMinutes(10)),
+        };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_000, playerPrice, DecisionReason.Cooldown);
+        AssertDecision(Decide(input with { History = RepricedAgo(TimeSpan.FromHours(2)) }), playerPrice < 1_000 ? SellAction.RepriceDown : SellAction.RepriceUp, playerPrice, playerPrice, DecisionReason.PlayerPrice);
+    }
+
+    [Fact]
+    public void PlayerPriceDropStillWaitsOutAPriceWar()
     {
         var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with
         {
             Override = PriceOverride.SetByPlayer(700),
-            History = RepricedAgo(TimeSpan.FromMinutes(5)),
+            History = RepricedAgo(TimeSpan.FromHours(3), TimeSpan.FromHours(3), TimeSpan.FromHours(10), TimeSpan.FromHours(20)),
         };
 
-        AssertDecision(Decide(input), SellAction.RepriceDown, 700, 700, DecisionReason.PlayerPrice);
+        AssertDecision(Decide(input), SellAction.Keep, 1_000, 700, DecisionReason.PriceWar);
+        AssertDecision(Decide(input with { Override = PriceOverride.SetByPlayer(1_300) }), SellAction.RepriceUp, 1_300, 1_300, DecisionReason.PlayerPrice);
     }
 
     [Fact]

@@ -88,7 +88,7 @@ internal static class PriceDecision
 
         if (target.Reason == DecisionReason.PlayerPrice)
         {
-            return DecidePlayerPrice(current, target.Price, floor, evidence);
+            return DecidePlayerPrice(input, current, target.Price, floor, evidence);
         }
 
         var drops = CallsForDrop(target, current, marketPrice);
@@ -112,18 +112,13 @@ internal static class PriceDecision
 
     private static Decision DecideDrop(in PriceDecisionInput input, uint current, PriceTarget target, in DecisionEvidence evidence)
     {
-        var settings = input.Settings;
-        if (input.History.IsInPriceWar(input.NowUtc, settings.PriceWarDropCount, settings.PriceWarWindow))
+        var wait = WaitReason(input, drops: true);
+        if (wait != DecisionReason.None)
         {
-            return Keep(current, target.Price, DecisionReason.PriceWar, evidence);
+            return Keep(current, target.Price, wait, evidence);
         }
 
-        if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
-        {
-            return Keep(current, target.Price, DecisionReason.Cooldown, evidence);
-        }
-
-        if (!PriceMath.ExceedsStepLimit(current, target.Price, settings.StepLimitPercent))
+        if (!PriceMath.ExceedsStepLimit(current, target.Price, input.Settings.StepLimitPercent))
         {
             return Change(SellAction.RepriceDown, target.Price, target.Reason, evidence);
         }
@@ -155,15 +150,16 @@ internal static class PriceDecision
                 : Keep(current, current, DecisionReason.AlreadyLowest, evidence);
         }
 
-        if (input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown))
+        var wait = WaitReason(input, drops: false);
+        if (wait != DecisionReason.None)
         {
-            return Keep(current, raised, DecisionReason.Cooldown, evidence);
+            return Keep(current, raised, wait, evidence);
         }
 
         return Change(SellAction.RepriceUp, raised, followsRule ? target.Reason : DecisionReason.RaisedToMarket, evidence);
     }
 
-    private static Decision DecidePlayerPrice(uint current, uint price, uint floor, in DecisionEvidence evidence)
+    private static Decision DecidePlayerPrice(in PriceDecisionInput input, uint current, uint price, uint floor, in DecisionEvidence evidence)
     {
         if (price < floor)
         {
@@ -175,8 +171,25 @@ internal static class PriceDecision
             return Keep(current, current, DecisionReason.PlayerPrice, evidence);
         }
 
-        var action = price < current ? SellAction.RepriceDown : SellAction.RepriceUp;
-        return Change(action, price, DecisionReason.PlayerPrice, evidence);
+        var drops = price < current;
+        var wait = WaitReason(input, drops);
+        if (wait != DecisionReason.None)
+        {
+            return Keep(current, price, wait, evidence);
+        }
+
+        return Change(drops ? SellAction.RepriceDown : SellAction.RepriceUp, price, DecisionReason.PlayerPrice, evidence);
+    }
+
+    private static DecisionReason WaitReason(in PriceDecisionInput input, bool drops)
+    {
+        var settings = input.Settings;
+        if (drops && input.History.IsInPriceWar(input.NowUtc, settings.PriceWarDropCount, settings.PriceWarWindow))
+        {
+            return DecisionReason.PriceWar;
+        }
+
+        return input.History.IsCoolingDown(input.NowUtc, settings.RepriceCooldown) ? DecisionReason.Cooldown : DecisionReason.None;
     }
 
     private static Decision BelowFloor(in PriceDecisionInput input, uint current, uint proposed, in DecisionEvidence evidence)
