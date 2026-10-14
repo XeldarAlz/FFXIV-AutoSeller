@@ -11,7 +11,7 @@ namespace AutoSeller.Windows.Pages;
 
 internal sealed class SettingsPage
 {
-    private enum Tab { General, Humanizer, Safety }
+    private enum Tab { General, Pricing, Sources, AutoRetainer, AssistWatch, Sales, Humanizer, Safety }
 
     private readonly record struct Entry(Tab Tab, LocString Label, FontAwesomeIcon Icon, LocString Subtitle);
 
@@ -19,6 +19,11 @@ internal sealed class SettingsPage
     private static readonly Entry[] entries =
     [
         new(Tab.General, L.Settings.CatGeneral, FontAwesomeIcon.Cog, L.Settings.CatGeneralSub),
+        new(Tab.Pricing, L.Pricing.Tab, FontAwesomeIcon.BalanceScale, L.Pricing.TabSub),
+        new(Tab.Sources, L.Sources.Tab, FontAwesomeIcon.BoxOpen, L.Sources.TabSub),
+        new(Tab.AutoRetainer, L.AutoRetainer.Tab, FontAwesomeIcon.Robot, L.AutoRetainer.TabSub),
+        new(Tab.AssistWatch, L.Assist.Tab, FontAwesomeIcon.Eye, L.Assist.TabSub),
+        new(Tab.Sales, L.SaleHistory.Tab, FontAwesomeIcon.Receipt, L.SaleHistory.TabSub),
         new(Tab.Humanizer, L.Humanizer.Tab, FontAwesomeIcon.UserClock, L.Humanizer.TabSub),
         new(Tab.Safety, L.Safety.Tab, FontAwesomeIcon.UserSecret, L.Safety.TabSub),
     ];
@@ -106,6 +111,21 @@ internal sealed class SettingsPage
         {
             case Tab.General:
                 GeneralSettings.Draw(configuration);
+                break;
+            case Tab.Pricing:
+                PriceSettings.Draw(configuration);
+                break;
+            case Tab.Sources:
+                SourceSettings.Draw(configuration, plugin.Characters.Current);
+                break;
+            case Tab.AutoRetainer:
+                AutoRetainerSettings.Draw(configuration);
+                break;
+            case Tab.AssistWatch:
+                AssistSettings.Draw(configuration);
+                break;
+            case Tab.Sales:
+                SaleSettings.Draw(configuration);
                 break;
             case Tab.Humanizer:
                 HumanizerSettings.Draw(configuration);

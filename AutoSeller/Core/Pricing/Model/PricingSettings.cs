@@ -2,25 +2,25 @@ using AutoSeller.Core.Rules.Model;
 
 namespace AutoSeller.Core.Pricing.Model;
 
-internal enum PricingMode : byte
+public enum PricingMode : byte
 {
     Undercut,
     Match,
 }
 
-internal enum UndercutUnit : byte
+public enum UndercutUnit : byte
 {
     Gil,
     Percent,
 }
 
-internal enum BelowFloorNewLot : byte
+public enum BelowFloorNewLot : byte
 {
     KeepInBags,
     ListAtFloor,
 }
 
-internal enum BelowFloorListing : byte
+public enum BelowFloorListing : byte
 {
     KeepListed,
     ReturnAfterDelay,

@@ -19,7 +19,10 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 
 ## Project layout
 
-- `AutoSeller/Core/Rules/`: the rule book frozen at Start (sell list, category rules, never-sell list, vendor settings, sources), item eligibility, lot planning and the vendor rules.
+- `AutoSeller/Core/Rules/`: the rule book frozen at Start (sell list, category rules, never-sell list, vendor settings, sources) and its builder, item eligibility, lot planning, the vendor rules, the rules import and export, the blocked items view, the gear set guard and the rules check behind the Rules page.
+- `AutoSeller/Core/Items/`: the marketable item catalog with its search and item categories, and the game data facts of any item, read once per item.
+- `AutoSeller/Core/Inventory/`: the bag reader and the containers each source reads.
+- `AutoSeller/Core/Characters/`: each character's retainer switches, last retainer snapshots, reprice history, approvals and plan edits, kept in `chars/<content id>.json`.
 - `AutoSeller/Core/Market/`: the Compare Prices search machine and its cross-check, the competitor snapshot and search reuse.
 - `AutoSeller/Core/Pricing/`: the price decision with its floor, bait filter, reference choice and reprice history, the undercut watch, and the Universalis client, throttle and translator under `Universalis/`.
 - `AutoSeller/Core/Allocation/`: the slot allocator that spreads lots over retainers, and the player's plan row edits.
@@ -56,6 +59,10 @@ Some code started as a copy of my other plugins, under the same license, and was
 | `Core/Sales/Model/SalesCsv` field quoting | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Shopping/Import/Csv.cs` | Copied |
 | `SaleGuard`, `ValueBook`, `SellAuthorization`, `SaleReadBack`, `RunReactions` | Auto Shopper's purchase guard, spend book, run authorization, reconciliation and reactions | Written new on the same shape |
 | `PromptText`, `StartBlockRule`, `SellWindowCheck`, the tracked window names | Auto GC Supply `master` (`1c4f8dd`) | Written new on the same shape |
+| `Core/Items/`: `ItemCatalog`, its search and `CatalogItem`, and the item glyph hand-off in `Windows/Shell/AppWindow.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Items/` and `Windows/Shell/AppWindow.cs` | Copied; name resolution dropped, item UI categories added |
+| `Windows/Sections/ItemSearch.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Windows/Pages/ListsPage.Search.cs` | Copied into a section each rule list draws |
+| `Windows/Components/GilField.cs` | Auto GC Supply `master` (`1c4f8dd`), `Windows/Components/GilField.cs` | Copied; a refused value can reset the field |
+| `Windows/Pages/RulesPage*.cs`, the Pricing, Sources, AutoRetainer, Assist and Sales settings sections | Auto Shopper `release/1.1` (`eda8fc8`), `Windows/Pages/ListsPage*.cs` and `Windows/Sections/Config/` | Written new on the same shape |
 
 The retainer sale history byte layout was checked against [Thaliak.Network](https://github.com/menphina/Thaliak.Network) (MIT). No code was taken from it.
 

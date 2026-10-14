@@ -1,7 +1,11 @@
 using AutoSeller.Core;
+using AutoSeller.Core.Characters;
 using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
+using AutoSeller.Core.Inventory;
+using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows;
@@ -38,6 +42,11 @@ public sealed class Plugin : IDalamudPlugin
     internal WindowSystem WindowSystem { get; } = new("AutoSeller");
     internal RunHistory History { get; }
     internal SellController Controller { get; }
+    internal ItemCatalog Items { get; }
+    internal GameItems GameItems { get; }
+    internal CharacterStore Characters { get; }
+    internal BagReader Bags { get; }
+    internal BlockedScanner BlockedScanner { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -66,6 +75,13 @@ public sealed class Plugin : IDalamudPlugin
 
             History = new RunHistory();
             Controller = new SellController();
+            Items = new ItemCatalog();
+            GameItems = new GameItems();
+            Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName);
+            completed.Push(Characters.Dispose);
+            Bags = new BagReader(static _ => false);
+            BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
+            completed.Push(BlockedScanner.Dispose);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -124,6 +140,8 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Login -= OnLoadedInGame;
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
+        BlockedScanner.Dispose();
+        Characters.Dispose();
 
         WindowSystem.RemoveAllWindows();
         appWindow.Dispose();

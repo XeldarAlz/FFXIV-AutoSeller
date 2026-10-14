@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 
@@ -53,6 +54,30 @@ internal sealed class CheckpointStore<T>
             return false;
         }
 
+        LastError = null;
+        return true;
+    }
+
+    public bool TryKeepCopy(CheckpointSource source, string suffix, out string? copyPath)
+    {
+        copyPath = null;
+        var path = FilePath + suffix;
+        for (var attempt = 2; File.Exists(path); attempt++)
+        {
+            path = string.Concat(FilePath, suffix, "-", attempt.ToString(CultureInfo.InvariantCulture));
+        }
+
+        try
+        {
+            File.Copy(source == CheckpointSource.Backup ? BackupPath : FilePath, path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LastError = exception.Message;
+            return false;
+        }
+
+        copyPath = path;
         LastError = null;
         return true;
     }

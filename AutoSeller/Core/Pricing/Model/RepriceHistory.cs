@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Pricing.Model;
@@ -13,8 +14,10 @@ internal readonly record struct RepriceEntry(DateTime LastRepriceUtc, ImmutableA
 
     private const int StackDropLimit = 64;
 
+    [JsonIgnore]
     public bool HasRepriced => LastRepriceUtc != default;
 
+    [JsonIgnore]
     public int DropCount => DropTimesUtc.IsDefault ? 0 : DropTimesUtc.Length;
 
     public bool IsCoolingDown(DateTime nowUtc, TimeSpan cooldown)

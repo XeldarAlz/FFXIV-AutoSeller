@@ -69,6 +69,34 @@ public sealed class CheckpointStoreTests : IDisposable
     }
 
     [Fact]
+    public void CopyKeepsTheLoadedFileUnderANameOfItsOwn()
+    {
+        var store = new CheckpointStore<Marker>(directory.Path, FileName);
+        store.TrySave(new Marker("first", 1));
+        store.TrySave(new Marker("second", 2));
+
+        Assert.True(store.TryKeepCopy(CheckpointSource.Primary, ".kept", out var primaryCopy));
+        Assert.True(store.TryKeepCopy(CheckpointSource.Backup, ".kept", out var backupCopy));
+
+        Assert.Equal(store.FilePath + ".kept", primaryCopy);
+        Assert.Equal(store.FilePath + ".kept-2", backupCopy);
+        Assert.Contains("second", File.ReadAllText(primaryCopy!), StringComparison.Ordinal);
+        Assert.Contains("first", File.ReadAllText(backupCopy!), StringComparison.Ordinal);
+        Assert.Equal(new Marker("second", 2), store.Load().Value);
+    }
+
+    [Fact]
+    public void CopyOfAMissingFileFails()
+    {
+        var store = new CheckpointStore<Marker>(directory.Path, FileName);
+
+        Assert.False(store.TryKeepCopy(CheckpointSource.Primary, ".kept", out var copyPath));
+
+        Assert.Null(copyPath);
+        Assert.NotNull(store.LastError);
+    }
+
+    [Fact]
     public void NothingSavedLoadsNothing()
     {
         var load = new CheckpointStore<Marker>(directory.Path, FileName).Load();

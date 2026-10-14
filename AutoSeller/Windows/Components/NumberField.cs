@@ -11,7 +11,7 @@ internal static class NumberField
 {
     private const float PadX = 9f;
 
-    public static bool Draw(string id, ref string text, string hint, float width, int maxLength, string? tooltip = null, bool takeFocus = false)
+    public static bool Draw(string id, ref string text, string hint, float width, int maxLength, string? tooltip = null, bool takeFocus = false, bool commitOnExit = false)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var height = ImGui.GetFrameHeight();
@@ -40,6 +40,7 @@ internal static class NumberField
             changed = ImGui.InputTextWithHint(id, hint, ref text, maxLength, ImGuiInputTextFlags.CharsDecimal);
         }
 
+        var committed = ImGui.IsItemDeactivatedAfterEdit();
         var active = ImGui.IsItemActive();
         var hovered = ImGui.IsItemHovered();
         var focus = Motion.Approach(Motion.Key(id, 1), active ? 1f : 0f, 16f);
@@ -53,6 +54,6 @@ internal static class NumberField
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(size);
-        return changed;
+        return commitOnExit ? committed : changed;
     }
 }

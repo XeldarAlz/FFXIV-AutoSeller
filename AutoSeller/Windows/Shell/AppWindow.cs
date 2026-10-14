@@ -9,7 +9,7 @@ namespace AutoSeller.Windows.Shell;
 
 public sealed class AppWindow : Window, IDisposable
 {
-    public enum Page { Sell, Settings, History, Plugins, Log, Changelog, About }
+    public enum Page { Sell, Rules, Settings, History, Plugins, Log, Changelog, About }
 
     private const float PageRevealMs = 260f;
     private const float PageSlide = 12f;
@@ -35,6 +35,7 @@ public sealed class AppWindow : Window, IDisposable
 
     private readonly Plugin plugin;
     private readonly SellPage sellPage = new();
+    private readonly RulesPage rulesPage = new();
     private readonly SettingsPage settingsPage = new();
     private readonly HistoryPage historyPage = new();
     private readonly PluginsPage pluginsPage = new();
@@ -45,6 +46,7 @@ public sealed class AppWindow : Window, IDisposable
     private Page page = Page.Sell;
     private long pageShownTick = Environment.TickCount64;
     private bool resetScroll;
+    private bool itemGlyphsShared;
 
     private bool compact;
     private float collapse;
@@ -101,6 +103,7 @@ public sealed class AppWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        ShareItemGlyphs();
         bodyFont = Fonts.PushBody();
         chrome = Styling.PushChrome(Vector2.Zero);
         AdvanceCollapse();
@@ -126,6 +129,17 @@ public sealed class AppWindow : Window, IDisposable
         }
 
         SizeCondition = ImGuiCond.FirstUseEver;
+    }
+
+    private void ShareItemGlyphs()
+    {
+        if (itemGlyphsShared || !plugin.Items.IsReady)
+        {
+            return;
+        }
+
+        itemGlyphsShared = true;
+        Fonts.AddContentGlyphs(plugin.Items.NameGlyphRanges);
     }
 
     private void AdvanceCollapse()
@@ -248,6 +262,7 @@ public sealed class AppWindow : Window, IDisposable
         switch (page)
         {
             case Page.Sell: sellPage.Draw(); break;
+            case Page.Rules: rulesPage.Draw(plugin); break;
             case Page.Settings: settingsPage.Draw(plugin); break;
             case Page.History: historyPage.Draw(plugin.History); break;
             case Page.Plugins: pluginsPage.Draw(); break;
