@@ -8,7 +8,9 @@ internal readonly record struct WatchedListing(ulong RetainerId, byte Slot, Item
     public DateTime PricedAtUtc => LastRepricedAtUtc > ListedAtUtc ? LastRepricedAtUtc : ListedAtUtc;
 }
 
-internal readonly record struct WorldListing(ItemKey Item, uint UnitPrice, ulong RetainerId, DateTime UploadedAtUtc);
+internal readonly record struct WorldListing(ItemKey Item, uint UnitPrice, DateTime UploadedAtUtc);
+
+internal readonly record struct OwnListingPrice(ItemKey Item, uint UnitPrice);
 
 internal readonly record struct WatchMark(
     ulong RetainerId,
@@ -24,21 +26,19 @@ internal readonly record struct WatchMark(
 
 internal static class UndercutWatch
 {
-    private const ulong UnknownRetainer = 0;
     private const int NotFound = -1;
 
     public static ImmutableArray<WatchMark> Mark(
         ReadOnlySpan<WatchedListing> ours,
         ReadOnlySpan<WorldListing> world,
-        ReadOnlySpan<ulong> ownAndAltRetainerIds,
+        ReadOnlySpan<OwnListingPrice> ownAndAltPrices,
         DateTime checkedAtUtc)
     {
-        var competing = Competing(ours, world, ownAndAltRetainerIds);
         var marks = ImmutableArray.CreateBuilder<WatchMark>();
         for (var listingIndex = 0; listingIndex < ours.Length; listingIndex++)
         {
             var listing = ours[listingIndex];
-            var lowestIndex = LowestNewer(listing, world, competing);
+            var lowestIndex = LowestNewerCompetitor(listing, world, ours, ownAndAltPrices);
             if (lowestIndex == NotFound || world[lowestIndex].UnitPrice >= listing.UnitPrice)
             {
                 continue;
@@ -65,39 +65,17 @@ internal static class UndercutWatch
         return needed.ToImmutable();
     }
 
-    private static bool[] Competing(ReadOnlySpan<WatchedListing> ours, ReadOnlySpan<WorldListing> world, ReadOnlySpan<ulong> ownAndAltRetainerIds)
-    {
-        var competing = new bool[world.Length];
-        for (var worldIndex = 0; worldIndex < world.Length; worldIndex++)
-        {
-            competing[worldIndex] = IsCompetitor(world[worldIndex], ours, ownAndAltRetainerIds);
-        }
-
-        return competing;
-    }
-
-    private static bool IsCompetitor(in WorldListing listing, ReadOnlySpan<WatchedListing> ours, ReadOnlySpan<ulong> ownAndAltRetainerIds)
-    {
-        if (listing.UnitPrice == 0)
-        {
-            return false;
-        }
-
-        if (listing.RetainerId == UnknownRetainer)
-        {
-            return true;
-        }
-
-        return !ownAndAltRetainerIds.Contains(listing.RetainerId) && !IsOurs(listing.RetainerId, ours);
-    }
-
-    private static int LowestNewer(in WatchedListing listing, ReadOnlySpan<WorldListing> world, bool[] competing)
+    private static int LowestNewerCompetitor(
+        in WatchedListing listing,
+        ReadOnlySpan<WorldListing> world,
+        ReadOnlySpan<WatchedListing> ours,
+        ReadOnlySpan<OwnListingPrice> ownAndAltPrices)
     {
         var lowestIndex = NotFound;
         for (var worldIndex = 0; worldIndex < world.Length; worldIndex++)
         {
             var candidate = world[worldIndex];
-            if (!competing[worldIndex] || candidate.Item != listing.Item || candidate.UploadedAtUtc <= listing.PricedAtUtc)
+            if (candidate.Item != listing.Item || candidate.UploadedAtUtc <= listing.PricedAtUtc || !IsCompetitor(candidate, ours, ownAndAltPrices))
             {
                 continue;
             }
@@ -111,6 +89,35 @@ internal static class UndercutWatch
         return lowestIndex;
     }
 
+    private static bool IsCompetitor(in WorldListing candidate, ReadOnlySpan<WatchedListing> ours, ReadOnlySpan<OwnListingPrice> ownAndAltPrices)
+        => candidate.UnitPrice != 0 && !WeListAt(candidate, ours) && !WeListAt(candidate, ownAndAltPrices);
+
+    private static bool WeListAt(in WorldListing candidate, ReadOnlySpan<WatchedListing> ours)
+    {
+        for (var listingIndex = 0; listingIndex < ours.Length; listingIndex++)
+        {
+            if (ours[listingIndex].Item == candidate.Item && ours[listingIndex].UnitPrice == candidate.UnitPrice)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool WeListAt(in WorldListing candidate, ReadOnlySpan<OwnListingPrice> ownAndAltPrices)
+    {
+        for (var priceIndex = 0; priceIndex < ownAndAltPrices.Length; priceIndex++)
+        {
+            if (ownAndAltPrices[priceIndex].Item == candidate.Item && ownAndAltPrices[priceIndex].UnitPrice == candidate.UnitPrice)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsBetter(in WorldListing candidate, in WorldListing best)
     {
         if (candidate.UnitPrice != best.UnitPrice)
@@ -119,19 +126,6 @@ internal static class UndercutWatch
         }
 
         return candidate.UploadedAtUtc > best.UploadedAtUtc;
-    }
-
-    private static bool IsOurs(ulong retainerId, ReadOnlySpan<WatchedListing> ours)
-    {
-        for (var listingIndex = 0; listingIndex < ours.Length; listingIndex++)
-        {
-            if (ours[listingIndex].RetainerId == retainerId)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static bool HasMark(ulong retainerId, ReadOnlySpan<WatchMark> marks)
