@@ -29,21 +29,21 @@ internal static class ChainWindows
 {
     public static readonly ImmutableArray<TrackedWindow> Tracked =
     [
-        new(ChainWindow.ContentsFinderConfirm, nameof(ChainWindow.ContentsFinderConfirm)),
-        new(ChainWindow.SelectOk, nameof(ChainWindow.SelectOk)),
-        new(ChainWindow.Request, nameof(ChainWindow.Request)),
-        new(ChainWindow.SelectIconString, nameof(ChainWindow.SelectIconString)),
-        new(ChainWindow.ContextIconMenu, nameof(ChainWindow.ContextIconMenu)),
-        new(ChainWindow.SelectYesno, nameof(ChainWindow.SelectYesno)),
-        new(ChainWindow.RetainerList, nameof(ChainWindow.RetainerList)),
-        new(ChainWindow.Talk, nameof(ChainWindow.Talk)),
-        new(ChainWindow.SelectString, nameof(ChainWindow.SelectString)),
-        new(ChainWindow.RetainerHistory, nameof(ChainWindow.RetainerHistory)),
-        new(ChainWindow.RetainerSellList, nameof(ChainWindow.RetainerSellList)),
-        new(ChainWindow.ContextMenu, nameof(ChainWindow.ContextMenu)),
-        new(ChainWindow.RetainerSell, nameof(ChainWindow.RetainerSell)),
-        new(ChainWindow.ItemSearchResult, nameof(ChainWindow.ItemSearchResult)),
-        new(ChainWindow.InputNumeric, nameof(ChainWindow.InputNumeric)),
+        new(ChainWindow.ContentsFinderConfirm, "ContentsFinderConfirm"),
+        new(ChainWindow.SelectOk, "SelectOk"),
+        new(ChainWindow.Request, "Request"),
+        new(ChainWindow.SelectIconString, "SelectIconString"),
+        new(ChainWindow.ContextIconMenu, "ContextIconMenu"),
+        new(ChainWindow.SelectYesno, "SelectYesno"),
+        new(ChainWindow.RetainerList, "RetainerList"),
+        new(ChainWindow.Talk, "Talk"),
+        new(ChainWindow.SelectString, "SelectString"),
+        new(ChainWindow.RetainerHistory, "RetainerHistory"),
+        new(ChainWindow.RetainerSellList, "RetainerSellList"),
+        new(ChainWindow.ContextMenu, "ContextMenu"),
+        new(ChainWindow.RetainerSell, "RetainerSell"),
+        new(ChainWindow.ItemSearchResult, "ItemSearchResult"),
+        new(ChainWindow.InputNumeric, "InputNumeric"),
     ];
 
     public static bool Contains(ChainWindow set, ChainWindow window) => (set & window) != 0;

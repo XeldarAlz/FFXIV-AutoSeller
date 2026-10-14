@@ -27,10 +27,21 @@ public sealed class ChainWindowTests
     }
 
     [Theory]
-    [InlineData((uint)ChainWindow.RetainerSellList, "RetainerSellList")]
+    [InlineData((uint)ChainWindow.ContentsFinderConfirm, "ContentsFinderConfirm")]
+    [InlineData((uint)ChainWindow.SelectOk, "SelectOk")]
+    [InlineData((uint)ChainWindow.Request, "Request")]
+    [InlineData((uint)ChainWindow.SelectIconString, "SelectIconString")]
+    [InlineData((uint)ChainWindow.ContextIconMenu, "ContextIconMenu")]
     [InlineData((uint)ChainWindow.SelectYesno, "SelectYesno")]
-    [InlineData((uint)ChainWindow.InputNumeric, "InputNumeric")]
+    [InlineData((uint)ChainWindow.RetainerList, "RetainerList")]
+    [InlineData((uint)ChainWindow.Talk, "Talk")]
+    [InlineData((uint)ChainWindow.SelectString, "SelectString")]
+    [InlineData((uint)ChainWindow.RetainerHistory, "RetainerHistory")]
+    [InlineData((uint)ChainWindow.RetainerSellList, "RetainerSellList")]
+    [InlineData((uint)ChainWindow.ContextMenu, "ContextMenu")]
+    [InlineData((uint)ChainWindow.RetainerSell, "RetainerSell")]
     [InlineData((uint)ChainWindow.ItemSearchResult, "ItemSearchResult")]
+    [InlineData((uint)ChainWindow.InputNumeric, "InputNumeric")]
     public void TheGameWindowsKeepTheirAddonNames(uint window, string addonName)
     {
         var found = string.Empty;
