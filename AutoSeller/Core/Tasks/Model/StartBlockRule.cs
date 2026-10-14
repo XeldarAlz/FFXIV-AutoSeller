@@ -14,6 +14,8 @@ internal enum StartBlock : byte
     NoRules,
     NoEnabledRetainers,
     Settling,
+    AlreadyRunning,
+    NotAuthorized,
 }
 
 internal readonly record struct StartFacts(

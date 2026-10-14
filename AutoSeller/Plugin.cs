@@ -82,8 +82,7 @@ public sealed class Plugin : IDalamudPlugin
 
             Configuration = LoadConfiguration();
 
-            History = new RunHistory();
-            Controller = new SellController();
+            History = new RunHistory(PluginInterface.ConfigDirectory.FullName);
             Items = new ItemCatalog();
             GameItems = new GameItems();
             Market = new MarketServices(Configuration, GameItems);
@@ -98,6 +97,8 @@ public sealed class Plugin : IDalamudPlugin
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
+            Controller = new SellController(this, History);
+            completed.Push(Controller.Shutdown);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -315,7 +316,7 @@ public sealed class Plugin : IDalamudPlugin
         return Languages.IsKnown(osLanguage) ? Languages.Resolve(osLanguage).Code : Languages.English.Code;
     }
 
-    private void OnLogout(int type, int code) => Controller.Stop();
+    private void OnLogout(int type, int code) => Controller.Interrupt();
 
     private static void Undo(Stack<Action> completed)
     {

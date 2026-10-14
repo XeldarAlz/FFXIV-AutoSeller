@@ -1,7 +1,18 @@
+using AutoSeller.Core.Execution.Model;
+
 namespace AutoSeller.Core.Tasks.Model;
 
 internal static class RunOutcomeRule
 {
+    public static RunState FinalStateOf(RunEnd end) => end switch
+    {
+        RunEnd.Completed => RunState.Completed,
+        RunEnd.CompletedPartial => RunState.CompletedPartial,
+        RunEnd.NeedsPlayer => RunState.NeedsPlayer,
+        RunEnd.Failed => RunState.Failed,
+        _ => RunState.Stopped,
+    };
+
     public static RunEnd Completion(RetainerVisits visits, ReadOnlySpan<RunDecision> decisions)
     {
         if (visits.NextPending() != RetainerVisits.NoRetainer)

@@ -1,5 +1,6 @@
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Tasks.Model;
 using static AutoSeller.Tests.EndToEnd.RunWorld;
@@ -83,6 +84,21 @@ public sealed class RunOutcomeTests
         Assert.False(skipped.WouldReprice);
         Assert.False(skipped.WouldList);
         Assert.False(skipped.Kept);
+    }
+
+    [Theory]
+    [InlineData((byte)RunEnd.Completed, (byte)RunState.Completed)]
+    [InlineData((byte)RunEnd.CompletedPartial, (byte)RunState.CompletedPartial)]
+    [InlineData((byte)RunEnd.NeedsPlayer, (byte)RunState.NeedsPlayer)]
+    [InlineData((byte)RunEnd.Failed, (byte)RunState.Failed)]
+    [InlineData((byte)RunEnd.Stopped, (byte)RunState.Stopped)]
+    [InlineData((byte)RunEnd.None, (byte)RunState.Stopped)]
+    public void EveryEndIsJournaledAsAFinalState(byte end, byte state)
+    {
+        var finalState = RunOutcomeRule.FinalStateOf((RunEnd)end);
+
+        Assert.Equal((RunState)state, finalState);
+        Assert.True(finalState.IsFinal());
     }
 
     private static RetainerVisits AllVisited(int count)

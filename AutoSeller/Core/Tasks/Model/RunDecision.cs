@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
@@ -30,10 +31,13 @@ internal readonly record struct RunDecision(
     Decision Decision,
     RunSkip Skip)
 {
+    [JsonIgnore]
     public bool WouldReprice => Skip == RunSkip.None && Decision.Action is SellAction.RepriceDown or SellAction.RepriceUp;
 
+    [JsonIgnore]
     public bool WouldList => Skip == RunSkip.None && Decision.Action == SellAction.List;
 
+    [JsonIgnore]
     public bool Kept => Skip == RunSkip.None && Decision.Action == SellAction.Keep;
 
     public static RunDecision ForListing(ulong retainerId, in ListingSlot listing, in Decision decision)
@@ -65,6 +69,7 @@ internal readonly record struct RunDecision(
 
 internal readonly record struct RunTally(int WouldReprice, int WouldList, int Kept, int Skipped)
 {
+    [JsonIgnore]
     public int Decided => WouldReprice + WouldList + Kept + Skipped;
 
     public static RunTally Of(ReadOnlySpan<RunDecision> decisions)
