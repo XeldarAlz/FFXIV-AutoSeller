@@ -275,6 +275,48 @@ public sealed class LotPlannerTests
     }
 
     [Fact]
+    public void BagRoomGoesToTheMostValuableSaddlebagStacksFirst()
+    {
+        var rules = Book([SellRule(Potion), SellRule(Ore)], null, null, SellSources.Default | SellSources.Saddlebag);
+        var cheap = Stock(In(SlotSource.Saddlebag, Potion, 99, 0), Material(Potion), 2);
+        var dear = Stock(In(SlotSource.Saddlebag, Ore, 10, 1), Material(), 500);
+
+        var plan = Plan(rules, ListingCounts.Empty, 1, cheap, dear);
+
+        var lot = Assert.Single(plan.Lots);
+        Assert.Equal(Ore, lot.Row.ItemId);
+        Assert.Equal(LotHold.BagsFull, plan.Slots[0].Hold);
+        Assert.Equal(LotHold.None, plan.Slots[1].Hold);
+    }
+
+    [Fact]
+    public void SaddlebagStackWithoutBagRoomLeavesItsListingToAnotherSource()
+    {
+        var rules = Book([SellRule(Potion, listingsToKeepUp: 1), SellRule(Ore, listingsToKeepUp: 1)], null, null, AllSources);
+        var cheapSaddlebag = Stock(In(SlotSource.Saddlebag, Potion, 99, 0), Material(Potion), 10);
+        var retainerPage = Stock(In(SlotSource.RetainerPage, Potion, 50, 0, retainerId: FirstRetainer), Material(Potion), 10);
+        var dearSaddlebag = Stock(In(SlotSource.Saddlebag, Ore, 99, 1), Material(), 1_000);
+
+        var plan = Plan(rules, ListingCounts.Empty, 1, cheapSaddlebag, retainerPage, dearSaddlebag);
+
+        Assert.Equal(LotHold.BagsFull, plan.Slots[0].Hold);
+        Assert.Equal(1, plan.Slots[1].LotCount);
+        Assert.Equal(1, plan.Slots[2].LotCount);
+        Assert.Equal(2, plan.Lots.Length);
+    }
+
+    [Fact]
+    public void NegativeFreeBagSlotsMeanNoRoom()
+    {
+        var rules = Book([SellRule()], null, null, SellSources.Default | SellSources.Saddlebag);
+
+        var plan = Plan(rules, ListingCounts.Empty, -1, Stock(In(SlotSource.Saddlebag, Ore, 99), Material()));
+
+        Assert.Empty(plan.Lots);
+        Assert.Equal(LotHold.BagsFull, plan.Slots[0].Hold);
+    }
+
+    [Fact]
     public void RetainerPageLotsAreBoundToTheirRetainer()
     {
         var rules = Book([SellRule()], null, null, SellSources.Default | SellSources.RetainerPages);

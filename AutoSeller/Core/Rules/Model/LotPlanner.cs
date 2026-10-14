@@ -64,9 +64,25 @@ internal static class LotPlanner
         }
 
         eligible.Sort((left, right) => CompareForListing(stock[left], stock[right]));
-        var pass = new Pass(stock, checks, eligible, listed, bounds, freeBagSlots);
-        pass.Run();
-        return pass.ToPlan();
+        var unlimited = new Pass(stock, checks, eligible, listed, bounds, null);
+        unlimited.Run();
+        var saddlebagStacks = unlimited.SaddlebagStacksWithLots();
+        var bagRoom = Math.Max(0, freeBagSlots);
+        if (saddlebagStacks.Count <= bagRoom)
+        {
+            return unlimited.ToPlan();
+        }
+
+        saddlebagStacks.Sort((left, right) => CompareForBagRoom(unlimited.ValueOf(left), unlimited.ValueOf(right), stock[left].Slot, stock[right].Slot));
+        var granted = new bool[stock.Length];
+        for (var position = 0; position < bagRoom; position++)
+        {
+            granted[saddlebagStacks[position]] = true;
+        }
+
+        var limited = new Pass(stock, checks, eligible, listed, bounds, granted);
+        limited.Run();
+        return limited.ToPlan();
     }
 
     public static LotSplit Split(uint available, uint lotSize, uint stackSize, QuantityBounds bounds)
@@ -140,6 +156,12 @@ internal static class LotPlanner
         return order != 0 ? order : CompareLocation(left, right);
     }
 
+    private static int CompareForBagRoom(long leftValue, long rightValue, in SlotFacts left, in SlotFacts right)
+    {
+        var order = rightValue.CompareTo(leftValue);
+        return order != 0 ? order : CompareLocation(left, right);
+    }
+
     private static int CompareLocation(in SlotFacts left, in SlotFacts right)
     {
         var order = left.RetainerId.CompareTo(right.RetainerId);
@@ -176,21 +198,23 @@ internal static class LotPlanner
         private readonly List<int> eligible;
         private readonly ListingCounts listed;
         private readonly QuantityBounds bounds;
+        private readonly bool[]? bagRoomGranted;
         private readonly SlotOutcome[] outcomes;
+        private readonly uint[] plannedQuantities;
         private readonly List<PlannedLot> lots = [];
         private readonly HashSet<uint> plannedUniqueItems = [];
         private readonly List<int> keepOrder = [];
         private readonly List<LotSplit> splits = [];
-        private int bagRoom;
 
-        public Pass(ImmutableArray<StockSlot> stock, EligibilityResult[] checks, List<int> eligible, ListingCounts listed, QuantityBounds bounds, int bagRoom)
+        public Pass(ImmutableArray<StockSlot> stock, EligibilityResult[] checks, List<int> eligible, ListingCounts listed, QuantityBounds bounds, bool[]? bagRoomGranted)
         {
             this.stock = stock;
             this.checks = checks;
             this.eligible = eligible;
             this.listed = listed;
             this.bounds = bounds;
-            this.bagRoom = bagRoom;
+            this.bagRoomGranted = bagRoomGranted;
+            plannedQuantities = new uint[stock.Length];
             outcomes = new SlotOutcome[stock.Length];
             for (var index = 0; index < outcomes.Length; index++)
             {
@@ -218,6 +242,25 @@ internal static class LotPlanner
                 PlanItem(start, normalStart, end);
                 start = end;
             }
+        }
+
+        public List<int> SaddlebagStacksWithLots()
+        {
+            var stacks = new List<int>();
+            for (var index = 0; index < outcomes.Length; index++)
+            {
+                if (outcomes[index].Slot.Source == SlotSource.Saddlebag && outcomes[index].LotCount > 0)
+                {
+                    stacks.Add(index);
+                }
+            }
+
+            return stacks;
+        }
+
+        public long ValueOf(int stockIndex)
+        {
+            return Gil.SaturatingMultiply(stock[stockIndex].ReferenceUnitPrice, plannedQuantities[stockIndex]);
         }
 
         public LotPlan ToPlan()
@@ -354,15 +397,10 @@ internal static class LotPlanner
                     continue;
                 }
 
-                if (slot.Source == SlotSource.Saddlebag)
+                if (slot.Source == SlotSource.Saddlebag && bagRoomGranted is not null && !bagRoomGranted[stockIndex])
                 {
-                    if (bagRoom <= 0)
-                    {
-                        outcomes[stockIndex] = outcome with { Hold = LotHold.BagsFull };
-                        continue;
-                    }
-
-                    bagRoom--;
+                    outcomes[stockIndex] = outcome with { Hold = LotHold.BagsFull };
+                    continue;
                 }
 
                 var taken = Math.Min(split.LotCount, remaining);
@@ -370,7 +408,9 @@ internal static class LotPlanner
                 for (var lotIndex = 0u; lotIndex < taken; lotIndex++)
                 {
                     var row = new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, (ushort)lotIndex, slot.ItemId, slot.IsHq);
-                    lots.Add(new PlannedLot(row, slot.Source, split.QuantityOf(lotIndex), terms.PreferredRetainerId, listingsToKeepUp));
+                    var quantity = split.QuantityOf(lotIndex);
+                    plannedQuantities[stockIndex] += quantity;
+                    lots.Add(new PlannedLot(row, slot.Source, quantity, terms.PreferredRetainerId, listingsToKeepUp));
                 }
 
                 var partial = taken < split.LotCount ? LotHold.ListingsToKeepUpReached : LotHold.None;
