@@ -61,7 +61,7 @@ internal sealed partial class RetainerDriver
             GilBefore = before.Gil,
             ListingsBefore = before.MarketReadable ? SaleReadBack.CountListings(marketBefore.AsSpan(0, before.Count), write, write.NewPrice) : WriteIntent.Unread,
         };
-        if (!Journal(intent))
+        if (!session.Journal.TryAppend(intent))
         {
             session.Values.Release(writeId);
             return new Written(WriteSettlement.NotConfirmed(WriteRejection.Cancelled), RunSkip.None, new Stop(DriverHalt.JournalWriteFailed, $"the journal refused the intent of write {writeId}: {session.Journal.LastError}"));
@@ -226,7 +226,7 @@ internal sealed partial class RetainerDriver
     {
         var writeId = intent.WriteId;
         var outcome = settlement.ToJournalEvent(intent.Write, writeId, session.Authorization.RunId, session.Journal.NextSequence, DateTime.UtcNow);
-        var journaled = Journal(outcome);
+        var journaled = session.Journal.TryAppend(outcome);
         var booked = settlement.ApplyTo(session.Values, writeId);
         var line = $"Driver: write {writeId} on {retainer.Name} settled as {settlement.Write} ({settlement.Rejection}, cause {settlement.Cause}), journaled {journaled}, value book {booked}.";
         if (settlement.Write == RunWrite.Confirmed)
@@ -244,6 +244,7 @@ internal sealed partial class RetainerDriver
 
     private void AfterConfirmed(WriteIntent intent)
     {
+        plugin.Ledger.NoteConfirmed(intent);
         var write = intent.Write;
         var nowUtc = DateTime.UtcNow;
         var item = new ItemKey(write.ItemId, write.IsHq);
@@ -258,13 +259,6 @@ internal sealed partial class RetainerDriver
         }
 
         plugin.RetainerMarket.ReadOpenRetainer(nowUtc);
-    }
-
-    private bool Journal(JournalEvent journalEvent)
-    {
-        var appended = session.Journal.TryAppend(journalEvent);
-        plugin.Ledger.Invalidate();
-        return appended;
     }
 
     private RetainerSnapshot LatestMarketOf(RunRetainer retainer, RetainerSnapshot current)
