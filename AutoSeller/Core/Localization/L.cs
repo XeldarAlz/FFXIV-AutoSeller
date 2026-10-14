@@ -250,7 +250,7 @@ internal static partial class L
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Auto Seller window. /asell config | stats | deps | log | changelog | about | start (start the run) | stop (stop the run) | pause (pause or resume the run).");
+        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Auto Seller window. /asell config | stats | deps | log | changelog | about | start (start the run) | stop (stop the run) | pause (pause or resume the run) | look <item id> (compare market prices once and log the price inputs) | mbstatus (log the market checks and the search state).");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /asell.");
         public static readonly LocString ConfigReset = new("plugin.configReset", "Your settings could not be read, so Auto Seller started with default settings. The old file is kept as {0}.");
         public static readonly LocString ConfigResetUnsaved = new("plugin.configResetUnsaved", "Your settings could not be read, so Auto Seller started with default settings. The old file could not be kept; the log has the details.");

@@ -238,11 +238,23 @@ public sealed class Plugin : IDalamudPlugin
         {
             TargetDumper.Dump();
         }
+        else if (trimmed.Equals(MarketDebugCommands.StatusSubcommand, StringComparison.OrdinalIgnoreCase))
+        {
+            MarketDebugCommands.PrintStatus(this);
+        }
+        else if (HasSubcommand(trimmed, MarketDebugCommands.LookSubcommand))
+        {
+            MarketDebugCommands.Look(trimmed[MarketDebugCommands.LookSubcommand.Length..].Trim(), this);
+        }
         else
         {
             ToggleMainUi();
         }
     }
+
+    private static bool HasSubcommand(string arguments, string subcommand)
+        => arguments.StartsWith(subcommand, StringComparison.OrdinalIgnoreCase)
+        && (arguments.Length == subcommand.Length || char.IsWhiteSpace(arguments[subcommand.Length]));
 
     private void OnDraw()
     {
