@@ -24,6 +24,9 @@ internal static class SettingsRow
     }
 
     public static void Draw(string label, string? help, float controlWidth, Action drawControl, float controlHeight = 0f)
+        => Draw(label, help, controlWidth, drawControl, static draw => draw(), controlHeight);
+
+    public static void Draw<TState>(string label, string? help, float controlWidth, TState state, Action<TState> drawControl, float controlHeight = 0f)
     {
         var area = BeginRow();
 
@@ -36,16 +39,20 @@ internal static class SettingsRow
             Tooltip.Show(help);
         }
 
-        DrawControl(area, controlWidth, controlHeight, drawControl);
+        PlaceControl(area, controlWidth, controlHeight);
+        drawControl(state);
         EndRow(area);
     }
 
     // A label header (with hover help) followed by free-flowing block content for lists, radios,
     // add-item rows, and anything that won't fit a single right-aligned control.
     public static void DrawBlock(string label, string? help, Action drawContent)
+        => DrawBlock(label, help, drawContent, static draw => draw());
+
+    public static void DrawBlock<TState>(string label, string? help, TState state, Action<TState> drawContent)
     {
         Draw(label, help, 0f, static () => { });
-        drawContent();
+        drawContent(state);
         Styling.VSpace(BlockBottomGap);
     }
 
@@ -138,12 +145,11 @@ internal static class SettingsRow
         return ImGui.IsItemHovered();
     }
 
-    private static void DrawControl(RowArea area, float controlWidth, float controlHeight, Action drawControl)
+    private static void PlaceControl(RowArea area, float controlWidth, float controlHeight)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var resolvedHeight = controlHeight > 0f ? controlHeight * scale : ImGui.GetFrameHeight();
         ImGui.SetCursorScreenPos(new Vector2(area.RightEdge - controlWidth * scale, area.MiddleY - resolvedHeight * 0.5f));
-        drawControl();
     }
 
     private static void EndRow(RowArea area)
