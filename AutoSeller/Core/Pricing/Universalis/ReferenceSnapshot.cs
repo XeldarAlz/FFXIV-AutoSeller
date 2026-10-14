@@ -20,6 +20,11 @@ internal sealed class ReferenceSnapshot
 
     public UniversalisScope Scope => Table.Scope;
 
+    public static ReferenceSnapshot? ForHomeWorld(ReferenceSnapshot? snapshot, uint homeWorldId)
+    {
+        return snapshot is not null && snapshot.IsFor(homeWorldId) ? snapshot : null;
+    }
+
     public static ReferenceSnapshot Build(
         long generation,
         DateTime fetchedAtUtc,
@@ -40,14 +45,19 @@ internal sealed class ReferenceSnapshot
         };
     }
 
-    public static ReferencePrice ReferenceFor(ReferenceSnapshot? snapshot, ItemKey item, CompetitorSnapshot? competition, DateTime nowUtc)
+    public static ReferencePrice ReferenceFor(ReferenceSnapshot? snapshot, uint homeWorldId, ItemKey item, CompetitorSnapshot? competition, DateTime nowUtc)
     {
-        if (snapshot is null || !snapshot.Table.TryGet(item.ItemId, out var reference))
+        if (ForHomeWorld(snapshot, homeWorldId) is not { } current || !current.Table.TryGet(item.ItemId, out var reference))
         {
             return ReferenceSelector.Select(item, default, default, competition, nowUtc);
         }
 
         return ReferenceSelector.Select(item, reference.World(item.IsHq), reference.DataCenter(item.IsHq), competition, nowUtc);
+    }
+
+    public bool IsFor(uint homeWorldId)
+    {
+        return homeWorldId != 0 && Scope.CoversWorld && Scope.WorldId == homeWorldId;
     }
 
     public TimeSpan Age(DateTime nowUtc)

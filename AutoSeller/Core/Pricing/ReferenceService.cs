@@ -52,7 +52,7 @@ internal sealed class ReferenceService : IDisposable
 
     public ReferencePrice ReferenceFor(ItemKey item, CompetitorSnapshot? competition, DateTime nowUtc)
     {
-        return ReferenceSnapshot.ReferenceFor(Latest, item, competition, nowUtc);
+        return ReferenceSnapshot.ReferenceFor(Latest, Svc.PlayerState.HomeWorld.RowId, item, competition, nowUtc);
     }
 
     public ReferenceRefresh TryRefresh(ReadOnlySpan<ItemKey> items)

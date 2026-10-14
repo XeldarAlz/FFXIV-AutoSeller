@@ -65,7 +65,7 @@ public sealed class ReferenceSnapshotTests
     [Fact]
     public void TheHomeWorldAverageIsTheReference()
     {
-        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), new ItemKey(BusyItem, false), null, RecordedAt);
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Phoenix, new ItemKey(BusyItem, false), null, RecordedAt);
 
         Assert.Equal(ReferenceSource.UniversalisWorld, reference.Source);
         Assert.Equal(581u, reference.AverageSalePrice);
@@ -74,7 +74,7 @@ public sealed class ReferenceSnapshotTests
     [Fact]
     public void TheHighQualityReferenceUsesHighQualitySales()
     {
-        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), new ItemKey(BusyItem, true), null, RecordedAt);
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Phoenix, new ItemKey(BusyItem, true), null, RecordedAt);
 
         Assert.Equal(ReferenceSource.UniversalisWorld, reference.Source);
         Assert.Equal(1_824u, reference.AverageSalePrice);
@@ -85,16 +85,55 @@ public sealed class ReferenceSnapshotTests
     {
         var item = new ItemKey(UnaskedItem, false);
 
-        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), item, Competition(UnaskedItem), RecordedAt);
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Phoenix, item, Competition(UnaskedItem), RecordedAt);
 
         Assert.Equal(ReferenceSource.GameHistory, reference.Source);
         Assert.Equal(200u, reference.AverageSalePrice);
     }
 
     [Fact]
+    public void PricesOfAnotherWorldAreNotTheReference()
+    {
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Odin, new ItemKey(BusyItem, false), null, RecordedAt);
+
+        Assert.False(reference.Exists);
+    }
+
+    [Fact]
+    public void PricesOfAnotherWorldGiveWayToTheSaleHistory()
+    {
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Odin, new ItemKey(BusyItem, false), Competition(BusyItem), RecordedAt);
+
+        Assert.Equal(ReferenceSource.GameHistory, reference.Source);
+        Assert.Equal(200u, reference.AverageSalePrice);
+    }
+
+    [Fact]
+    public void ASnapshotBelongsOnlyToItsHomeWorld()
+    {
+        var snapshot = PhoenixSnapshot();
+
+        Assert.True(snapshot.IsFor(Phoenix));
+        Assert.False(snapshot.IsFor(Odin));
+        Assert.False(snapshot.IsFor(0));
+        Assert.Same(snapshot, ReferenceSnapshot.ForHomeWorld(snapshot, Phoenix));
+        Assert.Null(ReferenceSnapshot.ForHomeWorld(snapshot, Odin));
+        Assert.Null(ReferenceSnapshot.ForHomeWorld(null, Phoenix));
+    }
+
+    [Fact]
+    public void ADataCenterSnapshotIsNoHomeWorldReference()
+    {
+        var snapshot = ReferenceSnapshot.Build(1, RecordedAt, LightScope, Results(), Taxes(), null);
+
+        Assert.False(snapshot.IsFor(Phoenix));
+        Assert.False(snapshot.IsFor(0));
+    }
+
+    [Fact]
     public void WithoutAFetchTheSaleHistoryIsTheReference()
     {
-        var reference = ReferenceSnapshot.ReferenceFor(null, new ItemKey(BusyItem, false), Competition(BusyItem), RecordedAt);
+        var reference = ReferenceSnapshot.ReferenceFor(null, Phoenix, new ItemKey(BusyItem, false), Competition(BusyItem), RecordedAt);
 
         Assert.Equal(ReferenceSource.GameHistory, reference.Source);
     }
@@ -102,7 +141,7 @@ public sealed class ReferenceSnapshotTests
     [Fact]
     public void StaleUniversalisDataGivesWayToTheSaleHistory()
     {
-        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), new ItemKey(BusyItem, false), Competition(BusyItem), RecordedAt.AddDays(4));
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Phoenix, new ItemKey(BusyItem, false), Competition(BusyItem), RecordedAt.AddDays(4));
 
         Assert.Equal(ReferenceSource.GameHistory, reference.Source);
     }
@@ -110,7 +149,7 @@ public sealed class ReferenceSnapshotTests
     [Fact]
     public void WithNothingKnownThereIsNoReference()
     {
-        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), new ItemKey(UnaskedItem, false), null, RecordedAt);
+        var reference = ReferenceSnapshot.ReferenceFor(PhoenixSnapshot(), Phoenix, new ItemKey(UnaskedItem, false), null, RecordedAt);
 
         Assert.False(reference.Exists);
     }
