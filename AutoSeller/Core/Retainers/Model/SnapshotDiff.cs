@@ -9,11 +9,13 @@ internal enum SnapshotDiffCorroboration : byte
     Corroborated,
     Partial,
     Uncorroborated,
+    GilAtCap,
 }
 
 internal sealed class SnapshotDiff
 {
     public const int HighestSellerTaxPercent = 5;
+    public const long RetainerGilCap = 999_999_999;
 
     private const int StackWriteLimit = 128;
 
@@ -60,7 +62,7 @@ internal sealed class SnapshotDiff
             Changes = changes.ToImmutable(),
             GilGrowth = gilGrowth,
             InferredSoldGross = soldGross,
-            Corroboration = Corroborate(soldCount, soldGross, gilGrowth),
+            Corroboration = Corroborate(soldCount, soldGross, previous.Gil, gilGrowth),
         };
     }
 
@@ -83,15 +85,21 @@ internal sealed class SnapshotDiff
         return gross;
     }
 
-    private static SnapshotDiffCorroboration Corroborate(int soldCount, long soldGross, long gilGrowth)
+    private static SnapshotDiffCorroboration Corroborate(int soldCount, long soldGross, uint previousGil, long gilGrowth)
     {
         if (soldCount == 0)
         {
             return SnapshotDiffCorroboration.NoInferredSales;
         }
 
+        var headroom = RetainerGilCap - previousGil;
+        if (headroom <= 0)
+        {
+            return SnapshotDiffCorroboration.GilAtCap;
+        }
+
         Gil.TryPercentFloor(soldGross, HighestSellerTaxPercent, out var highestTax);
-        if (gilGrowth >= soldGross - highestTax)
+        if (gilGrowth >= Math.Min(soldGross - highestTax, headroom))
         {
             return SnapshotDiffCorroboration.Corroborated;
         }

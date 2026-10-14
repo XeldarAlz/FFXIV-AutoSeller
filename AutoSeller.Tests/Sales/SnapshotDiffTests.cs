@@ -68,6 +68,42 @@ public sealed class SnapshotDiffTests
     }
 
     [Fact]
+    public void SaleThatFilledTheRetainerToTheGilCapIsCorroborated()
+    {
+        var previous = Snapshot(PreviousRead, 999_999_000, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 999_999_999);
+
+        var diff = SnapshotDiff.Compute(previous, current, []);
+
+        Assert.Equal(999, diff.GilGrowth);
+        Assert.Equal(SnapshotDiffCorroboration.Corroborated, diff.Corroboration);
+    }
+
+    [Fact]
+    public void RetainerAlreadyAtTheGilCapCannotCorroborateASale()
+    {
+        var previous = Snapshot(PreviousRead, 999_999_999, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 999_999_999);
+
+        var diff = SnapshotDiff.Compute(previous, current, []);
+
+        Assert.Equal(SnapshotDiffChangeKind.Sold, Assert.Single(diff.Changes).Kind);
+        Assert.Equal(0, diff.GilGrowth);
+        Assert.Equal(SnapshotDiffCorroboration.GilAtCap, diff.Corroboration);
+    }
+
+    [Fact]
+    public void GilBelowTheCapThatDidNotGrowIsStillUncorroborated()
+    {
+        var previous = Snapshot(PreviousRead, 999_999_000, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 999_999_000);
+
+        var diff = SnapshotDiff.Compute(previous, current, []);
+
+        Assert.Equal(SnapshotDiffCorroboration.Uncorroborated, diff.Corroboration);
+    }
+
+    [Fact]
     public void PriceChangeExplainedByOurRepriceIsOurs()
     {
         var repricedAt = PreviousRead.AddMinutes(2);
