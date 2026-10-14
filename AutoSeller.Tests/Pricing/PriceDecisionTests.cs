@@ -71,6 +71,14 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void MatchModeRaisesToTheNextSellerWithoutUndercutting()
+    {
+        var input = Existing(800, Snapshot(Competitors(1_000, 1_200)), FreshReference) with { Settings = MatchMode };
+
+        AssertDecision(Decide(input), SellAction.RepriceUp, 1_000, 1_000, DecisionReason.RaisedToMarket);
+    }
+
+    [Fact]
     public void RaisesWaitWhileRaisingIsOff()
     {
         var input = Existing(800, Snapshot(Competitors(1_000)), FreshReference) with { Settings = new PricingSettings { RaisePrices = false } };
@@ -145,6 +153,30 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void ApprovalStillWaitsForTheCooldown()
+    {
+        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with
+        {
+            Override = PriceOverride.ApprovedAt(999),
+            History = RepricedAgo(TimeSpan.FromMinutes(10)),
+        };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_500, 999, DecisionReason.Cooldown);
+    }
+
+    [Fact]
+    public void ApprovalStillWaitsOutAPriceWar()
+    {
+        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with
+        {
+            Override = PriceOverride.ApprovedAt(999),
+            History = RepricedAgo(TimeSpan.FromHours(3), TimeSpan.FromHours(3), TimeSpan.FromHours(10), TimeSpan.FromHours(20)),
+        };
+
+        AssertDecision(Decide(input), SellAction.Keep, 1_500, 999, DecisionReason.PriceWar);
+    }
+
+    [Fact]
     public void UndercutBelowTheFloorKeepsTheListing()
     {
         var decision = Decide(Existing(600, Snapshot(Competitors(450)), FreshReference));
@@ -159,6 +191,19 @@ public sealed class PriceDecisionTests
         {
             Settings = ReturnBelowFloor,
             BelowFloorDuration = PricingSettings.BelowFloorReturnDelay,
+        };
+
+        AssertDecision(Decide(input), SellAction.Return, 600, 449, DecisionReason.BelowFloorReturned);
+    }
+
+    [Fact]
+    public void ReturnIgnoresTheCooldownAndThePriceWar()
+    {
+        var input = Existing(600, Snapshot(Competitors(450)), FreshReference) with
+        {
+            Settings = ReturnBelowFloor,
+            BelowFloorDuration = PricingSettings.BelowFloorReturnDelay,
+            History = RepricedAgo(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10), TimeSpan.FromHours(2), TimeSpan.FromHours(4)),
         };
 
         AssertDecision(Decide(input), SellAction.Return, 600, 449, DecisionReason.BelowFloorReturned);
@@ -523,6 +568,26 @@ public sealed class PriceDecisionTests
         var input = NewLot(Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.SetByPlayer(1_500) };
 
         AssertDecision(Decide(input), SellAction.List, 1_500, 1_500, DecisionReason.PlayerPrice);
+    }
+
+    [Fact]
+    public void NewLotPlayerPriceBelowTheFloorStaysInTheBags()
+    {
+        var input = NewLot(Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.SetByPlayer(400) };
+
+        AssertDecision(Decide(input), SellAction.Keep, 0, 400, DecisionReason.BelowFloorKept);
+    }
+
+    [Fact]
+    public void NewLotPlayerPriceBelowTheFloorListsAtTheFloorWhenAsked()
+    {
+        var input = NewLot(Snapshot(Competitors(1_000)), FreshReference) with
+        {
+            Override = PriceOverride.SetByPlayer(400),
+            Settings = new PricingSettings { BelowFloorNewLot = BelowFloorNewLot.ListAtFloor },
+        };
+
+        AssertDecision(Decide(input), SellAction.List, ReferenceFloor, 400, DecisionReason.BelowFloorListedAtFloor);
     }
 
     [Fact]

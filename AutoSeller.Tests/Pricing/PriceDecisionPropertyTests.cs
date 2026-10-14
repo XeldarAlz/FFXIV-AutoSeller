@@ -359,10 +359,14 @@ public sealed class PriceDecisionPropertyTests
             var isHq = random.Next(2) == 0;
             var clusterLow = (uint)random.Next(MinimumBasePrice, MaximumBasePrice);
             var cluster = Cluster(random, isHq, clusterLow);
-            var extras = new CompetitorListing[random.Next(0, MaximumExtraListings + 1)];
+            var highestBait = (long)clusterLow * BaitFilter.GapDenominator / BaitFilter.GapNumerator;
+            var baitCount = random.Next(0, BaitFilter.GapSkipLimit + 1);
+            var extras = new CompetitorListing[baitCount + random.Next(0, MaximumExtraListings + 1)];
             for (var index = 0; index < extras.Length; index++)
             {
-                extras[index] = Uncompetitive(random, isHq);
+                extras[index] = index < baitCount
+                    ? Competitor((uint)random.NextInt64(1, highestBait + 1), isHq)
+                    : Uncompetitive(random, isHq);
             }
 
             var input = NewLot(Widen(Snapshot(cluster, [], Now), extras)) with
