@@ -29,6 +29,10 @@ internal sealed class CharacterData
 
     public ulong ContentId { get; }
 
+    public string Name { get; private set; } = string.Empty;
+
+    public uint HomeWorldId { get; private set; }
+
     public int Revision { get; private set; }
 
     public IReadOnlyList<RetainerSetting> Retainers => retainers;
@@ -43,7 +47,11 @@ internal sealed class CharacterData
 
     public static CharacterData FromRecord(CharacterRecord record)
     {
-        var data = new CharacterData(record.ContentId);
+        var data = new CharacterData(record.ContentId)
+        {
+            Name = record.Name ?? string.Empty,
+            HomeWorldId = record.HomeWorldId,
+        };
         var savedRetainers = record.Retainers.IsDefault ? [] : record.Retainers;
         for (var index = 0; index < savedRetainers.Length; index++)
         {
@@ -91,6 +99,8 @@ internal sealed class CharacterData
         return new CharacterRecord
         {
             ContentId = ContentId,
+            Name = Name,
+            HomeWorldId = HomeWorldId,
             SavedAtUtc = nowUtc,
             Retainers = [.. retainers],
             Snapshots = [.. snapshots],
@@ -98,6 +108,19 @@ internal sealed class CharacterData
             Approvals = [.. approvals],
             PlanEdits = PlanEdits.Items,
         };
+    }
+
+    public bool Describe(string name, uint homeWorldId)
+    {
+        if (name.Length == 0 || homeWorldId == 0 || (string.Equals(name, Name, StringComparison.Ordinal) && homeWorldId == HomeWorldId))
+        {
+            return false;
+        }
+
+        Name = name;
+        HomeWorldId = homeWorldId;
+        Revision++;
+        return true;
     }
 
     public bool IsEnabled(ulong retainerId)
@@ -203,6 +226,17 @@ internal sealed class CharacterData
         approvals.RemoveAll(existing => existing.SameListing(approval));
         approvals.Add(approval);
         Revision++;
+    }
+
+    public bool Withdraw(ApprovedPrice approval)
+    {
+        if (approvals.RemoveAll(existing => existing.SameListing(approval)) == 0)
+        {
+            return false;
+        }
+
+        Revision++;
+        return true;
     }
 
     public void SetPlanEdits(PlanEdits edits)

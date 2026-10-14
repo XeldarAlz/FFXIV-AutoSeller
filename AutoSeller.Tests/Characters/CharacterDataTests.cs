@@ -19,6 +19,8 @@ public sealed class CharacterDataTests : IDisposable
     private const ulong SecondRetainer = 102;
     private const uint Ore = 5_111;
     private const uint Potion = 4_551;
+    private const uint HomeWorld = 40;
+    private const string CharacterName = "Wren Ashford";
 
     private readonly TemporaryDirectory directory = new();
 
@@ -148,6 +150,36 @@ public sealed class CharacterDataTests : IDisposable
     }
 
     [Fact]
+    public void AWithdrawnApprovalIsGoneAndAMissingOneChangesNothing()
+    {
+        var data = new CharacterData(Character);
+        var approval = new ApprovedPrice(FirstRetainer, 0, Ore, false, 1_000, 800);
+        data.Approve(approval);
+        var revision = data.Revision;
+
+        Assert.True(data.Withdraw(approval with { Price = 750 }));
+        Assert.False(data.Withdraw(approval));
+
+        Assert.Empty(data.Approvals);
+        Assert.Equal(revision + 1, data.Revision);
+    }
+
+    [Fact]
+    public void TheCharactersNameAndHomeWorldAreKeptOnlyWhenTheyChange()
+    {
+        var data = new CharacterData(Character);
+
+        Assert.False(data.Describe(string.Empty, HomeWorld));
+        Assert.False(data.Describe(CharacterName, 0));
+        Assert.True(data.Describe(CharacterName, HomeWorld));
+        Assert.False(data.Describe(CharacterName, HomeWorld));
+
+        Assert.Equal(CharacterName, data.Name);
+        Assert.Equal(HomeWorld, data.HomeWorldId);
+        Assert.Equal(1, data.Revision);
+    }
+
+    [Fact]
     public void RepriceIsRecordedAndReadBack()
     {
         var data = new CharacterData(Character);
@@ -187,6 +219,8 @@ public sealed class CharacterDataTests : IDisposable
         Assert.Equal(CheckpointSource.Primary, load.Source);
         var restored = CharacterData.FromRecord(load.Value!);
         Assert.Equal(Character, restored.ContentId);
+        Assert.Equal(CharacterName, restored.Name);
+        Assert.Equal(HomeWorld, restored.HomeWorldId);
         Assert.Equal(data.Retainers, restored.Retainers);
         Assert.False(restored.IsEnabled(SecondRetainer));
         Assert.True(restored.TryGetSnapshot(FirstRetainer, out var snapshot));
@@ -272,6 +306,7 @@ public sealed class CharacterDataTests : IDisposable
         var record = new CharacterRecord
         {
             ContentId = Character,
+            Name = null!,
             Retainers = [new RetainerSetting(0, "Nobody", true), new RetainerSetting(FirstRetainer, "Alpha", false), new RetainerSetting(FirstRetainer, "Again", true)],
             Snapshots = [SnapshotOf(Other, SecondRetainer), Snapshot(FirstRetainer)],
             Reprices = default,
@@ -282,6 +317,7 @@ public sealed class CharacterDataTests : IDisposable
         var data = CharacterData.FromRecord(record);
 
         Assert.Equal([new RetainerSetting(FirstRetainer, "Alpha", false)], data.Retainers);
+        Assert.Equal(string.Empty, data.Name);
         Assert.Single(data.Snapshots);
         Assert.Empty(data.Approvals);
         Assert.Same(PlanEdits.None, data.PlanEdits);
@@ -291,6 +327,7 @@ public sealed class CharacterDataTests : IDisposable
     private static CharacterData Filled()
     {
         var data = new CharacterData(Character);
+        data.Describe(CharacterName, HomeWorld);
         data.UpdateRoster([Retainer(FirstRetainer, "Alpha"), Retainer(SecondRetainer, "Beta")]);
         data.SetEnabled(SecondRetainer, false);
         data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(3, Potion, 60)));
