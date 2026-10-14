@@ -20,6 +20,9 @@ public sealed class SaleGuardTests
         (SaleRejection.QualityMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { IsHq = true })),
         (SaleRejection.QuantityMismatch, () => WithObserved(GuardInput(Reprice()), slot => slot with { Quantity = LotQuantity + 1 })),
         (SaleRejection.ListingChanged, () => WithObserved(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 })),
+        (SaleRejection.ItemMismatch, () => WithPlanned(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 })),
+        (SaleRejection.QualityMismatch, () => WithPlanned(GuardInput(Reprice()), slot => slot with { IsHq = true })),
+        (SaleRejection.ListingChanged, () => WithPlanned(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 })),
         (SaleRejection.NotEligible, () => GuardInput(Reprice()) with { Eligible = false }),
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
@@ -270,5 +273,10 @@ public sealed class SaleGuardTests
     private static SaleGuardInput WithObserved(SaleGuardInput input, Func<SlotReading, SlotReading> change)
     {
         return input with { Observed = change(input.Observed) };
+    }
+
+    private static SaleGuardInput WithPlanned(SaleGuardInput input, Func<SlotReading, SlotReading> change)
+    {
+        return input with { Planned = change(input.Planned) };
     }
 }
