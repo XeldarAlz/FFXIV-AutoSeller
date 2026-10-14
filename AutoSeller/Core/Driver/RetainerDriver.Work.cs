@@ -199,7 +199,7 @@ internal sealed partial class RetainerDriver
 
         var name = decider.ItemName(row.ItemId);
         var shown = RetainerReads.SellWindow();
-        var verdict = OpenedSellWindow.ForItem(shown, name);
+        var verdict = OpenedSellWindow.ForItem(shown, name, row.IsHq);
         Diag($"Driver: the sell window shows '{shown.ItemName}' x{shown.Quantity} at {shown.AskingPrice} for container {row.Container} slot {row.Slot}: {verdict}.");
         if (verdict != SellWindowVerdict.Matches)
         {

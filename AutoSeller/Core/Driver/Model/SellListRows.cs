@@ -6,9 +6,7 @@ namespace AutoSeller.Core.Driver.Model;
 
 internal readonly record struct SellListRow(string Name, uint Quantity, uint UnitPrice)
 {
-    public const char HighQualityGlyph = '';
-
-    public bool IsHq => Name.Contains(HighQualityGlyph, StringComparison.Ordinal);
+    public bool IsHq => HighQualityGlyph.IsShownIn(Name);
 }
 
 internal static class SellListRows

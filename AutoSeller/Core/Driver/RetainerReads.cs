@@ -1,9 +1,11 @@
 using System.Text;
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Retainers.Model;
-using ECommons;
+using AutoSeller.Core.Rules.Model;
 using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Driver;
@@ -12,10 +14,11 @@ internal static unsafe class RetainerReads
 {
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
+    private static QuantityBounds reportedBounds;
 
     public static string[] RetainerNames()
     {
-        if (!AddonReady(RetainerClicks.RetainerListAddon, out var list))
+        if (!NpcInteraction.TryGetReadyAddon(RetainerClicks.RetainerListAddon, out var list))
         {
             return [];
         }
@@ -30,27 +33,9 @@ internal static unsafe class RetainerReads
         return names;
     }
 
-    public static string[] MenuEntries()
-    {
-        if (!AddonReady(RetainerClicks.SelectStringAddon, out var menu))
-        {
-            return [];
-        }
-
-        var master = new AddonMaster.SelectString(menu);
-        var entries = new string[master.EntryCount];
-        var shown = master.Entries;
-        for (var index = 0; index < entries.Length; index++)
-        {
-            entries[index] = shown[index].Text;
-        }
-
-        return entries;
-    }
-
     public static string[] ContextMenuEntries()
     {
-        if (!AddonReady(RetainerClicks.ContextMenuAddon, out var menu))
+        if (!NpcInteraction.TryGetReadyAddon(RetainerClicks.ContextMenuAddon, out var menu))
         {
             return [];
         }
@@ -67,7 +52,7 @@ internal static unsafe class RetainerReads
 
     public static SellListRow[] SellList()
     {
-        if (!AddonReady(RetainerClicks.SellListAddon, out var sellList) || sellList->AtkValues == null)
+        if (!NpcInteraction.TryGetReadyAddon(RetainerClicks.SellListAddon, out var sellList) || sellList->AtkValues == null)
         {
             return [];
         }
@@ -99,14 +84,32 @@ internal static unsafe class RetainerReads
 
     public static SellWindowShown SellWindow()
     {
-        if (!AddonReady(RetainerClicks.SellWindowAddon, out var sellWindow))
+        if (!NpcInteraction.TryGetReadyAddon(RetainerClicks.SellWindowAddon, out var sellWindow))
         {
             return SellWindowShown.Unreadable;
         }
 
         var master = new AddonMaster.RetainerSell(sellWindow);
         var name = ListingRequestTracker.ShownItemName(sellWindow);
-        return new SellWindowShown(name.Length > 0, name, master.Quantity, master.AskingPrice);
+        return new SellWindowShown(name.Length > 0, name, master.Quantity, master.AskingPrice, QuantityBoundsOf((AddonRetainerSell*)sellWindow));
+    }
+
+    private static QuantityBounds QuantityBoundsOf(AddonRetainerSell* sellWindow)
+    {
+        var quantity = sellWindow->Quantity;
+        if (quantity == null)
+        {
+            return QuantityBounds.Unread;
+        }
+
+        var bounds = new QuantityBounds((uint)Math.Max(0, quantity->Data.Min), (uint)Math.Max(0, quantity->Data.Max));
+        if (bounds != reportedBounds)
+        {
+            reportedBounds = bounds;
+            RunLog.Info($"Sell window: the quantity field takes {bounds.Minimum} to {bounds.Maximum}.");
+        }
+
+        return bounds.Maximum == 0 ? QuantityBounds.Unread : bounds;
     }
 
     private static void ReportRows(List<SellListRow> rows, int valueCount)
@@ -127,7 +130,4 @@ internal static unsafe class RetainerReads
         reportedRows = text;
         RunLog.Info(text);
     }
-
-    private static bool AddonReady(string addonName, out AtkUnitBase* addon)
-        => GenericHelpers.TryGetAddonByName(addonName, out addon) && GenericHelpers.IsAddonReady(addon);
 }
