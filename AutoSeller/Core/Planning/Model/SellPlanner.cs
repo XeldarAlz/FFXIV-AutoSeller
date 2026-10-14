@@ -65,7 +65,7 @@ internal static class SellPlanner
 
             reprices = RepriceHistory.Restore(input.Reprices.AsSpan());
             homeReferences = ReferenceSnapshot.ForHomeWorld(input.References, input.HomeWorldId);
-            undercuts = UndercutsOf(input.Markets.AsSpan());
+            undercuts = input.UndercutMarks();
             CollectOwnPrices();
         }
 
@@ -215,17 +215,6 @@ internal static class SellPlanner
             {
                 checks.Add(new EstimatedCheck(row.Item, RunRowKind.Lot));
             }
-        }
-
-        private ImmutableArray<WatchMark> UndercutsOf(ReadOnlySpan<RetainerSnapshot> markets)
-        {
-            var scan = new UndercutScan(homeReferences, input.NowUtc);
-            for (var index = 0; index < markets.Length; index++)
-            {
-                scan.Add(markets[index], reprices);
-            }
-
-            return scan.Mark();
         }
 
         private CompetitorSnapshot Estimate(ItemKey item)

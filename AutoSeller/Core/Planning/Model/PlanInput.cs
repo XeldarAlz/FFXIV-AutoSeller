@@ -78,6 +78,24 @@ internal sealed record PlanInput
         return enabled.ToImmutable();
     }
 
+    public ImmutableArray<ulong> RetainersToVisit(bool onlyUndercut)
+    {
+        var enabled = EnabledRetainerIds();
+        return onlyUndercut ? UndercutWatch.RetainersToVisit(enabled.AsSpan(), UndercutMarks().AsSpan()) : enabled;
+    }
+
+    public ImmutableArray<WatchMark> UndercutMarks()
+    {
+        var scan = new UndercutScan(ReferenceSnapshot.ForHomeWorld(References, HomeWorldId), NowUtc);
+        var reprices = RepriceHistory.Restore(Reprices.AsSpan());
+        for (var index = 0; index < Markets.Length; index++)
+        {
+            scan.Add(Markets[index], reprices);
+        }
+
+        return scan.Mark();
+    }
+
     public RetainerSnapshot? MarketOf(ulong retainerId)
     {
         return RunPlanner.MarketOf(Markets.AsSpan(), retainerId);

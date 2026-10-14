@@ -6,6 +6,9 @@ internal static class WatchInterval
 {
     public const int OffMinutes = 0;
     public const int DefaultMinutes = 30;
+    public const long NeverChecked = long.MinValue;
+
+    private const long MillisecondsPerMinute = 60_000;
 
     public static readonly ImmutableArray<int> ChoiceMinutes = [OffMinutes, 15, DefaultMinutes, 60];
 
@@ -21,6 +24,16 @@ internal static class WatchInterval
         }
 
         return nearest;
+    }
+
+    public static bool IsDue(long lastCheckedMs, long nowMs, int minutes)
+    {
+        if (minutes <= OffMinutes)
+        {
+            return false;
+        }
+
+        return lastCheckedMs == NeverChecked || nowMs - lastCheckedMs >= minutes * MillisecondsPerMinute;
     }
 
     public static int Nearest(int minutes)
