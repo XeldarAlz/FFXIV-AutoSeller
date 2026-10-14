@@ -46,6 +46,22 @@ public sealed class PlanEditTests
     }
 
     [Fact]
+    public void RestoreDropsPricesOutsideTheMarketRange()
+    {
+        var wrapsToOneGil = new PlanEdit(LotRow, PlanEditKind.Price, (ulong)uint.MaxValue + 2, Now);
+        var free = new PlanEdit(OtherLotRow, PlanEditKind.Price, 0, Now);
+        var kept = PlanEdit.Price(ListingRow, MarketLimits.MaximumUnitPrice, Now);
+
+        var edits = PlanEdits.Restore([wrapsToOneGil, free, kept, PlanEdit.Exclude(LotRow, Now)]);
+
+        Assert.Equal([kept, PlanEdit.Exclude(LotRow, Now)], edits.Items.AsSpan().ToArray());
+        Assert.False(edits.TryGetPrice(LotRow, out _));
+        Assert.False(edits.TryGetPrice(OtherLotRow, out _));
+        Assert.True(edits.TryGetPrice(ListingRow, out var price));
+        Assert.Equal(MarketLimits.MaximumUnitPrice, price);
+    }
+
+    [Fact]
     public void HighestMarketPriceIsAccepted()
     {
         var edit = PlanEdit.Price(LotRow, MarketLimits.MaximumUnitPrice, Now);

@@ -19,9 +19,10 @@ internal sealed class PlanEdits
         var builder = ImmutableArray.CreateBuilder<PlanEdit>(edits.Length);
         for (var index = 0; index < edits.Length; index++)
         {
-            if (!IsReplacedLater(edits, index))
+            var edit = edits[index];
+            if ((edit.Kind != PlanEditKind.Price || IsListablePrice(edit)) && !IsReplacedLater(edits, index))
             {
-                builder.Add(edits[index]);
+                builder.Add(edit);
             }
         }
 
@@ -107,7 +108,7 @@ internal sealed class PlanEdits
     public bool TryGetPrice(PlanRowKey row, out uint price)
     {
         var found = TryFind(row, PlanEditKind.Price, out var edit);
-        price = (uint)edit.Value;
+        price = checked((uint)edit.Value);
         return found;
     }
 
@@ -123,12 +124,17 @@ internal sealed class PlanEdits
 
     private static PlanEditRefusal ValidatePrice(in PlanEdit edit, in PlanEditTarget target)
     {
-        if (edit.Value is < MarketLimits.MinimumUnitPrice or > MarketLimits.MaximumUnitPrice)
+        if (!IsListablePrice(edit))
         {
             return PlanEditRefusal.PriceOutOfRange;
         }
 
         return edit.Value < target.Floor ? PlanEditRefusal.PriceBelowFloor : PlanEditRefusal.None;
+    }
+
+    private static bool IsListablePrice(in PlanEdit edit)
+    {
+        return edit.Value is >= MarketLimits.MinimumUnitPrice and <= MarketLimits.MaximumUnitPrice;
     }
 
     private static bool IsReplacedLater(ReadOnlySpan<PlanEdit> edits, int position)

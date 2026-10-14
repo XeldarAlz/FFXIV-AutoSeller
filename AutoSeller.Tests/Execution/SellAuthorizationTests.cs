@@ -159,6 +159,16 @@ public sealed class SellAuthorizationTests
     }
 
     [Fact]
+    public void AJournalPlanPriceOutsideTheMarketRangeIsNotRestored()
+    {
+        var recorded = Authorization().ToJournalEvent(1, Now) with { PlanEdits = [new PlanEdit(ListingRow, PlanEditKind.Price, (ulong)uint.MaxValue + 2, Now)] };
+
+        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
+        Assert.Empty(restored!.PlanEdits.Items);
+        Assert.Equal(PriceOverride.None, restored.OverrideForLot(ListingRow));
+    }
+
+    [Fact]
     public void DefaultCapsMatchThePlan()
     {
         Assert.Equal(new RunCaps(80, 100, 20_000), RunCaps.Default);
