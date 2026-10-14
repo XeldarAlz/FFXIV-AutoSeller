@@ -161,6 +161,39 @@ public sealed class LotPlannerTests
     }
 
     [Fact]
+    public void RuleForBothQualitiesKeepsOneCountAcrossThemNormalQualityFirst()
+    {
+        var rules = BookSelling(SellRule(keepCount: 5));
+
+        var even = Plan(rules, Stock(Bag(Ore, 5, 0), Material()), Stock(Bag(Ore, 5, 1, isHq: true), Material()));
+        var scarce = Plan(rules, Stock(Bag(Ore, 3, 0), Material()), Stock(Bag(Ore, 10, 1, isHq: true), Material()));
+
+        var lot = Assert.Single(even.Lots);
+        Assert.True(lot.Item.IsHq);
+        Assert.Equal(5u, lot.Quantity);
+        Assert.Equal(5u, even.Slots[0].KeptQuantity);
+        Assert.Equal(EligibilityReason.NoLotAfterKeep, even.Slots[0].Reason);
+        Assert.Equal(0u, even.Slots[1].KeptQuantity);
+        Assert.Equal(new uint[] { 8 }, Quantities(scarce));
+        Assert.Equal(3u, scarce.Slots[0].KeptQuantity);
+        Assert.Equal(2u, scarce.Slots[1].KeptQuantity);
+    }
+
+    [Fact]
+    public void SeparateRulesPerQualityKeepTheirOwnCounts()
+    {
+        var rules = BookSelling(SellRule(qualities: QualityFilter.Normal, keepCount: 5), SellRule(qualities: QualityFilter.High, keepCount: 5));
+
+        var plan = Plan(rules, Stock(Bag(Ore, 5, 0), Material()), Stock(Bag(Ore, 8, 1, isHq: true), Material()));
+
+        var lot = Assert.Single(plan.Lots);
+        Assert.True(lot.Item.IsHq);
+        Assert.Equal(3u, lot.Quantity);
+        Assert.Equal(5u, plan.Slots[0].KeptQuantity);
+        Assert.Equal(5u, plan.Slots[1].KeptQuantity);
+    }
+
+    [Fact]
     public void KeepCountPrefersBagsOverOtherSources()
     {
         var rules = Book([SellRule(keepCount: 20)], null, null, SellSources.Default | SellSources.Saddlebag);

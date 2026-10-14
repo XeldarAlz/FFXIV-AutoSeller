@@ -51,49 +51,22 @@ internal static class LotPlanner
 {
     public static LotPlan Plan(ImmutableArray<StockSlot> stock, RuleBook rules, ListingCounts listed, QuantityBounds bounds, int freeBagSlots)
     {
-        var outcomes = new SlotOutcome[stock.Length];
-        var terms = new SellTerms[stock.Length];
+        var checks = new EligibilityResult[stock.Length];
         var eligible = new List<int>(stock.Length);
         for (var index = 0; index < stock.Length; index++)
         {
             var entry = stock[index];
-            var result = Eligibility.Check(entry.Slot, entry.Item, entry.ReferenceUnitPrice, rules, listed);
-            outcomes[index] = new SlotOutcome(entry.Slot, result.Reason, LotHold.None, 0, 0);
-            if (!result.IsEligible)
+            checks[index] = Eligibility.Check(entry.Slot, entry.Item, entry.ReferenceUnitPrice, rules, listed);
+            if (checks[index].IsEligible)
             {
-                continue;
+                eligible.Add(index);
             }
-
-            terms[index] = result.Terms;
-            eligible.Add(index);
         }
 
         eligible.Sort((left, right) => CompareForListing(stock[left], stock[right]));
-        var lots = new List<PlannedLot>();
-        var plannedUniqueItems = new HashSet<uint>();
-        var group = new List<int>();
-        var bagRoom = freeBagSlots;
-        for (var start = 0; start < eligible.Count;)
-        {
-            var key = stock[eligible[start]].Slot.Key;
-            var end = start;
-            group.Clear();
-            while (end < eligible.Count && stock[eligible[end]].Slot.Key == key)
-            {
-                group.Add(eligible[end]);
-                end++;
-            }
-
-            var context = new GroupContext(stock, terms[eligible[start]], listed, bounds, outcomes, lots);
-            PlanGroup(context, group, plannedUniqueItems, ref bagRoom);
-            start = end;
-        }
-
-        return new LotPlan
-        {
-            Lots = [.. lots],
-            Slots = ImmutableCollectionsMarshal.AsImmutableArray(outcomes),
-        };
+        var pass = new Pass(stock, checks, eligible, listed, bounds, freeBagSlots);
+        pass.Run();
+        return pass.ToPlan();
     }
 
     public static LotSplit Split(uint available, uint lotSize, uint stackSize, QuantityBounds bounds)
@@ -125,129 +98,6 @@ internal static class LotPlanner
         return quantity >= bounds.Smallest ? quantity : 0;
     }
 
-    private static void PlanGroup(in GroupContext context, List<int> group, HashSet<uint> plannedUniqueItems, ref int bagRoom)
-    {
-        var first = context.Stock[group[0]];
-        var item = first.Item;
-        if (item.IsUnique && plannedUniqueItems.Contains(item.ItemId))
-        {
-            MarkGroup(context, group, EligibilityReason.UniqueAlreadyListed);
-            return;
-        }
-
-        ReserveKeep(context, group);
-        var splits = new LotSplit[group.Count];
-        uint totalLots = 0;
-        for (var position = 0; position < group.Count; position++)
-        {
-            var stockIndex = group[position];
-            var slot = context.Stock[stockIndex].Slot;
-            var free = slot.Quantity - context.Outcomes[stockIndex].KeptQuantity;
-            splits[position] = Split(free, context.Terms.LotSize, item.StackSize, context.Bounds);
-            totalLots += splits[position].LotCount;
-        }
-
-        if (totalLots == 0)
-        {
-            MarkGroup(context, group, EligibilityReason.NoLotAfterKeep);
-            return;
-        }
-
-        var listingsToKeepUp = item.IsUnique ? (byte)1 : context.Terms.ListingsToKeepUp;
-        var remaining = (uint)Math.Max(0, listingsToKeepUp - context.Listed.Of(first.Slot.Key));
-        for (var position = 0; position < group.Count; position++)
-        {
-            var stockIndex = group[position];
-            var outcome = context.Outcomes[stockIndex];
-            var slot = outcome.Slot;
-            var split = splits[position];
-            if (split.LotCount == 0)
-            {
-                var hold = outcome.KeptQuantity == slot.Quantity ? LotHold.KeptInBags : LotHold.BelowLotSize;
-                context.Outcomes[stockIndex] = outcome with { Hold = hold };
-                continue;
-            }
-
-            if (remaining == 0)
-            {
-                context.Outcomes[stockIndex] = outcome with { Hold = LotHold.ListingsToKeepUpReached };
-                continue;
-            }
-
-            if (slot.Source == SlotSource.Saddlebag)
-            {
-                if (bagRoom == 0)
-                {
-                    context.Outcomes[stockIndex] = outcome with { Hold = LotHold.BagsFull };
-                    continue;
-                }
-
-                bagRoom--;
-            }
-
-            var taken = Math.Min(split.LotCount, remaining);
-            remaining -= taken;
-            for (var lotIndex = 0u; lotIndex < taken; lotIndex++)
-            {
-                var row = new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, (ushort)lotIndex, slot.ItemId, slot.IsHq);
-                context.Lots.Add(new PlannedLot(row, slot.Source, split.QuantityOf(lotIndex), context.Terms.PreferredRetainerId, listingsToKeepUp));
-            }
-
-            var partial = taken < split.LotCount ? LotHold.ListingsToKeepUpReached : LotHold.None;
-            context.Outcomes[stockIndex] = outcome with { Hold = partial, LotCount = (ushort)taken };
-            if (item.IsUnique)
-            {
-                plannedUniqueItems.Add(item.ItemId);
-            }
-        }
-    }
-
-    private static void ReserveKeep(in GroupContext context, List<int> group)
-    {
-        var remainingKeep = context.Terms.KeepCount;
-        if (remainingKeep == 0)
-        {
-            return;
-        }
-
-        var stock = context.Stock;
-        var keepOrder = new List<int>(group);
-        keepOrder.Sort((left, right) => CompareForKeeping(stock[left].Slot, stock[right].Slot));
-        var lotSize = context.Terms.LotSize;
-        var lotQuantity = lotSize == 0 ? 0 : FixedLotQuantity(lotSize, stock[group[0]].Item.StackSize, context.Bounds);
-        if (lotQuantity > 0)
-        {
-            remainingKeep = KeepFrom(context, keepOrder, remainingKeep, lotQuantity);
-        }
-
-        KeepFrom(context, keepOrder, remainingKeep, 0);
-    }
-
-    private static uint KeepFrom(in GroupContext context, List<int> keepOrder, uint remainingKeep, uint lotQuantity)
-    {
-        for (var position = 0; position < keepOrder.Count && remainingKeep > 0; position++)
-        {
-            var stockIndex = keepOrder[position];
-            var outcome = context.Outcomes[stockIndex];
-            var free = outcome.Slot.Quantity - outcome.KeptQuantity;
-            var spare = lotQuantity == 0 ? free : free % lotQuantity;
-            var kept = Math.Min(spare, remainingKeep);
-            remainingKeep -= kept;
-            context.Outcomes[stockIndex] = outcome with { KeptQuantity = outcome.KeptQuantity + kept };
-        }
-
-        return remainingKeep;
-    }
-
-    private static void MarkGroup(in GroupContext context, List<int> group, EligibilityReason reason)
-    {
-        for (var position = 0; position < group.Count; position++)
-        {
-            var stockIndex = group[position];
-            context.Outcomes[stockIndex] = context.Outcomes[stockIndex] with { Reason = reason };
-        }
-    }
-
     private static int CompareForListing(in StockSlot left, in StockSlot right)
     {
         var order = left.Slot.ItemId.CompareTo(right.Slot.ItemId);
@@ -274,7 +124,13 @@ internal static class LotPlanner
 
     private static int CompareForKeeping(in SlotFacts left, in SlotFacts right)
     {
-        var order = KeepRank(left.Source).CompareTo(KeepRank(right.Source));
+        var order = left.IsHq.CompareTo(right.IsHq);
+        if (order != 0)
+        {
+            return order;
+        }
+
+        order = KeepRank(left.Source).CompareTo(KeepRank(right.Source));
         if (order != 0)
         {
             return order;
@@ -313,11 +169,231 @@ internal static class LotPlanner
         return source is SlotSource.Bags or SlotSource.Crystals or SlotSource.Armoury ? 0 : 1;
     }
 
-    private readonly record struct GroupContext(
-        ImmutableArray<StockSlot> Stock,
-        SellTerms Terms,
-        ListingCounts Listed,
-        QuantityBounds Bounds,
-        SlotOutcome[] Outcomes,
-        List<PlannedLot> Lots);
+    private sealed class Pass
+    {
+        private readonly ImmutableArray<StockSlot> stock;
+        private readonly EligibilityResult[] checks;
+        private readonly List<int> eligible;
+        private readonly ListingCounts listed;
+        private readonly QuantityBounds bounds;
+        private readonly SlotOutcome[] outcomes;
+        private readonly List<PlannedLot> lots = [];
+        private readonly HashSet<uint> plannedUniqueItems = [];
+        private readonly List<int> keepOrder = [];
+        private readonly List<LotSplit> splits = [];
+        private int bagRoom;
+
+        public Pass(ImmutableArray<StockSlot> stock, EligibilityResult[] checks, List<int> eligible, ListingCounts listed, QuantityBounds bounds, int bagRoom)
+        {
+            this.stock = stock;
+            this.checks = checks;
+            this.eligible = eligible;
+            this.listed = listed;
+            this.bounds = bounds;
+            this.bagRoom = bagRoom;
+            outcomes = new SlotOutcome[stock.Length];
+            for (var index = 0; index < outcomes.Length; index++)
+            {
+                outcomes[index] = new SlotOutcome(stock[index].Slot, checks[index].Reason, LotHold.None, 0, 0);
+            }
+        }
+
+        public void Run()
+        {
+            for (var start = 0; start < eligible.Count;)
+            {
+                var itemId = SlotAt(start).ItemId;
+                var end = start;
+                while (end < eligible.Count && SlotAt(end).ItemId == itemId)
+                {
+                    end++;
+                }
+
+                var normalStart = start;
+                while (normalStart < end && SlotAt(normalStart).IsHq)
+                {
+                    normalStart++;
+                }
+
+                PlanItem(start, normalStart, end);
+                start = end;
+            }
+        }
+
+        public LotPlan ToPlan()
+        {
+            return new LotPlan
+            {
+                Lots = [.. lots],
+                Slots = ImmutableCollectionsMarshal.AsImmutableArray(outcomes),
+            };
+        }
+
+        private void PlanItem(int start, int normalStart, int end)
+        {
+            if (SharesKeep(start, normalStart, end))
+            {
+                ReserveKeep(start, end);
+            }
+            else
+            {
+                ReserveKeep(start, normalStart);
+                ReserveKeep(normalStart, end);
+            }
+
+            PlanGroup(start, normalStart);
+            PlanGroup(normalStart, end);
+        }
+
+        private bool SharesKeep(int start, int normalStart, int end)
+        {
+            if (start == normalStart || normalStart == end)
+            {
+                return false;
+            }
+
+            var highRule = checks[eligible[start]].SellRule;
+            return highRule is not null && highRule == checks[eligible[normalStart]].SellRule;
+        }
+
+        private void ReserveKeep(int start, int end)
+        {
+            if (start == end)
+            {
+                return;
+            }
+
+            var terms = checks[eligible[start]].Terms;
+            var remainingKeep = terms.KeepCount;
+            if (remainingKeep == 0)
+            {
+                return;
+            }
+
+            keepOrder.Clear();
+            for (var position = start; position < end; position++)
+            {
+                keepOrder.Add(eligible[position]);
+            }
+
+            keepOrder.Sort((left, right) => CompareForKeeping(stock[left].Slot, stock[right].Slot));
+            var lotQuantity = terms.LotSize == 0 ? 0 : FixedLotQuantity(terms.LotSize, stock[eligible[start]].Item.StackSize, bounds);
+            if (lotQuantity > 0)
+            {
+                remainingKeep = KeepFrom(remainingKeep, lotQuantity);
+            }
+
+            KeepFrom(remainingKeep, 0);
+        }
+
+        private uint KeepFrom(uint remainingKeep, uint lotQuantity)
+        {
+            for (var position = 0; position < keepOrder.Count && remainingKeep > 0; position++)
+            {
+                var stockIndex = keepOrder[position];
+                var outcome = outcomes[stockIndex];
+                var free = outcome.Slot.Quantity - outcome.KeptQuantity;
+                var spare = lotQuantity == 0 ? free : free % lotQuantity;
+                var kept = Math.Min(spare, remainingKeep);
+                remainingKeep -= kept;
+                outcomes[stockIndex] = outcome with { KeptQuantity = outcome.KeptQuantity + kept };
+            }
+
+            return remainingKeep;
+        }
+
+        private void PlanGroup(int start, int end)
+        {
+            if (start == end)
+            {
+                return;
+            }
+
+            var item = stock[eligible[start]].Item;
+            if (item.IsUnique && plannedUniqueItems.Contains(item.ItemId))
+            {
+                Mark(start, end, EligibilityReason.UniqueAlreadyListed);
+                return;
+            }
+
+            var terms = checks[eligible[start]].Terms;
+            splits.Clear();
+            uint totalLots = 0;
+            for (var position = start; position < end; position++)
+            {
+                var outcome = outcomes[eligible[position]];
+                var split = Split(outcome.Slot.Quantity - outcome.KeptQuantity, terms.LotSize, item.StackSize, bounds);
+                splits.Add(split);
+                totalLots += split.LotCount;
+            }
+
+            if (totalLots == 0)
+            {
+                Mark(start, end, EligibilityReason.NoLotAfterKeep);
+                return;
+            }
+
+            var listingsToKeepUp = item.IsUnique ? (byte)1 : terms.ListingsToKeepUp;
+            var remaining = (uint)Math.Max(0, listingsToKeepUp - listed.Of(SlotAt(start).Key));
+            for (var position = start; position < end; position++)
+            {
+                var stockIndex = eligible[position];
+                var outcome = outcomes[stockIndex];
+                var slot = outcome.Slot;
+                var split = splits[position - start];
+                if (split.LotCount == 0)
+                {
+                    var hold = outcome.KeptQuantity == slot.Quantity ? LotHold.KeptInBags : LotHold.BelowLotSize;
+                    outcomes[stockIndex] = outcome with { Hold = hold };
+                    continue;
+                }
+
+                if (remaining == 0)
+                {
+                    outcomes[stockIndex] = outcome with { Hold = LotHold.ListingsToKeepUpReached };
+                    continue;
+                }
+
+                if (slot.Source == SlotSource.Saddlebag)
+                {
+                    if (bagRoom <= 0)
+                    {
+                        outcomes[stockIndex] = outcome with { Hold = LotHold.BagsFull };
+                        continue;
+                    }
+
+                    bagRoom--;
+                }
+
+                var taken = Math.Min(split.LotCount, remaining);
+                remaining -= taken;
+                for (var lotIndex = 0u; lotIndex < taken; lotIndex++)
+                {
+                    var row = new PlanRowKey(slot.RetainerId, slot.Container, slot.Slot, (ushort)lotIndex, slot.ItemId, slot.IsHq);
+                    lots.Add(new PlannedLot(row, slot.Source, split.QuantityOf(lotIndex), terms.PreferredRetainerId, listingsToKeepUp));
+                }
+
+                var partial = taken < split.LotCount ? LotHold.ListingsToKeepUpReached : LotHold.None;
+                outcomes[stockIndex] = outcome with { Hold = partial, LotCount = (ushort)taken };
+                if (item.IsUnique)
+                {
+                    plannedUniqueItems.Add(item.ItemId);
+                }
+            }
+        }
+
+        private void Mark(int start, int end, EligibilityReason reason)
+        {
+            for (var position = start; position < end; position++)
+            {
+                var stockIndex = eligible[position];
+                outcomes[stockIndex] = outcomes[stockIndex] with { Reason = reason };
+            }
+        }
+
+        private SlotFacts SlotAt(int position)
+        {
+            return stock[eligible[position]].Slot;
+        }
+    }
 }
