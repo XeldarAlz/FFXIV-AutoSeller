@@ -1,6 +1,5 @@
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Rules.Model;
-using AutoSeller.Core.Shared;
 using Newtonsoft.Json;
 
 namespace AutoSeller;
@@ -82,9 +81,6 @@ public sealed partial class Configuration
         changed |= RuleRepair.RepairCategoryRules(CategoryRules);
         changed |= RuleRepair.RepairIds(NeverSell);
         changed |= RuleRepair.RepairIds(VendorList);
-        var vendoredValueCap = Math.Clamp(VendoredValueCap, 0, MarketLimits.RetainerGilCap);
-        changed |= vendoredValueCap != VendoredValueCap;
-        VendoredValueCap = vendoredValueCap;
         return changed;
     }
 }

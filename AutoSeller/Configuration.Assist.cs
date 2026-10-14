@@ -1,3 +1,5 @@
+using AutoSeller.Core.Shared;
+
 namespace AutoSeller;
 
 public enum AssistSkipKey : byte
@@ -15,12 +17,8 @@ public sealed partial class Configuration
 
     private bool RepairAssistSettings()
     {
-        if (Enum.IsDefined(AssistSkipKey))
-        {
-            return false;
-        }
-
-        AssistSkipKey = AssistSkipKey.Shift;
-        return true;
+        var changed = SettingRepair.KnownValue(AssistSkipKey, AssistSkipKey.Shift, out var skipKey);
+        AssistSkipKey = skipKey;
+        return changed;
     }
 }
