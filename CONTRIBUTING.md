@@ -33,6 +33,21 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 
 Keep logic small and direct. This plugin has one job.
 
+## Where code came from
+
+Some code started as a copy of my other plugins, under the same license, and was renamed and adapted here. When you fix a bug in one of these files, check whether the source has it too.
+
+| Here | Source | How |
+|---|---|---|
+| `Core/Market/Model/`: `ListingRequestMachine`, `ListingCrossCheck`, `ListingFields`, `MarketItemId`, `OfferedListing`, `ObservedListing`, with their tests | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/Model/` and `Core/Execution/Model/ObservedListing.cs` | Copied; pacing, jitter and backoff changed |
+| `Core/Pricing/Universalis/`: `RetryPolicy`, `RequestThrottle`, `UniversalisClient`, with the test clock and handler | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Pricing/` | Copied; the client adapted to the aggregated and tax rate endpoints |
+| `Core/Ledger/` and the journal events, replayer and review in `Core/Execution/Model/`, with their tests | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Ledger/` and `Core/Execution/Model/` | Copied; events replaced with sale writes |
+| `Core/Sales/Model/SalesCsv` field quoting | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Shopping/Import/Csv.cs` | Copied |
+| `SaleGuard`, `ValueBook`, `SellAuthorization`, `SaleReadBack`, `RunReactions` | Auto Shopper's purchase guard, spend book, run authorization, reconciliation and reactions | Written new on the same shape |
+| `PromptText`, `StartBlockRule`, `RunEnd`, `SellWindowCheck`, the tracked window names | Auto GC Supply `master` (`1c4f8dd`) | Written new on the same shape |
+
+The retainer sale history byte layout was checked against [Thaliak.Network](https://github.com/menphina/Thaliak.Network) (MIT). No code was taken from it.
+
 ## Before you open a PR
 
 1. `dotnet build -c Release` cleanly, and `dotnet test -c Release` passes.

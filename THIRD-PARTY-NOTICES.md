@@ -1,6 +1,6 @@
 # Third-party notices
 
-Auto Seller ships no third-party data and no code ported from other plugins. The one bundled third-party asset is the font below; its license travels with it.
+Auto Seller ships no third-party data and no code ported from third-party plugins. Parts of it started in my own Auto Shopper and Auto GC Supply under the same license; [CONTRIBUTING.md](CONTRIBUTING.md#where-code-came-from) lists them. The one bundled third-party asset is the font below; its license travels with it.
 
 The release zip also carries the compiled libraries the plugin builds against: the ECommons submodule and the NuGet packages pinned in `AutoSeller/packages.lock.json` (the clib automation library and what it depends on). They ship as built and unmodified, each under its own license, and none of their source is copied into this repository. Besides those, the zip holds the plugin itself, its manifest, its icon, the nine language catalogs and the font below.
 
