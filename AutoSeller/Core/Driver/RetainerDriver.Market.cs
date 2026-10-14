@@ -1,6 +1,5 @@
 using System.Text;
 using AutoSeller.Core.Driver.Model;
-using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Retainers;
@@ -47,7 +46,7 @@ internal sealed partial class RetainerDriver
             return;
         }
 
-        var diff = SnapshotDiff.Compute(previous, current, DiffWrites.For(retainer.RetainerId, session.Review).AsSpan());
+        var diff = SnapshotDiff.Compute(previous, current, plugin.Ledger.ConfirmedWritesFor(retainer.RetainerId).AsSpan());
         var line = new StringBuilder()
             .Append("Driver: ").Append(retainer.Name).Append(" since ").Append(RunLog.Time(previous.ReadAtUtc)).Append(": ")
             .Append(diff.Changes.Length).Append(" change(s), gil ").Append(diff.GilGrowth)
