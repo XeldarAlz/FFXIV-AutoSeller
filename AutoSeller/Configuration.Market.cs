@@ -1,12 +1,7 @@
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller;
-
-public enum SearchSendPath : byte
-{
-    ComparePrices,
-    SearchProxy,
-}
 
 public sealed partial class Configuration
 {
