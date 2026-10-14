@@ -205,6 +205,7 @@ public sealed class Plugin : IDalamudPlugin
         UndercutWatch.Dispose();
         saleNotices.Dispose();
         SaleHistory.Dispose();
+        Sales.Flush();
         Plan.Dispose();
         BlockedScanner.Dispose();
         History.Dispose();

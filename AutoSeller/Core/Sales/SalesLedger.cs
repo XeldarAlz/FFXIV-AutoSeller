@@ -16,8 +16,9 @@ internal sealed class SalesLedger
 
     private readonly string directoryPath;
     private readonly Dictionary<ulong, HashSet<SaleHistoryEntry>> knownHistory = [];
+    private readonly List<UnwrittenSales> unwritten = [];
     private readonly StringBuilder line = new();
-    private Task<ImmutableArray<SaleRecord>>? loading;
+    private Task<LoadedSales>? loading;
     private long loadedAtMs = long.MinValue;
     private bool dirty = true;
 
@@ -39,6 +40,7 @@ internal sealed class SalesLedger
             return 0;
         }
 
+        WriteUnwritten();
         var file = new SalesFile(directoryPath, characterContentId);
         var fresh = SaleHistoryEntries.Unseen(sales, KnownHistoryOf(characterContentId, file));
         if (fresh.IsEmpty)
@@ -46,15 +48,15 @@ internal sealed class SalesLedger
             return 0;
         }
 
+        Report(fresh.AsSpan());
         if (!file.TryAppend(fresh.AsSpan()))
         {
-            knownHistory.Remove(characterContentId);
-            RunLog.Error($"Sales: {fresh.Length} sale(s) could not be written to {file.FilePath}: {file.LastError}");
-            return 0;
+            unwritten.Add(new UnwrittenSales(characterContentId, fresh));
+            RunLog.Warning($"Sales: {fresh.Length} sale(s) could not be written to {file.FilePath} yet ({file.LastError}); they are written again shortly.");
+            return fresh.Length;
         }
 
         dirty = true;
-        Report(fresh.AsSpan());
         return fresh.Length;
     }
 
@@ -66,8 +68,14 @@ internal sealed class SalesLedger
     public void Keep()
     {
         Collect();
+        if (loading is not null)
+        {
+            return;
+        }
+
+        WriteUnwritten();
         var now = Environment.TickCount64;
-        if (loading is not null || (!dirty && now - loadedAtMs < ReloadMs))
+        if (!dirty && now - loadedAtMs < ReloadMs)
         {
             return;
         }
@@ -93,9 +101,37 @@ internal sealed class SalesLedger
             return;
         }
 
-        Merged = finished.Result;
+        var loaded = finished.Result;
+        dirty |= loaded.UnreadFiles > 0;
+        Merged = loaded.Sales;
         Revision++;
-        RunLog.Debug($"Sales: {Merged.Length} sale(s) after merging the sales files.");
+        RunLog.Debug($"Sales: {Merged.Length} sale(s) after merging the sales files, {loaded.UnreadFiles} file(s) to read again.");
+    }
+
+    public void Flush()
+    {
+        WriteUnwritten();
+        for (var index = 0; index < unwritten.Count; index++)
+        {
+            RunLog.Error($"Sales: {unwritten[index].Sales.Length} sale(s) of character {unwritten[index].CharacterContentId} could not be written before unloading.");
+        }
+    }
+
+    private void WriteUnwritten()
+    {
+        for (var index = unwritten.Count - 1; index >= 0; index--)
+        {
+            var pending = unwritten[index];
+            var file = new SalesFile(directoryPath, pending.CharacterContentId);
+            if (!file.TryAppend(pending.Sales.AsSpan()))
+            {
+                continue;
+            }
+
+            unwritten.RemoveAt(index);
+            dirty = true;
+            RunLog.Info($"Sales: {pending.Sales.Length} sale(s) written to {file.FilePath} on a later try.");
+        }
     }
 
     private HashSet<SaleHistoryEntry> KnownHistoryOf(ulong characterContentId, SalesFile file)
@@ -138,15 +174,16 @@ internal sealed class SalesLedger
         RunLog.Info(line.ToString());
     }
 
-    private static ImmutableArray<SaleRecord> ReadAll(string directory)
+    private static LoadedSales ReadAll(string directory)
     {
         if (!Directory.Exists(directory))
         {
-            return [];
+            return new LoadedSales([], 0);
         }
 
         var paths = Directory.GetFiles(directory, SalesFile.FilePattern);
         var all = new List<SaleRecord>();
+        var unread = 0;
         for (var index = 0; index < paths.Length; index++)
         {
             if (!SalesFile.TryReadContentId(paths[index], out var contentId))
@@ -157,6 +194,7 @@ internal sealed class SalesLedger
             var read = SalesFile.ReadFile(paths[index]);
             if (read.Failed)
             {
+                unread++;
                 RunLog.Warning($"Sales: {paths[index]} could not be read: {read.Error}");
                 continue;
             }
@@ -171,6 +209,10 @@ internal sealed class SalesLedger
             }
         }
 
-        return SaleMatcher.Merge(CollectionsMarshal.AsSpan(all));
+        return new LoadedSales(SaleMatcher.Merge(CollectionsMarshal.AsSpan(all)), unread);
     }
+
+    private readonly record struct UnwrittenSales(ulong CharacterContentId, ImmutableArray<SaleRecord> Sales);
+
+    private readonly record struct LoadedSales(ImmutableArray<SaleRecord> Sales, int UnreadFiles);
 }
