@@ -341,6 +341,35 @@ public sealed class SlotAllocatorTests
     }
 
     [Fact]
+    public void LotPushedAsideTradesPlacesToKeepTheLowerTax()
+    {
+        var dear = Lot(Ore, 757, 0);
+        var middle = Lot(Silk, 508, 1);
+        var bound = Lot(Potion, 237, 2, boundRetainerId: Alpha);
+        var retainers = new[] { Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 1, sellerTaxPercent: 0), Retainer(Gamma, freeSlots: 3) };
+
+        var result = Allocate([dear, middle, bound], retainers);
+
+        Assert.Equal(Alpha, RetainerOf(result, bound));
+        Assert.Equal(Beta, RetainerOf(result, dear));
+        Assert.Equal(Gamma, RetainerOf(result, middle));
+    }
+
+    [Fact]
+    public void TradeNeverMovesALotOffItsPreferredRetainer()
+    {
+        var dear = Lot(Ore, 757, 0);
+        var preferring = Lot(Silk, 508, 1, preferredRetainerId: Beta);
+        var bound = Lot(Potion, 237, 2, boundRetainerId: Alpha);
+        var retainers = new[] { Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 1, sellerTaxPercent: 0), Retainer(Gamma, freeSlots: 3) };
+
+        var result = Allocate([dear, preferring, bound], retainers);
+
+        Assert.Equal(Beta, RetainerOf(result, preferring));
+        Assert.Equal(Gamma, RetainerOf(result, dear));
+    }
+
+    [Fact]
     public void LotOnItsPreferredRetainerStepsAsideLast()
     {
         var preferring = Lot(Ore, 900, 0, preferredRetainerId: Alpha);

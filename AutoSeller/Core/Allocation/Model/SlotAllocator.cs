@@ -11,6 +11,7 @@ internal static class SlotAllocator
         var work = new Work(request);
         work.PlaceMovedLots();
         work.PlaceOtherLots();
+        work.TradeTowardLowerTax();
         return work.Result();
     }
 
@@ -98,6 +99,33 @@ internal static class SlotAllocator
                 if (pinKinds[lotIndex] != PinKind.Move)
                 {
                     Place(lotIndex);
+                }
+            }
+        }
+
+        public void TradeTowardLowerTax()
+        {
+            var traded = true;
+            while (traded)
+            {
+                traded = false;
+                for (var upperPosition = 0; upperPosition < order.Length; upperPosition++)
+                {
+                    var upper = order[upperPosition];
+                    if (!CanTrade(upper))
+                    {
+                        continue;
+                    }
+
+                    for (var lowerPosition = upperPosition + 1; lowerPosition < order.Length; lowerPosition++)
+                    {
+                        var lower = order[lowerPosition];
+                        if (CanTrade(lower) && TradeLowersTax(upper, lower))
+                        {
+                            Trade(upper, lower);
+                            traded = true;
+                        }
+                    }
                 }
             }
         }
@@ -279,6 +307,39 @@ internal static class SlotAllocator
 
             gilNearCap[owner] = true;
             reasons[lotIndex] = AllocationReason.RetainerGilNearCap;
+        }
+
+        private bool CanTrade(int lotIndex)
+        {
+            var placement = placements[lotIndex];
+            return placement != Unplaced
+                && pinKinds[lotIndex] == PinKind.None
+                && lots[lotIndex].PreferredRetainerId != retainers[placement].RetainerId;
+        }
+
+        private bool TradeLowersTax(int upper, int lower)
+        {
+            var upperRetainer = placements[upper];
+            var lowerRetainer = placements[lower];
+            if (retainers[lowerRetainer].SellerTaxPercent >= retainers[upperRetainer].SellerTaxPercent)
+            {
+                return false;
+            }
+
+            var upperValue = lots[upper].EstimatedValue;
+            var lowerValue = lots[lower].EstimatedValue;
+            return GilFits(Release(loads[lowerRetainer], lowerValue), upperValue)
+                && GilFits(Release(loads[upperRetainer], upperValue), lowerValue);
+        }
+
+        private void Trade(int upper, int lower)
+        {
+            var upperRetainer = placements[upper];
+            var lowerRetainer = placements[lower];
+            Unassign(upper);
+            Unassign(lower);
+            Assign(upper, lowerRetainer);
+            Assign(lower, upperRetainer);
         }
 
         private bool TryMakeRoom(int target, long value)
