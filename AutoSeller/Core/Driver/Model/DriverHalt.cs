@@ -28,6 +28,8 @@ internal enum DriverHalt : byte
     DayChanged,
     GuardEndedRun,
     WriteUnresolved,
+    RetainerNotRegistered,
+    JournalWriteFailed,
 }
 
 internal static class DriverHalts
@@ -42,6 +44,7 @@ internal static class DriverHalts
         DriverHalt.MarketNotRead => RunReaction.EndRetainer,
         DriverHalt.SellWindowUnreadable => RunReaction.EndRetainer,
         DriverHalt.GuardEndedRetainer => RunReaction.EndRetainer,
+        DriverHalt.RetainerNotRegistered => RunReaction.EndRetainer,
         DriverHalt.MenuTextUnavailable => RunReaction.EndRun,
         DriverHalt.OtherCharacter => RunReaction.EndRun,
         DriverHalt.Fault => RunReaction.EndRun,
@@ -49,6 +52,7 @@ internal static class DriverHalts
         DriverHalt.LeftHomeWorld => RunReaction.EndRun,
         DriverHalt.DayChanged => RunReaction.EndRun,
         DriverHalt.GuardEndedRun => RunReaction.EndRun,
+        DriverHalt.JournalWriteFailed => RunReaction.EndRun,
         DriverHalt.CombatOrDutyPop => RunReaction.PauseRun,
         _ => RunReaction.PauseForPlayer,
     };
