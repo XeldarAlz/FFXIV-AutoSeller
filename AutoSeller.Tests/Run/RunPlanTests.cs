@@ -57,6 +57,38 @@ public sealed class RunPlanTests
     }
 
     [Fact]
+    public void AListingThisRunMadeDoesNotCountTowardTheListingsToKeepUp()
+    {
+        var inputs = Inputs(OreRule(listingsToKeepUp: 2));
+        var first = RunPlanner.Build(inputs, [Market(Alpha), Market(Beta)], Handled(), [], []);
+        var done = first.AssignedTo(Alpha).Length > 0 ? first.AssignedTo(Alpha)[0] : first.AssignedTo(Beta)[0];
+        RetainerSnapshot[] afterListing = [Market(Alpha, OreListing()), Market(Beta)];
+
+        var counted = RunPlanner.Build(inputs, afterListing, Handled(done.Lot.Row), [], []);
+        var leftOut = RunPlanner.Build(inputs, afterListing, Handled(done.Lot.Row), [], [NormalOre]);
+
+        Assert.Empty(counted.Allocation.Assignments);
+        Assert.Single(leftOut.Allocation.Assignments);
+        Assert.NotEqual(done.Lot.Row, leftOut.Allocation.Assignments[0].Lot.Row);
+    }
+
+    [Fact]
+    public void ListingsLeftOutAreTakenOffTheirOwnItemAndQualityOnly()
+    {
+        var otherItem = new ItemKey(Ore + 1, false);
+        var counts = ListingCounts.From([Market(Alpha, OreListing(), OreListing(1), new ListingSlot(2, Ore + 1, false, 1, ListedPrice))]);
+
+        var left = counts.Without([NormalOre, NormalOre, NormalOre, NormalOre with { IsHq = true }]);
+
+        Assert.Equal(0, left.Of(NormalOre));
+        Assert.Equal(1, left.Of(otherItem));
+        Assert.False(left.ContainsItem(Ore));
+        Assert.True(left.ContainsItem(Ore + 1));
+        Assert.Equal(2, counts.Of(NormalOre));
+        Assert.Same(counts, counts.Without([]));
+    }
+
+    [Fact]
     public void ALotIsValuedAtItsReferencePrice()
     {
         var plan = RunPlanner.Build(Inputs(OreRule()), [Market(Alpha)], Handled(), [], []);
