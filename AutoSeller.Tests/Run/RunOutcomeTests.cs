@@ -99,6 +99,46 @@ public sealed class RunOutcomeTests
     }
 
     [Fact]
+    public void AConfirmedOrDryWriteCountsWithItsValueAtTheNewPrice()
+    {
+        RunDecision[] decisions =
+        [
+            RunDecision.ForListing(Alpha, OreListing(), repriceDown) with { Write = RunWrite.Confirmed },
+            RunDecision.ForLot(Beta, lot, list) with { Write = RunWrite.DryRun },
+        ];
+
+        Assert.Equal(new RunTally(1, 1, 0, 0, (repriceDown.Price + (long)list.Price) * LotQuantity), RunTally.Of(decisions));
+        Assert.Equal(RunState.Completed, RunOutcomeRule.Completion(AllVisited(2), decisions));
+    }
+
+    [Fact]
+    public void AWriteTheGameDidNotTakeOrThatIsUnconfirmedIsNoChangeAndMakesTheRunPartial()
+    {
+        var rejected = RunDecision.ForListing(Alpha, OreListing(), repriceDown) with { Write = RunWrite.Rejected };
+        var unknown = RunDecision.ForLot(Beta, lot, list) with { Write = RunWrite.Unknown };
+
+        Assert.True(rejected.Failed);
+        Assert.True(unknown.Failed);
+        Assert.False(rejected.Clear);
+        Assert.False(rejected.Repriced);
+        Assert.False(unknown.Listed);
+        Assert.Equal(0, unknown.ListedValue);
+        Assert.Equal(new RunTally(0, 0, 0, 2, 0), RunTally.Of([rejected, unknown]));
+        Assert.Equal(RunState.CompletedPartial, RunOutcomeRule.Completion(AllVisited(2), [rejected]));
+    }
+
+    [Fact]
+    public void ASkippedOrRefusedRowIsNeverAFailedWrite()
+    {
+        var skipped = RunDecision.ListingSkipped(Alpha, OreListing(), RunSkip.WindowMismatch) with { Write = RunWrite.Rejected };
+        var refused = RunDecision.ForListing(Alpha, OreListing(), repriceDown) with { Guard = SaleRejection.BelowFloor, Write = RunWrite.Rejected };
+
+        Assert.False(skipped.Failed);
+        Assert.False(refused.Failed);
+        Assert.True(refused.Refused);
+    }
+
+    [Fact]
     public void EveryCompletionIsAFinalState()
     {
         Assert.True(RunOutcomeRule.Completion(AllVisited(1), []).IsFinal());
