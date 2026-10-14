@@ -36,15 +36,15 @@ internal static class LedgerCards
     {
         var ledger = plugin.Ledger;
         var review = ledger.Review;
-        if (ledger.ReadError is not null || review.IsDamaged)
-        {
-            DrawDamaged(plugin, ledger.ReadError is not null);
-            return;
-        }
-
         if (FirstUnresolved(review, out var unresolved))
         {
             DrawUnresolved(plugin, unresolved);
+            return;
+        }
+
+        if (ledger.ReadError is not null || review.IsDamaged)
+        {
+            DrawDamaged(plugin, ledger.ReadError is not null);
         }
     }
 
