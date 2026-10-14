@@ -71,7 +71,7 @@ internal static unsafe class PriceWriter
 
         var master = new AddonMaster.RetainerSell(sellWindow);
         var confirm = master.ConfirmButton;
-        if (confirm == null || !confirm->IsEnabled)
+        if (confirm == null || !confirm->IsEnabled || !confirm->AtkResNode->IsVisible())
         {
             return false;
         }

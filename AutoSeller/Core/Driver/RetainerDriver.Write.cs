@@ -66,6 +66,7 @@ internal sealed partial class RetainerDriver
         session.Enter(RunState.Typing);
         await Type(write);
         session.Enter(RunState.CheckingWindow);
+        await DelayMs(PacingPlan.UiStepMs(Random.Shared.NextDouble()));
         var check = SellWindowCheck.Judge(SampleWindow(itemName, write), write);
         if (check != SellWindowVerdict.Matches)
         {
@@ -83,7 +84,6 @@ internal sealed partial class RetainerDriver
         }
 
         session.Enter(RunState.Confirming);
-        await DelayMs(PacingPlan.UiStepMs(Random.Shared.NextDouble()));
         if (!await ClickOnce(PriceWriter.Confirm))
         {
             Warn($"Driver: Confirm could not be pressed for write {writeId}; it is cancelled.");
