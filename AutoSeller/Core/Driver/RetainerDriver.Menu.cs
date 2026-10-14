@@ -86,7 +86,7 @@ internal sealed partial class RetainerDriver
         }
 
         session.Enter(RunState.Guarding);
-        var verdict = decider.GuardReturn(retainer.RetainerId, listing, pending.Write, DateTime.UtcNow);
+        var verdict = decider.GuardReturn(listing, pending.Write, DateTime.UtcNow);
         return await ConcludeThroughMenu(
             pending.Outcome with { Guard = verdict.Rejection },
             pending.Write,
@@ -163,7 +163,7 @@ internal sealed partial class RetainerDriver
         session.Enter(RunState.Guarding);
         var write = SaleWrite.ForVendor(retainer.RetainerId, slot, stock.Item.VendorPrice);
         var observed = TryReadVendorSlot(slot, out var reading) ? reading : default;
-        var guard = decider.GuardVendor(retainer.RetainerId, stock, observed, write, DateTime.UtcNow);
+        var guard = decider.GuardVendor(stock, observed, write, DateTime.UtcNow);
         return await ConcludeThroughMenu(
             planned with { Guard = guard.Rejection },
             write,

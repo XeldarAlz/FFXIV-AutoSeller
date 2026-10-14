@@ -97,7 +97,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 
-    public SaleVerdict GuardReturn(ulong retainerId, in ListingSlot listing, in SaleWrite write, DateTime nowUtc)
+    public SaleVerdict GuardReturn(in ListingSlot listing, in SaleWrite write, DateTime nowUtc)
     {
         var facts = plugin.GameItems.FactsOf(listing.ItemId);
         var row = new GuardedRow(
@@ -111,7 +111,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         return RunGuard.Evaluate(Authorization, Live(nowUtc, true), row, NoSearch, default, session.Values, Guid.NewGuid());
     }
 
-    public SaleVerdict GuardVendor(ulong retainerId, in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
+    public SaleVerdict GuardVendor(in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
     {
         var itemProtected = ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(stock.Slot.ItemId));
         var current = stock with { Slot = stock.Slot with { Quantity = observed.Quantity, IsProtected = itemProtected } };
