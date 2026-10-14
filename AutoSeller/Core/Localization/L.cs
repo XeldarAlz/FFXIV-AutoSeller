@@ -115,6 +115,19 @@ internal static partial class L
         public static readonly LocString MinutesAgo = new("history.time.minutesAgo", "{0}m ago");
         public static readonly LocString HoursAgo = new("history.time.hoursAgo", "{0}h ago");
         public static readonly LocString DaysAgo = new("history.time.daysAgo", "{0}d ago");
+        public static readonly LocPlural Summary = new("history.summary", "{0} run recorded", "{0} runs recorded");
+        public static readonly LocString OutcomeCompleted = new("history.outcome.completed", "Completed");
+        public static readonly LocString OutcomePartial = new("history.outcome.partial", "Partly done");
+        public static readonly LocString OutcomeStopped = new("history.outcome.stopped", "Stopped");
+        public static readonly LocString OutcomeNeedsPlayer = new("history.outcome.needsPlayer", "Needs you");
+        public static readonly LocString OutcomeFailed = new("history.outcome.failed", "Failed");
+        public static readonly LocString DryRun = new("history.dryRun", "Dry run");
+        public static readonly LocString Retainers = new("history.retainers", "{0} of {1} retainers");
+        public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
+        public static readonly LocString ToList = new("history.toList", "{0} to list");
+        public static readonly LocString Kept = new("history.kept", "{0} kept");
+        public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
+        public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");
     }
 
     internal static class Plugins
