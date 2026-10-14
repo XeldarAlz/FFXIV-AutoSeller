@@ -108,7 +108,7 @@ internal sealed partial class ListingsPage
             return;
         }
 
-        DrawToolbar();
+        DrawToolbar(view.Table);
         Styling.VSpace(SectionGap);
         DrawStateChips();
         Styling.VSpace(SectionGap);
@@ -119,10 +119,10 @@ internal sealed partial class ListingsPage
             return;
         }
 
-        DrawRows();
+        DrawRows(view.Table.Rows);
     }
 
-    private void DrawToolbar()
+    private void DrawToolbar(ListingTable table)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
@@ -138,7 +138,7 @@ internal sealed partial class ListingsPage
         if (Dropdown.Draw(CharacterPickerId, characterLabels, ref characterChoice, PickerWidth))
         {
             retainerChoice = 0;
-            BuildRetainerChoices(Plugin.Instance.Listings.View.Table);
+            BuildRetainerChoices(table);
         }
 
         x += PickerWidth * scale + gap;

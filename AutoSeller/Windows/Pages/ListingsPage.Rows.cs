@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using AutoSeller.Core.Listings;
 using AutoSeller.Core.Listings.Model;
@@ -172,7 +173,7 @@ internal sealed partial class ListingsPage
         shown = ListingQuery.Apply(view.Table.Rows, view.ItemNames, filter, order);
     }
 
-    private void DrawRows()
+    private void DrawRows(ImmutableArray<ListingRow> rows)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
@@ -183,7 +184,6 @@ internal sealed partial class ListingsPage
         var windowTop = ImGui.GetWindowPos().Y;
         var first = Math.Clamp((int)MathF.Floor((windowTop - top.Y) / stride), 0, shown);
         var last = Math.Clamp((int)MathF.Ceiling((windowTop + ImGui.GetWindowHeight() - top.Y) / stride), first, shown);
-        var rows = Plugin.Instance.Listings.View.Table.Rows;
         for (var position = first; position < last; position++)
         {
             var index = order[position];
