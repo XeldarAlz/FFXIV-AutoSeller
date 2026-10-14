@@ -49,6 +49,7 @@ public sealed class Plugin : IDalamudPlugin
     internal GameItems GameItems { get; }
     internal MarketServices Market { get; }
     internal RetainerReader Retainers { get; }
+    internal MarketReader RetainerMarket { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -87,6 +88,7 @@ public sealed class Plugin : IDalamudPlugin
             Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
+            RetainerMarket = new MarketReader(Retainers, Characters, Retainers.Available);
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
