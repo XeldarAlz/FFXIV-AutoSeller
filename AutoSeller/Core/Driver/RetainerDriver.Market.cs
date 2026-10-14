@@ -73,7 +73,8 @@ internal sealed partial class RetainerDriver
     {
         var tracker = plugin.Market.Tracker;
         var state = tracker.Request(item, true);
-        chain.Begin(ChainStep.Closes(ChainWindow.RetainerSell, SearchBudgetMs, SearchWindows), Environment.TickCount64);
+        var watch = ChainStep.Closes(ChainWindow.RetainerSell, SearchBudgetMs, SearchWindows);
+        chain.Begin(watch, Environment.TickCount64);
         try
         {
             while (state.Status == ListingRequestStatus.Waiting)
@@ -93,10 +94,10 @@ internal sealed partial class RetainerDriver
                     case ChainAction.Pause:
                         return SearchResult.Halt(new Stop(DriverHalt.CombatOrDutyPop, $"{verdict.Window} opened during the price comparison"));
                     case ChainAction.Next:
-                        Warn($"Driver: the sell window closed during the price comparison of item {item.ItemId}");
-                        return SearchResult.Failed;
+                        chain.Begin(watch, Environment.TickCount64);
+                        break;
                     case ChainAction.Unwind:
-                        Warn($"Driver: the price comparison of item {item.ItemId} ran out of time");
+                        Warn($"Driver: the price comparison of item {item.ItemId} stopped waiting ({verdict.Window})");
                         return SearchResult.Failed;
                 }
             }
