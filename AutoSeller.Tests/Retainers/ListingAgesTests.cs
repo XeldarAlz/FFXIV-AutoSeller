@@ -65,6 +65,33 @@ public sealed class ListingAgesTests
     }
 
     [Fact]
+    public void ALotTheRunRelistedInTheSameSlotStartsItsOwnAge()
+    {
+        var first = Snapshot(FirstVisit, 0, Slot(0, DarksteelOre, 10, 200));
+        var known = ListingAges.Carry(null, first, [], []);
+        var relisted = Slot(0, DarksteelOre, 10, 180);
+        SnapshotDiffWrite[] writes = [new(SnapshotDiffWriteKind.Listed, byte.MaxValue, DarksteelOre, false, 10, 0, 180, SecondVisit.AddMinutes(-5))];
+
+        var withoutWrites = ListingAges.Carry(first, Snapshot(SecondVisit, 0, relisted), known.AsSpan(), []);
+        var withWrites = ListingAges.Carry(first, Snapshot(SecondVisit, 0, relisted), known.AsSpan(), writes);
+
+        Assert.Equal(FirstVisit, Assert.Single(withoutWrites).ListedSinceUtc);
+        Assert.Equal(new ListingAge(FirstRetainerId, relisted, SecondVisit), Assert.Single(withWrites));
+    }
+
+    [Fact]
+    public void ARepriceTheRunConfirmedKeepsTheListingsAge()
+    {
+        var first = Snapshot(FirstVisit, 0, Slot(0, DarksteelOre, 10, 200));
+        var known = ListingAges.Carry(null, first, [], []);
+        SnapshotDiffWrite[] writes = [new(SnapshotDiffWriteKind.Repriced, 0, DarksteelOre, false, 10, 200, 180, SecondVisit.AddMinutes(-5))];
+
+        var ages = ListingAges.Carry(first, Snapshot(SecondVisit, 0, Slot(0, DarksteelOre, 10, 180)), known.AsSpan(), writes);
+
+        Assert.Equal(FirstVisit, Assert.Single(ages).ListedSinceUtc);
+    }
+
+    [Fact]
     public void AnAgeIsCarriedOverEveryVisitThatStillShowsTheListing()
     {
         var first = Snapshot(FirstVisit, 0, Slot(0, DarksteelOre, 10, 200));

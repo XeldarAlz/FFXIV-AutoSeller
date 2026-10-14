@@ -129,6 +129,19 @@ public sealed class CharacterDataTests : IDisposable
     }
 
     [Fact]
+    public void ALotTheJournalListedInAnEmptiedSlotStartsItsOwnAge()
+    {
+        var data = new CharacterData(Character);
+        var nextDay = Now.AddDays(1);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
+        SnapshotDiffWrite[] listed = [new(SnapshotDiffWriteKind.Listed, byte.MaxValue, Ore, false, 5, 0, 950, nextDay.AddMinutes(-1))];
+
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, nextDay, Listing(0, Ore, 950)), listed);
+
+        Assert.Equal<ListingAge>([new ListingAge(FirstRetainer, Listing(0, Ore, 950), nextDay)], data.ToRecord(nextDay).ListingAges);
+    }
+
+    [Fact]
     public void AListingGoneFromItsSlotTakesItsTimeAlong()
     {
         var data = new CharacterData(Character);
