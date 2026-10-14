@@ -206,23 +206,8 @@ internal sealed partial class ListingsPage
         var iconSize = IconSize * scale;
         ItemIcon.Draw(drawList, text.IconId, new Vector2(columns.Icon, midY - iconSize * 0.5f), iconSize, text.HighQuality);
 
-        var lineHeight = ImGui.GetTextLineHeight();
-        var top = midY - (lineHeight + CaptionGap * scale + TextDraw.CaptionLineHeight()) * 0.5f;
-        var nameWidth = columns.NameRight - columns.Name;
-        var badgeWidth = text.HighQuality ? Badge.Width(Loc.T(L.Rules.HighQuality)) + 6f * scale : 0f;
-        var name = text.NameFit.Fit(text.Name, MathF.Max(0f, nameWidth - badgeWidth));
-        TextDraw.At(name, new Vector2(columns.Name, top), Styling.TextStrong);
-        if (text.HighQuality)
-        {
-            Badge.DrawLeft(drawList, Loc.T(L.Rules.HighQuality), Styling.AccentAmber, columns.Name + TextDraw.Measure(name).X + 6f * scale, top + lineHeight * 0.5f);
-        }
-
-        using (Fonts.PushCaption())
-        {
-            TextDraw.At(text.CaptionFit.Fit(text.Caption, nameWidth), new Vector2(columns.Name, top + lineHeight + CaptionGap * scale), Styling.TextDim);
-        }
-
-        var lineY = midY - lineHeight * 0.5f;
+        NameCell.Draw(drawList, text.Name, ref text.NameFit, text.Caption, ref text.CaptionFit, text.HighQuality, columns.Name, columns.NameRight, midY);
+        var lineY = midY - ImGui.GetTextLineHeight() * 0.5f;
         TextDraw.Right(text.Quantity, columns.QuantityRight, lineY, Styling.TextSecondary);
         TextDraw.Right(text.Price, columns.PriceRight, lineY, Styling.TextStrong);
         if (columns.ShowCompetitor)
@@ -253,47 +238,24 @@ internal sealed partial class ListingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         var height = ColumnHeaderHeight * scale;
-        Header(L.Listings.ColumnItem, columns.Icon, origin.Y, columns.NameRight - columns.Icon, height, false, null);
-        Header(L.Listings.ColumnQuantity, columns.QuantityRight, origin.Y, QuantityWidth * scale, height, true, null);
-        Header(L.Listings.ColumnPrice, columns.PriceRight, origin.Y, PriceWidth * scale, height, true, null);
+        ColumnHeader.Draw(L.Listings.ColumnItem, columns.Icon, origin.Y, columns.NameRight - columns.Icon, height, false, null);
+        ColumnHeader.Draw(L.Listings.ColumnQuantity, columns.QuantityRight, origin.Y, QuantityWidth * scale, height, true, null);
+        ColumnHeader.Draw(L.Listings.ColumnPrice, columns.PriceRight, origin.Y, PriceWidth * scale, height, true, null);
         if (columns.ShowCompetitor)
         {
-            Header(L.Listings.ColumnCompetitor, columns.CompetitorRight, origin.Y, PriceWidth * scale, height, true, L.Listings.CompetitorHelp);
+            ColumnHeader.Draw(L.Listings.ColumnCompetitor, columns.CompetitorRight, origin.Y, PriceWidth * scale, height, true, L.Listings.CompetitorHelp);
         }
 
-        Header(L.Listings.ColumnValue, columns.ValueRight, origin.Y, PriceWidth * scale, height, true, null);
+        ColumnHeader.Draw(L.Listings.ColumnValue, columns.ValueRight, origin.Y, PriceWidth * scale, height, true, null);
         if (columns.ShowRepriced)
         {
-            Header(L.Listings.ColumnLastReprice, columns.RepricedRight, origin.Y, RepricedWidth * scale, height, true, L.Listings.LastRepriceHelp);
+            ColumnHeader.Draw(L.Listings.ColumnLastReprice, columns.RepricedRight, origin.Y, RepricedWidth * scale, height, true, L.Listings.LastRepriceHelp);
         }
 
-        Header(L.Listings.ColumnListed, columns.ListedRight, origin.Y, ListedWidth * scale, height, true, L.Listings.ListedHelp);
-        Header(L.Listings.ColumnState, columns.State, origin.Y, StateWidth * scale, height, false, null);
+        ColumnHeader.Draw(L.Listings.ColumnListed, columns.ListedRight, origin.Y, ListedWidth * scale, height, true, L.Listings.ListedHelp);
+        ColumnHeader.Draw(L.Listings.ColumnState, columns.State, origin.Y, StateWidth * scale, height, false, null);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(columns.Right - columns.Left, height));
-    }
-
-    private static void Header(LocString label, float x, float y, float width, float height, bool alignRight, LocString? help)
-    {
-        using (Fonts.PushCaption())
-        {
-            var shown = TextDraw.Truncate(TextDraw.Upper(Loc.T(label)), width);
-            var textY = y + (height - ImGui.GetTextLineHeight()) * 0.5f;
-            if (alignRight)
-            {
-                TextDraw.Right(shown, x, textY, Styling.TextMuted);
-            }
-            else
-            {
-                TextDraw.At(shown, new Vector2(x, textY), Styling.TextMuted);
-            }
-        }
-
-        var min = alignRight ? new Vector2(x - width, y) : new Vector2(x, y);
-        if (help is { } text && Hit.HoveringRect(min, min + new Vector2(width, height)))
-        {
-            Tooltip.Show(Loc.T(text));
-        }
     }
 
     private static Columns ColumnsFor(float left, float width)

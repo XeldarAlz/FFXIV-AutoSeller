@@ -24,7 +24,6 @@ internal sealed partial class ListingsPage
     private const float PadX = 12f;
     private const float IconSize = 28f;
     private const float CellGap = 10f;
-    private const float CaptionGap = 2f;
     private const float QuantityWidth = 48f;
     private const float PriceWidth = 92f;
     private const float ListedWidth = 76f;
