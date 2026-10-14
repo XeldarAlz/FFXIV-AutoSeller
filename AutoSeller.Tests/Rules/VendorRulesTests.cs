@@ -111,6 +111,26 @@ public sealed class VendorRulesTests
         Assert.True(verdicts[3].IsVendored);
     }
 
+    [Theory]
+    [InlineData(99u, false)]
+    [InlineData(100u, true)]
+    [InlineData(101u, true)]
+    public void RunCapAllowsVendoringUpToExactlyTheCap(uint runCap, bool vendored)
+    {
+        var settings = On() with { RunCap = runCap };
+        var stock = new[]
+        {
+            Stock(Bag(Junk, 30, 0), Material(Junk, vendorPrice: 2), 5),
+            Stock(Bag(Shard, 40, 1), Material(Shard, vendorPrice: 1), 5),
+        };
+
+        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), settings, Book());
+
+        Assert.True(verdicts[0].IsVendored);
+        Assert.Equal(vendored, verdicts[1].IsVendored);
+        Assert.Equal(vendored ? VendorReason.Junk : VendorReason.RunCapReached, verdicts[1].Reason);
+    }
+
     [Fact]
     public void RunCapCountsOnlyVendoredSlots()
     {
