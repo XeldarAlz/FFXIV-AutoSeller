@@ -34,10 +34,12 @@ internal sealed partial class SellController
         var enabled = data?.EnabledRetainerIds() ?? [];
         var ledger = plugin.Ledger;
         ledger.Invalidate();
+        var journalBlocks = ledger.BlocksWrites;
         if (ledger.ReadError is { } readError)
         {
             RunLog.Warning($"The journal could not be read: {readError}");
         }
+
         var block = StartBlockRule.Evaluate(new StartFacts(
             RunMode.Standalone,
             Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer is not null && data is not null,
@@ -47,7 +49,7 @@ internal sealed partial class SellController
             Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
             Svc.Condition[ConditionFlag.TradeOpen],
             autoRetainerUnread,
-            ledger.BlocksWrites,
+            journalBlocks,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
             enabled.Length > 0,
