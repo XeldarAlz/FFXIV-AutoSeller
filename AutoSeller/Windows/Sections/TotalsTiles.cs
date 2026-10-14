@@ -80,7 +80,7 @@ internal sealed class TotalsTiles
         newListings = PlanLabels.Count(totals.NewListings);
         value = totals.ListedValue > 0 ? Formatting.Gil(totals.ListedValue) : PlanLabels.NoValue;
         vendor = totals.VendorGil > 0 ? Formatting.Gil(totals.VendorGil) : PlanLabels.NoValue;
-        time = totals.RunTime > TimeSpan.Zero ? Formatting.Elapsed(totals.RunTime) : PlanLabels.NoValue;
+        time = totals.RunTime > TimeSpan.Zero ? Formatting.Duration(totals.RunTime) : PlanLabels.NoValue;
         searches = Loc.Plural(L.Plan.TileSearches, totals.Searches);
     }
 }

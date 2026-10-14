@@ -108,7 +108,7 @@ internal static class PlanLabels
         DecisionReason.BelowFloorListedAtFloor => Loc.T(L.Plan.ReasonBelowFloorListedAtFloor),
         DecisionReason.BelowFloorReturned => Loc.T(L.Plan.ReasonBelowFloorReturned),
         DecisionReason.OverStepLimit => Loc.T(L.Plan.ReasonOverStepLimit),
-        DecisionReason.Cooldown => cooldownLeft > TimeSpan.Zero ? Loc.T(L.Plan.ReasonCooldown, Short(cooldownLeft)) : Loc.T(L.Plan.ReasonCooldown, string.Empty).TrimEnd(),
+        DecisionReason.Cooldown => cooldownLeft > TimeSpan.Zero ? Loc.T(L.Plan.ReasonCooldown, Formatting.Duration(cooldownLeft)) : Loc.T(L.Plan.ReasonCooldown, string.Empty).TrimEnd(),
         DecisionReason.PriceWar => Loc.T(L.Plan.ReasonPriceWar),
         DecisionReason.UnknownCompetition => Loc.T(L.Plan.ReasonUnknownCompetition),
         DecisionReason.NoPriceData => Loc.T(L.Plan.ReasonNoPriceData),
@@ -174,14 +174,6 @@ internal static class PlanLabels
     public static string Count(long count)
     {
         return count.ToString("N0", Loc.Culture);
-    }
-
-    public static string Short(TimeSpan span)
-    {
-        var minutes = Math.Max(1, (int)Math.Ceiling(span.TotalMinutes));
-        return minutes < 60
-            ? string.Concat(minutes.ToString(CultureInfo.InvariantCulture), "m")
-            : string.Concat((minutes / 60).ToString(CultureInfo.InvariantCulture), "h ", (minutes % 60).ToString("D2", CultureInfo.InvariantCulture), "m");
     }
 
     public static string ItemName(GameItems items, uint itemId)

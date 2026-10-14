@@ -6,6 +6,9 @@ namespace AutoSeller.Windows;
 // durations identically. Previously each window carried its own copy and they could drift.
 internal static class Formatting
 {
+    private const long MinutesPerHour = 60;
+    private const long HoursPerDay = 24;
+
     public static string Exp(long exp)
     {
         if (exp >= 1_000_000) return $"{exp / 1_000_000.0:0.0}M";
@@ -20,6 +23,20 @@ internal static class Formatting
     }
 
     public static string Gil(long amount) => Loc.Gil(amount);
+
+    public static string Duration(TimeSpan span)
+    {
+        var minutes = Math.Max(1L, (long)Math.Ceiling(span.TotalMinutes));
+        if (minutes < MinutesPerHour)
+        {
+            return Loc.T(L.Common.DurationMinutes, minutes);
+        }
+
+        var hours = minutes / MinutesPerHour;
+        return hours < HoursPerDay
+            ? Loc.T(L.Common.DurationHours, hours, minutes % MinutesPerHour)
+            : Loc.T(L.Common.DurationDays, hours / HoursPerDay, hours % HoursPerDay);
+    }
 
     public static string RelativeTime(DateTime utc) => RelativeTime(utc, DateTime.UtcNow);
 

@@ -11,6 +11,9 @@ internal static partial class L
         public static readonly LocString DragAdjustHint = new("common.dragAdjustHint", "Drag to adjust · Ctrl+click to type");
         public static readonly LocString NoMatches = new("common.noMatches", "Nothing matches “{0}”.");
         public static readonly LocString Gil = new("common.gil", "{0} gil");
+        public static readonly LocString DurationMinutes = new("common.duration.minutes", "{0} min");
+        public static readonly LocString DurationHours = new("common.duration.hours", "{0} h {1} min");
+        public static readonly LocString DurationDays = new("common.duration.days", "{0} d {1} h");
     }
 
     internal static class Shell
