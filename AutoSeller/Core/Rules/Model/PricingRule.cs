@@ -2,27 +2,22 @@ using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
-internal enum PricingRuleSource : byte
-{
-    SellList,
-    Open,
-}
-
 internal static class PricingRule
 {
-    public static ItemRuleSnapshot For(RuleBook rules, ItemKey item, out PricingRuleSource source)
+    public static ItemRuleSnapshot For(RuleBook rules, ItemKey item, out EligibilityReason sellListMatch)
     {
-        if (Eligibility.MatchSellList(rules.EntriesFor(item.ItemId), item.IsHq, out var rule) == EligibilityReason.Eligible)
+        var entries = rules.EntriesFor(item.ItemId);
+        if (entries.IsEmpty)
         {
-            source = PricingRuleSource.SellList;
-            return rule!.Value;
+            sellListMatch = EligibilityReason.NoMatchingRule;
+            return OpenRule(item);
         }
 
-        source = PricingRuleSource.Open;
-        return new ItemRuleSnapshot(0, item.ItemId, 0, 0, 0, 0, 0, QualityFilter.Both, ItemRule.DefaultListingsToKeepUp, false);
+        sellListMatch = Eligibility.MatchSellList(entries, item.IsHq, out var rule);
+        return rule ?? OpenRule(item);
     }
 
-    public static bool Manages(RuleBook rules, ItemKey item, byte itemUiCategory)
+    public static bool Manages(RuleBook rules, ItemKey item, byte itemUiCategory, uint referenceUnitPrice)
     {
         if (rules.NeverSell.Contains(item.ItemId))
         {
@@ -35,15 +30,11 @@ internal static class PricingRule
             return Eligibility.MatchSellList(entries, item.IsHq, out _) == EligibilityReason.Eligible;
         }
 
-        var categoryRules = rules.CategoryRules;
-        for (var index = 0; index < categoryRules.Length; index++)
-        {
-            if (categoryRules[index].Covers(itemUiCategory))
-            {
-                return true;
-            }
-        }
+        return Eligibility.MatchCategory(rules, itemUiCategory, referenceUnitPrice, out _) == EligibilityReason.Eligible;
+    }
 
-        return false;
+    private static ItemRuleSnapshot OpenRule(ItemKey item)
+    {
+        return new ItemRuleSnapshot(0, item.ItemId, 0, 0, 0, 0, 0, QualityFilter.Both, ItemRule.DefaultListingsToKeepUp, false);
     }
 }

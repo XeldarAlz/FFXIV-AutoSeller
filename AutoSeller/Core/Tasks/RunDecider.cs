@@ -20,7 +20,8 @@ internal sealed class RunDecider(Plugin plugin, SellAuthorization authorization)
     public ListingDuty DutyOf(ulong retainerId, in ListingSlot listing, bool handled, DateTime nowUtc)
     {
         var facts = plugin.GameItems.FactsOf(listing.ItemId);
-        return ListingDuties.Of(authorization.Rules, listing, facts.ItemUiCategory, HistoryOf(retainerId, listing), authorization.Pricing.RepriceCooldown, handled, nowUtc);
+        var reference = plugin.References.ReferenceFor(listing.Key, null, nowUtc).AverageSalePrice;
+        return ListingDuties.Of(authorization.Rules, listing, facts.ItemUiCategory, reference, HistoryOf(retainerId, listing), authorization.Pricing.RepriceCooldown, handled, nowUtc);
     }
 
     public Decision ForListing(ulong retainerId, in ListingSlot listing, CompetitorSnapshot competition, DateTime nowUtc)

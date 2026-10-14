@@ -16,8 +16,8 @@ public sealed class ListingDutyTests
     {
         var repricedLongAgo = new RepriceEntry(Now - cooldown, ImmutableArray<DateTime>.Empty);
 
-        Assert.Equal(ListingDuty.Due, ListingDuties.Of(rules, OreListing(), OreUiCategory, default, cooldown, false, Now));
-        Assert.Equal(ListingDuty.Due, ListingDuties.Of(rules, OreListing(), OreUiCategory, repricedLongAgo, cooldown, false, Now));
+        Assert.Equal(ListingDuty.Due, ListingDuties.Of(rules, OreListing(), OreUiCategory, OreReference, default, cooldown, false, Now));
+        Assert.Equal(ListingDuty.Due, ListingDuties.Of(rules, OreListing(), OreUiCategory, OreReference, repricedLongAgo, cooldown, false, Now));
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public sealed class ListingDutyTests
     {
         var repriced = new RepriceEntry(Now - cooldown + TimeSpan.FromMinutes(1), ImmutableArray<DateTime>.Empty);
 
-        Assert.Equal(ListingDuty.CoolingDown, ListingDuties.Of(rules, OreListing(), OreUiCategory, repriced, cooldown, false, Now));
+        Assert.Equal(ListingDuty.CoolingDown, ListingDuties.Of(rules, OreListing(), OreUiCategory, OreReference, repriced, cooldown, false, Now));
     }
 
     [Fact]
@@ -33,13 +33,22 @@ public sealed class ListingDutyTests
     {
         var other = OreListing() with { ItemId = Ore + 1 };
 
-        Assert.Equal(ListingDuty.NotManaged, ListingDuties.Of(rules, other, OreUiCategory, default, cooldown, false, Now));
+        Assert.Equal(ListingDuty.NotManaged, ListingDuties.Of(rules, other, OreUiCategory, OreReference, default, cooldown, false, Now));
+    }
+
+    [Fact]
+    public void ACategoryListingBelowItsMinimumIsLeftAlone()
+    {
+        var categoryRules = RuleBook.Create([], [new CategoryRule { ItemUiCategoryIds = [OreUiCategory], MinimumReferenceValue = OreReference }], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+
+        Assert.Equal(ListingDuty.Due, ListingDuties.Of(categoryRules, OreListing(), OreUiCategory, OreReference, default, cooldown, false, Now));
+        Assert.Equal(ListingDuty.NotManaged, ListingDuties.Of(categoryRules, OreListing(), OreUiCategory, OreReference - 1, default, cooldown, false, Now));
     }
 
     [Fact]
     public void AHandledListingIsNotCheckedAgain()
     {
-        Assert.Equal(ListingDuty.Handled, ListingDuties.Of(rules, OreListing(), OreUiCategory, default, cooldown, true, Now));
+        Assert.Equal(ListingDuty.Handled, ListingDuties.Of(rules, OreListing(), OreUiCategory, OreReference, default, cooldown, true, Now));
     }
 
     [Fact]

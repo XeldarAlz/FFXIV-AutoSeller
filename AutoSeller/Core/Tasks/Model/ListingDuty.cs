@@ -14,14 +14,14 @@ internal enum ListingDuty : byte
 
 internal static class ListingDuties
 {
-    public static ListingDuty Of(RuleBook rules, in ListingSlot listing, byte itemUiCategory, in RepriceEntry history, TimeSpan cooldown, bool handled, DateTime nowUtc)
+    public static ListingDuty Of(RuleBook rules, in ListingSlot listing, byte itemUiCategory, uint referenceUnitPrice, in RepriceEntry history, TimeSpan cooldown, bool handled, DateTime nowUtc)
     {
         if (handled)
         {
             return ListingDuty.Handled;
         }
 
-        if (!PricingRule.Manages(rules, listing.Key, itemUiCategory))
+        if (!PricingRule.Manages(rules, listing.Key, itemUiCategory, referenceUnitPrice))
         {
             return ListingDuty.NotManaged;
         }
