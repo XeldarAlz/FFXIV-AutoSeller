@@ -71,6 +71,24 @@ public sealed class FingerprintTests
     }
 
     [Fact]
+    public void CategoryIdsOutOfOrderInARestoredRuleBookKeepTheRuleFingerprint()
+    {
+        var built = Book(new Inputs());
+        var reversed = new CategoryRuleSnapshot[built.CategoryRules.Length];
+        for (var index = 0; index < reversed.Length; index++)
+        {
+            var category = built.CategoryRules[index];
+            var ids = category.ItemUiCategoryIds.AsSpan().ToArray();
+            Array.Reverse(ids);
+            reversed[index] = new CategoryRuleSnapshot([.. ids], category.MinimumReferenceValue);
+        }
+
+        var restored = RuleBook.Restore(built.SellList, [.. reversed], built.NeverSell, built.Vendor, built.Sources, built.InventoryRetainerIds);
+
+        Assert.Equal(Fingerprint.OfRuleBook(built), Fingerprint.OfRuleBook(restored));
+    }
+
+    [Fact]
     public void TwoEntriesForOneItemKeepTheirOrderBecauseTheFirstMatchWins()
     {
         var lowerFloorFirst = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = 500 }, new ItemRule { ItemId = Ore, Floor = 900 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);

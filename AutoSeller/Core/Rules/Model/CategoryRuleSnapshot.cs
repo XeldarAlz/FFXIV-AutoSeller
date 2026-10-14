@@ -1,25 +1,35 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
-internal readonly record struct CategoryRuleSnapshot(ImmutableArray<byte> ItemUiCategoryIds, uint MinimumReferenceValue)
+internal readonly record struct CategoryRuleSnapshot
 {
+    [JsonConstructor]
+    public CategoryRuleSnapshot(ImmutableArray<byte> itemUiCategoryIds, uint minimumReferenceValue)
+    {
+        ItemUiCategoryIds = SortedIds.Of(itemUiCategoryIds.AsSpan());
+        MinimumReferenceValue = minimumReferenceValue;
+    }
+
+    public ImmutableArray<byte> ItemUiCategoryIds { get; }
+
+    public uint MinimumReferenceValue { get; }
+
     public static CategoryRuleSnapshot From(CategoryRule rule)
     {
         var configured = rule.ItemUiCategoryIds;
-        var categories = new byte[configured.Length];
-        var count = 0;
+        var categories = ImmutableArray.CreateBuilder<byte>(configured.Length);
         for (var index = 0; index < configured.Length; index++)
         {
             if (configured[index] <= byte.MaxValue)
             {
-                categories[count] = (byte)configured[index];
-                count++;
+                categories.Add((byte)configured[index]);
             }
         }
 
-        return new CategoryRuleSnapshot(SortedIds.Of<byte>(categories.AsSpan(0, count)), rule.MinimumReferenceValue);
+        return new CategoryRuleSnapshot(categories.ToImmutable(), rule.MinimumReferenceValue);
     }
 
     public bool Covers(byte itemUiCategory)

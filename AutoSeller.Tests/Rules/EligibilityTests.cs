@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Text.Json;
+using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Rules.Model;
 using static AutoSeller.Tests.Rules.RuleFixtures;
 
@@ -301,6 +303,24 @@ public sealed class EligibilityTests
         Assert.Equal(rules.Vendor, restored.Vendor);
         Assert.True(restored.Allows(In(SlotSource.RetainerPage, Ore, 1, retainerId: SecondRetainer)));
         Assert.False(restored.Allows(In(SlotSource.RetainerPage, Ore, 1, retainerId: FirstRetainer)));
+    }
+
+    [Fact]
+    public void RuleBookRestoredWithCategoryIdsOutOfOrderStillCoversEveryCategory()
+    {
+        var unsorted = new CategoryRuleSnapshot([MaterialCategory, MedicineCategory, MaterialCategory], 50);
+        var fromJournal = JsonSerializer.Deserialize<CategoryRuleSnapshot>($$"""{"ItemUiCategoryIds":[{{MaterialCategory}},{{MedicineCategory}}],"MinimumReferenceValue":50}""", RunJournal.SerializerOptions);
+
+        var restored = RuleBook.Restore([], [unsorted, fromJournal], ItemIdSet.Empty, VendorSettings.Off, AllSources, []);
+
+        for (var index = 0; index < restored.CategoryRules.Length; index++)
+        {
+            var category = restored.CategoryRules[index];
+            Assert.Equal([MedicineCategory, MaterialCategory], category.ItemUiCategoryIds.AsSpan().ToArray());
+            Assert.Equal(50u, category.MinimumReferenceValue);
+            Assert.True(category.Covers(MaterialCategory));
+            Assert.True(category.Covers(MedicineCategory));
+        }
     }
 
     private static uint[] ItemIds(ImmutableArray<ItemRuleSnapshot> sellList)
