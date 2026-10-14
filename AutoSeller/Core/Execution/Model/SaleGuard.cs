@@ -19,7 +19,7 @@ internal static class SaleGuard
             return SaleVerdict.Rejected(rejection, floor);
         }
 
-        if (!input.Eligible)
+        if (!input.EligibleForWrite)
         {
             return SaleVerdict.Rejected(SaleRejection.NotEligible, floor);
         }
@@ -244,6 +244,11 @@ internal static class SaleGuard
             return SaleRejection.VendorGear;
         }
 
-        return input.IsProtected ? SaleRejection.VendorProtected : SaleRejection.None;
+        if (input.IsProtected)
+        {
+            return SaleRejection.VendorProtected;
+        }
+
+        return input.OnSellList ? SaleRejection.VendorOnSellList : SaleRejection.None;
     }
 }

@@ -26,7 +26,8 @@ public sealed class SaleGuardTests
         (SaleRejection.ItemMismatch, () => WithPlanned(GuardInput(Reprice()), slot => slot with { ItemId = Ore + 1 })),
         (SaleRejection.QualityMismatch, () => WithPlanned(GuardInput(Reprice()), slot => slot with { IsHq = true })),
         (SaleRejection.ListingChanged, () => WithPlanned(GuardInput(Reprice()), slot => slot with { UnitPrice = ListedPrice - 1 })),
-        (SaleRejection.NotEligible, () => GuardInput(Reprice()) with { Eligible = false }),
+        (SaleRejection.NotEligible, () => GuardInput(Reprice()) with { EligibleForWrite = false }),
+        (SaleRejection.NotEligible, () => GuardInput(Vendor()) with { EligibleForWrite = false }),
         (SaleRejection.PriceUnchanged, () => GuardInput(Reprice(ListedPrice))),
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
@@ -39,6 +40,7 @@ public sealed class SaleGuardTests
         (SaleRejection.VendorHighQuality, () => GuardInput(Vendor() with { IsHq = true })),
         (SaleRejection.VendorGear, () => GuardInput(Vendor()) with { IsGear = true }),
         (SaleRejection.VendorProtected, () => GuardInput(Vendor()) with { IsProtected = true }),
+        (SaleRejection.VendorOnSellList, () => GuardInput(Vendor()) with { OnSellList = true }),
     ];
 
     [Fact]
@@ -82,11 +84,11 @@ public sealed class SaleGuardTests
     [Fact]
     public void ChecksRunInTheOrderOfTheSafetyModel()
     {
-        var input = GuardInput(Reprice(DecisionFloor - 1)) with { Eligible = false, CurrentWorldId = HomeWorld + 1 };
+        var input = GuardInput(Reprice(DecisionFloor - 1)) with { EligibleForWrite = false, CurrentWorldId = HomeWorld + 1 };
 
         Assert.Equal(SaleRejection.NotOnHomeWorld, SaleGuard.Evaluate(input).Rejection);
         Assert.Equal(SaleRejection.NotEligible, SaleGuard.Evaluate(input with { CurrentWorldId = HomeWorld }).Rejection);
-        Assert.Equal(SaleRejection.BelowFloor, SaleGuard.Evaluate(input with { CurrentWorldId = HomeWorld, Eligible = true }).Rejection);
+        Assert.Equal(SaleRejection.BelowFloor, SaleGuard.Evaluate(input with { CurrentWorldId = HomeWorld, EligibleForWrite = true }).Rejection);
     }
 
     [Fact]
@@ -257,6 +259,15 @@ public sealed class SaleGuardTests
     }
 
     [Fact]
+    public void AnItemOnTheSellListIsNeverVendoredEvenWhenItIsOnTheVendorList()
+    {
+        var onBothLists = GuardInput(Vendor()) with { OnSellList = true, VendorRuleMatches = true };
+
+        Assert.Equal(SaleRejection.VendorOnSellList, SaleGuard.Evaluate(onBothLists).Rejection);
+        Assert.True(SaleGuard.Evaluate(GuardInput(List()) with { OnSellList = true }).IsAllowed);
+    }
+
+    [Fact]
     public void CapsComeFromTheAuthorization()
     {
         var input = GuardInput(Reprice()) with { Authorization = Authorization(new RunCaps(2, 100, 20_000)) };
@@ -298,12 +309,13 @@ public sealed class SaleGuardTests
             Write = write,
             Planned = slot,
             Observed = slot,
-            Eligible = true,
+            EligibleForWrite = true,
             RuleFloor = RuleFloor,
             VendorPrice = VendorUnitPrice,
             VendorRuleMatches = write.Kind == WriteKind.Vendor,
             IsGear = false,
             IsProtected = false,
+            OnSellList = write.Kind != WriteKind.Vendor,
         };
     }
 

@@ -42,6 +42,7 @@ public sealed class RunReactionsTests
         [SaleRejection.VendorHighQuality] = RunReaction.SkipItem,
         [SaleRejection.VendorGear] = RunReaction.SkipItem,
         [SaleRejection.VendorProtected] = RunReaction.SkipItem,
+        [SaleRejection.VendorOnSellList] = RunReaction.SkipItem,
     };
 
     private static readonly Dictionary<SellWindowVerdict, RunReaction> WindowReactions = new()

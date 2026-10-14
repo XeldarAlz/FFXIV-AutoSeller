@@ -34,7 +34,7 @@ internal readonly record struct SaleGuardInput
 
     public required SlotReading Observed { get; init; }
 
-    public required bool Eligible { get; init; }
+    public required bool EligibleForWrite { get; init; }
 
     public required uint RuleFloor { get; init; }
 
@@ -45,4 +45,6 @@ internal readonly record struct SaleGuardInput
     public required bool IsGear { get; init; }
 
     public required bool IsProtected { get; init; }
+
+    public required bool OnSellList { get; init; }
 }
