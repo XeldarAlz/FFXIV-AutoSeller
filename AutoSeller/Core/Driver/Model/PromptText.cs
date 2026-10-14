@@ -40,6 +40,8 @@ internal readonly struct PromptText
         return new PromptText(hasLiteral ? new string(buffer, 0, length) : string.Empty);
     }
 
+    public bool IsKnown => !string.IsNullOrEmpty(template);
+
     public bool Matches(ReadOnlySpan<char> shown)
     {
         ReadOnlySpan<char> significant = template;

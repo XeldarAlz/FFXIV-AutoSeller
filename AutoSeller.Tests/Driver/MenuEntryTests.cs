@@ -32,6 +32,15 @@ public sealed class MenuEntryTests
     }
 
     [Fact]
+    public void OnlyATextWithLettersIsKnown()
+    {
+        Assert.True(PromptText.From(Quit).IsKnown);
+        Assert.False(PromptText.From(string.Empty).IsKnown);
+        Assert.False(PromptText.From(PromptText.MacroPlaceholder).IsKnown);
+        Assert.False(default(PromptText).IsKnown);
+    }
+
+    [Fact]
     public void ARetainerIsFoundByName()
     {
         string[] retainers = ["Mimi", "Lala", "Momo"];

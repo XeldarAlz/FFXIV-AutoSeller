@@ -64,6 +64,11 @@ internal static class RunPlanner
         return Gil.SaturatingMultiply(referenceUnitPrice, quantity);
     }
 
+    public static bool StillHolds(in SlotFacts planned, ItemKey item, uint quantity)
+    {
+        return planned.Key == item && planned.Quantity == quantity;
+    }
+
     public static bool TryFindStock(ReadOnlySpan<StockSlot> stock, PlanRowKey row, out StockSlot found)
     {
         for (var index = 0; index < stock.Length; index++)

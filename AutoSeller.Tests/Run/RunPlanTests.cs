@@ -74,6 +74,16 @@ public sealed class RunPlanTests
         Assert.False(RunPlanner.TryFindStock(inputs.Stock.AsSpan(), row with { IsHq = true }, out _));
     }
 
+    [Fact]
+    public void ABagSlotStillHoldsItsLotOnlyWithTheSameItemQualityAndQuantity()
+    {
+        Assert.True(RunPlanner.StillHolds(OreInTheBags, NormalOre, LotQuantity));
+        Assert.False(RunPlanner.StillHolds(OreInTheBags, NormalOre with { IsHq = true }, LotQuantity));
+        Assert.False(RunPlanner.StillHolds(OreInTheBags, NormalOre with { ItemId = Ore + 1 }, LotQuantity));
+        Assert.False(RunPlanner.StillHolds(OreInTheBags, NormalOre, LotQuantity - 1));
+        Assert.False(RunPlanner.StillHolds(OreInTheBags, default, 0));
+    }
+
     private static RunPlanInputs Inputs(ItemRule rule)
     {
         return new RunPlanInputs

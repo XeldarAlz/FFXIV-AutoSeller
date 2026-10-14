@@ -1,0 +1,201 @@
+using AutoSeller.Core.Driver.Model;
+using Dalamud.Game.ClientState.Objects.Types;
+using ECommons;
+using ECommons.Automation;
+using ECommons.DalamudServices;
+using ECommons.GameFunctions;
+using ECommons.Throttlers;
+using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+
+namespace AutoSeller.Core.Driver;
+
+internal static unsafe class RetainerClicks
+{
+    private const int ClickThrottleMs = 600;
+    private const int ListingMenuCallback = 0;
+    private const int ListingMenuOpensContext = 1;
+    private const string BellThrottleKey = "AutoSeller.Retainer.Bell";
+    private const string SelectRetainerThrottleKey = "AutoSeller.Retainer.SelectRetainer";
+    private const string TalkThrottleKey = "AutoSeller.Retainer.Talk";
+    private const string OpenSellListThrottleKey = "AutoSeller.Retainer.OpenSellList";
+    private const string QuitThrottleKey = "AutoSeller.Retainer.Quit";
+    private const string ListingMenuThrottleKey = "AutoSeller.Retainer.ListingMenu";
+    private const string AdjustPriceThrottleKey = "AutoSeller.Retainer.AdjustPrice";
+    private const string CloseContextMenuThrottleKey = "AutoSeller.Retainer.CloseContextMenu";
+    private const string OpenSellWindowThrottleKey = "AutoSeller.Retainer.OpenSellWindow";
+    private const string CancelSellThrottleKey = "AutoSeller.Retainer.CancelSell";
+    private const string CloseSellWindowThrottleKey = "AutoSeller.Retainer.CloseSellWindow";
+    private const string CloseResultWindowThrottleKey = "AutoSeller.Retainer.CloseResultWindow";
+    private const string CloseSellListThrottleKey = "AutoSeller.Retainer.CloseSellList";
+    private const string CloseRetainerListThrottleKey = "AutoSeller.Retainer.CloseRetainerList";
+    private const string DeclinePromptThrottleKey = "AutoSeller.Retainer.DeclinePrompt";
+    private const string CloseWindowThrottleKey = "AutoSeller.Retainer.CloseWindow";
+
+    public static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
+    public static readonly string SelectStringAddon = ChainWindows.NameOf(ChainWindow.SelectString);
+    public static readonly string TalkAddon = ChainWindows.NameOf(ChainWindow.Talk);
+    public static readonly string SellListAddon = ChainWindows.NameOf(ChainWindow.RetainerSellList);
+    public static readonly string ContextMenuAddon = ChainWindows.NameOf(ChainWindow.ContextMenu);
+    public static readonly string SellWindowAddon = ChainWindows.NameOf(ChainWindow.RetainerSell);
+    public static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
+    public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
+
+    public static bool IsReady(string addonName) => AddonReady(addonName, out _);
+
+    public static bool IsPresent(string addonName) => GenericHelpers.TryGetAddonByName<AtkUnitBase>(addonName, out _);
+
+    public static bool InteractWithBell(IGameObject bell)
+    {
+        if (!EzThrottler.Throttle(BellThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: interacting with the summoning bell {bell.GameObjectId:X} (base id {bell.BaseId}).");
+        Svc.Targets.Target = bell;
+        TargetSystem.Instance()->InteractWithObject(bell.Struct(), false);
+        return true;
+    }
+
+    public static bool SelectRetainer(int row)
+    {
+        if (!AddonReady(RetainerListAddon, out var list) || !EzThrottler.Throttle(SelectRetainerThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        var retainers = new AddonMaster.RetainerList(list).Retainers;
+        if (row < 0 || row >= retainers.Length || !retainers[row].Select())
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: choosing row {row} of the retainer list.");
+        return true;
+    }
+
+    public static bool ProgressTalk()
+    {
+        if (!AddonReady(TalkAddon, out var talk) || !EzThrottler.Throttle(TalkThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        new AddonMaster.Talk(talk).Click();
+        return true;
+    }
+
+    public static bool OpenSellList(int entry) => ChooseMenuEntry(entry, OpenSellListThrottleKey);
+
+    public static bool Quit(int entry) => ChooseMenuEntry(entry, QuitThrottleKey);
+
+    public static bool OpenListingMenu(int row)
+    {
+        if (IsReady(ContextMenuAddon) || !AddonReady(SellListAddon, out var sellList) || !EzThrottler.Throttle(ListingMenuThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: opening the menu of sell list row {row}.");
+        Callback.Fire(sellList, true, ListingMenuCallback, row, ListingMenuOpensContext);
+        return true;
+    }
+
+    public static bool ChooseAdjustPrice(int entry)
+    {
+        if (!AddonReady(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(AdjustPriceThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        var entries = new AddonMaster.ContextMenu(menu).Entries;
+        if (entry < 0 || entry >= entries.Length || !entries[entry].Select())
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: choosing context menu entry {entry}, '{entries[entry].Text}'.");
+        return true;
+    }
+
+    public static bool CloseContextMenu() => Close(ContextMenuAddon, CloseContextMenuThrottleKey);
+
+    public static bool OpenSellWindow(Func<bool> open)
+    {
+        return !IsReady(SellWindowAddon) && EzThrottler.Throttle(OpenSellWindowThrottleKey, ClickThrottleMs) && open();
+    }
+
+    public static bool CancelSell()
+    {
+        if (!AddonReady(SellWindowAddon, out var sellWindow) || !EzThrottler.Throttle(CancelSellThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        var master = new AddonMaster.RetainerSell(sellWindow);
+        var cancel = master.CancelButton;
+        if (cancel == null || !cancel->IsEnabled)
+        {
+            return false;
+        }
+
+        RunLog.Info("Retainer: pressing Cancel on the sell window.");
+        master.Cancel();
+        return true;
+    }
+
+    public static bool CloseSellWindow() => Close(SellWindowAddon, CloseSellWindowThrottleKey);
+
+    public static bool CloseResultWindow() => Close(ResultWindowAddon, CloseResultWindowThrottleKey);
+
+    public static bool CloseSellList() => Close(SellListAddon, CloseSellListThrottleKey);
+
+    public static bool CloseRetainerList() => Close(RetainerListAddon, CloseRetainerListThrottleKey);
+
+    public static bool CloseAddon(string addonName) => Close(addonName, CloseWindowThrottleKey);
+
+    public static bool DeclinePrompt()
+    {
+        if (!AddonReady(PromptAddon, out var prompt) || !EzThrottler.Throttle(DeclinePromptThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        new AddonMaster.SelectYesno(prompt).No();
+        return true;
+    }
+
+    private static bool ChooseMenuEntry(int entry, string throttleKey)
+    {
+        if (!AddonReady(SelectStringAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        if (entry < 0 || entry >= new AddonMaster.SelectString(menu).EntryCount)
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: choosing retainer menu entry {entry}.");
+        Callback.Fire(menu, true, entry);
+        return true;
+    }
+
+    private static bool Close(string addonName, string throttleKey)
+    {
+        if (!AddonReady(addonName, out var addon) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: closing {addonName}.");
+        addon->Close(true);
+        return true;
+    }
+
+    private static bool AddonReady(string addonName, out AtkUnitBase* addon)
+        => GenericHelpers.TryGetAddonByName(addonName, out addon) && GenericHelpers.IsAddonReady(addon);
+}
