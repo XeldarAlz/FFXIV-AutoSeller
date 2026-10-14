@@ -2,6 +2,7 @@ using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ipc;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Stats;
+using AutoSeller.Core.Stats.Model;
 using AutoSeller.Core.Tasks.Model;
 using ECommons.DalamudServices;
 using ClibServices = clib.Services.Svc;

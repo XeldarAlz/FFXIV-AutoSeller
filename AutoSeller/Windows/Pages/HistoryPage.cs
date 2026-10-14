@@ -1,6 +1,7 @@
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Stats;
+using AutoSeller.Core.Stats.Model;
 using AutoSeller.Windows.Components;
 using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
@@ -35,7 +36,7 @@ internal sealed class HistoryPage
         RefreshSubtitle(history);
         PageHeader.Draw(Loc.T(L.History.Title), subtitle);
         Styling.VSpace(HeaderGap);
-        if (history.Records.Count == 0)
+        if (history.Records.Length == 0)
         {
             EmptyState.Draw(FontAwesomeIcon.History, Loc.T(L.History.NoRuns));
             return;
@@ -53,7 +54,7 @@ internal sealed class HistoryPage
 
         subtitleRevision = history.Revision;
         subtitleLanguage = Loc.Current;
-        var count = history.Records.Count;
+        var count = history.Records.Length;
         subtitle = count == 0 ? Loc.T(L.History.Empty) : Loc.Plural(L.History.Summary, count);
     }
 

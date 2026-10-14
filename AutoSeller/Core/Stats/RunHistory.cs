@@ -1,93 +1,93 @@
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Collections.Immutable;
+using System.Threading.Tasks;
+using AutoSeller.Core.Ledger;
+using AutoSeller.Core.Stats.Model;
 
 namespace AutoSeller.Core.Stats;
 
-internal sealed class RunHistory
+internal sealed class RunHistory : IDisposable
 {
-    public const int MaxRecords = 200;
+    private const int FlushWaitMs = 5_000;
 
-    private const int FileVersion = 1;
-    private const string FileName = "run-history.json";
-    private const string TemporarySuffix = ".tmp";
-
-    private static readonly JsonSerializerOptions serializerOptions = new()
-    {
-        Converters = { new JsonStringEnumConverter() },
-        WriteIndented = true,
-    };
-
-    private readonly List<RunRecord> records = [];
-    private readonly string directory;
-    private readonly string path;
+    private CheckpointStore<RunHistoryFile>? store;
+    private Task writes = Task.CompletedTask;
 
     public RunHistory(string directory)
     {
-        this.directory = directory;
-        path = Path.Combine(directory, FileName);
-        Load();
+        store = new CheckpointStore<RunHistoryFile>(directory, RunHistoryFile.FileName);
+        Load(store);
     }
 
-    public IReadOnlyList<RunRecord> Records => records;
+    public ImmutableArray<RunRecord> Records { get; private set; } = [];
 
     public int Revision { get; private set; }
 
     public void Append(RunRecord record)
     {
-        records.Add(record);
-        Trim();
+        Records = RunHistoryFile.Appended(Records, record);
         Revision++;
-        Save();
-    }
-
-    private void Trim()
-    {
-        if (records.Count > MaxRecords)
+        if (store is not { } target)
         {
-            records.RemoveRange(0, records.Count - MaxRecords);
+            return;
         }
+
+        var file = new RunHistoryFile { Records = Records };
+        writes = writes.ContinueWith(_ => Write(target, file), TaskScheduler.Default);
     }
 
-    private void Load()
+    public void Dispose()
     {
         try
         {
-            if (!File.Exists(path))
+            if (!writes.Wait(FlushWaitMs))
             {
-                return;
+                RunLog.Warning($"The run history was still being saved after {FlushWaitMs} ms at unload.");
             }
-
-            var file = JsonSerializer.Deserialize<HistoryFile>(File.ReadAllText(path), serializerOptions);
-            if (file?.Records is not { } loaded)
-            {
-                return;
-            }
-
-            records.AddRange(loaded);
-            Trim();
-            Revision++;
         }
-        catch (Exception exception)
+        catch (AggregateException exception)
         {
-            RunLog.Warning(exception, "The run history could not be read; starting empty");
+            RunLog.Warning(exception, "The run history could not be saved at unload");
         }
     }
 
-    private void Save()
+    private static void Write(CheckpointStore<RunHistoryFile> target, RunHistoryFile file)
     {
-        var temporary = path + TemporarySuffix;
-        try
+        if (!target.TrySave(file))
         {
-            Directory.CreateDirectory(directory);
-            File.WriteAllText(temporary, JsonSerializer.Serialize(new HistoryFile(FileVersion, records), serializerOptions));
-            File.Move(temporary, path, overwrite: true);
-        }
-        catch (Exception exception)
-        {
-            RunLog.Warning(exception, "The run history could not be saved");
+            RunLog.Warning($"The run history could not be saved to {target.FilePath}: {target.LastError}");
         }
     }
 
-    private sealed record HistoryFile(int Version, List<RunRecord> Records);
+    private void Load(CheckpointStore<RunHistoryFile> target)
+    {
+        var load = target.Load();
+        if (load.PrimaryDamaged && !SetAside(target, CheckpointSource.Primary, RunHistoryFile.DamagedSuffix, "could not be read"))
+        {
+            return;
+        }
+
+        var file = load.Value;
+        if (RunHistoryFile.FitOf(file) == RunHistoryFit.NewerVersion)
+        {
+            SetAside(target, load.Source, RunHistoryFile.SetAsideSuffix(file!.Version, DateTime.UtcNow), $"was written by a newer version ({file.Version})");
+            return;
+        }
+
+        Records = RunHistoryFile.Kept(file?.Records ?? []);
+        Revision++;
+        RunLog.Info($"Run history loaded from {load.Source}: {Records.Length} run(s).");
+    }
+
+    private bool SetAside(CheckpointStore<RunHistoryFile> target, CheckpointSource source, string suffix, string why)
+    {
+        if (target.TryKeepCopy(source, suffix, out var copyPath))
+        {
+            RunLog.Warning($"The run history {target.FilePath} {why} ({target.LastError}); it was copied to {copyPath}.");
+            return true;
+        }
+
+        store = null;
+        RunLog.Error($"The run history {target.FilePath} {why} and could not be copied aside ({target.LastError}); runs are kept in memory only this session.");
+        return false;
+    }
 }

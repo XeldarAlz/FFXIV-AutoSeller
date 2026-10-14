@@ -83,6 +83,7 @@ public sealed class Plugin : IDalamudPlugin
             Configuration = LoadConfiguration();
 
             History = new RunHistory(PluginInterface.ConfigDirectory.FullName);
+            completed.Push(History.Dispose);
             Items = new ItemCatalog();
             GameItems = new GameItems();
             Market = new MarketServices(Configuration, GameItems);
@@ -158,6 +159,7 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
         BlockedScanner.Dispose();
+        History.Dispose();
         Characters.Dispose();
         References.Dispose();
         Market.Dispose();
