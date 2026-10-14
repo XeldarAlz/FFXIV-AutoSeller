@@ -30,7 +30,11 @@ internal sealed partial class RulesPage
         }
 
         pendingImport = document;
-        pendingImportSummary = Loc.T(L.Rules.ImportSummary, document!.SellList.Count, document.CategoryRules.Count, document.NeverSell.Count, document.VendorList.Count);
+        pendingImportSummary = Loc.T(L.Rules.ImportSummary,
+            Loc.Plural(L.Rules.ImportSellRules, document!.SellList.Count),
+            Loc.Plural(L.Rules.ImportCategoryRules, document.CategoryRules.Count),
+            Loc.Plural(L.Rules.ImportNeverSell, document.NeverSell.Count),
+            Loc.Plural(L.Rules.ImportVendorItems, document.VendorList.Count));
     }
 
     private void DrawImportConfirm(Configuration configuration)

@@ -16,7 +16,11 @@ internal static partial class L
         public static readonly LocString Export = new("rules.export", "Export");
         public static readonly LocString ExportHelp = new("rules.exportHelp", "Copy every rule to the clipboard as JSON. Preferred retainers are left out.");
         public static readonly LocString ExportCopied = new("rules.exportCopied", "Rules copied to the clipboard.");
-        public static readonly LocString ImportSummary = new("rules.importSummary", "Replace your rules with {0} sell rules, {1} category rules, {2} never-sell items and {3} vendor items?");
+        public static readonly LocString ImportSummary = new("rules.importSummary", "Replace your rules with {0}, {1}, {2} and {3}?");
+        public static readonly LocPlural ImportSellRules = new("rules.importSellRules", "{0} sell rule", "{0} sell rules");
+        public static readonly LocPlural ImportCategoryRules = new("rules.importCategoryRules", "{0} category rule", "{0} category rules");
+        public static readonly LocPlural ImportNeverSell = new("rules.importNeverSell", "{0} never-sell item", "{0} never-sell items");
+        public static readonly LocPlural ImportVendorItems = new("rules.importVendorItems", "{0} vendor item", "{0} vendor items");
         public static readonly LocString ImportReplace = new("rules.importReplace", "Replace my rules");
         public static readonly LocString ImportCancel = new("rules.importCancel", "Cancel");
         public static readonly LocString Imported = new("rules.imported", "Rules imported.");
