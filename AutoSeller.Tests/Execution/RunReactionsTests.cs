@@ -108,6 +108,11 @@ public sealed class RunReactionsTests
             (RunState.CheckingWindow, InterruptHandling.CancelFirst),
             (RunState.Confirming, InterruptHandling.ReadBackFirst),
             (RunState.ReadingBack, InterruptHandling.ReadBackFirst),
+            (RunState.Returning, InterruptHandling.ReadBackFirst),
+            (RunState.Vendoring, InterruptHandling.ReadBackFirst),
+            (RunState.MovingFromSaddlebag, InterruptHandling.ReadBackFirst),
+            (RunState.Repricing, InterruptHandling.Immediate),
+            (RunState.Listing, InterruptHandling.Immediate),
             (RunState.ClosingSellList, InterruptHandling.Immediate),
         ];
         for (var index = 0; index < rows.Length; index++)
@@ -146,6 +151,28 @@ public sealed class RunReactionsTests
         Assert.False(review.BlocksWrites);
         Assert.Equal(1, review.Runs[0].Reprices);
         Assert.Equal(RunState.Stopped, review.Runs[0].RecoveredState);
+    }
+
+    [Fact]
+    public void AVendorSaleCaughtByStopIsReadBackFromTheBagsAndTheGil()
+    {
+        const long gilBefore = 10_000;
+        var journal = new MemoryJournal();
+        var writer = new JournalWriter(journal).Authorize().Intent(CaughtWrite, Vendor());
+
+        Assert.Equal(InterruptHandling.ReadBackFirst, RunReactions.ForInterruption(RunState.Vendoring));
+        var verdict = SaleReadBack.Judge(
+            Vendor(),
+            new ReadBackSample([], false, JunkQuantity, gilBefore),
+            new ReadBackSample([], false, 0, gilBefore + (JunkQuantity * VendorUnitPrice)),
+            300);
+        Assert.Equal(ReadBackVerdict.Confirmed, verdict);
+        writer.Confirmed(CaughtWrite, JunkQuantity, VendorUnitPrice).Ended(RunState.Stopped);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+
+        Assert.False(review.BlocksWrites);
+        Assert.Equal(JunkQuantity * VendorUnitPrice, review.Runs[0].VendoredValue);
     }
 
     [Fact]

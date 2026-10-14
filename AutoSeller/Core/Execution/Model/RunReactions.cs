@@ -82,6 +82,9 @@ internal static class RunReactions
         RunState.CheckingWindow => InterruptHandling.CancelFirst,
         RunState.Confirming => InterruptHandling.ReadBackFirst,
         RunState.ReadingBack => InterruptHandling.ReadBackFirst,
+        RunState.Returning => InterruptHandling.ReadBackFirst,
+        RunState.Vendoring => InterruptHandling.ReadBackFirst,
+        RunState.MovingFromSaddlebag => InterruptHandling.ReadBackFirst,
         _ => InterruptHandling.Immediate,
     };
 }
