@@ -126,7 +126,7 @@ internal sealed class ListingRequestMachine
     public void Begin(uint itemId, int searchJitterMs)
     {
         ItemId = itemId;
-        JitterMs = Math.Max(0, searchJitterMs);
+        UseJitter(searchJitterMs);
         Attempts = 0;
         failures = 0;
         Failure = ListingRequestFailure.None;
@@ -184,7 +184,7 @@ internal sealed class ListingRequestMachine
         return QuietWindowElapsed(nowMs, proxyListingCount) ? ListingRequestStep.Capture : ListingRequestStep.None;
     }
 
-    public void OnSent(long nowMs, bool accepted)
+    public void OnSent(long nowMs, bool accepted, int retryJitterMs)
     {
         if (phase != Phase.Pending)
         {
@@ -194,6 +194,7 @@ internal sealed class ListingRequestMachine
         Attempts++;
         Generation++;
         lastSendAtMs = nowMs;
+        UseJitter(retryJitterMs);
         ResetSend(nowMs);
         phase = Phase.Waiting;
         if (!accepted)
@@ -327,6 +328,11 @@ internal sealed class ListingRequestMachine
     private static long BackoffMs(int failureCount)
     {
         return Math.Min((long)BackoffBaseMs << (failureCount - 1), BackoffMaximumMs);
+    }
+
+    private void UseJitter(int jitterMs)
+    {
+        JitterMs = Math.Max(0, jitterMs);
     }
 
     private void NoteForeignActivity(long nowMs)

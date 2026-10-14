@@ -17,7 +17,7 @@ public sealed class ListingRequestMachineTests
         machine.Begin(Item, NoJitter);
 
         Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, NoJitter);
         machine.OnRequestResult(0, 0, 100);
         Assert.Equal(ListingRequestStep.Capture, machine.Poll(150, Item, 0));
         machine.OnCaptured();
@@ -35,7 +35,7 @@ public sealed class ListingRequestMachineTests
         var machine = new ListingRequestMachine { IntervalMs = interval };
         machine.Begin(Item, NoJitter);
         Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, NoJitter);
         machine.OnRequestResult(0, 0, 100);
         Assert.Equal(ListingRequestStep.Capture, machine.Poll(150, Item, 0));
         machine.OnCaptured();
@@ -73,7 +73,7 @@ public sealed class ListingRequestMachineTests
         var machine = new ListingRequestMachine();
         machine.Begin(Item, firstJitter);
         Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, NoJitter);
         machine.OnRequestResult(0, 0, 100);
         machine.Poll(150, Item, 0);
         machine.OnCaptured();
@@ -91,7 +91,7 @@ public sealed class ListingRequestMachineTests
         var machine = new ListingRequestMachine { IntervalMs = ListingRequestMachine.MinimumIntervalMs };
         machine.Begin(Item, NoJitter);
         machine.Poll(0, 0, 0);
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, NoJitter);
         machine.OnRequestResult(0, 0, 100);
         machine.Poll(150, Item, 0);
         machine.OnCaptured();
@@ -111,13 +111,52 @@ public sealed class ListingRequestMachineTests
         var machine = new ListingRequestMachine();
         machine.Begin(Item, jitter);
         machine.Poll(0, 0, 0);
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, jitter);
 
         machine.OnRequestResult(0, 1, 100);
 
         Assert.Equal(retryAt, machine.NextSendAtMs);
         Assert.Equal(ListingRequestStep.None, machine.Poll(retryAt - 1, Item, 0));
         Assert.Equal(ListingRequestStep.Send, machine.Poll(retryAt, Item, 0));
+    }
+
+    [Fact]
+    public void EachRetryWaitsForTheJitterGivenWithTheSendItRetries()
+    {
+        const int searchJitter = 700;
+        const int firstRetryJitter = 1_200;
+        const int secondRetryJitter = 300;
+        const long firstRetryAt = ListingRequestMachine.DefaultIntervalMs + firstRetryJitter + ListingRequestMachine.BackoffBaseMs;
+        const long secondRetryAt = firstRetryAt + ListingRequestMachine.DefaultIntervalMs + secondRetryJitter + (2 * ListingRequestMachine.BackoffBaseMs);
+        var machine = new ListingRequestMachine();
+        machine.Begin(Item, searchJitter);
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
+
+        machine.OnSent(0, true, firstRetryJitter);
+        machine.OnThrottleNotice(100);
+
+        Assert.Equal(firstRetryJitter, machine.JitterMs);
+        Assert.Equal(firstRetryAt, machine.NextSendAtMs);
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(firstRetryAt, Item, 0));
+
+        machine.OnSent(firstRetryAt, true, secondRetryJitter);
+        machine.OnThrottleNotice(firstRetryAt + 100);
+
+        Assert.Equal(secondRetryJitter, machine.JitterMs);
+        Assert.Equal(secondRetryAt, machine.NextSendAtMs);
+    }
+
+    [Fact]
+    public void NegativeRetryJitterNeverShortensTheWait()
+    {
+        var machine = new ListingRequestMachine();
+        machine.Begin(Item, NoJitter);
+        machine.Poll(0, 0, 0);
+
+        machine.OnSent(0, false, -ListingRequestMachine.DefaultIntervalMs);
+
+        Assert.Equal(0, machine.JitterMs);
+        Assert.Equal(FirstRetryAtMs, machine.NextSendAtMs);
     }
 
     [Fact]
@@ -204,7 +243,7 @@ public sealed class ListingRequestMachineTests
         Assert.Equal(ListingRequestFailure.Throttled, machine.LastFailure);
         Assert.Equal(ListingRequestStep.None, machine.Poll(FirstRetryAtMs - 1, Item, 0));
         Assert.Equal(ListingRequestStep.Send, machine.Poll(FirstRetryAtMs, Item, 0));
-        machine.OnSent(FirstRetryAtMs, true);
+        machine.OnSent(FirstRetryAtMs, true, NoJitter);
         Assert.Equal(2, machine.Generation);
         Assert.Equal(2, machine.Attempts);
     }
@@ -220,7 +259,7 @@ public sealed class ListingRequestMachineTests
         Assert.Equal(ListingRequestStep.Send, machine.Poll(sentAt, 0, 0));
         for (var failureIndex = 0; failureIndex < backoffs.Length; failureIndex++)
         {
-            machine.OnSent(sentAt, true);
+            machine.OnSent(sentAt, true, jitter);
             machine.OnThrottleNotice(sentAt + 100);
 
             var retryAt = sentAt + ListingRequestMachine.DefaultIntervalMs + jitter + backoffs[failureIndex];
@@ -241,7 +280,7 @@ public sealed class ListingRequestMachineTests
             machine.OnRequestResult(0, 1, sentAt + 100);
             sentAt = machine.NextSendAtMs;
             machine.Poll(sentAt, Item, 0);
-            machine.OnSent(sentAt, true);
+            machine.OnSent(sentAt, true, NoJitter);
         }
 
         machine.OnRequestResult(0, 1, sentAt + 100);
@@ -260,7 +299,7 @@ public sealed class ListingRequestMachineTests
             machine.OnRequestResult(0, 1, now);
             now = machine.NextSendAtMs;
             machine.Poll(now, Item, 0);
-            machine.OnSent(now, true);
+            machine.OnSent(now, true, NoJitter);
         }
 
         machine.OnRequestResult(0, 1, now);
@@ -293,7 +332,7 @@ public sealed class ListingRequestMachineTests
         machine.Begin(Item, NoJitter);
         machine.Poll(0, 0, 0);
 
-        machine.OnSent(0, false);
+        machine.OnSent(0, false, NoJitter);
 
         Assert.Equal(ListingRequestFailure.RequestRefused, machine.LastFailure);
         Assert.Equal(1, machine.Attempts);
@@ -416,7 +455,7 @@ public sealed class ListingRequestMachineTests
         var machine = new ListingRequestMachine();
         machine.Begin(Item, NoJitter);
         Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
-        machine.OnSent(0, true);
+        machine.OnSent(0, true, NoJitter);
         Assert.Equal(1, machine.Generation);
         return machine;
     }
