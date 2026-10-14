@@ -71,6 +71,17 @@ public sealed class FingerprintTests
     }
 
     [Fact]
+    public void TwoEntriesForOneItemKeepTheirOrderBecauseTheFirstMatchWins()
+    {
+        var lowerFloorFirst = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = 500 }, new ItemRule { ItemId = Ore, Floor = 900 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+        var higherFloorFirst = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = 900 }, new ItemRule { ItemId = Ore, Floor = 500 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []);
+
+        Assert.NotEqual(Fingerprint.OfRuleBook(lowerFloorFirst), Fingerprint.OfRuleBook(higherFloorFirst));
+        Assert.Equal(500u, lowerFloorFirst.EntriesFor(Ore)[0].Floor);
+        Assert.Equal(900u, higherFloorFirst.EntriesFor(Ore)[0].Floor);
+    }
+
+    [Fact]
     public void EveryPricingSettingChangesThePricingFingerprint()
     {
         var defaults = new PricingSettings();
