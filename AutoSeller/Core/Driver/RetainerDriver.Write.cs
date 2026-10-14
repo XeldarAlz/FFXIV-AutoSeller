@@ -218,13 +218,7 @@ internal sealed partial class RetainerDriver
     private MarketSample Sample(in SaleWrite write, ulong retainerId, ListingSlot[] market)
     {
         var readable = plugin.RetainerMarket.TrySample(retainerId, market, out var count, out var gil);
-        var itemCount = WriteIntent.Unread;
-        if (write.Kind == WriteKind.List && BagReader.TryReadSlot(write.Container, write.Slot, out var held, out var quantity))
-        {
-            itemCount = held == new ItemKey(write.ItemId, write.IsHq) ? quantity : 0;
-        }
-
-        return new MarketSample(readable, count, itemCount, readable ? gil : WriteIntent.Unread);
+        return new MarketSample(readable, count, BagReader.HeldFor(write), readable ? gil : WriteIntent.Unread);
     }
 
     private Stop Settle(WriteIntent intent, in WriteSettlement settlement, RunRetainer retainer)

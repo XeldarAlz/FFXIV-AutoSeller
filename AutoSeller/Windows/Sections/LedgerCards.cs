@@ -1,5 +1,6 @@
 using AutoSeller.Core;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Pricing.Model;
@@ -82,7 +83,7 @@ internal static class LedgerCards
         var write = intent.Write;
         var retainer = RetainerName(plugin, write.RetainerId);
         var latest = ReadAgainWhenOpen(plugin, write.RetainerId, intent.AtUtc);
-        var hint = ReconcileHints.From(intent, latest);
+        var hint = ReconcileHints.From(intent, latest, BagReader.HeldFor(write));
         var key = HashCode.Combine(plugin.Ledger.Revision, unresolved.WriteId, hint, Environment.TickCount64 / TimeUnits.MillisecondsPerMinute);
         if (!titleText.TryGet(key, out var title))
         {

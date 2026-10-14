@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
@@ -95,6 +96,16 @@ internal sealed unsafe class BagReader
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
         bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
         return new BagRead(slots.ToImmutable(), freeBagSlots, listableSkipped == 0);
+    }
+
+    public static long HeldFor(in SaleWrite write)
+    {
+        if (write.Kind != WriteKind.List || !TryReadSlot(write.Container, write.Slot, out var held, out var quantity))
+        {
+            return WriteIntent.Unread;
+        }
+
+        return held == new ItemKey(write.ItemId, write.IsHq) ? quantity : 0;
     }
 
     public static bool TryReadSlot(uint container, ushort slot, out ItemKey item, out uint quantity)
