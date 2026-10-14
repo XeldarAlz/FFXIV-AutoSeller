@@ -49,6 +49,8 @@ public sealed class SaleNoticeParserTests
     [InlineData(745u, new[] { 300, 5057, 10, 200, 1900 })]
     [InlineData(745u, new[] { 2, 0, 10, 200, 1900 })]
     [InlineData(745u, new[] { 2, 2000001, 10, 200, 1900 })]
+    [InlineData(745u, new[] { 2, 1000000, 10, 200, 1900 })]
+    [InlineData(748u, new[] { 2, 1000000, 0, 500, 475 })]
     [InlineData(745u, new[] { 2, 5057, 0, 200, 1900 })]
     [InlineData(745u, new[] { 2, 5057, 10, 0, 1900 })]
     [InlineData(745u, new[] { 2, 5057, 10, 200, -1 })]

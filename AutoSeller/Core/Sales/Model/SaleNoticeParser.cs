@@ -33,6 +33,11 @@ internal static class SaleNoticeParser
 
         var isHq = MarketItemId.HasHighQualityOffset((uint)rawItemId);
         var itemId = MarketItemId.Normalize((uint)rawItemId);
+        if (itemId == 0)
+        {
+            return false;
+        }
+
         var unitPrice = SalePrice.ToUnitPrice((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning);
         if (!MarketLimits.IsListableUnitPrice(unitPrice) || netGil > SalePrice.ToGross((uint)listedPrice, (uint)quantity, SaleNoticeLayout.ListedPriceMeaning))
         {
