@@ -48,7 +48,6 @@ internal sealed class ListingRequestMachine
     public const int QuietWindowMs = 1_000;
     public const int SettleMs = 1_000;
     public const int BackoffBaseMs = 1_000;
-    public const int BackoffStepMs = 500;
     public const int BackoffMaximumMs = 5_000;
     public const int MaximumAttempts = 4;
 
@@ -118,9 +117,11 @@ internal sealed class ListingRequestMachine
 
     public int JitterMs { get; private set; }
 
-    public long NextSendAtMs => Math.Max(lastSendAtMs + intervalMs + JitterMs, notBeforeMs);
+    public long NextSendAtMs => Math.Max(PacedSendAtMs, notBeforeMs);
 
     public ReadOnlySpan<OfferedListing> Offered => offered.AsSpan(0, offeredCount);
+
+    private long PacedSendAtMs => lastSendAtMs + intervalMs + JitterMs;
 
     public void Begin(uint itemId, int searchJitterMs)
     {
@@ -323,6 +324,11 @@ internal sealed class ListingRequestMachine
         }
     }
 
+    private static long BackoffMs(int failureCount)
+    {
+        return Math.Min((long)BackoffBaseMs << (failureCount - 1), BackoffMaximumMs);
+    }
+
     private void NoteForeignActivity(long nowMs)
     {
         lastSendAtMs = Math.Max(lastSendAtMs, nowMs);
@@ -355,8 +361,7 @@ internal sealed class ListingRequestMachine
     {
         failures++;
         LastFailure = reason;
-        var backoff = Math.Min(BackoffBaseMs + ((long)BackoffStepMs * failures), BackoffMaximumMs);
-        notBeforeMs = Math.Max(notBeforeMs, nowMs + backoff);
+        notBeforeMs = Math.Max(notBeforeMs, Math.Max(nowMs, PacedSendAtMs) + BackoffMs(failures));
         if (Attempts >= MaximumAttempts)
         {
             Failure = reason;

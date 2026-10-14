@@ -8,6 +8,7 @@ public sealed class ListingRequestMachineTests
     private const uint OtherItem = 6_000;
     private const int RequestId = 7;
     private const int NoJitter = 0;
+    private const long FirstRetryAtMs = ListingRequestMachine.DefaultIntervalMs + ListingRequestMachine.BackoffBaseMs;
 
     [Fact]
     public void FirstSearchIsSentAtOnceAndTheNextIsPaced()
@@ -103,9 +104,10 @@ public sealed class ListingRequestMachineTests
     }
 
     [Fact]
-    public void RetryAfterAThrottleStillWaitsForTheIntervalAndJitter()
+    public void RetryAfterAThrottleWaitsForTheIntervalJitterAndBackoff()
     {
         const int jitter = 1_000;
+        const long retryAt = ListingRequestMachine.DefaultIntervalMs + jitter + ListingRequestMachine.BackoffBaseMs;
         var machine = new ListingRequestMachine();
         machine.Begin(Item, jitter);
         machine.Poll(0, 0, 0);
@@ -113,9 +115,24 @@ public sealed class ListingRequestMachineTests
 
         machine.OnRequestResult(0, 1, 100);
 
-        Assert.Equal(ListingRequestMachine.DefaultIntervalMs + jitter, machine.NextSendAtMs);
-        Assert.Equal(ListingRequestStep.None, machine.Poll(ListingRequestMachine.DefaultIntervalMs + jitter - 1, Item, 0));
-        Assert.Equal(ListingRequestStep.Send, machine.Poll(ListingRequestMachine.DefaultIntervalMs + jitter, Item, 0));
+        Assert.Equal(retryAt, machine.NextSendAtMs);
+        Assert.Equal(ListingRequestStep.None, machine.Poll(retryAt - 1, Item, 0));
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(retryAt, Item, 0));
+    }
+
+    [Fact]
+    public void RetryAfterPleaseWaitGoesOutLaterThanAPacedSearch()
+    {
+        var paced = Sent();
+        paced.OnRequestResult(0, 0, 100);
+        paced.Poll(150, Item, 0);
+        paced.OnCaptured();
+        paced.Begin(OtherItem, NoJitter);
+        var throttled = Sent();
+
+        throttled.OnRequestResult(0, 1, 100);
+
+        Assert.Equal(paced.NextSendAtMs + ListingRequestMachine.BackoffBaseMs, throttled.NextSendAtMs);
     }
 
     [Fact]
@@ -185,29 +202,52 @@ public sealed class ListingRequestMachineTests
 
         Assert.Equal(ListingRequestStatus.Waiting, machine.Status);
         Assert.Equal(ListingRequestFailure.Throttled, machine.LastFailure);
-        Assert.Equal(ListingRequestStep.None, machine.Poll(ListingRequestMachine.DefaultIntervalMs - 1, Item, 0));
-        Assert.Equal(ListingRequestStep.Send, machine.Poll(ListingRequestMachine.DefaultIntervalMs, Item, 0));
-        machine.OnSent(ListingRequestMachine.DefaultIntervalMs, true);
+        Assert.Equal(ListingRequestStep.None, machine.Poll(FirstRetryAtMs - 1, Item, 0));
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(FirstRetryAtMs, Item, 0));
+        machine.OnSent(FirstRetryAtMs, true);
         Assert.Equal(2, machine.Generation);
         Assert.Equal(2, machine.Attempts);
     }
 
     [Fact]
-    public void BackoffGrowsWithEachFailureAndIsBounded()
+    public void EachThrottleDoublesTheBackoffOnTopOfThePacedGap()
+    {
+        const int jitter = 700;
+        long[] backoffs = [1_000, 2_000, 4_000];
+        var machine = new ListingRequestMachine();
+        machine.Begin(Item, jitter);
+        var sentAt = 0L;
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(sentAt, 0, 0));
+        for (var failureIndex = 0; failureIndex < backoffs.Length; failureIndex++)
+        {
+            machine.OnSent(sentAt, true);
+            machine.OnThrottleNotice(sentAt + 100);
+
+            var retryAt = sentAt + ListingRequestMachine.DefaultIntervalMs + jitter + backoffs[failureIndex];
+            Assert.Equal(retryAt, machine.NextSendAtMs);
+            Assert.Equal(ListingRequestStep.None, machine.Poll(retryAt - 1, Item, 0));
+            Assert.Equal(ListingRequestStep.Send, machine.Poll(retryAt, Item, 0));
+            sentAt = retryAt;
+        }
+    }
+
+    [Fact]
+    public void BackoffAfterTheLastThrottleIsCappedAndHoldsTheNextSearch()
     {
         var machine = Sent();
-        var now = 0L;
-        for (var failure = 1; failure < ListingRequestMachine.MaximumAttempts; failure++)
+        var sentAt = 0L;
+        for (var attempt = 1; attempt < ListingRequestMachine.MaximumAttempts; attempt++)
         {
-            machine.OnThrottleNotice(now);
-            var expected = Math.Min(ListingRequestMachine.BackoffBaseMs + (ListingRequestMachine.BackoffStepMs * failure), ListingRequestMachine.BackoffMaximumMs);
-            Assert.True(machine.NextSendAtMs >= now + expected);
-            now = machine.NextSendAtMs;
-            Assert.Equal(ListingRequestStep.Send, machine.Poll(now, Item, 0));
-            machine.OnSent(now, true);
+            machine.OnRequestResult(0, 1, sentAt + 100);
+            sentAt = machine.NextSendAtMs;
+            machine.Poll(sentAt, Item, 0);
+            machine.OnSent(sentAt, true);
         }
 
-        Assert.True(machine.NextSendAtMs - now <= ListingRequestMachine.BackoffMaximumMs);
+        machine.OnRequestResult(0, 1, sentAt + 100);
+        machine.Begin(OtherItem, NoJitter);
+
+        Assert.Equal(sentAt + ListingRequestMachine.DefaultIntervalMs + ListingRequestMachine.BackoffMaximumMs, machine.NextSendAtMs);
     }
 
     [Fact]
@@ -232,14 +272,18 @@ public sealed class ListingRequestMachineTests
     }
 
     [Fact]
-    public void SilentSearchTimesOutAndIsRetried()
+    public void SilentSearchTimesOutAndIsRetriedAfterTheBackoff()
     {
+        const long retryAt = ListingRequestMachine.TimeoutMs + ListingRequestMachine.BackoffBaseMs;
         var machine = Sent();
 
         Assert.Equal(ListingRequestStep.None, machine.Poll(ListingRequestMachine.TimeoutMs, Item, 0));
 
         Assert.Equal(ListingRequestFailure.Timeout, machine.LastFailure);
         Assert.Equal(ListingRequestStatus.Waiting, machine.Status);
+        Assert.Equal(retryAt, machine.NextSendAtMs);
+        Assert.Equal(ListingRequestStep.None, machine.Poll(retryAt - 1, Item, 0));
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(retryAt, Item, 0));
     }
 
     [Fact]
@@ -254,6 +298,7 @@ public sealed class ListingRequestMachineTests
         Assert.Equal(ListingRequestFailure.RequestRefused, machine.LastFailure);
         Assert.Equal(1, machine.Attempts);
         Assert.Equal(ListingRequestStep.None, machine.Poll(100, Item, 0));
+        Assert.Equal(FirstRetryAtMs, machine.NextSendAtMs);
     }
 
     [Fact]
