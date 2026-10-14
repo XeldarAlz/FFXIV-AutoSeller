@@ -207,7 +207,7 @@ internal static class PriceDecision
         return target;
     }
 
-    private static PriceTarget RuleOrMarketTarget(ItemRule rule, PricingSettings settings, in SaneCompetition sane, in ReferencePrice reference)
+    private static PriceTarget RuleOrMarketTarget(in ItemRuleSnapshot rule, PricingSettings settings, in SaneCompetition sane, in ReferencePrice reference)
     {
         if (rule.FixedPrice > 0)
         {

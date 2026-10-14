@@ -108,7 +108,7 @@ internal static class PricingFixtures
             Competition = competition,
             Reference = reference,
             VendorPrice = VendorPrice,
-            Rule = new ItemRule { ItemId = ItemId },
+            Rule = ItemRuleSnapshot.From(new ItemRule { ItemId = ItemId }),
             Settings = new PricingSettings(),
             OwnSellers = Sellers,
             NowUtc = Now,

@@ -548,6 +548,17 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void LotMatchedByACategoryRulePricesWithoutAnItemRule()
+    {
+        var input = NewLot(Snapshot(Competitors(1_100, 1_000)), FreshReference) with { Rule = default };
+
+        var decision = Decide(input);
+
+        AssertDecision(decision, SellAction.List, 999, 999, DecisionReason.Undercut);
+        Assert.Equal(ReferenceFloor, decision.Evidence.Floor);
+    }
+
+    [Fact]
     public void NewLotUsesTheFixedPrice()
     {
         var input = NewLot(Snapshot(Competitors(1_000)), FreshReference) with { Rule = Rule(fixedPrice: 1_234) };
@@ -738,9 +749,9 @@ public sealed class PriceDecisionTests
         return PriceDecision.Decide(input);
     }
 
-    private static ItemRule Rule(uint ceiling = 0, uint fixedPrice = 0)
+    private static ItemRuleSnapshot Rule(uint ceiling = 0, uint fixedPrice = 0)
     {
-        return new ItemRule { ItemId = ItemId, Ceiling = ceiling, FixedPrice = fixedPrice };
+        return ItemRuleSnapshot.From(new ItemRule { ItemId = ItemId, Ceiling = ceiling, FixedPrice = fixedPrice });
     }
 
     private static CompetitorSnapshot BlindSnapshot(BlindSearch search)

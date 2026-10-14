@@ -17,7 +17,7 @@ internal readonly record struct PriceDecisionInput
 
     public required uint VendorPrice { get; init; }
 
-    public required ItemRule Rule { get; init; }
+    public required ItemRuleSnapshot Rule { get; init; }
 
     public required PricingSettings Settings { get; init; }
 

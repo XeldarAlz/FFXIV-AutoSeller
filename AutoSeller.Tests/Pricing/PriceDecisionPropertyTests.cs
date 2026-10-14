@@ -162,7 +162,7 @@ public sealed class PriceDecisionPropertyTests
         for (var caseIndex = 0; caseIndex < CaseCount; caseIndex++)
         {
             var input = RandomInput(random);
-            input = input with { Rule = new ItemRule { ItemId = ItemId, Floor = input.Rule.Floor }, Override = PriceOverride.None };
+            input = input with { Rule = input.Rule with { Ceiling = 0, FixedPrice = 0 }, Override = PriceOverride.None };
             var decision = PriceDecision.Decide(input);
             var lowestCompetitor = decision.Evidence.CompetitorPrice;
             if (input.CurrentListing is not { } listing || lowestCompetitor == 0 || listing.UnitPrice >= lowestCompetitor)
@@ -470,15 +470,15 @@ public sealed class PriceDecisionPropertyTests
         return new ReferencePrice(item, ReferenceSource.UniversalisWorld, price, price, price, 1f, Now - TimeSpan.FromHours(5));
     }
 
-    private static ItemRule RandomRule(Random random, uint basePrice)
+    private static ItemRuleSnapshot RandomRule(Random random, uint basePrice)
     {
-        return new ItemRule
+        return ItemRuleSnapshot.From(new ItemRule
         {
             ItemId = ItemId,
             Floor = random.Next(3) == 0 ? PriceNear(random, basePrice) : 0,
             Ceiling = random.Next(4) == 0 ? PriceNear(random, basePrice) : 0,
             FixedPrice = random.Next(8) == 0 ? PriceNear(random, basePrice) : 0,
-        };
+        });
     }
 
     private static PricingSettings RandomSettings(Random random)
