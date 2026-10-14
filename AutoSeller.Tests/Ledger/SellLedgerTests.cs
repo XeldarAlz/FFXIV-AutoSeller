@@ -182,6 +182,43 @@ public sealed class SellLedgerTests
     }
 
     [Fact]
+    public void AWriteConfirmedDuringARunFeedsTheDiffWithoutReadingTheJournalAgain()
+    {
+        using var directory = new TemporaryDirectory();
+        var ledger = new SellLedger(directory.Path);
+        var writer = new JournalWriter(ledger.Journal).Authorize();
+        Assert.Empty(ledger.ConfirmedWritesFor(FirstRetainer));
+        var revision = ledger.Revision;
+        var intent = WriteIntent.Record(Reprice(), ledger.Journal.NextSequence, RunId, Now, FirstWrite);
+        writer.Append(intent);
+        writer.Confirmed(FirstWrite);
+
+        ledger.NoteConfirmed(intent);
+
+        var write = Assert.Single(ledger.ConfirmedWritesFor(FirstRetainer));
+        Assert.Equal(revision, ledger.Revision);
+        Assert.Equal(SnapshotDiffWriteKind.Repriced, write.Kind);
+        Assert.Equal((ListedPrice, UndercutPrice), (write.OldUnitPrice, write.NewUnitPrice));
+        Assert.Empty(ledger.ConfirmedWritesFor(SecondRetainer));
+    }
+
+    [Fact]
+    public void AWriteNotedBeforeTheJournalIsReadAgainCountsOnce()
+    {
+        using var directory = new TemporaryDirectory();
+        var ledger = new SellLedger(directory.Path);
+        var writer = new JournalWriter(ledger.Journal).Authorize();
+        var intent = WriteIntent.Record(Reprice(), ledger.Journal.NextSequence, RunId, Now, FirstWrite);
+        writer.Append(intent);
+        writer.Confirmed(FirstWrite);
+        ledger.NoteConfirmed(intent);
+
+        ledger.Invalidate();
+
+        Assert.Single(ledger.ConfirmedWritesFor(FirstRetainer));
+    }
+
+    [Fact]
     public void ADryRunJournalsToMemoryAndARealRunToTheFile()
     {
         using var directory = new TemporaryDirectory();
