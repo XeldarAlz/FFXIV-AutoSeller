@@ -12,6 +12,7 @@ internal static class SettingsControls
     public const float ToggleWidth = 40f;
     public const float RowSliderWidth = 180f;
     public const float RowComboWidth = 170f;
+    public const float RowStepperWidth = 150f;
 
     private const float RangeDragWidth = 62f;
     private const float RangeDashSlot = 14f;
@@ -21,6 +22,18 @@ internal static class SettingsControls
 
     public static float RangeInlineWidth()
         => RangeDragWidth * 2f + RangeDashSlot;
+
+    public static bool Toggle(string id, bool current, out bool value)
+    {
+        value = current;
+        return ToggleSwitch.Draw(id, ref value);
+    }
+
+    public static bool Step(string id, int current, int step, int minimum, int maximum, string format, out int value, float width = RowStepperWidth)
+    {
+        value = current;
+        return Stepper.Draw(id, ref value, step, minimum, maximum, format, width);
+    }
 
     public static void DrawToggle(Configuration cfg, Func<bool> getter, Action<bool> setter, string id)
     {
@@ -157,14 +170,17 @@ internal static class SettingsControls
         public static void DrawCombo(string id, Choice[] options, int selected, Action<int> onSelect,
             float width = RowComboWidth)
         {
-            Resolve(options);
-
-            var picked = selected;
-            if (Dropdown.DrawDetailed(id, names.AsSpan(0, options.Length), details.AsSpan(0, options.Length),
-                ref picked, width, PanelWidth))
+            if (DrawCombo(id, options, ref selected, width))
             {
-                onSelect(picked);
+                onSelect(selected);
             }
+        }
+
+        public static bool DrawCombo(string id, Choice[] options, ref int selected, float width = RowComboWidth)
+        {
+            Resolve(options);
+            return Dropdown.DrawDetailed(id, names.AsSpan(0, options.Length), details.AsSpan(0, options.Length),
+                ref selected, width, PanelWidth);
         }
 
         // The catalog hands back cached strings, so refilling shared buffers keeps the per frame
