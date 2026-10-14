@@ -18,11 +18,13 @@ internal static partial class L
         public static readonly LocString StateUndercut = new("listings.state.undercut", "Undercut");
         public static readonly LocString StateBelowFloor = new("listings.state.belowFloor", "Below floor");
         public static readonly LocString StatePriceWar = new("listings.state.priceWar", "Price war");
+        public static readonly LocString StateSold = new("listings.state.sold", "Sold");
         public static readonly LocString StateNoData = new("listings.state.noData", "Unknown");
         public static readonly LocString StateLowestHelp = new("listings.stateHelp.lowest", "Universalis shows no lower price of another seller on your world.");
         public static readonly LocString StateUndercutHelp = new("listings.stateHelp.undercut", "Universalis shows a lower price on your world, newer than this listing's last reprice.");
         public static readonly LocString StateBelowFloorHelp = new("listings.stateHelp.belowFloor", "The price is under the item's floor.");
         public static readonly LocString StatePriceWarHelp = new("listings.stateHelp.priceWar", "Repriced down too often lately; runs leave it alone until the price war window passes.");
+        public static readonly LocString StateSoldHelp = new("listings.stateHelp.sold", "A sale notice or the retainer's sale history shows this listing sold after the retainer's last visit; the next visit takes it off.");
         public static readonly LocString StateNoDataHelp = new("listings.stateHelp.noData", "Universalis cannot tell whether another seller is lower: it has no recent data for this item on this character's home world, its data is older than the last reprice, or its lowest price is one of yours.");
         public static readonly LocString ColumnItem = new("listings.column.item", "Item");
         public static readonly LocString ColumnQuantity = new("listings.column.quantity", "Qty");

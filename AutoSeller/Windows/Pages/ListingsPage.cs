@@ -39,7 +39,7 @@ internal sealed partial class ListingsPage
     private const string RowIdPrefix = "##asell_listings_row_";
     private const string ChipIdPrefix = "##asell_listings_state_";
 
-    private static readonly ListingState[] states = [ListingState.Lowest, ListingState.Undercut, ListingState.BelowFloor, ListingState.PriceWar, ListingState.NoData];
+    private static readonly ListingState[] states = [ListingState.Lowest, ListingState.Undercut, ListingState.BelowFloor, ListingState.PriceWar, ListingState.SoldSinceLastVisit, ListingState.NoData];
 
     private readonly StringBuilder tooltip = new();
     private readonly Segmented.Item[] sortItems = new Segmented.Item[2];
@@ -200,6 +200,7 @@ internal sealed partial class ListingsPage
         ListingState.Undercut => Loc.T(L.Listings.StateUndercut),
         ListingState.BelowFloor => Loc.T(L.Listings.StateBelowFloor),
         ListingState.PriceWar => Loc.T(L.Listings.StatePriceWar),
+        ListingState.SoldSinceLastVisit => Loc.T(L.Listings.StateSold),
         _ => Loc.T(L.Listings.StateNoData),
     };
 
@@ -209,6 +210,7 @@ internal sealed partial class ListingsPage
         ListingState.Undercut => Loc.T(L.Listings.StateUndercutHelp),
         ListingState.BelowFloor => Loc.T(L.Listings.StateBelowFloorHelp),
         ListingState.PriceWar => Loc.T(L.Listings.StatePriceWarHelp),
+        ListingState.SoldSinceLastVisit => Loc.T(L.Listings.StateSoldHelp),
         _ => Loc.T(L.Listings.StateNoDataHelp),
     };
 
@@ -218,6 +220,7 @@ internal sealed partial class ListingsPage
         ListingState.Undercut => Styling.AccentRose,
         ListingState.BelowFloor => Styling.AccentAmber,
         ListingState.PriceWar => Styling.AccentNebula,
+        ListingState.SoldSinceLastVisit => Styling.AccentGlow,
         _ => Styling.TextDim,
     };
 }
