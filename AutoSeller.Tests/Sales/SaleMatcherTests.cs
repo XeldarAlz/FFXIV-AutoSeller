@@ -112,6 +112,23 @@ public sealed class SaleMatcherTests
     }
 
     [Fact]
+    public void HistoryTotalAfterTaxReadAgainAfterItMergedStaysOneSaleWithItsUnitPrice()
+    {
+        var history = ParseHistory(SalePriceMeaning.StackTotalAfterTax, 1_901);
+        var once = SaleMatcher.Merge(Of(
+            Notice(NoticedAt, PreviousRead, DarksteelOre, 10, 200, NoticedNet),
+            Diff(PreviousRead, CurrentRead, DarksteelOre, 10, 200, listedAtUtc: ListedAt),
+            history).AsSpan());
+
+        var again = SaleMatcher.Merge(Of([.. once, history]).AsSpan());
+
+        var sale = Assert.Single(again);
+        Assert.Equal(200u, sale.UnitPrice);
+        Assert.Equal(ListedAt, sale.ListedAtUtc);
+        Assert.Equal(NoticedNet, sale.NetGil);
+    }
+
+    [Fact]
     public void HistoryAndDiffMergeIntoTheHistoryRecordWithTheListingTime()
     {
         var merged = SaleMatcher.Merge(Of(

@@ -67,26 +67,40 @@ internal static class SaleMatcher
         var kept = new List<SaleRecord>(records.Length);
         for (var index = 0; index < records.Length; index++)
         {
-            if (!ContainsDuplicate(kept, records[index], isDuplicate))
+            var record = records[index];
+            var duplicate = IndexOfDuplicate(kept, record, isDuplicate);
+            if (duplicate == NotFound)
             {
-                kept.Add(records[index]);
+                kept.Add(record);
+                continue;
             }
+
+            kept[duplicate] = FillGaps(kept[duplicate], record);
         }
 
         return kept;
     }
 
-    private static bool ContainsDuplicate(List<SaleRecord> kept, in SaleRecord record, Func<SaleRecord, SaleRecord, bool> isDuplicate)
+    private static int IndexOfDuplicate(List<SaleRecord> kept, in SaleRecord record, Func<SaleRecord, SaleRecord, bool> isDuplicate)
     {
         for (var index = 0; index < kept.Count; index++)
         {
             if (isDuplicate(kept[index], record))
             {
-                return true;
+                return index;
             }
         }
 
-        return false;
+        return NotFound;
+    }
+
+    private static SaleRecord FillGaps(in SaleRecord kept, in SaleRecord duplicate)
+    {
+        return kept with
+        {
+            ListedAtUtc = kept.HasListingTime ? kept.ListedAtUtc : duplicate.ListedAtUtc,
+            UnitPrice = kept.HasUnitPrice ? kept.UnitPrice : duplicate.UnitPrice,
+        };
     }
 
     private static List<SaleRecord> Absorb(IReadOnlyList<SaleRecord> primaries, IReadOnlyList<SaleRecord> secondaries)
@@ -199,8 +213,8 @@ internal static class SaleMatcher
     private static bool IsSameHistoryEntry(SaleRecord kept, SaleRecord candidate)
     {
         return kept.RetainerId == candidate.RetainerId
-            && kept.UnitPrice == candidate.UnitPrice
-            && kept.SoldAtUtc == candidate.SoldAtUtc;
+            && kept.SoldAtUtc == candidate.SoldAtUtc
+            && PricesAgree(kept, candidate);
     }
 
     private static bool IsRepeatedNotice(SaleRecord kept, SaleRecord candidate)
