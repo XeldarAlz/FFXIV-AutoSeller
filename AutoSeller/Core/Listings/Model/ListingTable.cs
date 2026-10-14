@@ -5,6 +5,7 @@ using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Sales.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Listings.Model;
@@ -16,6 +17,7 @@ internal enum ListingState : byte
     Undercut,
     BelowFloor,
     PriceWar,
+    SoldSinceLastVisit,
 }
 
 internal readonly record struct ListingCharacter(ulong ContentId, string Name);
@@ -57,6 +59,8 @@ internal sealed class ListingInputs
     public required uint HomeWorldId { get; init; }
 
     public required DateTime NowUtc { get; init; }
+
+    public ImmutableArray<SaleRecord> Sales { get; init; } = [];
 }
 
 internal sealed class ListingTable
@@ -80,6 +84,7 @@ internal sealed class ListingTable
         var references = ReferenceSnapshot.ForHomeWorld(inputs.References, inputs.HomeWorldId);
         var histories = HistoriesOf(inputs.Characters);
         var marks = UndercutMarks(inputs, references, histories);
+        var sales = new SoldClaims(inputs.Sales.IsDefault ? [] : inputs.Sales);
         var rows = ImmutableArray.CreateBuilder<ListingRow>();
         var characters = ImmutableArray.CreateBuilder<ListingCharacter>(inputs.Characters.Length);
         var retainers = ImmutableArray.CreateBuilder<ListingRetainer>();
@@ -94,7 +99,7 @@ internal sealed class ListingTable
             }
 
             var priced = references is not null && record.HomeWorldId == inputs.HomeWorldId;
-            AddRows(rows, record, histories[characterIndex], priced ? references : null, facts, marks, inputs);
+            AddRows(rows, record, histories[characterIndex], priced ? references : null, facts, marks, sales, inputs);
         }
 
         return new ListingTable { Rows = rows.ToImmutable(), Characters = characters.MoveToImmutable(), Retainers = retainers.ToImmutable() };
@@ -135,6 +140,7 @@ internal sealed class ListingTable
         ReferenceSnapshot? references,
         Dictionary<uint, ItemFacts> facts,
         ImmutableArray<WatchMark> marks,
+        SoldClaims sales,
         ListingInputs inputs)
     {
         var snapshots = record.Snapshots.IsDefault ? [] : record.Snapshots;
@@ -149,7 +155,8 @@ internal sealed class ListingTable
             var slots = snapshot.Slots;
             for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
             {
-                rows.Add(RowOf(record, reprices, snapshot, slots[slotIndex], references, facts, marks, inputs));
+                var sold = SoldSinceVisit.TryClaim(record.ContentId, snapshot, slots[slotIndex], sales.Records.AsSpan(), sales.Claimed);
+                rows.Add(RowOf(record, reprices, snapshot, slots[slotIndex], references, facts, marks, sold, inputs));
             }
         }
     }
@@ -162,6 +169,7 @@ internal sealed class ListingTable
         ReferenceSnapshot? references,
         Dictionary<uint, ItemFacts> facts,
         ImmutableArray<WatchMark> marks,
+        bool sold,
         ListingInputs inputs)
     {
         var history = reprices.EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
@@ -172,7 +180,8 @@ internal sealed class ListingTable
         var vendorPrice = facts.TryGetValue(listing.ItemId, out var item) ? item.VendorPrice : 0;
         var floor = FloorCalculator.Calculate(PricingRule.For(inputs.Rules, listing.Key, out _).Floor, vendorPrice, usable, inputs.Pricing.MinimumReferenceRatioPercent);
         var undercut = UndercutWatch.TryFind(marks.AsSpan(), snapshot.RetainerId, listing.Slot, listing.Key, out var mark);
-        var state = listing.UnitPrice < floor ? ListingState.BelowFloor
+        var state = sold ? ListingState.SoldSinceLastVisit
+            : listing.UnitPrice < floor ? ListingState.BelowFloor
             : history.IsInPriceWar(inputs.NowUtc, inputs.Pricing.PriceWarDropCount, inputs.Pricing.PriceWarWindow) ? ListingState.PriceWar
             : undercut ? ListingState.Undercut
             : known && world.LowestListing >= listing.UnitPrice ? ListingState.Lowest
@@ -228,5 +237,12 @@ internal sealed class ListingTable
         }
 
         return scan.Mark();
+    }
+
+    private sealed class SoldClaims(ImmutableArray<SaleRecord> records)
+    {
+        public ImmutableArray<SaleRecord> Records { get; } = records;
+
+        public bool[] Claimed { get; } = new bool[records.Length];
     }
 }
