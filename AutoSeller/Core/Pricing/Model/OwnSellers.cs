@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using System.Runtime.InteropServices;
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Pricing.Model;
 
@@ -23,7 +23,7 @@ internal readonly struct OwnSellers
 
     public static OwnSellers Create(ReadOnlySpan<ulong> retainerIds, ReadOnlySpan<ulong> contentIds)
     {
-        return new OwnSellers(SortedDistinct(retainerIds), SortedDistinct(contentIds));
+        return new OwnSellers(SortedIds.Of(retainerIds), SortedIds.Of(contentIds));
     }
 
     public bool IsOwnRetainer(ulong retainerId)
@@ -49,26 +49,5 @@ internal readonly struct OwnSellers
         }
 
         return ids.AsSpan().BinarySearch(id) >= 0;
-    }
-
-    private static ImmutableArray<ulong> SortedDistinct(ReadOnlySpan<ulong> ids)
-    {
-        var sorted = ids.ToArray();
-        Array.Sort(sorted);
-        var count = 0;
-        for (var index = 0; index < sorted.Length; index++)
-        {
-            var id = sorted[index];
-            if (id == 0 || (count > 0 && sorted[count - 1] == id))
-            {
-                continue;
-            }
-
-            sorted[count] = id;
-            count++;
-        }
-
-        Array.Resize(ref sorted, count);
-        return ImmutableCollectionsMarshal.AsImmutableArray(sorted);
     }
 }

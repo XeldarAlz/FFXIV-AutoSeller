@@ -4,10 +4,11 @@ using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
-internal readonly record struct VendorSettings(bool Enabled, ItemIdSet VendorList, uint JunkThreshold, uint RunCap)
+internal readonly record struct VendorSettings(bool Enabled, ItemIdSet VendorList, uint JunkThreshold)
 {
     public const uint DefaultJunkThreshold = 1_000;
-    public const uint DefaultRunCap = 20_000;
+
+    public static VendorSettings Off => new(false, ItemIdSet.Empty, DefaultJunkThreshold);
 }
 
 internal enum VendorReason : byte
@@ -36,18 +37,18 @@ internal readonly record struct VendorVerdict(SlotFacts Slot, VendorReason Reaso
 
 internal static class VendorRules
 {
-    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, in VendorSettings settings, RuleBook rules)
+    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, RuleBook rules, long vendoredValueCap)
     {
         var verdicts = new VendorVerdict[stock.Length];
         long vendoredValue = 0;
         for (var index = 0; index < stock.Length; index++)
         {
             var entry = stock[index];
-            var verdict = new VendorVerdict(entry.Slot, Check(entry, settings, rules), VendorValue(entry));
+            var verdict = new VendorVerdict(entry.Slot, Check(entry, rules), VendorValue(entry));
             if (verdict.IsVendored)
             {
                 var total = Gil.SaturatingAdd(vendoredValue, verdict.VendorValue);
-                if (total > settings.RunCap)
+                if (total > vendoredValueCap)
                 {
                     verdict = verdict with { Reason = VendorReason.RunCapReached };
                 }
@@ -63,13 +64,14 @@ internal static class VendorRules
         return ImmutableCollectionsMarshal.AsImmutableArray(verdicts);
     }
 
-    public static VendorReason Check(in StockSlot stock, in VendorSettings settings, RuleBook rules)
+    public static VendorReason Check(in StockSlot stock, RuleBook rules)
     {
-        if (Refusal(stock, settings, rules) is { } refusal)
+        if (Refusal(stock, rules) is { } refusal)
         {
             return refusal;
         }
 
+        var settings = rules.Vendor;
         if (settings.VendorList.Contains(stock.Slot.ItemId))
         {
             return VendorReason.VendorList;
@@ -89,11 +91,11 @@ internal static class VendorRules
         return Gil.SaturatingMultiply(stock.Item.VendorPrice, stock.Slot.Quantity);
     }
 
-    private static VendorReason? Refusal(in StockSlot stock, in VendorSettings settings, RuleBook rules)
+    private static VendorReason? Refusal(in StockSlot stock, RuleBook rules)
     {
         var slot = stock.Slot;
         var item = stock.Item;
-        if (!settings.Enabled)
+        if (!rules.Vendor.Enabled)
         {
             return VendorReason.VendoringOff;
         }

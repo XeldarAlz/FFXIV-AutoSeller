@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
@@ -7,37 +8,54 @@ internal sealed class RuleBook
 {
     private const int ItemIdShift = 32;
 
-    private readonly ImmutableArray<ItemRuleSnapshot> sellListByItem;
-    private readonly ImmutableArray<ulong> inventoryRetainerIds;
-
     private RuleBook(
-        ImmutableArray<ItemRuleSnapshot> sellListByItem,
+        ImmutableArray<ItemRuleSnapshot> sellList,
         ImmutableArray<CategoryRuleSnapshot> categoryRules,
         ItemIdSet neverSell,
+        VendorSettings vendor,
         SellSources sources,
         ImmutableArray<ulong> inventoryRetainerIds)
     {
-        this.sellListByItem = sellListByItem;
-        this.inventoryRetainerIds = inventoryRetainerIds;
+        SellList = sellList;
         CategoryRules = categoryRules;
         NeverSell = neverSell;
+        Vendor = vendor;
         Sources = sources;
+        InventoryRetainerIds = inventoryRetainerIds;
     }
+
+    public ImmutableArray<ItemRuleSnapshot> SellList { get; }
 
     public ImmutableArray<CategoryRuleSnapshot> CategoryRules { get; }
 
     public ItemIdSet NeverSell { get; }
 
+    public VendorSettings Vendor { get; }
+
     public SellSources Sources { get; }
+
+    public ImmutableArray<ulong> InventoryRetainerIds { get; }
 
     public static RuleBook Create(
         IEnumerable<ItemRule> sellList,
         IEnumerable<CategoryRule> categoryRules,
         ItemIdSet neverSell,
+        in VendorSettings vendor,
         SellSources sources,
         IEnumerable<ulong> inventoryRetainerIds)
     {
-        return new RuleBook(SortedByItem(sellList), EnabledCategoryRules(categoryRules), neverSell, sources, [.. inventoryRetainerIds]);
+        return Restore(SnapshotsOf(sellList), EnabledCategoryRules(categoryRules), neverSell, vendor, sources, [.. inventoryRetainerIds]);
+    }
+
+    public static RuleBook Restore(
+        ImmutableArray<ItemRuleSnapshot> sellList,
+        ImmutableArray<CategoryRuleSnapshot> categoryRules,
+        ItemIdSet neverSell,
+        in VendorSettings vendor,
+        SellSources sources,
+        ImmutableArray<ulong> inventoryRetainerIds)
+    {
+        return new RuleBook(SortedByItem(sellList.AsSpan()), categoryRules, neverSell, vendor, sources, SortedIds.Of(inventoryRetainerIds.AsSpan()));
     }
 
     public bool Allows(in SlotFacts slot)
@@ -48,7 +66,7 @@ internal sealed class RuleBook
             return false;
         }
 
-        return slot.Source != SlotSource.RetainerPage || inventoryRetainerIds.AsSpan().Contains(slot.RetainerId);
+        return slot.Source != SlotSource.RetainerPage || InventoryRetainerIds.AsSpan().BinarySearch(slot.RetainerId) >= 0;
     }
 
     public bool IsOnSellList(uint itemId)
@@ -58,7 +76,7 @@ internal sealed class RuleBook
 
     public ReadOnlySpan<ItemRuleSnapshot> EntriesFor(uint itemId)
     {
-        var entries = sellListByItem.AsSpan();
+        var entries = SellList.AsSpan();
         var low = 0;
         var high = entries.Length;
         while (low < high)
@@ -82,15 +100,25 @@ internal sealed class RuleBook
         return entries[low..end];
     }
 
-    private static ImmutableArray<ItemRuleSnapshot> SortedByItem(IEnumerable<ItemRule> sellList)
+    private static ImmutableArray<ItemRuleSnapshot> SnapshotsOf(IEnumerable<ItemRule> sellList)
     {
         var entries = new List<ItemRule>(sellList);
-        var sortKeys = new ulong[entries.Count];
-        var sorted = new ItemRuleSnapshot[entries.Count];
+        var snapshots = new ItemRuleSnapshot[entries.Count];
+        for (var index = 0; index < snapshots.Length; index++)
+        {
+            snapshots[index] = ItemRuleSnapshot.From(entries[index]);
+        }
+
+        return ImmutableCollectionsMarshal.AsImmutableArray(snapshots);
+    }
+
+    private static ImmutableArray<ItemRuleSnapshot> SortedByItem(ReadOnlySpan<ItemRuleSnapshot> sellList)
+    {
+        var sortKeys = new ulong[sellList.Length];
+        var sorted = sellList.ToArray();
         for (var index = 0; index < sorted.Length; index++)
         {
-            sorted[index] = ItemRuleSnapshot.From(entries[index]);
-            sortKeys[index] = ((ulong)entries[index].ItemId << ItemIdShift) | (uint)index;
+            sortKeys[index] = ((ulong)sorted[index].ItemId << ItemIdShift) | (uint)index;
         }
 
         Array.Sort(sortKeys, sorted);
