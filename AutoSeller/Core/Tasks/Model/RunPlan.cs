@@ -82,6 +82,37 @@ internal static class RunPlanner
         return planned.Key == item && planned.Quantity == quantity;
     }
 
+    public static ImmutableArray<StockSlot> Restock(ImmutableArray<StockSlot> stock, ItemKey item, ReadOnlySpan<SlotFacts> fresh)
+    {
+        var restocked = ImmutableArray.CreateBuilder<StockSlot>(stock.Length + fresh.Length);
+        StockSlot? model = null;
+        for (var index = 0; index < stock.Length; index++)
+        {
+            if (stock[index].Slot.Key != item)
+            {
+                restocked.Add(stock[index]);
+                continue;
+            }
+
+            model ??= stock[index];
+        }
+
+        if (model is not { } known)
+        {
+            return restocked.ToImmutable();
+        }
+
+        for (var index = 0; index < fresh.Length; index++)
+        {
+            if (fresh[index].Key == item && CanListFrom(fresh[index].Source))
+            {
+                restocked.Add(known with { Slot = fresh[index] });
+            }
+        }
+
+        return restocked.ToImmutable();
+    }
+
     public static bool TryFindStock(ReadOnlySpan<StockSlot> stock, PlanRowKey row, out StockSlot found)
     {
         for (var index = 0; index < stock.Length; index++)
