@@ -36,7 +36,13 @@ internal static class PriceDecision
         return competition.ItemId == item.ItemId
             && competition.IsComplete
             && !competition.IsCapped
-            && nowUtc - competition.CapturedAtUtc < PricingSettings.CompetitionLifetime;
+            && IsFresh(competition.CapturedAtUtc, nowUtc);
+    }
+
+    private static bool IsFresh(DateTime capturedAtUtc, DateTime nowUtc)
+    {
+        var age = nowUtc - capturedAtUtc;
+        return age >= TimeSpan.Zero && age <= PricingSettings.CompetitionLifetime;
     }
 
     private static Decision DecideNewLot(PricingSettings settings, PriceTarget target, uint floor, in DecisionEvidence evidence)

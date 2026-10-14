@@ -20,6 +20,7 @@ public sealed class PriceDecisionTests
         CountUnknown,
         Stale,
         OtherItem,
+        FromTheFuture,
     }
 
     [Fact]
@@ -295,6 +296,7 @@ public sealed class PriceDecisionTests
     [InlineData(BlindSearch.CountUnknown)]
     [InlineData(BlindSearch.Stale)]
     [InlineData(BlindSearch.OtherItem)]
+    [InlineData(BlindSearch.FromTheFuture)]
     public void BlindSearchKeepsTheListing(BlindSearch search)
     {
         var decision = Decide(Existing(1_100, BlindSnapshot(search), FreshReference));
@@ -305,12 +307,15 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
-    public void SearchIsCurrentUntilItsLifetimeEnds()
+    public void SearchIsCurrentFromItsCaptureToTheEndOfItsLifetime()
     {
-        var almostStale = Snapshot(Competitors(1_000), [], Now - PricingSettings.CompetitionLifetime + TimeSpan.FromTicks(1));
+        var lifetime = PricingSettings.CompetitionLifetime;
+        var tick = TimeSpan.FromTicks(1);
 
-        Assert.True(PriceDecision.IsCurrent(almostStale, Normal, Now));
-        Assert.False(PriceDecision.IsCurrent(BlindSnapshot(BlindSearch.Stale), Normal, Now));
+        Assert.False(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now + tick), Normal, Now));
+        Assert.True(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now), Normal, Now));
+        Assert.True(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now - lifetime), Normal, Now));
+        Assert.False(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now - lifetime - tick), Normal, Now));
     }
 
     [Fact]
@@ -635,7 +640,8 @@ public sealed class PriceDecisionTests
             BlindSearch.Capped => Snapshot(CappedListings()),
             BlindSearch.Incomplete => Expecting(listings, listings.Length + 1),
             BlindSearch.CountUnknown => Expecting(listings, -1),
-            BlindSearch.Stale => Snapshot(listings, [], Now - PricingSettings.CompetitionLifetime),
+            BlindSearch.Stale => Snapshot(listings, [], Now - PricingSettings.CompetitionLifetime - TimeSpan.FromTicks(1)),
+            BlindSearch.FromTheFuture => Snapshot(listings, [], Now + TimeSpan.FromMinutes(1)),
             _ => new CompetitorSnapshot
             {
                 ItemId = OtherItemId,
