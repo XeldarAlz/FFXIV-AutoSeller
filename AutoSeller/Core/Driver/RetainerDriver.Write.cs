@@ -89,7 +89,19 @@ internal sealed partial class RetainerDriver
         }
 
         session.Enter(RunState.Confirming);
-        if (!await ClickOnce(PriceWriter.Confirm))
+        var stopped = false;
+        var pressed = await ClickOnce(() =>
+        {
+            stopped = session.StopRequested;
+            return stopped || PriceWriter.Confirm();
+        });
+        if (stopped)
+        {
+            Diag($"Driver: Stop came before Confirm could be pressed; write {writeId} is cancelled.");
+            return NotConfirmed(intent, retainer);
+        }
+
+        if (!pressed)
         {
             Warn($"Driver: Confirm could not be pressed for write {writeId}; it is cancelled.");
             return NotConfirmed(intent, retainer);
