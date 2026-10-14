@@ -1,8 +1,10 @@
 using System.IO;
+using System.Threading.Tasks;
 using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -11,15 +13,16 @@ namespace AutoSeller.Core.Characters;
 
 internal sealed unsafe class CharacterStore : IDisposable
 {
-    private const long SaveDebounceMs = 2_000;
+    private const long SaveSettleMs = 2_000;
+    private const long SaveRetryMs = 15_000;
     private const long RosterIntervalMs = 5_000;
 
     private readonly string directoryPath;
     private readonly RetainerInfo[] roster = new RetainerInfo[MarketLimits.MaximumRetainers];
+    private readonly SaveSchedule schedule = new(SaveSettleMs, SaveRetryMs);
     private CheckpointStore<CharacterRecord>? store;
-    private int savedRevision;
-    private int observedRevision;
-    private long observedAtMs;
+    private CheckpointStore<CharacterRecord>? writeTarget;
+    private Task<bool>? write;
     private long lastRosterMs;
 
     public CharacterStore(string configDirectory)
@@ -40,16 +43,21 @@ internal sealed unsafe class CharacterStore : IDisposable
 
     public void Flush()
     {
-        if (Current is null || store is null || Current.Revision == savedRevision)
+        var now = Environment.TickCount64;
+        CollectWrite(now, true);
+        if (Current is null || store is null || !schedule.HasUnsaved(Current.Revision))
         {
             return;
         }
 
-        Save(Current, store);
+        schedule.Started(Current.Revision);
+        Finish(store, store.TrySave(Current.ToRecord(DateTime.UtcNow)), now);
     }
 
     private void OnUpdate(IFramework framework)
     {
+        var now = Environment.TickCount64;
+        CollectWrite(now, false);
         if (!Svc.ClientState.IsLoggedIn)
         {
             return;
@@ -67,7 +75,6 @@ internal sealed unsafe class CharacterStore : IDisposable
             Load(contentId);
         }
 
-        var now = Environment.TickCount64;
         RefreshRoster(Current!, now);
         SaveWhenSettled(Current!, now);
     }
@@ -75,7 +82,7 @@ internal sealed unsafe class CharacterStore : IDisposable
     private void OnLogout(int type, int code)
     {
         Flush();
-        RunLog.Info($"Character data flushed on logout.");
+        RunLog.Info("Character data flushed on logout.");
         Current = null;
         store = null;
     }
@@ -90,22 +97,34 @@ internal sealed unsafe class CharacterStore : IDisposable
         }
 
         var record = load.Value;
-        if (record is not null && (record.ContentId != contentId || record.Version > CharacterRecord.CurrentVersion))
+        var fit = CharacterRecord.FitFor(record, contentId);
+        if (fit is CharacterRecordFit.OtherCharacter or CharacterRecordFit.NewerVersion)
         {
-            RunLog.Warning($"The character file {store.FilePath} belongs to {record.ContentId} at version {record.Version}; starting empty.");
+            SetAside(store, load.Source, record!, fit);
             record = null;
         }
 
         Current = record is null ? new CharacterData(contentId) : CharacterData.FromRecord(record);
-        savedRevision = Current.Revision;
-        observedRevision = Current.Revision;
+        schedule.Loaded(Current.Revision);
         lastRosterMs = 0;
         RunLog.Info($"Character data loaded from {load.Source}: {Current.Retainers.Count} retainers, {Current.Snapshots.Count} snapshots, {Current.RepriceCount} reprice records, {Current.Approvals.Count} approvals.");
     }
 
+    private void SetAside(CheckpointStore<CharacterRecord> target, CheckpointSource source, CharacterRecord record, CharacterRecordFit fit)
+    {
+        if (target.TryKeepCopy(source, CharacterRecord.SetAsideSuffix(record.Version, DateTime.UtcNow), out var copyPath))
+        {
+            RunLog.Warning($"The character file {target.FilePath} does not fit ({fit}: character {record.ContentId}, version {record.Version}); it was copied to {copyPath} and this character starts empty.");
+            return;
+        }
+
+        store = null;
+        RunLog.Error($"The character file {target.FilePath} does not fit ({fit}: character {record.ContentId}, version {record.Version}) and could not be copied aside ({target.LastError}); this character starts empty and nothing is saved over the file this session.");
+    }
+
     private void RefreshRoster(CharacterData data, long now)
     {
-        if (now - lastRosterMs < RosterIntervalMs)
+        if (!CanReadRoster() || now - lastRosterMs < RosterIntervalMs)
         {
             return;
         }
@@ -133,31 +152,46 @@ internal sealed unsafe class CharacterStore : IDisposable
 
         if (data.UpdateRoster(roster.AsSpan(0, count)))
         {
-            RunLog.Info($"Retainer roster now has {count} retainers.");
+            RunLog.Info($"Retainer roster now has {count} retainers, read at the summoning bell.");
         }
+    }
+
+    private static bool CanReadRoster()
+    {
+        return Svc.Condition[ConditionFlag.OccupiedSummoningBell];
     }
 
     private void SaveWhenSettled(CharacterData data, long now)
     {
-        if (data.Revision != observedRevision)
-        {
-            observedRevision = data.Revision;
-            observedAtMs = now;
-            return;
-        }
-
-        if (observedRevision == savedRevision || now - observedAtMs < SaveDebounceMs)
+        if (store is null || !schedule.IsDue(data.Revision, now))
         {
             return;
         }
 
-        Save(data, store!);
+        var record = data.ToRecord(DateTime.UtcNow);
+        var target = store;
+        schedule.Started(data.Revision);
+        writeTarget = target;
+        write = Task.Run(() => target.TrySave(record));
     }
 
-    private void Save(CharacterData data, CheckpointStore<CharacterRecord> target)
+    private void CollectWrite(long now, bool wait)
     {
-        var saved = target.TrySave(data.ToRecord(DateTime.UtcNow));
-        savedRevision = data.Revision;
+        if (write is null || (!wait && !write.IsCompleted))
+        {
+            return;
+        }
+
+        var saved = write.GetAwaiter().GetResult();
+        var target = writeTarget!;
+        write = null;
+        writeTarget = null;
+        Finish(target, saved, now);
+    }
+
+    private void Finish(CheckpointStore<CharacterRecord> target, bool saved, long now)
+    {
+        schedule.Finished(saved, now);
         if (saved)
         {
             return;
