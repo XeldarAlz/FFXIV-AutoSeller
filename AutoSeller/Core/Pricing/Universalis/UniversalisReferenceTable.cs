@@ -5,9 +5,15 @@ namespace AutoSeller.Core.Pricing.Universalis;
 
 internal sealed class UniversalisReferenceTable
 {
-    public required UniversalisScope Scope { get; init; }
+    private UniversalisReferenceTable(UniversalisScope scope, ImmutableArray<UniversalisReference> items)
+    {
+        Scope = scope;
+        Items = items;
+    }
 
-    public required ImmutableArray<UniversalisReference> Items { get; init; }
+    public UniversalisScope Scope { get; }
+
+    public ImmutableArray<UniversalisReference> Items { get; }
 
     public bool TryGet(uint itemId, out UniversalisReference reference)
     {
@@ -80,11 +86,7 @@ internal sealed class UniversalisReferenceTable
         var built = new UniversalisReference[merged.Count];
         merged.Values.CopyTo(built, 0);
         Array.Sort(built, CompareItems);
-        return new UniversalisReferenceTable
-        {
-            Scope = scope,
-            Items = ImmutableCollectionsMarshal.AsImmutableArray(built),
-        };
+        return new UniversalisReferenceTable(scope, ImmutableCollectionsMarshal.AsImmutableArray(built));
     }
 
     private static int CompareItems(UniversalisReference left, UniversalisReference right)
