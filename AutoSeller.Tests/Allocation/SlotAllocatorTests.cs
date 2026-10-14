@@ -46,6 +46,42 @@ public sealed class SlotAllocatorTests
     }
 
     [Fact]
+    public void LotWithoutAPreferenceStepsAsideForALotPreferringItsRetainer()
+    {
+        var indifferent = Lot(Ore, 900, 0);
+        var preferring = Lot(Potion, 100, 1, preferredRetainerId: Alpha);
+
+        var result = Allocate([indifferent, preferring], [Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 1)]);
+
+        Assert.Equal(Beta, RetainerOf(result, indifferent));
+        Assert.Equal(Alpha, RetainerOf(result, preferring));
+    }
+
+    [Fact]
+    public void LotOnItsOwnPreferredRetainerDoesNotStepAsideForAnotherPreference()
+    {
+        var first = Lot(Ore, 900, 0, preferredRetainerId: Alpha);
+        var second = Lot(Potion, 100, 1, preferredRetainerId: Alpha);
+
+        var result = Allocate([first, second], [Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 1)]);
+
+        Assert.Equal(Alpha, RetainerOf(result, first));
+        Assert.Equal(Beta, RetainerOf(result, second));
+    }
+
+    [Fact]
+    public void PreferenceNeverPushesAPlacedLotOutOfTheRun()
+    {
+        var indifferent = Lot(Ore, 900, 0);
+        var preferring = Lot(Potion, 100, 1, preferredRetainerId: Alpha);
+
+        var result = Allocate([indifferent, preferring], [Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 0)]);
+
+        Assert.Equal(Alpha, RetainerOf(result, indifferent));
+        Assert.Equal(AllocationReason.NoFreeSlot, ReasonOf(result, preferring));
+    }
+
+    [Fact]
     public void UnknownPreferredRetainerIsIgnored()
     {
         var lot = Lot(Ore, 100, preferredRetainerId: Unknown);

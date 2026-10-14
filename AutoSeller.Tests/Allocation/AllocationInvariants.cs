@@ -15,6 +15,37 @@ internal static class AllocationInvariants
         CheckLoads(request, result);
     }
 
+    public static void CheckPreferences(AllocationRequest request, AllocationResult result)
+    {
+        var freeSlots = FreeSlotsAfter(request, result);
+        var loads = LoadsAfter(request, result);
+        for (var index = 0; index < result.Assignments.Length; index++)
+        {
+            var assignment = result.Assignments[index];
+            var lot = assignment.Lot;
+            var preferred = ListableIndexOf(request, lot.PreferredRetainerId);
+            if (!IsFree(assignment) || preferred < 0 || lot.PreferredRetainerId == assignment.RetainerId)
+            {
+                continue;
+            }
+
+            Assert.False(freeSlots[preferred] > 0 && Fits(loads[preferred], lot.EstimatedValue), $"{lot.Row} is off its preferred retainer while it has room");
+            var current = IndexOf(request, assignment.RetainerId);
+            for (var otherIndex = 0; otherIndex < result.Assignments.Length; otherIndex++)
+            {
+                var occupant = result.Assignments[otherIndex];
+                if (occupant.RetainerId != lot.PreferredRetainerId || !IsFree(occupant) || occupant.Lot.PreferredRetainerId == lot.PreferredRetainerId)
+                {
+                    continue;
+                }
+
+                var swapFits = Fits(loads[preferred] - occupant.Lot.EstimatedValue, lot.EstimatedValue)
+                    && Fits(loads[current] - lot.EstimatedValue, occupant.Lot.EstimatedValue);
+                Assert.False(swapFits, $"{lot.Row} could trade places with {occupant.Lot.Row} on its preferred retainer");
+            }
+        }
+    }
+
     private static void CheckOverflowReasons(AllocationRequest request, AllocationResult result)
     {
         var placedByItem = PlacedByItem(result);
@@ -121,6 +152,45 @@ internal static class AllocationInvariants
         }
 
         return free;
+    }
+
+    private static long[] LoadsAfter(AllocationRequest request, AllocationResult result)
+    {
+        var loads = new long[request.Retainers.Length];
+        for (var retainerIndex = 0; retainerIndex < loads.Length; retainerIndex++)
+        {
+            loads[retainerIndex] = request.Retainers[retainerIndex].Load;
+        }
+
+        for (var index = 0; index < result.Assignments.Length; index++)
+        {
+            loads[IndexOf(request, result.Assignments[index].RetainerId)] += result.Assignments[index].Lot.EstimatedValue;
+        }
+
+        return loads;
+    }
+
+    private static bool Fits(long load, long value)
+    {
+        return load + value <= MarketLimits.RetainerGilCap;
+    }
+
+    private static bool IsFree(LotAssignment assignment)
+    {
+        return assignment.Lot.BoundRetainerId == 0 && !assignment.Moved;
+    }
+
+    private static int ListableIndexOf(AllocationRequest request, ulong retainerId)
+    {
+        for (var index = 0; index < request.Retainers.Length; index++)
+        {
+            if (retainerId != 0 && request.Retainers[index].RetainerId == retainerId)
+            {
+                return request.Retainers[index].CanList ? index : -1;
+            }
+        }
+
+        return -1;
     }
 
     private static ulong PinOf(AllocationRequest request, AllocationLot lot)

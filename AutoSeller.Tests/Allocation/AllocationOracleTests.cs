@@ -23,6 +23,7 @@ public sealed class AllocationOracleTests
             var result = SlotAllocator.Allocate(request);
 
             AllocationInvariants.Check(request, result);
+            AllocationInvariants.CheckPreferences(request, result);
             AssertMatchesOracle(request, result, caseIndex);
         }
     }
@@ -38,6 +39,7 @@ public sealed class AllocationOracleTests
             var result = SlotAllocator.Allocate(request);
 
             AllocationInvariants.Check(request, result);
+            AllocationInvariants.CheckPreferences(request, result);
             if (ListableCount(request) > 1)
             {
                 continue;

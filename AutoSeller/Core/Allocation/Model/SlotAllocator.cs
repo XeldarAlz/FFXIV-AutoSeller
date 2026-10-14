@@ -186,6 +186,14 @@ internal static class SlotAllocator
 
         private void PlaceFree(int lotIndex)
         {
+            var preferred = PreferredOf(lotIndex);
+            var value = lots[lotIndex].EstimatedValue;
+            if (preferred != Unplaced && !CanTake(preferred, value) && TryRelocateFrom(preferred, value, false))
+            {
+                Assign(lotIndex, preferred);
+                return;
+            }
+
             var destination = Choose(lotIndex, Unplaced);
             if (destination != Unplaced)
             {
@@ -267,9 +275,8 @@ internal static class SlotAllocator
 
         private int Choose(int lotIndex, int excludedRetainer)
         {
-            var lot = lots[lotIndex];
-            var value = lot.EstimatedValue;
-            var preferred = lot.PreferredRetainerId == 0 ? Unplaced : IndexOf(lot.PreferredRetainerId);
+            var value = lots[lotIndex].EstimatedValue;
+            var preferred = PreferredOf(lotIndex);
             if (preferred != Unplaced && preferred != excludedRetainer && CanTake(preferred, value))
             {
                 return preferred;
@@ -290,6 +297,12 @@ internal static class SlotAllocator
             }
 
             return best;
+        }
+
+        private int PreferredOf(int lotIndex)
+        {
+            var preferredId = lots[lotIndex].PreferredRetainerId;
+            return preferredId == 0 ? Unplaced : IndexOf(preferredId);
         }
 
         private bool Outranks(int candidate, int best)
