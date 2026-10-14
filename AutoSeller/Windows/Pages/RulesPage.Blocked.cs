@@ -19,9 +19,9 @@ internal sealed partial class RulesPage
     private LanguageInfo? blockedTextLanguage;
     private int blockedRulesRevision = -1;
 
-    private void TrackBlockedTab(Plugin plugin, bool shown)
+    private void TrackBlockedTab(Plugin plugin, bool shown, bool reopened)
     {
-        if (shown && (!blockedShown || blockedRulesRevision != plugin.Configuration.RulesRevision))
+        if (shown && (reopened || !blockedShown || blockedRulesRevision != plugin.Configuration.RulesRevision))
         {
             blockedRulesRevision = plugin.Configuration.RulesRevision;
             plugin.BlockedScanner.Request();

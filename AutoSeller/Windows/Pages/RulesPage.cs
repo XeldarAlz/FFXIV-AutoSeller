@@ -43,6 +43,7 @@ internal sealed partial class RulesPage
     private LanguageInfo? tabItemsLanguage;
     private int activeTab;
     private bool blockedShown;
+    private int lastDrawnFrame = -2;
     private TransientNotice notice;
 
     public void Draw(Plugin plugin)
@@ -56,7 +57,10 @@ internal sealed partial class RulesPage
 
         using var reveal = Motion.PushSwitch("##asell_rules_tab", activeTab);
         var tab = (Tab)activeTab;
-        TrackBlockedTab(plugin, tab == Tab.Blocked);
+        var frame = ImGui.GetFrameCount();
+        var reopened = frame - lastDrawnFrame > 1;
+        lastDrawnFrame = frame;
+        TrackBlockedTab(plugin, tab == Tab.Blocked, reopened);
         switch (tab)
         {
             case Tab.SellList:
