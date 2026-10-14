@@ -12,10 +12,6 @@ internal static class SaleNoticeParser
 {
     public static readonly TimeSpan CatchUpLimit = TimeSpan.FromDays(7);
 
-    private const int NoMatch = 0;
-    private const int SameLot = 1;
-    private const int SameLotAndPrice = 2;
-
     public static bool TryRead(uint logMessageId, ReadOnlySpan<int> parameters, out SaleNotice notice)
     {
         notice = default;
@@ -88,7 +84,7 @@ internal static class SaleNoticeParser
 
     private static bool TryFindListing(in SaleNotice notice, ulong characterContentId, ReadOnlySpan<RetainerSnapshot> snapshots, out ulong retainerId, out DateTime lastSeenListedUtc)
     {
-        var bestScore = NoMatch;
+        var bestMatch = ListingMatch.None;
         var bestRetainerId = SaleRecord.UnknownRetainer;
         var ambiguous = false;
         lastSeenListedUtc = default;
@@ -100,15 +96,15 @@ internal static class SaleNoticeParser
                 continue;
             }
 
-            var score = MatchScore(notice, snapshot.Slots.AsSpan());
-            if (score == NoMatch || score < bestScore)
+            var match = Match(notice, snapshot.Slots.AsSpan());
+            if (match == ListingMatch.None || match < bestMatch)
             {
                 continue;
             }
 
-            if (score > bestScore)
+            if (match > bestMatch)
             {
-                bestScore = score;
+                bestMatch = match;
                 bestRetainerId = snapshot.RetainerId;
                 ambiguous = false;
                 lastSeenListedUtc = snapshot.ReadAtUtc;
@@ -123,12 +119,12 @@ internal static class SaleNoticeParser
         }
 
         retainerId = ambiguous ? SaleRecord.UnknownRetainer : bestRetainerId;
-        return bestScore != NoMatch;
+        return bestMatch != ListingMatch.None;
     }
 
-    private static int MatchScore(in SaleNotice notice, ReadOnlySpan<ListingSlot> slots)
+    private static ListingMatch Match(in SaleNotice notice, ReadOnlySpan<ListingSlot> slots)
     {
-        var score = NoMatch;
+        var match = ListingMatch.None;
         for (var index = 0; index < slots.Length; index++)
         {
             var slot = slots[index];
@@ -139,12 +135,19 @@ internal static class SaleNoticeParser
 
             if (slot.UnitPrice == notice.UnitPrice)
             {
-                return SameLotAndPrice;
+                return ListingMatch.SameLotAndPrice;
             }
 
-            score = SameLot;
+            match = ListingMatch.SameLot;
         }
 
-        return score;
+        return match;
+    }
+
+    private enum ListingMatch : byte
+    {
+        None,
+        SameLot,
+        SameLotAndPrice,
     }
 }

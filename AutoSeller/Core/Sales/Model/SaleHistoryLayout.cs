@@ -18,5 +18,5 @@ internal static class SaleHistoryLayout
     public const int BuyerNameOffset = 19;
     public const int BuyerNameLength = 32;
 
-    public static readonly SalePriceMeaning PriceMeaning = SalePriceMeaning.UnitPrice;
+    public const SalePriceMeaning PriceMeaning = SalePriceMeaning.UnitPrice;
 }

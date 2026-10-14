@@ -18,5 +18,5 @@ internal static class SaleNoticeLayout
 
     public static readonly SaleNoticeParameterOrder SingleSale = new(Town: 0, Item: 1, Quantity: SaleNoticeParameterOrder.Absent, ListedPrice: 3, NetGil: 4);
 
-    public static readonly SalePriceMeaning ListedPriceMeaning = SalePriceMeaning.UnitPrice;
+    public const SalePriceMeaning ListedPriceMeaning = SalePriceMeaning.UnitPrice;
 }
