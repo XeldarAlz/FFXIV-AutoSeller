@@ -16,34 +16,86 @@ internal static class AllocationInvariants
         CheckLoads(request, result);
     }
 
-    public static void CheckPreferences(AllocationRequest request, AllocationResult result)
+    public static void CheckRetainerChoices(AllocationRequest request, AllocationResult result)
     {
         var freeSlots = FreeSlotsAfter(request, result);
         var loads = LoadsAfter(request, result);
         for (var index = 0; index < result.Assignments.Length; index++)
         {
             var assignment = result.Assignments[index];
-            var lot = assignment.Lot;
-            var preferred = ListableIndexOf(request, lot.PreferredRetainerId);
-            if (!IsFree(assignment) || preferred < 0 || lot.PreferredRetainerId == assignment.RetainerId)
+            if (!IsFree(assignment) || assignment.Lot.PreferredRetainerId == assignment.RetainerId)
             {
                 continue;
             }
 
-            Assert.False(freeSlots[preferred] > 0 && Fits(loads[preferred], lot.EstimatedValue), $"{lot.Row} is off its preferred retainer while it has room");
-            var current = IndexOf(request, assignment.RetainerId);
-            for (var otherIndex = 0; otherIndex < result.Assignments.Length; otherIndex++)
-            {
-                var occupant = result.Assignments[otherIndex];
-                if (occupant.RetainerId != lot.PreferredRetainerId || !IsFree(occupant) || occupant.Lot.PreferredRetainerId == lot.PreferredRetainerId)
-                {
-                    continue;
-                }
+            CheckPreference(request, result, assignment, freeSlots, loads);
+            CheckLowestTax(request, assignment, freeSlots, loads);
+            CheckNoTaxLoweringTrade(request, result, assignment, loads);
+        }
+    }
 
-                var swapFits = Fits(loads[preferred] - occupant.Lot.EstimatedValue, lot.EstimatedValue)
-                    && Fits(loads[current] - lot.EstimatedValue, occupant.Lot.EstimatedValue);
-                Assert.False(swapFits, $"{lot.Row} could trade places with {occupant.Lot.Row} on its preferred retainer");
+    private static void CheckNoTaxLoweringTrade(AllocationRequest request, AllocationResult result, LotAssignment upper, long[] loads)
+    {
+        var upperIndex = IndexOf(request, upper.RetainerId);
+        for (var index = 0; index < result.Assignments.Length; index++)
+        {
+            var lower = result.Assignments[index];
+            if (!IsFree(lower) || lower.Lot.PreferredRetainerId == lower.RetainerId || lower.Lot.EstimatedValue >= upper.Lot.EstimatedValue)
+            {
+                continue;
             }
+
+            var lowerIndex = IndexOf(request, lower.RetainerId);
+            if (request.Retainers[lowerIndex].SellerTaxPercent >= request.Retainers[upperIndex].SellerTaxPercent)
+            {
+                continue;
+            }
+
+            var tradeFits = Fits(loads[lowerIndex] - lower.Lot.EstimatedValue, upper.Lot.EstimatedValue)
+                && Fits(loads[upperIndex] - upper.Lot.EstimatedValue, lower.Lot.EstimatedValue);
+            Assert.False(tradeFits, $"{upper.Lot.Row} pays more tax than the cheaper {lower.Lot.Row} and they could trade places");
+        }
+    }
+
+    private static void CheckPreference(AllocationRequest request, AllocationResult result, LotAssignment assignment, int[] freeSlots, long[] loads)
+    {
+        var lot = assignment.Lot;
+        var preferred = ListableIndexOf(request, lot.PreferredRetainerId);
+        if (preferred < 0)
+        {
+            return;
+        }
+
+        Assert.False(freeSlots[preferred] > 0 && Fits(loads[preferred], lot.EstimatedValue), $"{lot.Row} is off its preferred retainer while it has room");
+        var current = IndexOf(request, assignment.RetainerId);
+        for (var otherIndex = 0; otherIndex < result.Assignments.Length; otherIndex++)
+        {
+            var occupant = result.Assignments[otherIndex];
+            if (occupant.RetainerId != lot.PreferredRetainerId || !IsFree(occupant) || occupant.Lot.PreferredRetainerId == lot.PreferredRetainerId)
+            {
+                continue;
+            }
+
+            var swapFits = Fits(loads[preferred] - occupant.Lot.EstimatedValue, lot.EstimatedValue)
+                && Fits(loads[current] - lot.EstimatedValue, occupant.Lot.EstimatedValue);
+            Assert.False(swapFits, $"{lot.Row} could trade places with {occupant.Lot.Row} on its preferred retainer");
+        }
+    }
+
+    private static void CheckLowestTax(AllocationRequest request, LotAssignment assignment, int[] freeSlots, long[] loads)
+    {
+        var current = request.Retainers[IndexOf(request, assignment.RetainerId)];
+        for (var retainerIndex = 0; retainerIndex < request.Retainers.Length; retainerIndex++)
+        {
+            var other = request.Retainers[retainerIndex];
+            if (!other.CanList || freeSlots[retainerIndex] == 0 || !Fits(loads[retainerIndex], assignment.Lot.EstimatedValue))
+            {
+                continue;
+            }
+
+            Assert.True(
+                other.SellerTaxPercent >= current.SellerTaxPercent,
+                $"{assignment.Lot.Row} pays {current.SellerTaxPercent}% while retainer {other.RetainerId} has room at {other.SellerTaxPercent}%");
         }
     }
 

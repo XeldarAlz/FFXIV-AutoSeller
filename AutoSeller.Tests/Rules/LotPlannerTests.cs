@@ -385,19 +385,35 @@ public sealed class LotPlannerTests
             Stock(In(SlotSource.RetainerPage, Ore, 60, 0, retainerId: FirstRetainer), Material()),
             Stock(In(SlotSource.RetainerPage, Ore, 60, 0, retainerId: SecondRetainer), Material()),
         };
+        var refreshed = new[] { stock[0] with { Slot = stock[0].Slot with { Quantity = 50 } }, stock[1], stock[2], stock[4], stock[5], stock[6] };
 
         var first = Plan(rules, ListingCounts.Empty, 2, stock);
-        var second = Plan(rules, ListingCounts.Empty, 2, stock);
+        var second = Plan(rules, ListingCounts.Empty, 2, refreshed);
 
         var rows = new HashSet<PlanRowKey>();
         for (var index = 0; index < first.Lots.Length; index++)
         {
             Assert.True(rows.Add(first.Lots[index].Row), $"row {first.Lots[index].Row} planned twice");
-            Assert.Equal(first.Lots[index], second.Lots[index]);
         }
 
-        Assert.Equal(first.Lots.Length, second.Lots.Length);
         Assert.Equal(14, CountOf(first, Ore, false));
+        Assert.Equal(12, CountOf(second, Ore, false));
+        for (var index = 0; index < first.Lots.Length; index++)
+        {
+            var lot = first.Lots[index];
+            Assert.True(StillPlanned(lot.Row) == Contains(second, lot), $"row {lot.Row} after the refresh");
+        }
+
+        static bool StillPlanned(PlanRowKey row)
+        {
+            if (row.Item == new ItemKey(Potion, true))
+            {
+                return false;
+            }
+
+            var shrunk = row.RetainerId == 0 && row.Container == BagContainer && row.Slot == 0;
+            return !shrunk || row.LotIndex < 2;
+        }
     }
 
     [Fact]
@@ -515,6 +531,19 @@ public sealed class LotPlannerTests
         }
 
         return count;
+    }
+
+    private static bool Contains(LotPlan plan, PlannedLot lot)
+    {
+        for (var index = 0; index < plan.Lots.Length; index++)
+        {
+            if (plan.Lots[index] == lot)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static long SumFrom(LotPlan plan, SlotFacts slot)
