@@ -127,6 +127,13 @@ internal sealed class SellRunSession
         return replanned.Add(item);
     }
 
+    public void Replan(ItemKey item, RunPlanInputs inputs)
+    {
+        PlanInputs = inputs;
+        RunPlanner.ForgetLots(handled, item);
+        Listed.Forget(item);
+    }
+
     public void HoldAtBoundary(PauseReason reason)
     {
         PausedAtBoundary = true;
