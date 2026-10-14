@@ -8,9 +8,11 @@ internal enum RuleMatch : byte
     Category,
 }
 
-internal readonly record struct BlockedItem(SlotFacts Slot, EligibilityReason Reason, RuleMatch Match, uint ReferenceUnitPrice)
+internal readonly record struct BlockedItem(SlotFacts Slot, EligibilityReason Reason, LotHold Hold, RuleMatch Match, uint ReferenceUnitPrice)
 {
     public bool WaitsForReference => Reason == EligibilityReason.BelowCategoryMinimum && ReferenceUnitPrice == 0;
+
+    public bool IsHeld => Reason == EligibilityReason.Eligible && Hold != LotHold.None;
 }
 
 internal static class BlockedItems
@@ -22,7 +24,7 @@ internal static class BlockedItems
         for (var index = 0; index < plan.Slots.Length; index++)
         {
             var outcome = plan.Slots[index];
-            if (outcome.Reason is EligibilityReason.Eligible or EligibilityReason.NoMatchingRule)
+            if (outcome.Reason == EligibilityReason.NoMatchingRule || IsListed(outcome))
             {
                 continue;
             }
@@ -33,7 +35,7 @@ internal static class BlockedItems
                 continue;
             }
 
-            blocked.Add(new BlockedItem(outcome.Slot, outcome.Reason, match, entry.ReferenceUnitPrice));
+            blocked.Add(new BlockedItem(outcome.Slot, outcome.Reason, outcome.Hold, match, entry.ReferenceUnitPrice));
         }
 
         return blocked.ToImmutable();
@@ -59,5 +61,10 @@ internal static class BlockedItems
 
         match = default;
         return false;
+    }
+
+    private static bool IsListed(in SlotOutcome outcome)
+    {
+        return outcome.Reason == EligibilityReason.Eligible && (outcome.Hold == LotHold.None || outcome.LotCount > 0);
     }
 }
