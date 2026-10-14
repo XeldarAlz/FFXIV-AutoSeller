@@ -41,6 +41,9 @@ internal sealed partial class RetainerDriver
                 case ListingDuty.CoolingDown:
                     Record(RunDecision.CoolingDown(retainer.RetainerId, listing), retainer);
                     continue;
+                case ListingDuty.Excluded:
+                    Record(RunDecision.Excluded(retainer.RetainerId, listing), retainer);
+                    continue;
             }
 
             session.WorkOn(retainerIndex, PlanRowKey.ForListing(retainer.RetainerId, listing));

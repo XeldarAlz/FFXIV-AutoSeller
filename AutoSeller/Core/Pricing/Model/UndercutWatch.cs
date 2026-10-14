@@ -51,6 +51,21 @@ internal static class UndercutWatch
         return marks.ToImmutable();
     }
 
+    public static bool TryFind(ReadOnlySpan<WatchMark> marks, ulong retainerId, byte slot, ItemKey item, out WatchMark mark)
+    {
+        for (var index = 0; index < marks.Length; index++)
+        {
+            if (marks[index].RetainerId == retainerId && marks[index].Slot == slot && marks[index].Item == item)
+            {
+                mark = marks[index];
+                return true;
+            }
+        }
+
+        mark = default;
+        return false;
+    }
+
     public static ImmutableArray<ulong> RetainersToVisit(ReadOnlySpan<ulong> enabledRetainerIds, ReadOnlySpan<WatchMark> marks)
     {
         var needed = ImmutableArray.CreateBuilder<ulong>();

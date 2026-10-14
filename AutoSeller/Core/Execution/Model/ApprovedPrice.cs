@@ -10,6 +10,26 @@ internal readonly record struct ApprovedPrice(ulong RetainerId, ushort Slot, uin
         return new ApprovedPrice(retainerId, listing.Slot, listing.ItemId, listing.IsHq, listing.UnitPrice, price);
     }
 
+    public static bool TryFindLatest(ReadOnlySpan<ApprovedPrice> approvals, ulong retainerId, in ListingSlot listing, out ApprovedPrice approval)
+    {
+        return TryFindLatest(approvals, retainerId, listing.Slot, listing.Key, listing.UnitPrice, out approval);
+    }
+
+    public static bool TryFindLatest(ReadOnlySpan<ApprovedPrice> approvals, ulong retainerId, ushort slot, ItemKey item, uint oldPrice, out ApprovedPrice approval)
+    {
+        for (var index = approvals.Length - 1; index >= 0; index--)
+        {
+            if (approvals[index].Covers(retainerId, slot, item, oldPrice))
+            {
+                approval = approvals[index];
+                return true;
+            }
+        }
+
+        approval = default;
+        return false;
+    }
+
     public static int Compare(ApprovedPrice left, ApprovedPrice right)
     {
         var order = left.RetainerId.CompareTo(right.RetainerId);

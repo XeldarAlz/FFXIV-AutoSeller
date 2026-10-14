@@ -14,6 +14,7 @@ internal enum PlanEditRefusal : byte
     PriceOutOfRange,
     NotMovable,
     NoTargetRetainer,
+    RunInProgress,
 }
 
 internal readonly record struct PlanEdit(PlanRowKey Row, PlanEditKind Kind, ulong Value, DateTime CreatedAtUtc)

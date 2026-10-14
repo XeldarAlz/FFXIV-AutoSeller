@@ -4,9 +4,11 @@ using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
+using AutoSeller.Core.Listings;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Planning;
 using AutoSeller.Core.Pricing;
 using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
@@ -56,6 +58,8 @@ public sealed class Plugin : IDalamudPlugin
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
+    internal PlanBuilder Plan { get; }
+    internal ListingsBook Listings { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -98,6 +102,9 @@ public sealed class Plugin : IDalamudPlugin
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
+            Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller?.RunInput);
+            completed.Push(Plan.Dispose);
+            Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
             dutyWatcher = new DutyWatcher();
@@ -158,6 +165,7 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Login -= OnLoadedInGame;
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
+        Plan.Dispose();
         BlockedScanner.Dispose();
         History.Dispose();
         Characters.Dispose();

@@ -4,15 +4,16 @@ using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
+using AutoSeller.Core.Tasks.Model;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace AutoSeller.Core.Inventory;
 
-internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots)
+internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots, bool ListableComplete)
 {
-    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0);
+    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0, false);
 }
 
 internal sealed unsafe class BagReader
@@ -43,6 +44,7 @@ internal sealed unsafe class BagReader
         var slots = ImmutableArray.CreateBuilder<SlotFacts>();
         unloaded.Clear();
         var skipped = 0;
+        var listableSkipped = 0;
         var protectedSlots = 0;
         var gearsetSlots = 0;
         for (var containerIndex = 0; containerIndex < containers.Length; containerIndex++)
@@ -52,6 +54,7 @@ internal sealed unsafe class BagReader
             if (container == null || !container->IsLoaded)
             {
                 skipped++;
+                listableSkipped += RunPlanner.CanListFrom(source.Source) ? 1 : 0;
                 unloaded.Append(unloaded.Length == 0 ? " (not loaded: " : ", ").Append(source.Container);
                 continue;
             }
@@ -91,7 +94,7 @@ internal sealed unsafe class BagReader
 
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
         bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
-        return new BagRead(slots.ToImmutable(), freeBagSlots);
+        return new BagRead(slots.ToImmutable(), freeBagSlots, listableSkipped == 0);
     }
 
     public static bool TryReadSlot(uint container, ushort slot, out ItemKey item, out uint quantity)

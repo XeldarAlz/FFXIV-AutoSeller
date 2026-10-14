@@ -22,10 +22,12 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 - `AutoSeller/Core/Rules/`: the rule book frozen at Start (sell list, category rules, never-sell list, vendor settings, sources) and its builder, item eligibility, lot planning, the vendor rules, the rules import and export, the blocked items view, the gear set guard and the rules check behind the Rules page.
 - `AutoSeller/Core/Items/`: the marketable item catalog with its search and item categories, and the game data facts of any item, read once per item.
 - `AutoSeller/Core/Inventory/`: the bag reader and the containers each source reads.
-- `AutoSeller/Core/Characters/`: each character's retainer switches, last retainer snapshots, reprice history, approvals and plan edits, kept in `chars/<content id>.json`.
+- `AutoSeller/Core/Characters/`: each character's name and home world, retainer switches, last retainer snapshots, reprice history, approvals and plan edits, kept in `chars/<content id>.json`.
 - `AutoSeller/Core/Market/`: the Compare Prices search machine and its cross-check, the competitor snapshot and search reuse, the send path choice, the sale history capture, the market gates, and the game side: the search tracker with its hooks, the market checks and the `/asell look`, `/asell mbstatus` and `/asell sendpath` commands.
 - `AutoSeller/Core/Pricing/`: the price decision with its floor, bait filter, reference choice and reprice history, the undercut watch, own sellers, the Universalis client, throttle, translator, reference snapshot and fetch generations under `Universalis/`, and the reference service that fetches them.
 - `AutoSeller/Core/Allocation/`: the slot allocator that spreads lots over retainers, and the player's plan row edits.
+- `AutoSeller/Core/Planning/`: the plan behind the Sell page, built off the framework thread from the same inputs a run starts from, with its market estimate, totals and run time estimate.
+- `AutoSeller/Core/Listings/`: every character's listings from their saved snapshots, with their states, filters and sort orders, behind the Listings page.
 - `AutoSeller/Core/Retainers/`: retainer market snapshots and the diff between two reads of a retainer, the retainer roster reader and the market reader of the open retainer.
 - `AutoSeller/Core/Execution/`: the sell authorization frozen at Start with its fingerprints and approved prices, the sale guard, the sell window check, the read-back, the value book, the journal events and their replay.
 - `AutoSeller/Core/Ledger/`: the run journal, durable files and checkpoints.
@@ -35,7 +37,7 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 - `AutoSeller/Core/Tasks/`: the run controller, the run phases, pause reasons, Start's readiness check and block rules, and the shared movement helpers (teleport, aethernet, walking, landing).
 - `AutoSeller/Core/Shared/`: gil arithmetic, the market limits, item keys and sorted id sets every model shares.
 - `AutoSeller/Core/Travel/` and `AutoSeller/Core/Ipc/`: zone and aetheryte data, and the vnavmesh bridge.
-- `AutoSeller/Core/Game/`: NPC and dialog handling, text input focus, and the duty and GM watchers.
+- `AutoSeller/Core/Game/`: NPC and dialog handling, text input focus, town and world names, and the duty and GM watchers.
 - `AutoSeller/Core/External/`: the helper plugins on the Plugins page and their one-click install.
 - `AutoSeller/Core/Stats/` and `AutoSeller/Core/Changelog/`: History and the changelog entries.
 - `AutoSeller/Core/` itself and `Core/Debug/`: the run log behind the Console page, the humanizer, and the `/asell target` dump.

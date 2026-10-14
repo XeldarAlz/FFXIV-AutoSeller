@@ -22,6 +22,8 @@ internal sealed class CharacterStore : IDisposable
     private CheckpointStore<CharacterRecord>? writeTarget;
     private Task<bool>? write;
     private long lastRosterMs;
+    private long lastDescribeMs;
+    private bool described;
 
     public CharacterStore(string configDirectory, RetainerReader retainers)
     {
@@ -75,6 +77,7 @@ internal sealed class CharacterStore : IDisposable
             Load(contentId);
         }
 
+        DescribeCharacter(Current!, now);
         RefreshRoster(Current!, now);
         SaveWhenSettled(Current!, now);
     }
@@ -108,6 +111,8 @@ internal sealed class CharacterStore : IDisposable
         Current = record is null ? new CharacterData(contentId) : CharacterData.FromRecord(record);
         schedule.Loaded(Current.Revision);
         lastRosterMs = 0;
+        lastDescribeMs = 0;
+        described = false;
         RunLog.Info($"Character data loaded from {load.Source}: {Current.Retainers.Count} retainers, {Current.Snapshots.Count} snapshots, {Current.RepriceCount} reprice records, {Current.Approvals.Count} approvals.");
     }
 
@@ -121,6 +126,28 @@ internal sealed class CharacterStore : IDisposable
 
         store = null;
         RunLog.Error($"The character file {target.FilePath} does not fit ({fit}: character {record.ContentId}, version {record.Version}) and could not be copied aside ({target.LastError}); this character starts empty and nothing is saved over the file this session.");
+    }
+
+    private void DescribeCharacter(CharacterData data, long now)
+    {
+        if (described || !Svc.PlayerState.IsLoaded || now - lastDescribeMs < RosterIntervalMs)
+        {
+            return;
+        }
+
+        lastDescribeMs = now;
+        var name = Svc.PlayerState.CharacterName;
+        var homeWorldId = Svc.PlayerState.HomeWorld.RowId;
+        if (name.Length == 0 || homeWorldId == 0)
+        {
+            return;
+        }
+
+        described = true;
+        if (data.Describe(name, homeWorldId))
+        {
+            RunLog.Info($"Character data now names the character and its home world {homeWorldId}.");
+        }
     }
 
     private void RefreshRoster(CharacterData data, long now)

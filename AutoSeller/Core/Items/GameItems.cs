@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using ECommons.DalamudServices;
 using Lumina.Excel.Sheets;
@@ -19,6 +21,25 @@ internal sealed class GameItems
     public ItemFacts FactsOf(uint itemId)
     {
         return Get(itemId).Facts;
+    }
+
+    public ImmutableArray<ItemFacts> FactsOfListed(ReadOnlySpan<RetainerSnapshot> snapshots)
+    {
+        var seen = new HashSet<uint>();
+        var facts = ImmutableArray.CreateBuilder<ItemFacts>();
+        for (var snapshotIndex = 0; snapshotIndex < snapshots.Length; snapshotIndex++)
+        {
+            var slots = snapshots[snapshotIndex].Slots;
+            for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
+            {
+                if (seen.Add(slots[slotIndex].ItemId))
+                {
+                    facts.Add(FactsOf(slots[slotIndex].ItemId));
+                }
+            }
+        }
+
+        return facts.ToImmutable();
     }
 
     private static GameItem Read(uint itemId)

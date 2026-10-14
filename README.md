@@ -18,7 +18,7 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start only runs a dry run: it goes to a summoning bell, visits each enabled retainer, compares prices and records in History and the Console what it would reprice or list, without typing a price.
+> **In development.** This page describes what version 1.0 will do. Until it ships, Start only runs a dry run: it goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price.
 
 ## What it does
 
@@ -35,7 +35,7 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 - **Three ways to run**: Start, which goes to a nearby summoning bell or the bell in your inn room; an AutoRetainer post-process after each venture; or Assist, which fills the suggested price when you open a sell window by hand and leaves Confirm to you.
 - **In-game buttons**: "Run all retainers" on the retainer list and "Reprice this retainer" on a retainer's sell list, so a run can start without opening the window.
 - **Undercut watch**: your listings are checked against Universalis on a timer, with no game request, and a run can visit only the retainers that need it.
-- **Listings**: every listing of every character and retainer from their last visit, with its price, the lowest competitor, its age and its state.
+- **Listings**: every listing of every character and retainer from their last visit, with its price, the lowest competitor, how long it has been listed, its last reprice and its state.
 - **Sales**: a ledger built from sale notices, the retainer sale history and listing changes, with daily, 7-day and 30-day totals, a daily chart, views per item, retainer and character, and hints when an item sells fast or sits unsold.
 - **Run controls**: Pause, Resume and Stop in the dock at the bottom of the window or as commands, auto-pause while you are in a duty, and hold new moves while you type in chat.
 - **Humanizer**: short random delays before the character moves off or casts a teleport.

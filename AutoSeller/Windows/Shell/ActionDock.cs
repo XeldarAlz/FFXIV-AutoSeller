@@ -1,6 +1,7 @@
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows.Components;
+using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using System.Numerics;
@@ -32,7 +33,7 @@ internal static class ActionDock
         }
         else
         {
-            DrawStart(controller, innerWidth);
+            DrawStart(controller, innerWidth, buttonHeight);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -58,12 +59,24 @@ internal static class ActionDock
         }
     }
 
-    private static void DrawStart(SellController controller, float innerWidth)
+    private static void DrawStart(SellController controller, float innerWidth, float height)
     {
         var readiness = RunReadiness.Evaluate();
-        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth))
+        var showTile = controller.DryRun;
+        var gap = ButtonGap * ImGuiHelpers.GlobalScale;
+        var tileWidth = showTile ? DryRunTile.Width(innerWidth) : 0f;
+        var buttonWidth = showTile ? innerWidth - tileWidth - gap : innerWidth;
+        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), buttonWidth))
         {
             controller.Start();
         }
+
+        if (!showTile)
+        {
+            return;
+        }
+
+        ImGui.SameLine(0f, gap);
+        DryRunTile.Draw(tileWidth, height);
     }
 }

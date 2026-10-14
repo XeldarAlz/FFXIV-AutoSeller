@@ -10,11 +10,12 @@ internal enum ListingDuty : byte
     NotManaged,
     CoolingDown,
     Handled,
+    Excluded,
 }
 
 internal static class ListingDuties
 {
-    public static ListingDuty Of(RuleBook rules, in ListingSlot listing, byte itemUiCategory, uint referenceUnitPrice, in RepriceEntry history, TimeSpan cooldown, bool handled, DateTime nowUtc)
+    public static ListingDuty Of(RuleBook rules, in ListingSlot listing, byte itemUiCategory, uint referenceUnitPrice, in RepriceEntry history, TimeSpan cooldown, bool handled, bool excluded, DateTime nowUtc)
     {
         if (handled)
         {
@@ -24,6 +25,11 @@ internal static class ListingDuties
         if (!PricingRule.Manages(rules, listing.Key, itemUiCategory, referenceUnitPrice))
         {
             return ListingDuty.NotManaged;
+        }
+
+        if (excluded)
+        {
+            return ListingDuty.Excluded;
         }
 
         return history.IsCoolingDown(nowUtc, cooldown) ? ListingDuty.CoolingDown : ListingDuty.Due;

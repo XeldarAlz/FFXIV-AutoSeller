@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
@@ -15,6 +16,7 @@ internal sealed class CharacterData
     private readonly List<RetainerSetting> retainers = [];
     private readonly List<RetainerSnapshot> snapshots = [];
     private readonly List<ApprovedPrice> approvals = [];
+    private readonly List<ListingAge> listingAges = [];
     private RepriceHistory reprices = new();
 
     public CharacterData(ulong contentId)
@@ -28,6 +30,10 @@ internal sealed class CharacterData
     }
 
     public ulong ContentId { get; }
+
+    public string Name { get; private set; } = string.Empty;
+
+    public uint HomeWorldId { get; private set; }
 
     public int Revision { get; private set; }
 
@@ -43,7 +49,11 @@ internal sealed class CharacterData
 
     public static CharacterData FromRecord(CharacterRecord record)
     {
-        var data = new CharacterData(record.ContentId);
+        var data = new CharacterData(record.ContentId)
+        {
+            Name = record.Name ?? string.Empty,
+            HomeWorldId = record.HomeWorldId,
+        };
         var savedRetainers = record.Retainers.IsDefault ? [] : record.Retainers;
         for (var index = 0; index < savedRetainers.Length; index++)
         {
@@ -62,6 +72,11 @@ internal sealed class CharacterData
             {
                 data.PutSnapshot(snapshot);
             }
+        }
+
+        if (!record.ListingAges.IsDefault)
+        {
+            data.listingAges.AddRange(record.ListingAges);
         }
 
         var savedReprices = record.Reprices.IsDefault ? [] : record.Reprices;
@@ -91,13 +106,29 @@ internal sealed class CharacterData
         return new CharacterRecord
         {
             ContentId = ContentId,
+            Name = Name,
+            HomeWorldId = HomeWorldId,
             SavedAtUtc = nowUtc,
             Retainers = [.. retainers],
             Snapshots = [.. snapshots],
+            ListingAges = [.. listingAges],
             Reprices = kept.ToImmutable(),
             Approvals = [.. approvals],
             PlanEdits = PlanEdits.Items,
         };
+    }
+
+    public bool Describe(string name, uint homeWorldId)
+    {
+        if (name.Length == 0 || homeWorldId == 0 || (string.Equals(name, Name, StringComparison.Ordinal) && homeWorldId == HomeWorldId))
+        {
+            return false;
+        }
+
+        Name = name;
+        HomeWorldId = homeWorldId;
+        Revision++;
+        return true;
     }
 
     public bool IsEnabled(ulong retainerId)
@@ -157,6 +188,7 @@ internal sealed class CharacterData
         retainers.Clear();
         retainers.AddRange(updated);
         snapshots.RemoveAll(snapshot => IndexOfRetainer(snapshot.RetainerId) < 0);
+        listingAges.RemoveAll(age => IndexOfRetainer(age.RetainerId) < 0);
         approvals.RemoveAll(approval => IndexOfRetainer(approval.RetainerId) < 0);
         Revision++;
         return true;
@@ -181,6 +213,10 @@ internal sealed class CharacterData
             throw new ArgumentException("A snapshot of another character's retainer cannot be kept here.", nameof(snapshot));
         }
 
+        TryGetSnapshot(snapshot.RetainerId, out var previous);
+        var ages = ListingAges.Carry(previous, snapshot, CollectionsMarshal.AsSpan(listingAges));
+        listingAges.RemoveAll(age => age.RetainerId == snapshot.RetainerId);
+        listingAges.AddRange(ages);
         PutSnapshot(snapshot);
         approvals.RemoveAll(approval => approval.RetainerId == snapshot.RetainerId && !StillListed(approval, snapshot));
         Revision++;
@@ -203,6 +239,17 @@ internal sealed class CharacterData
         approvals.RemoveAll(existing => existing.SameListing(approval));
         approvals.Add(approval);
         Revision++;
+    }
+
+    public bool Withdraw(ApprovedPrice approval)
+    {
+        if (approvals.RemoveAll(existing => existing.SameListing(approval)) == 0)
+        {
+            return false;
+        }
+
+        Revision++;
+        return true;
     }
 
     public void SetPlanEdits(PlanEdits edits)

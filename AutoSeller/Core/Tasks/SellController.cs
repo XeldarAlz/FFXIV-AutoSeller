@@ -1,4 +1,5 @@
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks.Model;
 
@@ -13,6 +14,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
     public bool Paused => PauseReason != PauseReason.None;
 
     public bool Running => session is not null;
+
+    public PlanInput? RunInput => session?.Input;
 
     public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 
@@ -87,7 +90,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 
-    private static string Describe(NeedsPlayerReason reason) => reason switch
+    public static string Describe(NeedsPlayerReason reason) => reason switch
     {
         NeedsPlayerReason.BellNotReached => Loc.T(L.Run.NeedsBellNotReached),
         NeedsPlayerReason.WindowsStuck => Loc.T(L.Run.NeedsWindowsStuck),

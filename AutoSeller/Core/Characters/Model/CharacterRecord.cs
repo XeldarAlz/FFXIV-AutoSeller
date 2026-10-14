@@ -29,11 +29,17 @@ internal sealed record CharacterRecord
 
     public required ulong ContentId { get; init; }
 
+    public string Name { get; init; } = string.Empty;
+
+    public uint HomeWorldId { get; init; }
+
     public DateTime SavedAtUtc { get; init; }
 
     public ImmutableArray<RetainerSetting> Retainers { get; init; } = [];
 
     public ImmutableArray<RetainerSnapshot> Snapshots { get; init; } = [];
+
+    public ImmutableArray<ListingAge> ListingAges { get; init; } = [];
 
     public ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> Reprices { get; init; } = [];
 

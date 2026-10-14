@@ -19,11 +19,12 @@ internal static class NavRail
     private static readonly Entry[] entries =
     [
         new(AppWindow.Page.Sell,      FontAwesomeIcon.Tags,          "##asell_nav_sell",      L.Shell.NavSell),
+        new(AppWindow.Page.Listings,  FontAwesomeIcon.ThList,        "##asell_nav_listings",  L.Shell.NavListings),
         new(AppWindow.Page.Rules,     FontAwesomeIcon.ListUl,        "##asell_nav_rules",     L.Shell.NavRules),
-        new(AppWindow.Page.Settings,  FontAwesomeIcon.SlidersH,      "##asell_nav_settings",  L.Shell.NavSettings),
         new(AppWindow.Page.History,   FontAwesomeIcon.ChartLine,     "##asell_nav_history",   L.Shell.NavHistory),
         new(AppWindow.Page.Plugins,   FontAwesomeIcon.Plug,          "##asell_nav_plugins",   L.Shell.NavPlugins),
         new(AppWindow.Page.Log,       FontAwesomeIcon.Terminal,      "##asell_nav_log",       L.Shell.NavLog),
+        new(AppWindow.Page.Settings,  FontAwesomeIcon.SlidersH,      "##asell_nav_settings",  L.Shell.NavSettings),
         new(AppWindow.Page.Changelog, FontAwesomeIcon.Newspaper,     "##asell_nav_changelog", L.Shell.NavChangelog),
         new(AppWindow.Page.About,     FontAwesomeIcon.InfoCircle,    "##asell_nav_about",     L.Shell.NavAbout),
     ];

@@ -31,7 +31,7 @@ internal static class Approvals
                     continue;
                 }
 
-                if (TryFindLatest(playerApprovals, market.RetainerId, listing, out var playerApproval))
+                if (ApprovedPrice.TryFindLatest(playerApprovals, market.RetainerId, listing, out var playerApproval))
                 {
                     approved.Add(playerApproval);
                 }
@@ -39,20 +39,5 @@ internal static class Approvals
         }
 
         return approved.ToImmutable();
-    }
-
-    private static bool TryFindLatest(ReadOnlySpan<ApprovedPrice> playerApprovals, ulong retainerId, in ListingSlot listing, out ApprovedPrice latest)
-    {
-        for (var index = playerApprovals.Length - 1; index >= 0; index--)
-        {
-            if (playerApprovals[index].Covers(retainerId, listing.Slot, listing.Key, listing.UnitPrice))
-            {
-                latest = playerApprovals[index];
-                return true;
-            }
-        }
-
-        latest = default;
-        return false;
     }
 }
