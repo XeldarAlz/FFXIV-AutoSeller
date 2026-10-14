@@ -66,7 +66,7 @@ internal sealed class JournalReview
             for (var index = Runs.Length - 1; index >= 0; index--)
             {
                 var run = Runs[index];
-                if (run.Authorization is not null && run.FinalState is null && !run.NeedsReconciliation)
+                if (run.Authorization is { PolicyVersion: SellAuthorization.CurrentPolicyVersion } && run.FinalState is null && !run.NeedsReconciliation)
                 {
                     return run;
                 }

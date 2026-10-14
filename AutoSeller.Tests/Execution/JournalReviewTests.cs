@@ -105,6 +105,21 @@ public sealed class JournalReviewTests
     }
 
     [Fact]
+    public void ARunAuthorizedUnderAnotherPolicyIsNotOfferedForResume()
+    {
+        var journal = new MemoryJournal();
+        var writer = new JournalWriter(journal);
+        writer.Append(Authorization().ToJournalEvent(journal.NextSequence, Now) with { PolicyVersion = SellAuthorization.CurrentPolicyVersion + 1 });
+        writer.Intent(FirstWrite).Confirmed(FirstWrite);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+
+        Assert.False(review.BlocksWrites);
+        Assert.NotNull(review.Runs[0].Authorization);
+        Assert.Null(review.Interrupted);
+    }
+
+    [Fact]
     public void ATornTailAloneNeitherBlocksNorDamages()
     {
         var journal = new MemoryJournal();
