@@ -13,22 +13,33 @@ dotnet test AutoSeller.sln -c Release
 
 You need the .NET 10 SDK. The plugin requires Dalamud at runtime; CI pulls a Dalamud dev build automatically and that's enough to compile. When your Dalamud build is not where XIVLauncher puts it, pass its folder with `-p:DalamudLibPath=<folder>/`. See `.github/workflows/ci.yml` if you want to reproduce CI locally.
 
-`dotnet test AutoSeller.Tests -c Release` runs the unit tests alone. For now they cover gil arithmetic, check that all nine catalogs carry the same keys in the same order with the same placeholders and no em dashes, and that the newest changelog entry matches the version in `Directory.Build.props`. The test project does not reference the plugin; it links `Core/Shared/`, `Core/Changelog/`, the string table, `Core/Ledger/`, `Core/Pricing/Universalis/` and every `Model/` folder under `AutoSeller/Core/` by path, so code placed there is tested without editing the test project and must not depend on Dalamud, ECommons, FFXIVClientStructs or clib.
+`dotnet test AutoSeller.Tests -c Release` runs the unit tests alone. They cover every pure model, run those models together in the order a sell run uses them (`AutoSeller.Tests/EndToEnd/`), check that all nine catalogs carry the same keys in the same order with the same placeholders and no em dashes, and that the newest changelog entry matches the version in `Directory.Build.props`. The test project does not reference the plugin; it links `Core/Shared/`, `Core/Changelog/`, the string table, `Core/Ledger/`, `Core/Pricing/Universalis/` and every `Model/` folder under `AutoSeller/Core/` by path, so code placed there is tested without editing the test project and must not depend on Dalamud, ECommons, FFXIVClientStructs or clib.
 
 Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Locations**, pointing at `AutoSeller/bin/Release/AutoSeller.dll`.
 
 ## Project layout
 
-- `AutoSeller/Core/Tasks/`: the run controller, the run phases, pause reasons and Start's readiness check, and the shared movement helpers (teleport, aethernet, walking, landing).
+- `AutoSeller/Core/Rules/`: the rule book frozen at Start (sell list, category rules, never-sell list, vendor settings, sources), item eligibility, lot planning and the vendor rules.
+- `AutoSeller/Core/Market/`: the Compare Prices search machine and its cross-check, the competitor snapshot and search reuse.
+- `AutoSeller/Core/Pricing/`: the price decision with its floor, bait filter, reference choice and reprice history, the undercut watch, and the Universalis client, throttle and translator under `Universalis/`.
+- `AutoSeller/Core/Allocation/`: the slot allocator that spreads lots over retainers, and the player's plan row edits.
+- `AutoSeller/Core/Retainers/`: retainer market snapshots and the diff between two reads of a retainer.
+- `AutoSeller/Core/Execution/`: the sell authorization frozen at Start with its fingerprints and approved prices, the sale guard, the sell window check, the read-back, the value book, the journal events and their replay.
+- `AutoSeller/Core/Ledger/`: the run journal, durable files and checkpoints.
+- `AutoSeller/Core/Sales/`: sale notice and sale history parsing, inferred sales, the sale matcher, stats, hints and the CSV export.
+- `AutoSeller/Core/Driver/`: the retainer window chain, UI pacing and prompt text matching.
+- `AutoSeller/Core/AutoRetainer/`: the AutoRetainer state and the post-process budget.
+- `AutoSeller/Core/Tasks/`: the run controller, the run phases, pause reasons, Start's readiness check and block rules, and the shared movement helpers (teleport, aethernet, walking, landing).
+- `AutoSeller/Core/Shared/`: gil arithmetic, the market limits, item keys and sorted id sets every model shares.
 - `AutoSeller/Core/Travel/` and `AutoSeller/Core/Ipc/`: zone and aetheryte data, and the vnavmesh bridge.
-- `AutoSeller/Core/Game/`: NPC and dialog handling, party checks, Grand Company ids, text input focus, and the duty and GM watchers.
+- `AutoSeller/Core/Game/`: NPC and dialog handling, text input focus, and the duty and GM watchers.
 - `AutoSeller/Core/External/`: the helper plugins on the Plugins page and their one-click install.
 - `AutoSeller/Core/Stats/` and `AutoSeller/Core/Changelog/`: History and the changelog entries.
-- `AutoSeller/Core/` itself, `Core/Shared/` and `Core/Debug/`: the run log behind the Console page, the humanizer, gil arithmetic, and the `/asell target` dump.
+- `AutoSeller/Core/` itself and `Core/Debug/`: the run log behind the Console page, the humanizer, and the `/asell target` dump.
 - `AutoSeller/Core/Localization/` and `AutoSeller/Localization/`: the string table and the nine language catalogs.
 - `AutoSeller/Windows/`: the ImGui window with its shell, pages, sections, settings and components.
 - `AutoSeller/`: plugin entry points, config, command wiring.
-- `AutoSeller.Tests/`: unit tests for everything above that runs without the game.
+- `AutoSeller.Tests/`: unit tests for everything above that runs without the game, and `EndToEnd/`, which carries one sell run through the pure models from the rule book to a sale record.
 - `ECommons/`: submodule, shared Dalamud helpers. Don't patch this directly; upstream it.
 
 Keep logic small and direct. This plugin has one job.
