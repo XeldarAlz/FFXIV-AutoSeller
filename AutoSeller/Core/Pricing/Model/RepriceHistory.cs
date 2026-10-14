@@ -75,6 +75,17 @@ internal sealed class RepriceHistory
 
     public int Count => entries.Count;
 
+    public static RepriceHistory Restore(ReadOnlySpan<KeyValuePair<RepriceKey, RepriceEntry>> saved)
+    {
+        var history = new RepriceHistory();
+        for (var index = 0; index < saved.Length; index++)
+        {
+            history.entries[saved[index].Key] = saved[index].Value;
+        }
+
+        return history;
+    }
+
     public RepriceEntry EntryFor(RepriceKey key)
     {
         return entries.GetValueOrDefault(key);
@@ -85,5 +96,22 @@ internal sealed class RepriceHistory
         var entry = EntryFor(key).WithReprice(atUtc, newPrice < previousPrice);
         entries[key] = entry;
         return entry;
+    }
+
+    public bool Forget(RepriceKey key)
+    {
+        return entries.Remove(key);
+    }
+
+    public int CopyTo(Span<KeyValuePair<RepriceKey, RepriceEntry>> destination)
+    {
+        var count = 0;
+        foreach (var pair in entries)
+        {
+            destination[count] = pair;
+            count++;
+        }
+
+        return count;
     }
 }
