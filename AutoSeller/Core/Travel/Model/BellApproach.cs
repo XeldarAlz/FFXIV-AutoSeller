@@ -9,6 +9,16 @@ internal enum BellRoute : byte
     GoToInn,
 }
 
+internal enum BellArrival : byte
+{
+    Reached,
+    RetainerListOpen,
+    BellBusy,
+    NoBell,
+    NotReached,
+    Cancelled,
+}
+
 internal readonly record struct BellSituation(
     bool RetainerListOpen,
     bool OccupiedAtBell,
