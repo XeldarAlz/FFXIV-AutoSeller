@@ -10,6 +10,9 @@ public sealed class SaleGuardTests
         (SaleRejection.WrongRun, () => GuardInput(Reprice()) with { ActiveRunId = Guid.NewGuid() }),
         (SaleRejection.WrongCharacter, () => GuardInput(Reprice()) with { CharacterContentId = Character + 1 }),
         (SaleRejection.NotOnHomeWorld, () => GuardInput(Reprice()) with { CurrentWorldId = HomeWorld + 1 }),
+        (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRulesHash = RulesHash + 1 }),
+        (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricingHash = PricingHash + 1 }),
+        (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEditsHash = PlanEditsHash + 1 }),
         (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
         (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
@@ -82,6 +85,19 @@ public sealed class SaleGuardTests
         Assert.Equal(SaleRejection.NotOnHomeWorld, SaleGuard.Evaluate(input).Rejection);
         Assert.Equal(SaleRejection.NotEligible, SaleGuard.Evaluate(input with { CurrentWorldId = HomeWorld }).Rejection);
         Assert.Equal(SaleRejection.BelowFloor, SaleGuard.Evaluate(input with { CurrentWorldId = HomeWorld, Eligible = true }).Rejection);
+    }
+
+    [Fact]
+    public void ARuleEditedDuringTheRunStopsEveryKindOfWrite()
+    {
+        SaleWrite[] writes = [Reprice(), List(), Return(), Vendor(), Move()];
+        for (var index = 0; index < writes.Length; index++)
+        {
+            var loweredFloor = GuardInput(writes[index]) with { CurrentRulesHash = RulesHash + 1, RuleFloor = 1 };
+
+            Assert.Equal(SaleRejection.RulesChanged, SaleGuard.Evaluate(loweredFloor).Rejection);
+            Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(SaleGuard.Evaluate(loweredFloor).Rejection));
+        }
     }
 
     [Fact]
@@ -243,6 +259,9 @@ public sealed class SaleGuardTests
             ActiveRunId = RunId,
             CharacterContentId = Character,
             CurrentWorldId = HomeWorld,
+            CurrentRulesHash = RulesHash,
+            CurrentPricingHash = PricingHash,
+            CurrentPlanEditsHash = PlanEditsHash,
             OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
             WindowChainReady = true,
             SearchGeneration = SearchGeneration,

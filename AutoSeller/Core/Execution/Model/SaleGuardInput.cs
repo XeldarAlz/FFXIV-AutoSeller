@@ -12,6 +12,12 @@ internal readonly record struct SaleGuardInput
 
     public required uint CurrentWorldId { get; init; }
 
+    public required ulong CurrentRulesHash { get; init; }
+
+    public required ulong CurrentPricingHash { get; init; }
+
+    public required ulong CurrentPlanEditsHash { get; init; }
+
     public required ulong OpenRetainerId { get; init; }
 
     public required bool WindowChainReady { get; init; }

@@ -76,6 +76,12 @@ internal static class SaleGuard
             return SaleRejection.NotOnHomeWorld;
         }
 
+        var frozen = CheckFrozenSettings(input);
+        if (frozen != SaleRejection.None)
+        {
+            return frozen;
+        }
+
         if (!authorization.AllowsRetainer(write.RetainerId))
         {
             return SaleRejection.RetainerNotAuthorized;
@@ -102,6 +108,22 @@ internal static class SaleGuard
         }
 
         return input.JournalBlocksWrites ? SaleRejection.JournalUnresolved : SaleRejection.None;
+    }
+
+    private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
+    {
+        var authorization = input.Authorization;
+        if (input.CurrentRulesHash != authorization.RulesHash)
+        {
+            return SaleRejection.RulesChanged;
+        }
+
+        if (input.CurrentPricingHash != authorization.PricingHash)
+        {
+            return SaleRejection.PricingChanged;
+        }
+
+        return input.CurrentPlanEditsHash != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
     }
 
     private static SaleRejection CheckIdentity(in SaleGuardInput input)
