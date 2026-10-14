@@ -20,6 +20,7 @@ internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int Fre
 internal sealed unsafe class BagReader
 {
     private readonly Func<uint, bool> isProtected;
+    private readonly Dictionary<uint, bool> protectedThisRead = [];
     private readonly DiagnosticLog bagLog = new();
     private readonly DiagnosticLog retainerLog = new();
     private readonly DiagnosticLog gearsetLog = new();
@@ -44,6 +45,7 @@ internal sealed unsafe class BagReader
         var containers = SourceContainers.For(sources, readRetainer);
         var slots = ImmutableArray.CreateBuilder<SlotFacts>();
         unloaded.Clear();
+        protectedThisRead.Clear();
         var skipped = 0;
         var listableSkipped = 0;
         var protectedSlots = 0;
@@ -71,7 +73,7 @@ internal sealed unsafe class BagReader
 
                 var isHq = (item->Flags & InventoryItem.ItemFlags.HighQuality) != 0;
                 var inGearSet = gearsets.Contains(item->ItemId, isHq);
-                var protectedItem = isProtected(item->ItemId);
+                var protectedItem = IsProtected(item->ItemId);
                 gearsetSlots += inGearSet ? 1 : 0;
                 protectedSlots += protectedItem ? 1 : 0;
                 slots.Add(new SlotFacts(
@@ -128,6 +130,17 @@ internal sealed unsafe class BagReader
         item = new ItemKey(held->ItemId, (held->Flags & InventoryItem.ItemFlags.HighQuality) != 0);
         quantity = (uint)held->Quantity;
         return true;
+    }
+
+    private bool IsProtected(uint itemId)
+    {
+        if (!protectedThisRead.TryGetValue(itemId, out var answer))
+        {
+            answer = isProtected(itemId);
+            protectedThisRead.Add(itemId, answer);
+        }
+
+        return answer;
     }
 
     private ulong OpenRetainerId(InventoryManager* manager)

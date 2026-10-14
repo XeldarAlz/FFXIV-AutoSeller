@@ -1,4 +1,5 @@
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.AutoRetainer.Model;
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
@@ -84,7 +85,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             PricingRule.Manages(Authorization.Rules, listing.Key, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc)),
             PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
             facts.VendorPrice,
-            plugin.AutoRetainer.IsItemProtected(listing.ItemId));
+            ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 
@@ -99,7 +100,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             Eligibility.Check(held, stock.Item, stock.ReferenceUnitPrice, Authorization.Rules, ListingCounts.From(markets)).IsEligible,
             PricingRule.For(Authorization.Rules, stock.Slot.Key, out _).Floor,
             stock.Item.VendorPrice,
-            plugin.AutoRetainer.IsItemProtected(stock.Slot.ItemId));
+            ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(stock.Slot.ItemId)));
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 

@@ -40,6 +40,20 @@ internal static class IpcGate
         }
     }
 
+    public static TResult InvokeQuietly<TArgument, TResult>(Func<TArgument, TResult> call, TArgument argument, TResult fallback, out Exception? failure)
+    {
+        try
+        {
+            failure = null;
+            return call(argument);
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+            return fallback;
+        }
+    }
+
     public static bool Run(bool hasFunction, Action call, string label, [CallerFilePath] string callerFile = "")
     {
         if (!hasFunction)

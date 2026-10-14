@@ -12,6 +12,7 @@ namespace AutoSeller.Core.AutoRetainer;
 internal sealed class AutoRetainerIpc : IDisposable
 {
     private const long StatusRefreshMs = 1_000;
+    private const uint ProtectProbeItemId = 1;
 
     private const string InitGate = "AutoRetainer.Init";
     private const string IsBusyGate = "AutoRetainer.PluginState.IsBusy";
@@ -36,7 +37,8 @@ internal sealed class AutoRetainerIpc : IDisposable
     private const string CustomTaskFailed = "AutoRetainer: OnRetainerListCustomTask failed";
     private const string RegisteredCharactersFailed = "AutoRetainer: GetRegisteredCIDs failed";
     private const string OfflineCharacterFailed = "AutoRetainer: GetOfflineCharacterData failed";
-    private const string IsItemProtectedFailed = "AutoRetainer: PluginState.IsItemProtected failed; the item counts as protected";
+    private const string IsItemProtectedFailed = "AutoRetainer: PluginState.IsItemProtected failed, so its protect list cannot be read; Start and the post-process stay off and every write is refused until it answers again";
+    private const string IsItemProtectedRecovered = "AutoRetainer: PluginState.IsItemProtected answers again; its protect list applies.";
 
     private readonly ICallGateSubscriber<object> init;
     private readonly ICallGateSubscriber<bool> isBusy;
@@ -65,6 +67,8 @@ internal sealed class AutoRetainerIpc : IDisposable
     private readonly Action<string> onAdditionalTask;
     private readonly Action<string, string> onReadyForPostprocess;
     private readonly Action onTaskButtonsDraw;
+
+    private readonly ProtectListHealth protectList = new();
 
     private AutoRetainerStatus status;
     private AutoRetainerProbe reportedProbe;
@@ -189,7 +193,44 @@ internal sealed class AutoRetainerIpc : IDisposable
 
     public bool IsItemProtected(uint itemId)
     {
-        return isItemProtected.HasFunction && IpcGate.Invoke(true, isItemProtectedCall, itemId, true, IsItemProtectedFailed);
+        return ProtectListHealth.ShownProtected(ProtectionOf(itemId));
+    }
+
+    public bool ProtectListReadable()
+    {
+        return ProtectionOf(ProtectProbeItemId) != ProtectAnswer.Unreadable;
+    }
+
+    public ProtectAnswer ProtectionOf(uint itemId)
+    {
+        if (!isItemProtected.HasFunction)
+        {
+            return ProtectAnswer.NotProtected;
+        }
+
+        var now = Environment.TickCount64;
+        if (!protectList.ShouldAsk(now))
+        {
+            return ProtectAnswer.Unreadable;
+        }
+
+        var isProtected = IpcGate.InvokeQuietly(isItemProtectedCall, itemId, false, out var failure);
+        if (failure is null)
+        {
+            if (protectList.Answered() == ProtectChange.Recovered)
+            {
+                RunLog.Info(IsItemProtectedRecovered);
+            }
+
+            return isProtected ? ProtectAnswer.Protected : ProtectAnswer.NotProtected;
+        }
+
+        if (protectList.Failed(now) == ProtectChange.BecameUnreadable)
+        {
+            RunLog.Warning(failure, IsItemProtectedFailed);
+        }
+
+        return ProtectAnswer.Unreadable;
     }
 
     public AltSellers ReadAlts(ulong ownContentId)
