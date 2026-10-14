@@ -5,11 +5,11 @@ namespace AutoSeller.Tests.Run;
 
 public sealed class RetainerChainTests
 {
-    private const int Deadline = 3_000;
+    private const int StepTimeoutMs = 3_000;
     private const uint ExpectedPrompt = 4_321;
     private const uint OtherPrompt = 4_322;
 
-    private static readonly ChainStep openSellList = ChainStep.Opens(ChainWindow.RetainerSellList, Deadline, ChainWindow.SelectString);
+    private static readonly ChainStep openSellList = ChainStep.Opens(ChainWindow.RetainerSellList, StepTimeoutMs, ChainWindow.SelectString);
 
     [Fact]
     public void TheExpectedWindowMovesTheChainOn()
@@ -26,8 +26,8 @@ public sealed class RetainerChainTests
     {
         var chain = Begun(openSellList, startMs: 1_000);
 
-        Assert.Equal(1_000 + Deadline, chain.DeadlineMs);
-        Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.None), 1_000 + Deadline - 1));
+        Assert.Equal(1_000 + StepTimeoutMs, chain.DeadlineMs);
+        Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.None), 1_000 + StepTimeoutMs - 1));
     }
 
     [Fact]
@@ -35,30 +35,30 @@ public sealed class RetainerChainTests
     {
         var chain = Begun(openSellList);
 
-        Assert.Equal(ChainVerdict.Of(ChainAction.Retry, ChainWindow.RetainerSellList), chain.Poll(View(ChainWindow.SelectString), Deadline));
+        Assert.Equal(ChainVerdict.Of(ChainAction.Retry, ChainWindow.RetainerSellList), chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs));
         Assert.True(chain.Retried);
-        Assert.Equal(Deadline * 2, chain.DeadlineMs);
-        Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.SelectString), (Deadline * 2) - 1));
-        Assert.Equal(Next(ChainWindow.RetainerSellList), chain.Poll(View(ChainWindow.RetainerSellList), (Deadline * 2) - 1));
+        Assert.Equal(StepTimeoutMs * 2, chain.DeadlineMs);
+        Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.SelectString), (StepTimeoutMs * 2) - 1));
+        Assert.Equal(Next(ChainWindow.RetainerSellList), chain.Poll(View(ChainWindow.RetainerSellList), (StepTimeoutMs * 2) - 1));
     }
 
     [Fact]
     public void ASecondMissUnwinds()
     {
         var chain = Begun(openSellList);
-        chain.Poll(View(ChainWindow.SelectString), Deadline);
+        chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs);
 
         var unwind = ChainVerdict.Of(ChainAction.Unwind, ChainWindow.RetainerSellList);
-        Assert.Equal(unwind, chain.Poll(View(ChainWindow.SelectString), Deadline * 2));
-        Assert.Equal(unwind, chain.Poll(View(ChainWindow.RetainerSellList), (Deadline * 2) + 100));
+        Assert.Equal(unwind, chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs * 2));
+        Assert.Equal(unwind, chain.Poll(View(ChainWindow.RetainerSellList), (StepTimeoutMs * 2) + 100));
     }
 
     [Fact]
     public void TheNextStepStartsAFreshWatch()
     {
         var chain = Begun(openSellList);
-        chain.Poll(View(ChainWindow.SelectString), Deadline);
-        chain.Poll(View(ChainWindow.SelectString), Deadline * 2);
+        chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs);
+        chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs * 2);
 
         chain.Begin(openSellList, 10_000);
 
@@ -69,7 +69,7 @@ public sealed class RetainerChainTests
     [Fact]
     public void AClosingStepMovesOnOnceTheWindowIsGone()
     {
-        var chain = Begun(ChainStep.Closes(ChainWindow.ItemSearchResult, Deadline, ChainWindow.RetainerSell | ChainWindow.RetainerSellList));
+        var chain = Begun(ChainStep.Closes(ChainWindow.ItemSearchResult, StepTimeoutMs, ChainWindow.RetainerSell | ChainWindow.RetainerSellList));
 
         Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult), 100));
         Assert.Equal(Next(ChainWindow.ItemSearchResult), chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.RetainerSell), 200));
@@ -78,7 +78,7 @@ public sealed class RetainerChainTests
     [Fact]
     public void InputNumericIsAlwaysAllowed()
     {
-        var chain = Begun(ChainStep.Opens(ChainWindow.RetainerSell, Deadline));
+        var chain = Begun(ChainStep.Opens(ChainWindow.RetainerSell, StepTimeoutMs));
 
         Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.InputNumeric), 100));
         Assert.Equal(Next(ChainWindow.RetainerSell), chain.Poll(View(ChainWindow.RetainerSell | ChainWindow.InputNumeric), 200));
@@ -120,7 +120,7 @@ public sealed class RetainerChainTests
 
         Assert.Equal(halt, chain.Poll(View(ChainWindow.ContextMenu | ChainWindow.ContentsFinderConfirm), 100));
         Assert.Equal(halt, chain.Poll(View(ChainWindow.RetainerSellList), 200));
-        Assert.Equal(halt, chain.Poll(View(ChainWindow.None), Deadline * 3));
+        Assert.Equal(halt, chain.Poll(View(ChainWindow.None), StepTimeoutMs * 3));
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public sealed class RetainerChainTests
     [Fact]
     public void APromptCannotBeMerelyTolerated()
     {
-        var chain = Begun(ChainStep.Opens(ChainWindow.RetainerSellList, Deadline, ChainWindow.SelectString | ChainWindow.SelectYesno));
+        var chain = Begun(ChainStep.Opens(ChainWindow.RetainerSellList, StepTimeoutMs, ChainWindow.SelectString | ChainWindow.SelectYesno));
 
         var verdict = chain.Poll(View(ChainWindow.SelectYesno, OtherPrompt), 100);
 
@@ -146,7 +146,7 @@ public sealed class RetainerChainTests
     [Fact]
     public void TheExpectedPromptIsAccepted()
     {
-        var chain = Begun(ChainStep.Prompt(ExpectedPrompt, Deadline, ChainWindow.RetainerSellList));
+        var chain = Begun(ChainStep.Prompt(ExpectedPrompt, StepTimeoutMs, ChainWindow.RetainerSellList));
 
         Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.RetainerSellList), 100));
         Assert.Equal(Next(ChainWindow.SelectYesno), chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.SelectYesno, ExpectedPrompt), 200));
@@ -157,7 +157,7 @@ public sealed class RetainerChainTests
     [InlineData(ChainStep.NoPrompt)]
     public void ADifferentOrUnrecognisedPromptHaltsAStepThatExpectsOne(uint shownPrompt)
     {
-        var chain = Begun(ChainStep.Prompt(ExpectedPrompt, Deadline, ChainWindow.RetainerSellList));
+        var chain = Begun(ChainStep.Prompt(ExpectedPrompt, StepTimeoutMs, ChainWindow.RetainerSellList));
 
         var verdict = chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.SelectYesno, shownPrompt), 100);
 
@@ -176,7 +176,7 @@ public sealed class RetainerChainTests
     [Fact]
     public void AClosingPromptStepWaitsForThePromptToGo()
     {
-        var chain = Begun(ChainStep.Closes(ChainWindow.SelectYesno, Deadline) with { PromptRow = ExpectedPrompt });
+        var chain = Begun(ChainStep.Closes(ChainWindow.SelectYesno, StepTimeoutMs) with { PromptRow = ExpectedPrompt });
 
         Assert.Equal(ChainVerdict.Wait, chain.Poll(View(ChainWindow.SelectYesno, ExpectedPrompt), 100));
         Assert.Equal(Next(ChainWindow.SelectYesno), chain.Poll(View(ChainWindow.None), 200));
@@ -187,8 +187,8 @@ public sealed class RetainerChainTests
     [InlineData(RetainerChain.GilLimitPromptAlternateRow)]
     public void TheGilLimitPromptNeedsThePlayer(uint promptRow)
     {
-        var listing = Begun(ChainStep.Closes(ChainWindow.RetainerSell, Deadline, ChainWindow.RetainerSellList));
-        var expectingAPrompt = Begun(ChainStep.Prompt(promptRow, Deadline));
+        var listing = Begun(ChainStep.Closes(ChainWindow.RetainerSell, StepTimeoutMs, ChainWindow.RetainerSellList));
+        var expectingAPrompt = Begun(ChainStep.Prompt(promptRow, StepTimeoutMs));
         var gilLimit = ChainVerdict.Halt(ChainWindow.SelectYesno, NeedsPlayerReason.GilLimitPrompt);
 
         Assert.Equal(gilLimit, listing.Poll(View(ChainWindow.RetainerSellList | ChainWindow.RetainerSell | ChainWindow.SelectYesno, promptRow), 100));
@@ -205,13 +205,13 @@ public sealed class RetainerChainTests
     }
 
     [Fact]
-    public void AStepNamesOneWindowAPromptWhenItWaitsOnOneAndADeadline()
+    public void AStepNamesOneWindowAPromptWhenItWaitsOnOneAndATimeout()
     {
         var chain = new RetainerChain();
 
-        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.None, Deadline), 0));
-        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.RetainerSell | ChainWindow.RetainerSellList, Deadline), 0));
-        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.SelectYesno, Deadline), 0));
+        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.None, StepTimeoutMs), 0));
+        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.RetainerSell | ChainWindow.RetainerSellList, StepTimeoutMs), 0));
+        Assert.Throws<ArgumentException>(() => chain.Begin(ChainStep.Opens(ChainWindow.SelectYesno, StepTimeoutMs), 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => chain.Begin(ChainStep.Opens(ChainWindow.RetainerSell, 0), 0));
     }
 
@@ -222,11 +222,11 @@ public sealed class RetainerChainTests
         var chain = new RetainerChain();
         var now = 0L;
 
-        Walk(chain, ref now, ChainStep.Opens(ChainWindow.ContextMenu, Deadline, sellList), sellList, sellList | ChainWindow.ContextMenu);
-        Walk(chain, ref now, ChainStep.Opens(ChainWindow.RetainerSell, Deadline, sellList | ChainWindow.ContextMenu), sellList | ChainWindow.ContextMenu, sellList | ChainWindow.RetainerSell);
-        Walk(chain, ref now, ChainStep.Opens(ChainWindow.ItemSearchResult, Deadline, sellList | ChainWindow.RetainerSell), sellList | ChainWindow.RetainerSell, sellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult);
-        Walk(chain, ref now, ChainStep.Closes(ChainWindow.ItemSearchResult, Deadline, sellList | ChainWindow.RetainerSell), sellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult, sellList | ChainWindow.RetainerSell | ChainWindow.InputNumeric);
-        Walk(chain, ref now, ChainStep.Closes(ChainWindow.RetainerSell, Deadline, sellList), sellList | ChainWindow.RetainerSell, sellList);
+        Walk(chain, ref now, ChainStep.Opens(ChainWindow.ContextMenu, StepTimeoutMs, sellList), sellList, sellList | ChainWindow.ContextMenu);
+        Walk(chain, ref now, ChainStep.Opens(ChainWindow.RetainerSell, StepTimeoutMs, sellList | ChainWindow.ContextMenu), sellList | ChainWindow.ContextMenu, sellList | ChainWindow.RetainerSell);
+        Walk(chain, ref now, ChainStep.Opens(ChainWindow.ItemSearchResult, StepTimeoutMs, sellList | ChainWindow.RetainerSell), sellList | ChainWindow.RetainerSell, sellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult);
+        Walk(chain, ref now, ChainStep.Closes(ChainWindow.ItemSearchResult, StepTimeoutMs, sellList | ChainWindow.RetainerSell), sellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult, sellList | ChainWindow.RetainerSell | ChainWindow.InputNumeric);
+        Walk(chain, ref now, ChainStep.Closes(ChainWindow.RetainerSell, StepTimeoutMs, sellList), sellList | ChainWindow.RetainerSell, sellList);
 
         Assert.False(chain.Retried);
     }

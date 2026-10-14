@@ -7,18 +7,18 @@ internal enum ChainExpectation : byte { Opens, Closes }
 
 internal enum ChainAction : byte { Wait, Next, Retry, Unwind, Halt }
 
-internal readonly record struct ChainStep(ChainWindow Window, ChainExpectation Expectation, int DeadlineMs, ChainWindow Tolerated, uint PromptRow)
+internal readonly record struct ChainStep(ChainWindow Window, ChainExpectation Expectation, int TimeoutMs, ChainWindow Tolerated, uint PromptRow)
 {
     public const uint NoPrompt = 0;
 
-    public static ChainStep Opens(ChainWindow window, int deadlineMs, ChainWindow tolerated = ChainWindow.None)
-        => new(window, ChainExpectation.Opens, deadlineMs, tolerated, NoPrompt);
+    public static ChainStep Opens(ChainWindow window, int timeoutMs, ChainWindow tolerated = ChainWindow.None)
+        => new(window, ChainExpectation.Opens, timeoutMs, tolerated, NoPrompt);
 
-    public static ChainStep Closes(ChainWindow window, int deadlineMs, ChainWindow tolerated = ChainWindow.None)
-        => new(window, ChainExpectation.Closes, deadlineMs, tolerated, NoPrompt);
+    public static ChainStep Closes(ChainWindow window, int timeoutMs, ChainWindow tolerated = ChainWindow.None)
+        => new(window, ChainExpectation.Closes, timeoutMs, tolerated, NoPrompt);
 
-    public static ChainStep Prompt(uint promptRow, int deadlineMs, ChainWindow tolerated = ChainWindow.None)
-        => new(ChainWindow.SelectYesno, ChainExpectation.Opens, deadlineMs, tolerated, promptRow);
+    public static ChainStep Prompt(uint promptRow, int timeoutMs, ChainWindow tolerated = ChainWindow.None)
+        => new(ChainWindow.SelectYesno, ChainExpectation.Opens, timeoutMs, tolerated, promptRow);
 }
 
 internal readonly record struct ChainView(ChainWindow Visible, uint PromptRow);
@@ -57,7 +57,7 @@ internal sealed class RetainerChain
     {
         Validate(step);
         Step = step;
-        DeadlineMs = nowMs + step.DeadlineMs;
+        DeadlineMs = nowMs + step.TimeoutMs;
         Retried = false;
         phase = Phase.Watching;
     }
@@ -95,7 +95,7 @@ internal sealed class RetainerChain
         }
 
         Retried = true;
-        DeadlineMs = nowMs + Step.DeadlineMs;
+        DeadlineMs = nowMs + Step.TimeoutMs;
         return ChainVerdict.Of(ChainAction.Retry, Step.Window);
     }
 
@@ -154,6 +154,6 @@ internal sealed class RetainerChain
             throw new ArgumentException("A step that waits on a prompt names the prompt.", nameof(step));
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(step.DeadlineMs);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(step.TimeoutMs);
     }
 }
