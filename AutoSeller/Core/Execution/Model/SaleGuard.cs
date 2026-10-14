@@ -1,5 +1,7 @@
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
@@ -117,20 +119,24 @@ internal static class SaleGuard
         return input.JournalBlocksWrites ? SaleRejection.JournalUnresolved : SaleRejection.None;
     }
 
-    private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
+    public static SaleRejection CheckFrozenSettings(SellAuthorization authorization, RuleBook currentRules, PricingSettings currentPricing, PlanEdits currentPlanEdits)
     {
-        var authorization = input.Authorization;
-        if (Fingerprint.OfRuleBook(input.CurrentRules) != authorization.RulesHash)
+        if (Fingerprint.OfRuleBook(currentRules) != authorization.RulesHash)
         {
             return SaleRejection.RulesChanged;
         }
 
-        if (Fingerprint.OfPricing(input.CurrentPricing) != authorization.PricingHash)
+        if (Fingerprint.OfPricing(currentPricing) != authorization.PricingHash)
         {
             return SaleRejection.PricingChanged;
         }
 
-        return Fingerprint.OfPlanEdits(input.CurrentPlanEdits) != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
+        return Fingerprint.OfPlanEdits(currentPlanEdits) != authorization.PlanEditsHash ? SaleRejection.PlanEditsChanged : SaleRejection.None;
+    }
+
+    private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
+    {
+        return CheckFrozenSettings(input.Authorization, input.CurrentRules, input.CurrentPricing, input.CurrentPlanEdits);
     }
 
     private static SaleRejection CheckIdentity(in SaleGuardInput input)

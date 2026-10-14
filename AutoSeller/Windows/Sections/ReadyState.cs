@@ -1,5 +1,6 @@
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
+using AutoSeller.Core.Tasks.Model;
 using Dalamud.Bindings.ImGui;
 using System.Numerics;
 
@@ -56,8 +57,12 @@ internal static class ReadyState
 
     public static string PhaseLabel(RunPhase phase) => phase switch
     {
-        RunPhase.Preparing => Loc.T(L.Run.PhasePreparing),
-        RunPhase.Paused    => Loc.T(L.Run.PhasePaused),
+        RunPhase.Preparing  => Loc.T(L.Run.PhasePreparing),
+        RunPhase.Paused     => Loc.T(L.Run.PhasePaused),
+        RunPhase.Travelling => Loc.T(L.Run.PhaseTravelling),
+        RunPhase.Selling    => Loc.T(L.Run.PhaseSelling),
+        RunPhase.Finishing  => Loc.T(L.Run.PhaseFinishing),
+        RunPhase.Stopping   => Loc.T(L.Run.PhaseStopping),
         _                  => Loc.T(L.Run.PhaseStandingBy),
     };
 }

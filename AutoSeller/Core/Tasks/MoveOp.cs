@@ -36,6 +36,9 @@ internal sealed class MoveOp(Func<MoveOp, Task> body) : TaskBase
     public Task Aethernet(uint territoryId, Vector3 destination)
         => UseAethernet(territoryId, destination);
 
+    public Task StepStraightWithoutMesh(Vector3 destination, Func<bool> stopCondition)
+        => MoveToDirectly(destination, stopCondition);
+
     public Task Interact(IGameObject gameObject, Func<bool>? waitUntil, UiSkipOptions skip)
         => InteractWith(gameObject, waitUntil, null, skip);
 

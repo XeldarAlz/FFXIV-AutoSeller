@@ -3,6 +3,7 @@ using System.Text;
 using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -91,6 +92,28 @@ internal sealed unsafe class BagReader
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
         bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
         return new BagRead(slots.ToImmutable(), freeBagSlots);
+    }
+
+    public static bool TryReadSlot(uint container, ushort slot, out ItemKey item, out uint quantity)
+    {
+        item = default;
+        quantity = 0;
+        var manager = InventoryManager.Instance();
+        var inventory = manager == null ? null : manager->GetInventoryContainer((InventoryType)container);
+        if (inventory == null || !inventory->IsLoaded || slot >= inventory->Size)
+        {
+            return false;
+        }
+
+        var held = inventory->GetInventorySlot(slot);
+        if (held == null || held->ItemId == 0 || held->Quantity <= 0)
+        {
+            return true;
+        }
+
+        item = new ItemKey(held->ItemId, (held->Flags & InventoryItem.ItemFlags.HighQuality) != 0);
+        quantity = (uint)held->Quantity;
+        return true;
     }
 
     private ulong OpenRetainerId(InventoryManager* manager)

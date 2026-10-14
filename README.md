@@ -18,7 +18,7 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, the plugin is a skeleton and Start does not run anything yet.
+> **In development.** This page describes what version 1.0 will do. Until it ships, Start only runs a dry run: it goes to a summoning bell, visits each enabled retainer, compares prices and records in History and the Console what it would reprice or list, without typing a price.
 
 ## What it does
 

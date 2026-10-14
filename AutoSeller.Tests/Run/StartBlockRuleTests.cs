@@ -13,6 +13,9 @@ public sealed class StartBlockRuleTests
         LoggedIn: true,
         OnHomeWorld: true,
         InContent: false,
+        InCombat: false,
+        InCutscene: false,
+        Trading: false,
         AutoRetainer: idle,
         UnresolvedJournalEntry: false,
         CompatibilityGatesOpen: true,
@@ -29,7 +32,7 @@ public sealed class StartBlockRuleTests
     [Fact]
     public void TheFirstBlockInOrderIsReported()
     {
-        var facts = new StartFacts(RunMode.Standalone, false, false, true, busy, true, false, false, false, true);
+        var facts = new StartFacts(RunMode.Standalone, false, false, true, true, true, true, busy, true, false, false, false, true);
 
         Assert.Equal(StartBlock.NotLoggedIn, StartBlockRule.Evaluate(facts));
         facts = facts with { LoggedIn = true };
@@ -37,6 +40,12 @@ public sealed class StartBlockRuleTests
         facts = facts with { OnHomeWorld = true };
         Assert.Equal(StartBlock.InContent, StartBlockRule.Evaluate(facts));
         facts = facts with { InContent = false };
+        Assert.Equal(StartBlock.InCombat, StartBlockRule.Evaluate(facts));
+        facts = facts with { InCombat = false };
+        Assert.Equal(StartBlock.InCutscene, StartBlockRule.Evaluate(facts));
+        facts = facts with { InCutscene = false };
+        Assert.Equal(StartBlock.Trading, StartBlockRule.Evaluate(facts));
+        facts = facts with { Trading = false };
         Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
         facts = facts with { AutoRetainer = idle };
         Assert.Equal(StartBlock.UnresolvedJournalEntry, StartBlockRule.Evaluate(facts));

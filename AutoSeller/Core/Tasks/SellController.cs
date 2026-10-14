@@ -1,95 +1,58 @@
-using AutoSeller.Core.Ipc;
-using clib.Services;
+using AutoSeller.Core.Localization;
+using AutoSeller.Core.Stats;
+using AutoSeller.Core.Tasks.Model;
 
 namespace AutoSeller.Core.Tasks;
 
-internal sealed class SellController
+internal sealed partial class SellController(Plugin plugin, RunHistory history)
 {
+    private readonly FaultResumeBudget faultBudget = new();
+
     public PauseReason PauseReason { get; private set; } = PauseReason.None;
 
     public bool Paused => PauseReason != PauseReason.None;
 
-    public bool Running => Svc.Automation.Running || Paused;
+    public bool Running => session is not null;
+
+    public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 
     public RunPhase Phase
     {
         get
         {
+            if (session is not { } active)
+            {
+                return RunPhase.Idle;
+            }
+
             if (Paused)
             {
                 return RunPhase.Paused;
             }
 
-            return Running ? RunPhase.Preparing : RunPhase.Idle;
+            return active.StopRequested ? RunPhase.Stopping : RunPhases.Of(active.State);
         }
     }
 
-    public string Status => PauseReason switch
+    public string Status
     {
-        PauseReason.InContent => "Paused while you are in content",
-        PauseReason.Manual => "Paused",
-        _ => Svc.Automation.CurrentTask?.Status ?? "Idle",
-    };
-
-    public void Start()
-    {
-        if (Running)
+        get
         {
-            RunLog.Info("Start ignored: a run is already running.");
-            return;
-        }
-
-        RunLog.Info("Not implemented yet.");
-    }
-
-    public void Stop()
-    {
-        if (!Running)
-        {
-            return;
-        }
-
-        PauseReason = PauseReason.None;
-        StopAutomation();
-        RunLog.Info("Stop requested; the run is cleared.");
-    }
-
-    public void StopForAlert() => Stop();
-
-    public void Shutdown() => Stop();
-
-    public void Pause(PauseReason reason)
-    {
-        if (reason == PauseReason.None || !Running)
-        {
-            return;
-        }
-
-        if (Paused)
-        {
-            if (reason == PauseReason.Manual && PauseReason == PauseReason.InContent)
+            if (session is not { } active)
             {
-                PauseReason = PauseReason.Manual;
-                RunLog.Info("Auto-pause promoted to a manual pause; leaving content will no longer resume.");
+                return Loc.T(L.Shell.StatusIdle);
             }
 
-            return;
+            return PauseReason switch
+            {
+                PauseReason.InContent => Loc.T(L.Run.StatusPausedInContent),
+                PauseReason.Interrupted => Loc.T(L.Run.StatusPausedInterrupted),
+                PauseReason.Manual => Loc.T(L.Run.PhasePaused),
+                _ when active.StopRequested => Loc.T(L.Run.StatusStopping),
+                _ when active.PauseRequested => Loc.T(L.Run.StatusPausing),
+                _ => active.Status,
+            };
         }
-
-        PauseReason = reason;
-        StopAutomation();
-        RunLog.Info($"Run paused ({reason}).");
-    }
-
-    public void Resume()
-    {
-        if (!Paused)
-        {
-            return;
-        }
-
-        PauseReason = PauseReason.None;
-        RunLog.Info("Resuming the run.");
     }
 
     public void TogglePause()
@@ -103,14 +66,33 @@ internal sealed class SellController
         Pause(PauseReason.Manual);
     }
 
-    private static void StopAutomation()
-    {
-        if (!Svc.Automation.Running)
-        {
-            return;
-        }
+    public void StopForAlert() => Stop();
 
-        Svc.Automation.Stop();
-        NavmeshIPC.Instance.Stop();
-    }
+    public void Shutdown() => Interrupt();
+
+    private static string Describe(StartBlock block) => block switch
+    {
+        StartBlock.NotLoggedIn => Loc.T(L.Run.BlockNotLoggedIn),
+        StartBlock.NotOnHomeWorld => Loc.T(L.Run.BlockNotOnHomeWorld),
+        StartBlock.InContent => Loc.T(L.Run.BlockInContent),
+        StartBlock.AutoRetainerBusy => Loc.T(L.Run.BlockAutoRetainerBusy),
+        StartBlock.UnresolvedJournalEntry => Loc.T(L.Run.BlockUnresolvedJournal),
+        StartBlock.CompatibilityGatesClosed => Loc.T(L.Run.BlockGatesClosed),
+        StartBlock.NoRules => Loc.T(L.Run.BlockNoRules),
+        StartBlock.NoEnabledRetainers => Loc.T(L.Run.BlockNoRetainers),
+        StartBlock.AlreadyRunning => Loc.T(L.Run.BlockRunning),
+        StartBlock.InCombat => Loc.T(L.Run.BlockInCombat),
+        StartBlock.InCutscene => Loc.T(L.Run.BlockInCutscene),
+        StartBlock.Trading => Loc.T(L.Run.BlockTrading),
+        _ => Loc.T(L.Run.BlockAuthorization),
+    };
+
+    private static string Describe(NeedsPlayerReason reason) => reason switch
+    {
+        NeedsPlayerReason.BellNotReached => Loc.T(L.Run.NeedsBellNotReached),
+        NeedsPlayerReason.WindowsStuck => Loc.T(L.Run.NeedsWindowsStuck),
+        NeedsPlayerReason.GilLimitPrompt => Loc.T(L.Run.NeedsGilLimit),
+        NeedsPlayerReason.UnknownWrite => Loc.T(L.Run.NeedsUnknownWrite),
+        _ => Loc.T(L.Run.NeedsUnexpectedWindow),
+    };
 }

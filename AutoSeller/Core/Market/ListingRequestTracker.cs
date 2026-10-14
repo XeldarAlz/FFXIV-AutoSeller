@@ -322,7 +322,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return new ProxyRequestIds(proxy->NextRequestId, proxy->CurrentRequestId);
     }
 
-    private static string ShownItemName(AtkUnitBase* sellWindow)
+    public static string ShownItemName(AtkUnitBase* sellWindow)
     {
         var node = sellWindow->GetTextNodeById(SellWindowItemNameNode);
         return node == null ? string.Empty : node->NodeText.GetText();

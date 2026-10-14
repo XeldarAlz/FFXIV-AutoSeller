@@ -61,6 +61,56 @@ internal static partial class L
         public static readonly LocString PhaseStandingBy = new("run.phase.standingBy", "Standing by");
         public static readonly LocString PhasePaused = new("run.phase.paused", "Paused");
         public static readonly LocString ChatTaskFailed = new("run.chat.taskFailed", "A task could not be started. The log has the details.");
+        public static readonly LocString PhaseTravelling = new("run.phase.travelling", "Going to the bell");
+        public static readonly LocString PhaseSelling = new("run.phase.selling", "At the retainers");
+        public static readonly LocString PhaseFinishing = new("run.phase.finishing", "Finishing");
+        public static readonly LocString PhaseStopping = new("run.phase.stopping", "Stopping");
+        public static readonly LocString StatusPreparing = new("run.status.preparing", "Reading your bags and the reference prices");
+        public static readonly LocString StatusSettling = new("run.status.settling", "Waiting for the stopped run to close its windows");
+        public static readonly LocString StatusGoingToBell = new("run.status.goingToBell", "Going to a summoning bell");
+        public static readonly LocString StatusOpeningBell = new("run.status.openingBell", "Opening the retainer list");
+        public static readonly LocString StatusRetainer = new("run.status.retainer", "Retainer {0} of {1}: {2}");
+        public static readonly LocString StatusReadingMarket = new("run.status.readingMarket", "{0}: reading the listings");
+        public static readonly LocString StatusListing = new("run.status.listing", "{0}: checking {1} ({2} of {3})");
+        public static readonly LocString StatusLot = new("run.status.lot", "{0}: pricing {1} for a new listing ({2} of {3})");
+        public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
+        public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
+        public static readonly LocString StatusPausing = new("run.status.pausing", "Pausing after this item");
+        public static readonly LocString StatusPausedInContent = new("run.status.pausedInContent", "Paused while you are in content");
+        public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");
+        public static readonly LocString StatusStopping = new("run.status.stopping", "Stopping and closing the sell windows");
+        public static readonly LocString StatusDone = new("run.status.done", "Dry run done: {0} to reprice, {1} to list, {2} kept, {3} skipped");
+        public static readonly LocString StatusNeedsPlayer = new("run.status.needsPlayer", "Needs you: {0}");
+        public static readonly LocString StatusFailed = new("run.status.failed", "The run failed: {0}");
+        public static readonly LocString StatusStopped = new("run.status.stopped", "Stopped");
+        public static readonly LocString BlockRunning = new("run.block.running", "A run is already going.");
+        public static readonly LocString BlockNotLoggedIn = new("run.block.notLoggedIn", "Log in first.");
+        public static readonly LocString BlockNotOnHomeWorld = new("run.block.notOnHomeWorld", "Go back to your home world first; retainers only sell there.");
+        public static readonly LocString BlockInContent = new("run.block.inContent", "Leave the duty first.");
+        public static readonly LocString BlockInCombat = new("run.block.inCombat", "Leave combat first.");
+        public static readonly LocString BlockInCutscene = new("run.block.inCutscene", "Wait until the cutscene is over.");
+        public static readonly LocString BlockTrading = new("run.block.trading", "Finish or cancel the trade first.");
+        public static readonly LocString BlockAutoRetainerBusy = new("run.block.autoRetainerBusy", "AutoRetainer is busy; wait until it is done.");
+        public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet.");
+        public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
+        public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
+        public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
+        public static readonly LocString BlockAuthorization = new("run.block.authorization", "The run could not be authorized. The Console has the details.");
+        public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room and press Start again");
+        public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
+        public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
+        public static readonly LocString NeedsGilLimit = new("run.needs.gilLimit", "a retainer is close to its gil limit");
+        public static readonly LocString NeedsUnknownWrite = new("run.needs.unknownWrite", "a listing change from this run is not confirmed yet");
+        public static readonly LocString FailedFault = new("run.failed.fault", "an unexpected error; the Console has the details");
+        public static readonly LocString FailedOtherCharacter = new("run.failed.otherCharacter", "another character is logged in than the one the run started for");
+        public static readonly LocString FailedMenuText = new("run.failed.menuText", "the retainer menu text could not be read from the game data");
+        public static readonly LocString FailedSettingsChanged = new("run.failed.settingsChanged", "the rules, the pricing settings or the plan edits changed after Start; start again to use them");
+        public static readonly LocString FailedLeftHomeWorld = new("run.failed.leftHomeWorld", "the character left its home world");
+        public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after Start; start again for the new day");
+        public static readonly LocString FailedGuard = new("run.failed.guard", "a safety check refused the run's next step; the Console has the details");
+        public static readonly LocPlural ChatStarted = new("run.chat.started", "Dry run started for {0} retainer: prices are compared and nothing is listed or repriced.", "Dry run started for {0} retainers: prices are compared and nothing is listed or repriced.");
+        public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
+        public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
     }
 
     internal static class History
@@ -72,6 +122,19 @@ internal static partial class L
         public static readonly LocString MinutesAgo = new("history.time.minutesAgo", "{0}m ago");
         public static readonly LocString HoursAgo = new("history.time.hoursAgo", "{0}h ago");
         public static readonly LocString DaysAgo = new("history.time.daysAgo", "{0}d ago");
+        public static readonly LocPlural Summary = new("history.summary", "{0} run recorded", "{0} runs recorded");
+        public static readonly LocString OutcomeCompleted = new("history.outcome.completed", "Completed");
+        public static readonly LocString OutcomePartial = new("history.outcome.partial", "Partly done");
+        public static readonly LocString OutcomeStopped = new("history.outcome.stopped", "Stopped");
+        public static readonly LocString OutcomeNeedsPlayer = new("history.outcome.needsPlayer", "Needs you");
+        public static readonly LocString OutcomeFailed = new("history.outcome.failed", "Failed");
+        public static readonly LocString DryRun = new("history.dryRun", "Dry run");
+        public static readonly LocString Retainers = new("history.retainers", "{0} of {1} retainers");
+        public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
+        public static readonly LocString ToList = new("history.toList", "{0} to list");
+        public static readonly LocString Kept = new("history.kept", "{0} kept");
+        public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
+        public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");
     }
 
     internal static class Plugins

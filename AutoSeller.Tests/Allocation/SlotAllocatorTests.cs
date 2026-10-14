@@ -400,7 +400,7 @@ public sealed class SlotAllocatorTests
     [Fact]
     public void NegativeEstimatedValueIsRejected()
     {
-        var planned = new PlannedLot(new PlanRowKey(0, 0, 0, 0, Ore, false), SlotSource.Bags, 1, 0, 1);
+        var planned = new PlannedLot(new PlanRowKey(0, 0, 0, 0, Ore, false), SlotSource.Bags, 1, 0, 1, 0);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => AllocationLot.From(planned, -1));
         Assert.Equal(0, AllocationLot.From(planned, 0).EstimatedValue);

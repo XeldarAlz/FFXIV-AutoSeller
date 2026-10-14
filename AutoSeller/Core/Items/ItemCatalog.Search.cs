@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Text;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Items;
 
 internal sealed partial class ItemCatalog
 {
-    private const char HighQualityGlyph = (char)0xE03C;
     private const char LeftSingleQuote = (char)0x2018;
     private const char RightSingleQuote = (char)0x2019;
 
@@ -79,7 +79,7 @@ internal sealed partial class ItemCatalog
         for (var index = 0; index < text.Length; index++)
         {
             var character = text[index];
-            if (character == HighQualityGlyph || char.IsControl(character))
+            if (character == HighQualityGlyph.Glyph || char.IsControl(character))
             {
                 continue;
             }

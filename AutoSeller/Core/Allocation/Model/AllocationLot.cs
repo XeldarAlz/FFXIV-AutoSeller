@@ -13,6 +13,11 @@ internal readonly record struct AllocationLot(
 {
     public ItemKey Item => Row.Item;
 
+    public static AllocationLot From(in PlannedLot lot)
+    {
+        return From(lot, lot.EstimatedValue);
+    }
+
     public static AllocationLot From(in PlannedLot lot, long estimatedValue)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(estimatedValue);

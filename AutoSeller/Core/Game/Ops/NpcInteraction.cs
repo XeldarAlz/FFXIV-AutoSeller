@@ -1,3 +1,4 @@
+using AutoSeller.Core.Driver.Model;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons;
@@ -125,22 +126,25 @@ internal static unsafe class NpcInteraction
     public static ulong Interact(IGameObject gameObject)
         => TargetSystem.Instance()->InteractWithObject(gameObject.Struct(), false);
 
-    public static bool IsAddonReady(string addonName) => AddonReady(addonName, out _);
+    public static bool IsAddonReady(string addonName) => TryGetReadyAddon(addonName, out _);
 
-    public static bool SelectStringOpen() => AddonReady(SelectStringAddon, out _);
+    public static bool TryGetReadyAddon(string addonName, out AtkUnitBase* addon)
+        => GenericHelpers.TryGetAddonByName(addonName, out addon) && GenericHelpers.IsAddonReady(addon);
 
-    public static bool SelectYesnoOpen() => AddonReady(SelectYesnoAddon, out _);
+    public static bool SelectStringOpen() => TryGetReadyAddon(SelectStringAddon, out _);
 
-    public static bool TalkOpen() => AddonReady(TalkAddon, out _);
+    public static bool SelectYesnoOpen() => TryGetReadyAddon(SelectYesnoAddon, out _);
+
+    public static bool TalkOpen() => TryGetReadyAddon(TalkAddon, out _);
 
     public static bool DialogAddonOpen() => TalkOpen() || SelectYesnoOpen() || SelectStringOpen();
 
     public static int SelectStringEntryCount()
-        => AddonReady(SelectStringAddon, out var addon) ? new AddonMaster.SelectString(addon).EntryCount : 0;
+        => TryGetReadyAddon(SelectStringAddon, out var addon) ? new AddonMaster.SelectString(addon).EntryCount : 0;
 
     public static string SelectStringEntryText(int entryIndex)
     {
-        if (!AddonReady(SelectStringAddon, out var addon))
+        if (!TryGetReadyAddon(SelectStringAddon, out var addon))
         {
             return string.Empty;
         }
@@ -151,7 +155,7 @@ internal static unsafe class NpcInteraction
 
     public static int FindSelectStringEntry(string text)
     {
-        if (text.Length == 0 || !AddonReady(SelectStringAddon, out var addon))
+        if (text.Length == 0 || !TryGetReadyAddon(SelectStringAddon, out var addon))
         {
             return NoEntry;
         }
@@ -170,7 +174,7 @@ internal static unsafe class NpcInteraction
 
     public static bool SelectEntry(int entryIndex)
     {
-        if (!AddonReady(SelectStringAddon, out var addon) || entryIndex < 0 || entryIndex >= new AddonMaster.SelectString(addon).EntryCount)
+        if (!TryGetReadyAddon(SelectStringAddon, out var addon) || entryIndex < 0 || entryIndex >= new AddonMaster.SelectString(addon).EntryCount)
         {
             return false;
         }
@@ -185,6 +189,49 @@ internal static unsafe class NpcInteraction
         return true;
     }
 
+    public static string[] SelectStringEntries()
+    {
+        if (!TryGetReadyAddon(SelectStringAddon, out var addon))
+        {
+            return [];
+        }
+
+        var master = new AddonMaster.SelectString(addon);
+        var entries = new string[master.EntryCount];
+        var shown = master.Entries;
+        for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
+        {
+            entries[entryIndex] = shown[entryIndex].Text;
+        }
+
+        return entries;
+    }
+
+    public static bool SelectEntryShowing(int entryIndex, in PromptText expected, string throttleKey)
+    {
+        if (!TryGetReadyAddon(SelectStringAddon, out var addon) || !EzThrottler.Throttle(throttleKey, AddonInteractThrottleMs))
+        {
+            return false;
+        }
+
+        var master = new AddonMaster.SelectString(addon);
+        if (entryIndex < 0 || entryIndex >= master.EntryCount)
+        {
+            return false;
+        }
+
+        var text = master.Entries[entryIndex].Text;
+        if (!expected.Matches(text))
+        {
+            RunLog.Warning($"SelectString: entry {entryIndex} reads '{text}', not the entry this step expects; nothing chosen.");
+            return false;
+        }
+
+        RunLog.Info($"SelectString: choosing entry {entryIndex}, '{text}'.");
+        Callback.Fire(addon, true, entryIndex);
+        return true;
+    }
+
     public static bool SelectLastEntry()
     {
         var entryCount = SelectStringEntryCount();
@@ -192,11 +239,11 @@ internal static unsafe class NpcInteraction
     }
 
     public static string SelectYesnoText()
-        => AddonReady(SelectYesnoAddon, out var addon) ? new AddonMaster.SelectYesno(addon).Text : string.Empty;
+        => TryGetReadyAddon(SelectYesnoAddon, out var addon) ? new AddonMaster.SelectYesno(addon).Text : string.Empty;
 
-    public static bool AnswerNo()
+    public static bool AnswerNo(string throttleKey = SelectYesnoThrottleKey)
     {
-        if (!AddonReady(SelectYesnoAddon, out var addon) || !EzThrottler.Throttle(SelectYesnoThrottleKey, AddonInteractThrottleMs))
+        if (!TryGetReadyAddon(SelectYesnoAddon, out var addon) || !EzThrottler.Throttle(throttleKey, AddonInteractThrottleMs))
         {
             return false;
         }
@@ -205,9 +252,9 @@ internal static unsafe class NpcInteraction
         return true;
     }
 
-    public static bool ProgressTalk()
+    public static bool ProgressTalk(string throttleKey = TalkThrottleKey)
     {
-        if (!AddonReady(TalkAddon, out var addon) || !EzThrottler.Throttle(TalkThrottleKey, AddonInteractThrottleMs))
+        if (!TryGetReadyAddon(TalkAddon, out var addon) || !EzThrottler.Throttle(throttleKey, AddonInteractThrottleMs))
         {
             return false;
         }
@@ -218,7 +265,7 @@ internal static unsafe class NpcInteraction
 
     public static bool FireCallback(string addonName, int value)
     {
-        if (!AddonReady(addonName, out var addon) || !EzThrottler.Throttle(CallbackThrottleKey, AddonInteractThrottleMs))
+        if (!TryGetReadyAddon(addonName, out var addon) || !EzThrottler.Throttle(CallbackThrottleKey, AddonInteractThrottleMs))
         {
             return false;
         }
@@ -230,7 +277,7 @@ internal static unsafe class NpcInteraction
 
     public static bool Close(string addonName)
     {
-        if (!AddonReady(addonName, out var addon) || !EzThrottler.Throttle(CloseThrottleKey, AddonInteractThrottleMs))
+        if (!TryGetReadyAddon(addonName, out var addon) || !EzThrottler.Throttle(CloseThrottleKey, AddonInteractThrottleMs))
         {
             return false;
         }
@@ -248,9 +295,6 @@ internal static unsafe class NpcInteraction
 
         builder.Append(label);
     }
-
-    private static bool AddonReady(string addonName, out AtkUnitBase* addon)
-        => GenericHelpers.TryGetAddonByName(addonName, out addon) && GenericHelpers.IsAddonReady(addon);
 
     private readonly record struct BlockingFlag(ConditionFlag Flag, string Label);
 }

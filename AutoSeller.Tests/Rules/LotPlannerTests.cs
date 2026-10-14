@@ -27,6 +27,17 @@ public sealed class LotPlannerTests
         }
     }
 
+    [Fact]
+    public void EachLotCarriesItsValueAtTheReferencePrice()
+    {
+        var plan = Plan(BookSelling(SellRule(lotSize: 99)), Stock(Bag(Ore, 150), Material(), referenceUnitPrice: 40));
+        var priceless = Plan(BookSelling(SellRule(lotSize: 99)), Stock(Bag(Ore, 150), Material(), referenceUnitPrice: uint.MaxValue));
+
+        Assert.Equal(99L * 40, plan.Lots[0].EstimatedValue);
+        Assert.Equal(Gil.SaturatingMultiply(uint.MaxValue, 99), priceless.Lots[0].EstimatedValue);
+        Assert.Equal(plan.Lots[0].EstimatedValue, AllocationLot.From(plan.Lots[0]).EstimatedValue);
+    }
+
     [Theory]
     [InlineData(98u, 0u, 99u)]
     [InlineData(100u, 100u, 0u)]

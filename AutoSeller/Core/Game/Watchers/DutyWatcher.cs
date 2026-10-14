@@ -1,3 +1,5 @@
+using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Tasks;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
@@ -8,6 +10,8 @@ namespace AutoSeller.Core.Game.Watchers;
 internal sealed class DutyWatcher : IDisposable
 {
     private const int ResumeSettleMs = 5_000;
+
+    private static readonly string DutyPopAddon = ChainWindows.NameOf(ChainWindow.ContentsFinderConfirm);
 
     private long leftContentAtMs;
 
@@ -32,11 +36,13 @@ internal sealed class DutyWatcher : IDisposable
             return;
         }
 
-        if (controller.PauseReason != PauseReason.InContent) return;
+        if (controller.PauseReason is not (PauseReason.InContent or PauseReason.Interrupted)) return;
 
         if (Svc.Objects.LocalPlayer is null
          || Svc.Condition[ConditionFlag.BetweenAreas]
-         || Svc.Condition[ConditionFlag.BetweenAreas51])
+         || Svc.Condition[ConditionFlag.BetweenAreas51]
+         || Svc.Condition[ConditionFlag.InCombat]
+         || NpcInteraction.IsAddonReady(DutyPopAddon))
         {
             leftContentAtMs = 0;
             return;

@@ -162,6 +162,11 @@ internal sealed class CharacterData
         return true;
     }
 
+    public RetainerSnapshot[] SnapshotArray()
+    {
+        return [.. snapshots];
+    }
+
     public bool TryGetSnapshot(ulong retainerId, out RetainerSnapshot? snapshot)
     {
         var index = IndexOfSnapshot(retainerId);

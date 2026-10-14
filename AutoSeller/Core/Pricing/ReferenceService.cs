@@ -39,6 +39,8 @@ internal sealed class ReferenceService : IDisposable
 
     public ReferenceSnapshot? Current => ReferenceSnapshot.ForHomeWorld(Latest, HomeWorldId);
 
+    public TaxRatesResult Taxes => Current?.Taxes ?? TaxRatesResult.FailedWith(UniversalisFailure.NotFound);
+
     public bool Fetching
     {
         get
