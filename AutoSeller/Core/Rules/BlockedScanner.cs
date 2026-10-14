@@ -13,13 +13,15 @@ internal readonly record struct BlockedRow(BlockedItem Item, string Name, ushort
 
 internal sealed class BlockedScan
 {
-    public static readonly BlockedScan None = new() { Rows = [], LoggedIn = false, Revision = 0 };
+    public static readonly BlockedScan None = new() { Rows = [], LoggedIn = false, Revision = 0, ContentId = 0 };
 
     public required ImmutableArray<BlockedRow> Rows { get; init; }
 
     public required bool LoggedIn { get; init; }
 
     public required int Revision { get; init; }
+
+    public required ulong ContentId { get; init; }
 }
 
 internal sealed class BlockedScanner : IDisposable
@@ -42,6 +44,8 @@ internal sealed class BlockedScanner : IDisposable
     }
 
     public BlockedScan Latest => latest;
+
+    public ulong CurrentContentId => characters.Current?.ContentId ?? 0;
 
     public bool Pending => requested;
 
@@ -69,9 +73,10 @@ internal sealed class BlockedScanner : IDisposable
 
     private BlockedScan Scan()
     {
+        var contentId = CurrentContentId;
         if (!Svc.ClientState.IsLoggedIn)
         {
-            return new BlockedScan { Rows = [], LoggedIn = false, Revision = revision };
+            return new BlockedScan { Rows = [], LoggedIn = false, Revision = revision, ContentId = contentId };
         }
 
         var rules = configuration.BuildRuleBook();
@@ -92,7 +97,7 @@ internal sealed class BlockedScanner : IDisposable
         }
 
         RunLog.Info($"Rules check: {read.Slots.Length} stacks read, {blocked.Length} matched stacks blocked.");
-        return new BlockedScan { Rows = rows.MoveToImmutable(), LoggedIn = true, Revision = revision };
+        return new BlockedScan { Rows = rows.MoveToImmutable(), LoggedIn = true, Revision = revision, ContentId = contentId };
     }
 
     private ListingCounts ListedOnRetainers()

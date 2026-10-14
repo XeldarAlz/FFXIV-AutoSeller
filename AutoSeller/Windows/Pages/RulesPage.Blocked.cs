@@ -21,10 +21,12 @@ internal sealed partial class RulesPage
 
     private void TrackBlockedTab(Plugin plugin, bool shown, bool reopened)
     {
-        if (shown && (reopened || !blockedShown || blockedRulesRevision != plugin.Configuration.RulesRevision))
+        var scanner = plugin.BlockedScanner;
+        var otherCharacter = scanner.Latest.Revision != 0 && scanner.Latest.ContentId != scanner.CurrentContentId;
+        if (shown && (reopened || otherCharacter || !blockedShown || blockedRulesRevision != plugin.Configuration.RulesRevision))
         {
             blockedRulesRevision = plugin.Configuration.RulesRevision;
-            plugin.BlockedScanner.Request();
+            scanner.Request();
         }
 
         blockedShown = shown;
@@ -36,7 +38,7 @@ internal sealed partial class RulesPage
         var scan = scanner.Latest;
         DrawBlockedHeader(scanner);
         Styling.VSpace(SectionGap);
-        if (scan.Revision == 0)
+        if (scan.Revision == 0 || scan.ContentId != scanner.CurrentContentId)
         {
             EmptyState.Draw(Loc.T(L.Rules.BlockedReading));
             return;
