@@ -45,13 +45,18 @@ internal sealed class SearchReuse
     public bool TryReuse(ItemKey key, DateTime nowUtc, [NotNullWhen(true)] out CompetitorSnapshot? snapshot)
     {
         snapshot = null;
-        if (!searches.TryGetValue(key, out var stored) || !IsWithin(stored.CapturedAtUtc, nowUtc, ReuseWindow))
+        if (!searches.TryGetValue(key, out var stored) || !IsSettled(stored) || !IsWithin(stored.CapturedAtUtc, nowUtc, ReuseWindow))
         {
             return false;
         }
 
         snapshot = WithoutOwnListings(stored, key);
         return true;
+    }
+
+    private static bool IsSettled(CompetitorSnapshot snapshot)
+    {
+        return snapshot.IsComplete || snapshot.IsCapped;
     }
 
     private static bool IsWithin(DateTime capturedAtUtc, DateTime nowUtc, TimeSpan window)
@@ -107,7 +112,7 @@ internal sealed class SearchReuse
             WorldId = stored.WorldId,
             Generation = stored.Generation,
             CapturedAtUtc = stored.CapturedAtUtc,
-            ExpectedCount = stored.ExpectedCount < 0 ? stored.ExpectedCount : stored.ExpectedCount - removed,
+            ExpectedCount = stored.ExpectedCount - removed,
             Listings = ImmutableCollectionsMarshal.AsImmutableArray(kept),
             History = stored.History,
         };

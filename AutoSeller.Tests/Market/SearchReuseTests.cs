@@ -148,35 +148,48 @@ public sealed class SearchReuseTests
     }
 
     [Fact]
-    public void IncompleteSnapshotStaysIncompleteAfterOwnRowsAreDropped()
+    public void IncompleteSearchIsNeverReused()
     {
         var reuse = new SearchReuse();
-        reuse.Store(Snapshot(Now, 4, Competitor(1, 800, OwnRetainer), Competitor(2, 900)), false);
-        reuse.Store(Snapshot(Now, -1, Competitor(1, 800, OwnRetainer), Competitor(2, 900)), true);
+        reuse.Store(Snapshot(Now, 4, Competitor(1, 800), Competitor(2, 900)), false);
+        reuse.Store(Snapshot(Now, -1, Competitor(1, 800), Competitor(2, 900)), true);
 
-        reuse.NoteOwnListing(NormalOre, OwnRetainer);
-        reuse.NoteOwnListing(HighQualityOre, OwnRetainer);
+        Assert.False(reuse.TryReuse(NormalOre, Now, out var shortOfRows));
+        Assert.False(reuse.TryReuse(HighQualityOre, Now, out var unannounced));
+        Assert.Null(shortOfRows);
+        Assert.Null(unannounced);
+    }
 
-        Assert.True(reuse.TryReuse(NormalOre, Now, out var shortOfRows));
-        Assert.True(reuse.TryReuse(HighQualityOre, Now, out var unannounced));
-        Assert.Equal(3, shortOfRows.ExpectedCount);
-        Assert.False(shortOfRows.IsComplete);
-        Assert.Equal(-1, unannounced.ExpectedCount);
-        Assert.False(unannounced.IsComplete);
+    [Fact]
+    public void CompleteSearchStoredOverAnIncompleteOneIsReused()
+    {
+        var reuse = new SearchReuse();
+        reuse.Store(Snapshot(Now, 4, Competitor(1, 800), Competitor(2, 900)), false);
+        var complete = Snapshot(Now.AddSeconds(10), Competitor(1, 800), Competitor(2, 900));
+
+        reuse.Store(complete, false);
+
+        Assert.True(reuse.TryReuse(NormalOre, Now.AddSeconds(20), out var snapshot));
+        Assert.Same(complete, snapshot);
+    }
+
+    [Fact]
+    public void CappedSearchWithoutASummaryIsReused()
+    {
+        var reuse = new SearchReuse();
+        var stored = Snapshot(Now, -1, CappedRows());
+        reuse.Store(stored, false);
+
+        Assert.True(reuse.TryReuse(NormalOre, Now, out var snapshot));
+        Assert.Same(stored, snapshot);
+        Assert.True(snapshot.IsCapped);
     }
 
     [Fact]
     public void CappedSearchIsHandedOutWhole()
     {
         var reuse = new SearchReuse();
-        var rows = new CompetitorListing[CompetitorSnapshot.MaximumListings];
-        rows[0] = Competitor(1, 800, OwnRetainer);
-        for (var index = 1; index < rows.Length; index++)
-        {
-            rows[index] = Competitor((ulong)index + 1, 900 + (uint)index);
-        }
-
-        var stored = Snapshot(Now, rows);
+        var stored = Snapshot(Now, CappedRows());
         reuse.Store(stored, false);
 
         reuse.NoteOwnListing(NormalOre, OwnRetainer);
@@ -224,6 +237,18 @@ public sealed class SearchReuseTests
         Assert.True(reuse.TryReuse(NormalOre, decidedAt, out var snapshot));
 
         Assert.False(SearchReuse.IsFreshForTyping(snapshot, decidedAt));
+    }
+
+    private static CompetitorListing[] CappedRows()
+    {
+        var rows = new CompetitorListing[CompetitorSnapshot.MaximumListings];
+        rows[0] = Competitor(1, 800, OwnRetainer);
+        for (var index = 1; index < rows.Length; index++)
+        {
+            rows[index] = Competitor((ulong)index + 1, 900 + (uint)index);
+        }
+
+        return rows;
     }
 
     private static CompetitorListing Competitor(ulong listingId, uint unitPrice, ulong retainerId = CompetitorRetainer)
