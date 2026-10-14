@@ -12,7 +12,7 @@ namespace AutoSeller.Tests.Run;
 public sealed class RunGuardTests
 {
     private static readonly SellAuthorization dryRun = Authorization(dryRun: true);
-    private static readonly RunLiveFacts live = new(Character, HomeWorld, FirstRetainer, StartRules, StartPricing, PlanEdits.None, false, Now);
+    private static readonly RunLiveFacts live = new(Character, HomeWorld, FirstRetainer, true, StartRules, StartPricing, PlanEdits.None, false, Now);
     private static readonly CompetitorSnapshot competition = new()
     {
         ItemId = Ore,

@@ -11,6 +11,7 @@ internal readonly record struct RunLiveFacts(
     ulong CharacterContentId,
     uint CurrentWorldId,
     ulong OpenRetainerId,
+    bool WindowChainReady,
     RuleBook Rules,
     PricingSettings Pricing,
     PlanEdits PlanEdits,
@@ -42,7 +43,7 @@ internal static class RunGuard
             CurrentPricing = live.Pricing,
             CurrentPlanEdits = live.PlanEdits,
             OpenRetainerId = live.OpenRetainerId,
-            WindowChainReady = true,
+            WindowChainReady = live.WindowChainReady,
             SearchGeneration = competition.Generation,
             SearchCapturedAtUtc = competition.CapturedAtUtc,
             NowUtc = live.NowUtc,
@@ -59,7 +60,7 @@ internal static class RunGuard
             IsProtected = false,
             OnSellList = authorization.Rules.IsOnSellList(row.Write.ItemId),
         });
-        if (verdict.IsAllowed && values.TryReserve(writeId, row.Write) == ValueBookResult.Applied)
+        if (verdict.IsAllowed && authorization.DryRun && values.TryReserve(writeId, row.Write) == ValueBookResult.Applied)
         {
             values.Confirm(writeId);
         }
