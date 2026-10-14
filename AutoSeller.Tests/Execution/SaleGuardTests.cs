@@ -114,9 +114,9 @@ public sealed class SaleGuardTests
     [Fact]
     public void AnApprovedPriceMayDropPastTheStepLimitButNeverBelowTheFloor()
     {
-        var approved = GuardInput(Reprice(700)) with { Authorization = Authorization(approvedPrices: [new ApprovedPrice(FirstRetainer, Ore, false, 700)]) };
+        var approved = GuardInput(Reprice(700)) with { Authorization = Authorization(approvedPrices: [Approval(700)]) };
         var otherPrice = approved with { Write = Reprice(690) };
-        var belowFloor = GuardInput(Reprice(550)) with { Authorization = Authorization(approvedPrices: [new ApprovedPrice(FirstRetainer, Ore, false, 550)]) };
+        var belowFloor = GuardInput(Reprice(550)) with { Authorization = Authorization(approvedPrices: [Approval(550)]) };
 
         Assert.True(SaleGuard.Evaluate(approved).IsAllowed);
         Assert.Equal(SaleRejection.OverStepLimit, SaleGuard.Evaluate(otherPrice).Rejection);
@@ -124,13 +124,22 @@ public sealed class SaleGuardTests
     }
 
     [Fact]
-    public void AnApprovalForAnotherRetainerOrQualityDoesNotCount()
+    public void AnApprovalCountsOnlyForItsOwnListingAndOldPrice()
     {
-        var otherRetainer = GuardInput(Reprice(700)) with { Authorization = Authorization(approvedPrices: [new ApprovedPrice(SecondRetainer, Ore, false, 700)]) };
-        var otherQuality = GuardInput(Reprice(700)) with { Authorization = Authorization(approvedPrices: [new ApprovedPrice(FirstRetainer, Ore, true, 700)]) };
+        ApprovedPrice[] others =
+        [
+            Approval(700) with { RetainerId = SecondRetainer },
+            Approval(700) with { Slot = MarketSlot + 1 },
+            Approval(700) with { ItemId = Ore + 1 },
+            Approval(700) with { IsHq = true },
+            Approval(700) with { OldPrice = ListedPrice + 1 },
+        ];
+        for (var index = 0; index < others.Length; index++)
+        {
+            var input = GuardInput(Reprice(700)) with { Authorization = Authorization(approvedPrices: [others[index]]) };
 
-        Assert.Equal(SaleRejection.OverStepLimit, SaleGuard.Evaluate(otherRetainer).Rejection);
-        Assert.Equal(SaleRejection.OverStepLimit, SaleGuard.Evaluate(otherQuality).Rejection);
+            Assert.Equal(SaleRejection.OverStepLimit, SaleGuard.Evaluate(input).Rejection);
+        }
     }
 
     [Fact]

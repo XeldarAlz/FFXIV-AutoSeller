@@ -54,6 +54,11 @@ internal static class ExecutionFixtures
         return authorization!;
     }
 
+    public static ApprovedPrice Approval(uint price)
+    {
+        return new ApprovedPrice(FirstRetainer, MarketSlot, Ore, false, ListedPrice, price);
+    }
+
     public static SaleWrite Reprice(uint newPrice = UndercutPrice)
     {
         return new SaleWrite(WriteKind.Reprice, FirstRetainer, MarketContainer, MarketSlot, Ore, false, LotQuantity, ListedPrice, newPrice, Evidence);

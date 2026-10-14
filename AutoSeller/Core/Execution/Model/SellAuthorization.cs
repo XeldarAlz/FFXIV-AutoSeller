@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
-using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
 
@@ -146,12 +145,12 @@ internal sealed class SellAuthorization
         return RetainerIds.AsSpan().BinarySearch(retainerId) >= 0;
     }
 
-    public bool TryGetApprovedPrice(ulong retainerId, ItemKey item, out uint price)
+    public bool TryGetApprovedPrice(in SaleWrite write, out uint price)
     {
         for (var index = 0; index < ApprovedPrices.Length; index++)
         {
             var approved = ApprovedPrices[index];
-            if (approved.RetainerId == retainerId && approved.Item == item)
+            if (approved.Covers(write))
             {
                 price = approved.Price;
                 return true;
@@ -216,7 +215,10 @@ internal sealed class SellAuthorization
         for (var index = 0; index < sortedPrices.Length; index++)
         {
             var approved = sortedPrices[index];
-            if (approved.ItemId == 0 || !PriceRange.Contains(approved.Price) || Array.BinarySearch(sortedRetainers, approved.RetainerId) < 0)
+            if (approved.ItemId == 0
+                || !PriceRange.Contains(approved.OldPrice)
+                || !PriceRange.Contains(approved.Price)
+                || Array.BinarySearch(sortedRetainers, approved.RetainerId) < 0)
             {
                 return AuthorizationProblem.InvalidApprovedPrice;
             }

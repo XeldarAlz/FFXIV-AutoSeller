@@ -170,7 +170,7 @@ internal static class SaleGuard
     private static bool IsApproved(in SaleGuardInput input)
     {
         var write = input.Write;
-        return input.Authorization.TryGetApprovedPrice(write.RetainerId, write.Item, out var approved) && approved == write.NewPrice;
+        return input.Authorization.TryGetApprovedPrice(write, out var approved) && approved == write.NewPrice;
     }
 
     private static SaleRejection CheckCaps(in SaleGuardInput input)

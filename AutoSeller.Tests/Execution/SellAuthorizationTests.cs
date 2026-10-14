@@ -1,15 +1,14 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Rules.Model;
-using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
 namespace AutoSeller.Tests.Execution;
 
 public sealed class SellAuthorizationTests
 {
-    private static readonly ApprovedPrice FirstApproval = new(FirstRetainer, Ore, false, 650);
-    private static readonly ApprovedPrice SecondApproval = new(SecondRetainer, Ore, true, 7_000);
+    private static readonly ApprovedPrice FirstApproval = Approval(650);
+    private static readonly ApprovedPrice SecondApproval = new(SecondRetainer, MarketSlot, Ore, true, 9_000, 7_000);
 
     [Fact]
     public void StartFreezesSortedCopiesOfRetainersAndApprovals()
@@ -35,14 +34,26 @@ public sealed class SellAuthorizationTests
     }
 
     [Fact]
-    public void ApprovedPriceIsFoundByRetainerItemAndQuality()
+    public void ApprovedPriceIsFoundOnlyForItsListingAndOldPrice()
     {
         var authorization = Authorization(approvedPrices: [FirstApproval, SecondApproval]);
 
-        Assert.True(authorization.TryGetApprovedPrice(FirstRetainer, new ItemKey(Ore, false), out var price));
+        Assert.True(authorization.TryGetApprovedPrice(Reprice(), out var price));
         Assert.Equal(650u, price);
-        Assert.False(authorization.TryGetApprovedPrice(FirstRetainer, new ItemKey(Ore, true), out _));
-        Assert.False(authorization.TryGetApprovedPrice(SecondRetainer, new ItemKey(Ore, false), out _));
+        Assert.True(authorization.TryGetApprovedPrice(Reprice() with { RetainerId = SecondRetainer, IsHq = true, OldPrice = 9_000 }, out price));
+        Assert.Equal(7_000u, price);
+        Assert.False(authorization.TryGetApprovedPrice(Reprice() with { IsHq = true }, out _));
+        Assert.False(authorization.TryGetApprovedPrice(Reprice() with { RetainerId = SecondRetainer }, out _));
+        Assert.False(authorization.TryGetApprovedPrice(Reprice() with { Slot = MarketSlot + 1 }, out _));
+        Assert.False(authorization.TryGetApprovedPrice(Reprice() with { OldPrice = ListedPrice + 1 }, out _));
+    }
+
+    [Fact]
+    public void TwoApprovalsForOneListingAreOnlyDuplicatesAtTheSameOldPrice()
+    {
+        Assert.Equal(AuthorizationProblem.None, Create(out _, approvedPrices: [FirstApproval, FirstApproval with { Slot = MarketSlot + 1 }]));
+        Assert.Equal(AuthorizationProblem.None, Create(out _, approvedPrices: [FirstApproval, FirstApproval with { OldPrice = ListedPrice + 1 }]));
+        Assert.Equal(AuthorizationProblem.DuplicateApprovedPrice, Create(out _, approvedPrices: [FirstApproval, FirstApproval with { Price = 700 }]));
     }
 
     [Fact]
@@ -59,6 +70,7 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.InvalidCaps, Create(out _, caps: new RunCaps(-1, 100, 20_000)));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = PriceRange.Maximum + 1 }]));
+        Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { OldPrice = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { ItemId = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { RetainerId = StrangerRetainer }]));
         Assert.Equal(AuthorizationProblem.DuplicateApprovedPrice, Create(out _, approvedPrices: [FirstApproval, FirstApproval with { Price = 700 }]));

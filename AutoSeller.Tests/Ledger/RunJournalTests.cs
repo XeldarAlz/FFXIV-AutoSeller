@@ -66,7 +66,7 @@ public sealed class RunJournalTests : IDisposable
     public void TheAuthorizationIsReadBackWhole()
     {
         var journal = new RunJournal(directory.Path);
-        var approved = new ApprovedPrice(FirstRetainer, Ore, false, 650);
+        var approved = Approval(650);
         var authorization = Authorization(new RunCaps(5, 6, 7_000), [approved], dryRun: true);
         new JournalWriter(journal).Authorize(authorization);
 
