@@ -1,15 +1,10 @@
-using System.Collections.Immutable;
 using AutoSeller.Core.AutoRetainer.Model;
-using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
-using AutoSeller.Core.Pricing.Universalis;
-using AutoSeller.Core.Retainers.Model;
-using AutoSeller.Core.Rules.Model;
-using AutoSeller.Core.Shared;
+using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Tasks.Model;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
@@ -21,6 +16,8 @@ internal sealed partial class SellController
     private const bool DryRunOnly = true;
 
     private static readonly AutoRetainerStatus autoRetainerUnread = new(AutoRetainerState.Missing, false);
+
+    public bool DryRun => DryRunOnly;
 
     public StartBlock Start()
     {
@@ -64,17 +61,22 @@ internal sealed partial class SellController
             RunLog.Info("Start: the stopped run is still closing its retainer windows; the new run waits for it.");
         }
 
-        var markets = data!.SnapshotArray();
         var nowUtc = DateTime.UtcNow;
-        var edits = data!.PlanEdits;
-        var approvals = Approvals.Collect(edits, markets, enabled.AsSpan(), ApprovalsOf(data));
+        if (plugin.Plan.Capture(nowUtc) is not { } input)
+        {
+            return Refuse(StartBlock.NotLoggedIn, "the bags and the character data could not be read");
+        }
+
+        var markets = input.Markets.AsSpan();
+        var edits = input.Edits;
+        var approvals = Approvals.Collect(edits, markets, enabled.AsSpan(), input.PlayerApprovals.AsSpan());
         var problem = SellAuthorization.TryCreate(
             Guid.NewGuid(),
-            data.ContentId,
-            Svc.PlayerState.HomeWorld.RowId,
+            input.CharacterContentId,
+            input.HomeWorldId,
             enabled,
-            rules,
-            configuration.BuildPricingSettings(),
+            input.Rules,
+            input.Pricing,
             edits,
             configuration.BuildRunCaps(),
             DryRunOnly,
@@ -88,14 +90,21 @@ internal sealed partial class SellController
         }
 
         plugin.Market.Tracker.ClearReuse();
-        var active = new SellRunSession(authorization!, PlanInputsOf(authorization!, data, RetainersOf(data, authorization!, markets), nowUtc), review);
+        var leftOut = PlanStock.LeftOut(input.Stock.AsSpan());
+        if (leftOut > 0)
+        {
+            RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
+        }
+
+        var active = new SellRunSession(authorization!, input.ToRunInputs(), review);
         active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc));
-        FetchReferences(active.PlanInputs.Stock.AsSpan(), markets);
+        var items = PlanStock.ItemsToPrice(input.Stock.AsSpan(), markets);
+        RunLog.Info($"Run: reference prices for {items.Length} item(s): {plugin.References.Fetch(items.AsSpan())}.");
         session = active;
         PauseReason = PauseReason.None;
         faultBudget.Reset();
         RunLog.Info(
-            $"Run {authorization.RunId} authorized: {active.Retainers.Length} retainer(s), {rules.SellList.Length} sell list entr(ies), {rules.CategoryRules.Length} category rule(s), " +
+            $"Run {authorization.RunId} authorized: {active.Retainers.Length} retainer(s), {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
             $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, dry run {authorization.DryRun}, policy {authorization.PolicyVersion}.");
         Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.Plural(L.Run.ChatStarted, active.Retainers.Length)}");
         Launch(active);
@@ -119,106 +128,5 @@ internal sealed partial class SellController
         }
 
         return JournalReview.Build(read.Entries);
-    }
-
-    private static ApprovedPrice[] ApprovalsOf(CharacterData data)
-    {
-        var stored = data.Approvals;
-        var approvals = new ApprovedPrice[stored.Count];
-        for (var index = 0; index < approvals.Length; index++)
-        {
-            approvals[index] = stored[index];
-        }
-
-        return approvals;
-    }
-
-    private ImmutableArray<RunRetainer> RetainersOf(CharacterData data, SellAuthorization authorization, ReadOnlySpan<RetainerSnapshot> markets)
-    {
-        var taxes = plugin.References.Taxes;
-        var roster = data.Retainers;
-        var retainers = ImmutableArray.CreateBuilder<RunRetainer>(authorization.RetainerIds.Length);
-        for (var index = 0; index < roster.Count; index++)
-        {
-            var setting = roster[index];
-            if (!authorization.AllowsRetainer(setting.RetainerId))
-            {
-                continue;
-            }
-
-            var town = TownOf(markets, setting.RetainerId);
-            retainers.Add(new RunRetainer(setting.RetainerId, setting.Name, town, taxes.SellerTaxPercentFor(town)));
-        }
-
-        return retainers.ToImmutable();
-    }
-
-    private static byte TownOf(ReadOnlySpan<RetainerSnapshot> markets, ulong retainerId)
-    {
-        for (var index = 0; index < markets.Length; index++)
-        {
-            if (markets[index].RetainerId == retainerId)
-            {
-                return markets[index].Town;
-            }
-        }
-
-        return 0;
-    }
-
-    private RunPlanInputs PlanInputsOf(SellAuthorization authorization, CharacterData data, ImmutableArray<RunRetainer> retainers, DateTime nowUtc)
-    {
-        var rules = authorization.Rules;
-        var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        var stock = ImmutableArray.CreateBuilder<StockSlot>(read.Slots.Length);
-        var unsupported = 0;
-        for (var index = 0; index < read.Slots.Length; index++)
-        {
-            var slot = read.Slots[index];
-            if (!RunPlanner.CanListFrom(slot.Source))
-            {
-                unsupported++;
-                continue;
-            }
-
-            var reference = plugin.References.ReferenceFor(slot.Key, null, nowUtc);
-            stock.Add(new StockSlot(slot, plugin.GameItems.FactsOf(slot.ItemId), reference.AverageSalePrice));
-        }
-
-        if (unsupported > 0)
-        {
-            RunLog.Info($"Run: {unsupported} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
-        }
-
-        return new RunPlanInputs
-        {
-            Stock = stock.ToImmutable(),
-            FreeBagSlots = read.FreeBagSlots,
-            Rules = rules,
-            Edits = data.PlanEdits,
-            Retainers = retainers,
-        };
-    }
-
-    private void FetchReferences(ReadOnlySpan<StockSlot> stock, ReadOnlySpan<RetainerSnapshot> markets)
-    {
-        var keys = new HashSet<ItemKey>();
-        for (var index = 0; index < stock.Length; index++)
-        {
-            keys.Add(stock[index].Slot.Key);
-        }
-
-        for (var marketIndex = 0; marketIndex < markets.Length; marketIndex++)
-        {
-            var slots = markets[marketIndex].Slots;
-            for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
-            {
-                keys.Add(slots[slotIndex].Key);
-            }
-        }
-
-        var items = new ItemKey[keys.Count];
-        keys.CopyTo(items);
-        RunLog.Info($"Run: reference prices for {items.Length} item(s): {plugin.References.Fetch(items)}.");
     }
 }

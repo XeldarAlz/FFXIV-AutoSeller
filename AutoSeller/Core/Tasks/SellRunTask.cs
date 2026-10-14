@@ -1,8 +1,8 @@
-using System.Collections.Immutable;
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks.Model;
 using AutoSeller.Core.Travel.Model;
@@ -100,19 +100,11 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             return;
         }
 
-        var nowUtc = DateTime.UtcNow;
         var inputs = session.PlanInputs;
         var stock = inputs.Stock;
-        var refreshed = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
-        for (var index = 0; index < stock.Length; index++)
-        {
-            var slot = stock[index];
-            refreshed.Add(slot with { ReferenceUnitPrice = plugin.References.ReferenceFor(slot.Slot.Key, null, nowUtc).AverageSalePrice });
-        }
-
         session.PlanInputs = new RunPlanInputs
         {
-            Stock = refreshed.MoveToImmutable(),
+            Stock = PlanStock.Priced(stock, plugin.References.Latest, session.Authorization.HomeWorldId, DateTime.UtcNow),
             FreeBagSlots = inputs.FreeBagSlots,
             Rules = inputs.Rules,
             Edits = inputs.Edits,

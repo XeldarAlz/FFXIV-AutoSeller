@@ -87,7 +87,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 
-    private static string Describe(NeedsPlayerReason reason) => reason switch
+    public static string Describe(NeedsPlayerReason reason) => reason switch
     {
         NeedsPlayerReason.BellNotReached => Loc.T(L.Run.NeedsBellNotReached),
         NeedsPlayerReason.WindowsStuck => Loc.T(L.Run.NeedsWindowsStuck),
