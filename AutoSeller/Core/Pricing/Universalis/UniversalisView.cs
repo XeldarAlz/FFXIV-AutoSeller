@@ -34,6 +34,9 @@ internal sealed class AggregatedQualityView
     [JsonPropertyName("medianListing")]
     public ScopedValuesView? MedianListing { get; init; }
 
+    [JsonPropertyName("recentPurchase")]
+    public ScopedValuesView? RecentPurchase { get; init; }
+
     [JsonPropertyName("averageSalePrice")]
     public ScopedValuesView? AverageSalePrice { get; init; }
 
@@ -60,6 +63,9 @@ internal sealed class ScopedValueView
 
     [JsonPropertyName("worldId")]
     public long? WorldId { get; init; }
+
+    [JsonPropertyName("timestamp")]
+    public long? Timestamp { get; init; }
 }
 
 internal sealed class WorldUploadView

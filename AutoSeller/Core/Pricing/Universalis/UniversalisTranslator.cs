@@ -88,9 +88,18 @@ internal static class UniversalisTranslator
         var coverage = ReferenceCoverage.None;
         var uploads = item.WorldUploadTimes;
         var worldUpload = scope.CoversWorld ? UploadTimeOf(uploads, scope.WorldId, ref coverage) : default;
-        var normalListingUpload = UploadTimeOf(uploads, DataCenterListingWorld(item.Normal), ref coverage);
-        var highListingUpload = UploadTimeOf(uploads, DataCenterListingWorld(item.High), ref coverage);
-        var dataCenterUpload = Newest(worldUpload, Newest(normalListingUpload, highListingUpload));
+        var normalListing = item.Normal?.MinListing?.DataCenter;
+        var highListing = item.High?.MinListing?.DataCenter;
+        var normalListingUpload = UploadTimeOf(uploads, WorldOf(normalListing), ref coverage);
+        var highListingUpload = UploadTimeOf(uploads, WorldOf(highListing), ref coverage);
+        var dataCenterLatest = Newest(
+            worldUpload,
+            normalListingUpload,
+            highListingUpload,
+            DataCenterSaleTime(item.Normal, ref coverage),
+            DataCenterSaleTime(item.High, ref coverage));
+        var normalDataCenterUpload = normalListing is null ? dataCenterLatest : normalListingUpload;
+        var highDataCenterUpload = highListing is null ? dataCenterLatest : highListingUpload;
 
         var normalKey = new ItemKey(itemId, false);
         var highKey = new ItemKey(itemId, true);
@@ -100,8 +109,8 @@ internal static class UniversalisTranslator
         var worldHigh = scope.CoversWorld
             ? TranslatePrice(highKey, ReferenceSource.UniversalisWorld, item.High, worldUpload, ref coverage)
             : UniversalisReference.NoPrice(highKey);
-        var dataCenterNormal = TranslatePrice(normalKey, ReferenceSource.UniversalisDataCenter, item.Normal, dataCenterUpload, ref coverage);
-        var dataCenterHigh = TranslatePrice(highKey, ReferenceSource.UniversalisDataCenter, item.High, dataCenterUpload, ref coverage);
+        var dataCenterNormal = TranslatePrice(normalKey, ReferenceSource.UniversalisDataCenter, item.Normal, normalDataCenterUpload, ref coverage);
+        var dataCenterHigh = TranslatePrice(highKey, ReferenceSource.UniversalisDataCenter, item.High, highDataCenterUpload, ref coverage);
         return new UniversalisReference(itemId, worldNormal, worldHigh, dataCenterNormal, dataCenterHigh, coverage);
     }
 
@@ -156,10 +165,15 @@ internal static class UniversalisTranslator
         return (float)quantity;
     }
 
-    private static uint DataCenterListingWorld(AggregatedQualityView? quality)
+    private static uint WorldOf(ScopedValueView? listing)
     {
-        var worldId = quality?.MinListing?.DataCenter?.WorldId;
+        var worldId = listing?.WorldId;
         return worldId is > 0 and <= uint.MaxValue ? (uint)worldId.Value : 0;
+    }
+
+    private static DateTime DataCenterSaleTime(AggregatedQualityView? quality, ref ReferenceCoverage coverage)
+    {
+        return quality?.RecentPurchase?.DataCenter?.Timestamp is { } milliseconds ? ToUtc(milliseconds, ref coverage) : default;
     }
 
     private static DateTime UploadTimeOf(WorldUploadView?[]? uploads, uint worldId, ref ReferenceCoverage coverage)
@@ -176,22 +190,35 @@ internal static class UniversalisTranslator
                 continue;
             }
 
-            var milliseconds = upload.Timestamp;
-            if (milliseconds <= 0 || milliseconds > MaximumUnixMilliseconds)
-            {
-                coverage |= ReferenceCoverage.InvalidValues;
-                return default;
-            }
-
-            return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime;
+            return ToUtc(upload.Timestamp, ref coverage);
         }
 
         return default;
     }
 
-    private static DateTime Newest(DateTime left, DateTime right)
+    private static DateTime ToUtc(long milliseconds, ref ReferenceCoverage coverage)
     {
-        return left >= right ? left : right;
+        if (milliseconds <= 0 || milliseconds > MaximumUnixMilliseconds)
+        {
+            coverage |= ReferenceCoverage.InvalidValues;
+            return default;
+        }
+
+        return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime;
+    }
+
+    private static DateTime Newest(params ReadOnlySpan<DateTime> times)
+    {
+        var newest = default(DateTime);
+        for (var index = 0; index < times.Length; index++)
+        {
+            if (times[index] > newest)
+            {
+                newest = times[index];
+            }
+        }
+
+        return newest;
     }
 
     private static bool TryPercent(long? value, out byte percent)

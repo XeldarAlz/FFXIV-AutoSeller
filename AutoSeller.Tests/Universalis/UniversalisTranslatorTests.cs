@@ -29,31 +29,100 @@ public sealed class UniversalisTranslatorTests
     }
 
     [Fact]
-    public void WorldAnswerAlsoFillsTheDataCenterPricesStampedWithTheNewestDataCenterUpload()
+    public void WorldAnswerStampsEachDataCenterPriceWithItsOwnListingWorldUpload()
     {
         var result = Translate(PhoenixFixture, PhoenixScope, BusyItem, QuietItem);
 
         var reference = Item(result, BusyItem);
         var odinUpload = FromUnixMilliseconds(1_791_975_093_389);
+        var raidenUpload = FromUnixMilliseconds(1_791_973_458_405);
+        Assert.True(odinUpload > raidenUpload);
         Assert.Equal(
             new ReferencePrice(new ItemKey(BusyItem, false), ReferenceSource.UniversalisDataCenter, 147, 0, 70, 535.7765407358312f, odinUpload),
             reference.DataCenterNormal);
         Assert.Equal(
-            new ReferencePrice(new ItemKey(BusyItem, true), ReferenceSource.UniversalisDataCenter, 375, 0, 5, 78.06781759237691f, odinUpload),
+            new ReferencePrice(new ItemKey(BusyItem, true), ReferenceSource.UniversalisDataCenter, 375, 0, 5, 78.06781759237691f, raidenUpload),
             reference.DataCenterHigh);
     }
 
     [Fact]
-    public void RegionListingWorldsDoNotFreshenTheDataCenterPrices()
+    public void NewerHomeOrRegionUploadsDoNotFreshenADataCenterListing()
     {
         var result = Translate(PhoenixFixture, PhoenixScope, BusyItem, QuietItem);
 
         var reference = Item(result, QuietItem);
-        var phoenixUpload = FromUnixMilliseconds(1_791_722_482_423);
-        var louisoixUpload = FromUnixMilliseconds(1_791_730_689_029);
-        Assert.True(louisoixUpload > phoenixUpload);
-        Assert.Equal(phoenixUpload, reference.DataCenterNormal.UpdatedAtUtc);
-        Assert.Equal(phoenixUpload, reference.DataCenterHigh.UpdatedAtUtc);
+        var shivaUpload = FromUnixMilliseconds(1_791_646_088_772);
+        var odinUpload = FromUnixMilliseconds(1_791_476_212_520);
+        Assert.True(reference.WorldNormal.UpdatedAtUtc > shivaUpload);
+        Assert.True(FromUnixMilliseconds(1_791_730_689_029) > shivaUpload);
+        Assert.Equal(shivaUpload, reference.DataCenterNormal.UpdatedAtUtc);
+        Assert.Equal(odinUpload, reference.DataCenterHigh.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void AQualityWithoutADataCenterListingTakesTheNewestDataCenterUpload()
+    {
+        const string json = """
+            {"results":[{"itemId":5057,
+              "nq":{"minListing":{"world":{"price":1999},"dc":{"price":70,"worldId":66}},
+                    "averageSalePrice":{"dc":{"price":147}}},
+              "hq":{"minListing":{"region":{"price":5,"worldId":83}},
+                    "recentPurchase":{"dc":{"price":250,"timestamp":1791972467000,"worldId":66}},
+                    "averageSalePrice":{"dc":{"price":375}}},
+              "worldUploadTimes":[{"worldId":56,"timestamp":1791973797080},{"worldId":66,"timestamp":1791975093389},
+                                  {"worldId":83,"timestamp":1791979999999}]}],
+             "failedItems":[]}
+            """;
+
+        var reference = Item(UniversalisTranslator.TranslateReferences(Utf8(json), Chunk(PhoenixScope, BusyItem)), BusyItem);
+
+        Assert.Equal(FromUnixMilliseconds(1_791_975_093_389), reference.DataCenterHigh.UpdatedAtUtc);
+        Assert.Equal(0u, reference.DataCenterHigh.LowestListing);
+        Assert.True(reference.DataCenterHigh.Exists);
+        Assert.Equal(FromUnixMilliseconds(1_791_973_797_080), reference.WorldHigh.UpdatedAtUtc);
+        Assert.Equal(ReferenceCoverage.None, reference.Coverage);
+    }
+
+    [Fact]
+    public void ADataCenterAnswerWithoutAnyDataCenterListingTakesItsLatestDataCenterSale()
+    {
+        const string json = """
+            {"results":[{"itemId":5057,
+              "nq":{"minListing":{"region":{"price":60,"worldId":83}},
+                    "recentPurchase":{"dc":{"price":2500,"timestamp":1791965494000,"worldId":56},
+                                      "region":{"price":61,"timestamp":1791979000000,"worldId":83}},
+                    "averageSalePrice":{"dc":{"price":147.4}},
+                    "dailySaleVelocity":{"dc":{"quantity":535.7}}},
+              "hq":{"recentPurchase":{"dc":{"price":250,"timestamp":1791972467000,"worldId":66}},
+                    "averageSalePrice":{"dc":{"price":375.2}}},
+              "worldUploadTimes":[{"worldId":83,"timestamp":1791979999999}]}],
+             "failedItems":[]}
+            """;
+
+        var reference = Item(UniversalisTranslator.TranslateReferences(Utf8(json), Chunk(LightScope, BusyItem)), BusyItem);
+
+        var latestSale = FromUnixMilliseconds(1_791_972_467_000);
+        Assert.Equal(latestSale, reference.DataCenterNormal.UpdatedAtUtc);
+        Assert.Equal(latestSale, reference.DataCenterHigh.UpdatedAtUtc);
+        Assert.True(reference.DataCenterNormal.Exists);
+        Assert.Equal(147u, reference.DataCenterNormal.AverageSalePrice);
+        Assert.Equal(0u, reference.DataCenterNormal.LowestListing);
+        Assert.Equal(ReferenceCoverage.None, reference.Coverage);
+    }
+
+    [Fact]
+    public void AnOutOfRangeSaleTimeIsDroppedAndFlagged()
+    {
+        const string json = """
+            {"results":[{"itemId":5057,"nq":{"recentPurchase":{"dc":{"price":2500,"timestamp":-1,"worldId":56}},
+              "averageSalePrice":{"dc":{"price":147}}},"hq":{}}],"failedItems":[]}
+            """;
+
+        var reference = Item(UniversalisTranslator.TranslateReferences(Utf8(json), Chunk(LightScope, BusyItem)), BusyItem);
+
+        Assert.Equal(default(DateTime), reference.DataCenterNormal.UpdatedAtUtc);
+        Assert.Equal(147u, reference.DataCenterNormal.AverageSalePrice);
+        Assert.Equal(ReferenceCoverage.InvalidValues, reference.Coverage);
     }
 
     [Fact]
@@ -96,16 +165,17 @@ public sealed class UniversalisTranslatorTests
         Assert.Equal(375u, reference.DataCenterHigh.AverageSalePrice);
         Assert.Equal(5u, reference.DataCenterHigh.LowestListing);
         Assert.Equal(FromUnixMilliseconds(1_791_975_093_389), reference.DataCenterNormal.UpdatedAtUtc);
+        Assert.Equal(FromUnixMilliseconds(1_791_973_458_405), reference.DataCenterHigh.UpdatedAtUtc);
     }
 
     [Fact]
-    public void DataCenterAnswerTakesItsFreshnessFromTheDataCenterListingWorlds()
+    public void DataCenterAnswerTakesEachQualityFreshnessFromItsListingWorld()
     {
         var result = Translate(LightFixture, LightScope, BusyItem, QuietItem);
 
         var reference = Item(result, QuietItem);
         Assert.Equal(FromUnixMilliseconds(1_791_646_088_772), reference.DataCenterNormal.UpdatedAtUtc);
-        Assert.Equal(FromUnixMilliseconds(1_791_646_088_772), reference.DataCenterHigh.UpdatedAtUtc);
+        Assert.Equal(FromUnixMilliseconds(1_791_476_212_520), reference.DataCenterHigh.UpdatedAtUtc);
     }
 
     [Fact]
