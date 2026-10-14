@@ -5,6 +5,7 @@ using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Market;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
@@ -44,6 +45,7 @@ public sealed class Plugin : IDalamudPlugin
     internal SellController Controller { get; }
     internal ItemCatalog Items { get; }
     internal GameItems GameItems { get; }
+    internal MarketServices Market { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -77,6 +79,8 @@ public sealed class Plugin : IDalamudPlugin
             Controller = new SellController();
             Items = new ItemCatalog();
             GameItems = new GameItems();
+            Market = new MarketServices(Configuration);
+            completed.Push(Market.Dispose);
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName);
             completed.Push(Characters.Dispose);
             Bags = new BagReader(static _ => false);
@@ -142,6 +146,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.SaveIfPending();
         BlockedScanner.Dispose();
         Characters.Dispose();
+        Market.Dispose();
 
         WindowSystem.RemoveAllWindows();
         appWindow.Dispose();
