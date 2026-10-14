@@ -110,7 +110,7 @@ internal sealed partial class SellController
         var configuration = plugin.Configuration;
         var ledger = plugin.Ledger;
         var nowUtc = DateTime.UtcNow;
-        if (plugin.Plan.Capture(nowUtc) is not { } input)
+        if (plugin.Plan.Capture(nowUtc, true) is not { } input)
         {
             return Refuse(mode, StartBlock.NotLoggedIn, "the bags and the character data could not be read");
         }

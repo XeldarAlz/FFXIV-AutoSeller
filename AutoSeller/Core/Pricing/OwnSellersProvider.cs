@@ -10,14 +10,13 @@ namespace AutoSeller.Core.Pricing;
 internal sealed class OwnSellersProvider
 {
     private const int StackRetainerLimit = MarketLimits.MaximumRetainers * 2;
-    private const long AltReadIntervalMs = 60_000;
 
     private readonly RetainerReader retainers;
     private readonly CharacterStore characters;
     private readonly Configuration configuration;
     private readonly AutoRetainerIpc autoRetainer;
-    private AltRead lastRead;
-    private long altsReadAtMs = long.MinValue;
+    private AltReadKey lastRead;
+    private long altsReadAtMs = AltReadSchedule.NeverRead;
 
     public OwnSellersProvider(RetainerReader retainers, CharacterStore characters, Configuration configuration, AutoRetainerIpc autoRetainer)
     {
@@ -29,11 +28,11 @@ internal sealed class OwnSellersProvider
 
     public AltSellers Alts { get; private set; } = AltSellers.None;
 
-    public void ReadAlts()
+    public void ReadAlts(bool readNow)
     {
-        var read = new AltRead(Svc.PlayerState.ContentId, configuration.AutoRetainerAltsAreOwn);
+        var read = new AltReadKey(Svc.PlayerState.ContentId, configuration.AutoRetainerAltsAreOwn);
         var now = Environment.TickCount64;
-        if (read == lastRead && altsReadAtMs != long.MinValue && now - altsReadAtMs < AltReadIntervalMs)
+        if (!AltReadSchedule.Due(readNow, read, lastRead, altsReadAtMs, now))
         {
             return;
         }
@@ -71,6 +70,4 @@ internal sealed class OwnSellersProvider
 
         return OwnSellers.Of(retainerIds[..total], Svc.PlayerState.ContentId, Alts);
     }
-
-    private readonly record struct AltRead(ulong ContentId, bool Wanted);
 }

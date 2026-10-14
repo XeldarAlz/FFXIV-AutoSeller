@@ -77,7 +77,7 @@ internal sealed partial class PlanBuilder : IDisposable
         return refresh;
     }
 
-    public PlanInput? Capture(DateTime nowUtc)
+    public PlanInput? Capture(DateTime nowUtc, bool readAltsNow)
     {
         if (!Svc.ClientState.IsLoggedIn || characters.Current is not { } data)
         {
@@ -94,7 +94,7 @@ internal sealed partial class PlanBuilder : IDisposable
         }
 
         var markets = data.SnapshotArray();
-        ownSellers.ReadAlts();
+        ownSellers.ReadAlts(readAltsNow);
         return new PlanInput
         {
             Generation = 0,
@@ -192,7 +192,7 @@ internal sealed partial class PlanBuilder : IDisposable
 
     private void StartPlanning()
     {
-        if (Capture(DateTime.UtcNow) is not { } captured)
+        if (Capture(DateTime.UtcNow, false) is not { } captured)
         {
             CancelPlanning();
             Volatile.Write(ref latest, null);
