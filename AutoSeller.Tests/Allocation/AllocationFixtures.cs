@@ -66,7 +66,7 @@ internal static class AllocationFixtures
         for (var index = 0; index < edits.Length; index++)
         {
             var edit = edits[index];
-            var target = new PlanEditTarget(edit.Row, 0, 0, false);
+            var target = new PlanEditTarget(edit.Row, 0, 0);
             Assert.Equal(PlanEditRefusal.None, result.TryApply(edit, target, out result));
         }
 

@@ -126,7 +126,7 @@ public sealed class SellRunTests
         Assert.Equal(2u, decision.Evidence.CompetitorListingId);
 
         var write = SaleWrite.ForListing(Alpha, listing, decision);
-        Assert.Equal(new SaleWrite(WriteKind.Reprice, Alpha, PlanRowKey.MarketContainer, 0, Ore, false, LotQuantity, ListedPrice, 949, decision.Evidence), write);
+        Assert.Equal(new SaleWrite(WriteKind.Reprice, Alpha, ListingSlot.MarketContainer, 0, Ore, false, LotQuantity, ListedPrice, 949, decision.Evidence), write);
         Assert.True(run.Guard(write, SlotReading.Of(listing), SlotReading.Of(listing), competition).IsAllowed);
 
         run.Advance(Step);

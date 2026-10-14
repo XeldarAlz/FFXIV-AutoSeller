@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 
 namespace AutoSeller.Tests.Execution;
@@ -14,7 +15,7 @@ internal static class ExecutionFixtures
     public const ulong SecondRetainer = 502;
     public const ulong StrangerRetainer = 900;
     public const uint Ore = 5_000;
-    public const uint MarketContainer = PlanRowKey.MarketContainer;
+    public const uint MarketContainer = ListingSlot.MarketContainer;
     public const uint BagContainer = 0;
     public const uint SaddlebagContainer = 4_000;
     public const ushort MarketSlot = 3;

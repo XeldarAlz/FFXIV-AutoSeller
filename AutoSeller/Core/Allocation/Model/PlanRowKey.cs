@@ -7,17 +7,15 @@ namespace AutoSeller.Core.Allocation.Model;
 internal readonly record struct PlanRowKey(ulong RetainerId, uint Container, ushort Slot, ushort LotIndex, uint ItemId, bool IsHq)
     : IComparable<PlanRowKey>
 {
-    public const uint MarketContainer = 12_002;
-
     [JsonIgnore]
     public ItemKey Item => new(ItemId, IsHq);
 
     [JsonIgnore]
-    public bool IsListing => Container == MarketContainer;
+    public bool IsListing => Container == ListingSlot.MarketContainer;
 
     public static PlanRowKey ForListing(ulong retainerId, in ListingSlot listing)
     {
-        return new PlanRowKey(retainerId, MarketContainer, listing.Slot, 0, listing.ItemId, listing.IsHq);
+        return new PlanRowKey(retainerId, ListingSlot.MarketContainer, listing.Slot, 0, listing.ItemId, listing.IsHq);
     }
 
     public int CompareTo(PlanRowKey other)

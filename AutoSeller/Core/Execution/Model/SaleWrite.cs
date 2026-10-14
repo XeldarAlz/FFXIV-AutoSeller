@@ -48,7 +48,7 @@ internal readonly record struct SaleWrite(
             _ => throw new ArgumentOutOfRangeException(nameof(decision), decision.Action, null),
         };
         var newPrice = kind == WriteKind.Reprice ? decision.Price : 0;
-        return new SaleWrite(kind, retainerId, PlanRowKey.MarketContainer, listing.Slot, listing.ItemId, listing.IsHq, listing.Quantity, listing.UnitPrice, newPrice, decision.Evidence);
+        return new SaleWrite(kind, retainerId, ListingSlot.MarketContainer, listing.Slot, listing.ItemId, listing.IsHq, listing.Quantity, listing.UnitPrice, newPrice, decision.Evidence);
     }
 
     public static SaleWrite ForLot(in LotAssignment assignment, in Decision decision)

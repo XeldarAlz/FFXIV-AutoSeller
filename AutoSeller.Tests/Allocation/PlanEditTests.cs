@@ -1,4 +1,5 @@
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Allocation.AllocationFixtures;
 
@@ -8,7 +9,7 @@ public sealed class PlanEditTests
 {
     private static readonly PlanRowKey LotRow = new(0, 0, 4, 0, Ore, false);
     private static readonly PlanRowKey OtherLotRow = new(0, 0, 5, 0, Ore, false);
-    private static readonly PlanRowKey ListingRow = new(Alpha, 12_002, 3, 0, Potion, true);
+    private static readonly PlanRowKey ListingRow = new(Alpha, ListingSlot.MarketContainer, 3, 0, Potion, true);
     private static readonly PlanRowKey RetainerInventoryRow = new(Beta, RetainerPageContainer, 1, 0, Silk, false);
 
     [Fact]
@@ -70,6 +71,16 @@ public sealed class PlanEditTests
     }
 
     [Fact]
+    public void ARowInTheMarketContainerIsAListingWhateverItIsBoundTo()
+    {
+        var unbound = new PlanEditTarget(ListingRow, 0, 0);
+
+        Assert.True(unbound.IsListing);
+        Assert.False(LotTarget(0).IsListing);
+        Assert.Equal(PlanEditRefusal.NotMovable, PlanEdits.Validate(PlanEdit.Move(ListingRow, Beta, Now), unbound));
+    }
+
+    [Fact]
     public void ListingRowCanHaveItsPriceSetButCannotMove()
     {
         Assert.Equal(PlanEditRefusal.None, PlanEdits.None.TryApply(PlanEdit.Price(ListingRow, 700, Now), Listing(500), out _));
@@ -79,7 +90,7 @@ public sealed class PlanEditTests
     [Fact]
     public void RetainerInventoryLotCannotMove()
     {
-        var target = new PlanEditTarget(RetainerInventoryRow, 0, Beta, false);
+        var target = new PlanEditTarget(RetainerInventoryRow, 0, Beta);
 
         Assert.Equal(PlanEditRefusal.NotMovable, PlanEdits.None.TryApply(PlanEdit.Move(RetainerInventoryRow, Alpha, Now), target, out _));
     }
@@ -143,7 +154,7 @@ public sealed class PlanEditTests
         var edits = Apply(PlanEdits.None, PlanEdit.Exclude(LotRow, Now), LotTarget(0));
         edits = Apply(edits, PlanEdit.Exclude(OtherLotRow, Now), LotTarget(0));
 
-        var refreshed = edits.Refresh([new PlanEditTarget(OtherLotRow, 0, 0, false)]);
+        var refreshed = edits.Refresh([new PlanEditTarget(OtherLotRow, 0, 0)]);
 
         Assert.False(refreshed.IsExcluded(LotRow));
         Assert.True(refreshed.IsExcluded(OtherLotRow));
@@ -166,7 +177,7 @@ public sealed class PlanEditTests
     {
         var edits = Apply(PlanEdits.None, PlanEdit.Price(LotRow, 600, Now), LotTarget(500));
 
-        Assert.Same(edits, edits.Refresh([LotTarget(500), new PlanEditTarget(OtherLotRow, 0, 0, false)]));
+        Assert.Same(edits, edits.Refresh([LotTarget(500), new PlanEditTarget(OtherLotRow, 0, 0)]));
     }
 
     [Fact]
@@ -175,7 +186,7 @@ public sealed class PlanEditTests
         var lot = Lot(Ore, 100, 4);
         var edits = Apply(PlanEdits.None, PlanEdit.Exclude(lot.Row, Now), LotTarget(0));
 
-        var refreshed = edits.Refresh([new PlanEditTarget(lot.Row, 0, 0, false)]);
+        var refreshed = edits.Refresh([new PlanEditTarget(lot.Row, 0, 0)]);
         var result = Allocate([lot], [Retainer(Alpha)], refreshed);
 
         Assert.Equal(AllocationReason.Excluded, ReasonOf(result, lot));
@@ -189,11 +200,11 @@ public sealed class PlanEditTests
 
     private static PlanEditTarget LotTarget(uint floor)
     {
-        return new PlanEditTarget(LotRow, floor, 0, false);
+        return new PlanEditTarget(LotRow, floor, 0);
     }
 
     private static PlanEditTarget Listing(uint floor)
     {
-        return new PlanEditTarget(ListingRow, floor, Alpha, true);
+        return new PlanEditTarget(ListingRow, floor, Alpha);
     }
 }
