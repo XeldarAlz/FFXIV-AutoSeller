@@ -416,6 +416,20 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void TotalsCountTheVendorGilOfWhatTheVendorRulesSellWithinTheCap()
+    {
+        const uint junk = 7_777;
+        var junkFacts = new ItemFacts(junk, 999, 5, 0, 0, false, false, false, false);
+        var junkSlot = new StockSlot(new SlotFacts(0, junk, 10, BagContainer, 9, 0, SlotSource.Bags, false, false, false), junkFacts, 0);
+        var vendoring = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, new VendorSettings(true, ItemIdSet.From([junk]), VendorSettings.DefaultJunkThreshold), SellSources.Default, []);
+        var input = Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags), junkSlot) with { Rules = vendoring };
+
+        Assert.Equal(50, Build(input).Totals.VendorGil);
+        Assert.Equal(0, Build(input with { VendoredValueCap = 49 }).Totals.VendorGil);
+        Assert.Equal(0, Build(input with { Rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) }).Totals.VendorGil);
+    }
+
+    [Fact]
     public void ACancelledPlanThrows()
     {
         using var cancellation = new CancellationTokenSource();

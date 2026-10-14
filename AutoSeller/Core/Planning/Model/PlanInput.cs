@@ -46,6 +46,8 @@ internal sealed record PlanInput
 
     public ImmutableArray<ListingStreak> Streaks { get; init; } = [];
 
+    public long VendoredValueCap { get; init; } = RunCaps.DefaultMaxVendoredValue;
+
     public required OwnSellers OwnSellers { get; init; }
 
     public required ReferenceSnapshot? References { get; init; }

@@ -119,7 +119,7 @@ internal static class SellPlanner
                 Groups = groups.ToImmutable(),
                 Retainers = retainers.ToImmutable(),
                 EditTargets = editTargets.ToImmutable(),
-                Totals = Total(built.AsSpan(), estimate),
+                Totals = Total(built.AsSpan(), estimate, VendorRules.PlannedValue(stock, input.Rules, input.VendoredValueCap)),
             };
         }
 
@@ -312,7 +312,7 @@ internal static class SellPlanner
             _ => DecisionReason.None,
         };
 
-        private static PlanTotals Total(ReadOnlySpan<PlanRow> rows, in RunTimeEstimateResult estimate)
+        private static PlanTotals Total(ReadOnlySpan<PlanRow> rows, in RunTimeEstimateResult estimate, long vendorGil)
         {
             var listingsToChange = 0;
             var newListings = 0;
@@ -342,7 +342,7 @@ internal static class SellPlanner
                 }
             }
 
-            return new PlanTotals(listingsToChange, newListings, listedValue, 0, awaitingApproval, estimate.Searches, estimate.Duration);
+            return new PlanTotals(listingsToChange, newListings, listedValue, vendorGil, awaitingApproval, estimate.Searches, estimate.Duration);
         }
     }
 }
