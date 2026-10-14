@@ -64,6 +64,14 @@ public sealed class RunReactionsTests
         [ReadBackOutcome.Unknown] = RunReaction.NeedsReconciliation,
     };
 
+    private static readonly Dictionary<WriteRejection, RunReaction> RejectionReactions = new()
+    {
+        [WriteRejection.Unchanged] = RunReaction.SkipItem,
+        [WriteRejection.WindowMismatch] = RunReaction.SkipItem,
+        [WriteRejection.Cancelled] = RunReaction.SkipItem,
+        [WriteRejection.PromptRefused] = RunReaction.PauseForPlayer,
+    };
+
     [Fact]
     public void EveryGuardRejectionHasItsReaction()
     {
@@ -95,6 +103,31 @@ public sealed class RunReactionsTests
             Assert.True(ReadBackReactions.TryGetValue(values[index], out var expected), $"no reaction for {values[index]}");
             Assert.Equal(expected, RunReactions.ForReadBack(values[index]));
         }
+    }
+
+    [Fact]
+    public void EveryJournaledRejectionHasItsReaction()
+    {
+        var values = Enum.GetValues<WriteRejection>();
+        for (var index = 0; index < values.Length; index++)
+        {
+            Assert.True(RejectionReactions.TryGetValue(values[index], out var expected), $"no reaction for {values[index]}");
+            Assert.Equal(expected, RunReactions.ForRejection(values[index]));
+        }
+    }
+
+    [Fact]
+    public void ARefusedGilLimitPromptSettlesTheWriteAndPausesForThePlayer()
+    {
+        var journal = new MemoryJournal();
+        new JournalWriter(journal).Authorize().Intent(CaughtWrite, List()).Rejected(CaughtWrite, WriteRejection.PromptRefused);
+
+        var review = JournalReview.Build(journal.Read().Entries);
+
+        Assert.Equal(RunReaction.PauseForPlayer, RunReactions.ForRejection(WriteRejection.PromptRefused));
+        Assert.False(review.BlocksWrites);
+        Assert.Equal(1, review.Runs[0].RejectedWrites);
+        Assert.Equal(0, review.Runs[0].NewListings);
     }
 
     [Fact]

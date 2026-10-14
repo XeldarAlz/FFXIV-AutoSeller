@@ -9,6 +9,7 @@ internal enum RunReaction : byte
     NeedsReconciliation,
     SearchAgain,
     KeepReading,
+    PauseForPlayer,
 }
 
 internal enum InterruptHandling : byte
@@ -73,6 +74,15 @@ internal static class RunReactions
         ReadBackOutcome.Confirmed => RunReaction.Continue,
         ReadBackOutcome.Rejected => RunReaction.SkipItem,
         _ => RunReaction.NeedsReconciliation,
+    };
+
+    public static RunReaction ForRejection(WriteRejection reason) => reason switch
+    {
+        WriteRejection.Unchanged => RunReaction.SkipItem,
+        WriteRejection.WindowMismatch => RunReaction.SkipItem,
+        WriteRejection.Cancelled => RunReaction.SkipItem,
+        WriteRejection.PromptRefused => RunReaction.PauseForPlayer,
+        _ => RunReaction.EndRun,
     };
 
     public static InterruptHandling ForInterruption(RunState state) => state switch
