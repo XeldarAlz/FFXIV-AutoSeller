@@ -194,6 +194,34 @@ public sealed class SaleReadBackTests
         Assert.Equal(ReadBackVerdict.Confirmed, verdict);
     }
 
+    [Fact]
+    public void AWriteIsMadeOnlyWhenTheSampleBeforeItHoldsEveryPieceOfEvidence()
+    {
+        Assert.True(SaleReadBack.CanJudge(Reprice(), Market([Listed(ListedPrice)])));
+        Assert.False(SaleReadBack.CanJudge(Reprice(), Purse(BagStack, GilBefore)));
+        Assert.True(SaleReadBack.CanJudge(List(), Market([], BagStack)));
+        Assert.False(SaleReadBack.CanJudge(List(), Market([])));
+        Assert.False(SaleReadBack.CanJudge(List(), Purse(BagStack, GilBefore)));
+        Assert.True(SaleReadBack.CanJudge(Return(), Market([Listed(ListedPrice)], 0)));
+        Assert.False(SaleReadBack.CanJudge(Return(), Market([Listed(ListedPrice)])));
+        Assert.True(SaleReadBack.CanJudge(Vendor(), Purse(JunkQuantity, GilBefore)));
+        Assert.False(SaleReadBack.CanJudge(Vendor(), Purse(JunkQuantity, ReadBackSample.Unread)));
+        Assert.True(SaleReadBack.CanJudge(Move(), Purse(0, ReadBackSample.Unread)));
+        Assert.False(SaleReadBack.CanJudge(Move(), Purse(ReadBackSample.Unread, GilBefore)));
+    }
+
+    [Fact]
+    public void AWriteMadeFromASampleWithoutItsEvidenceCouldOnlyEndUnknown()
+    {
+        var unsampledBags = Market([]);
+        var unreadMarket = new ReadBackSample([], false, BagStack, ReadBackSample.Unread);
+
+        Assert.False(SaleReadBack.CanJudge(List(), unsampledBags));
+        Assert.Equal(ReadBackVerdict.Unknown(ReadBackCause.CountUnreadable), SaleReadBack.Judge(List(), unsampledBags, Market([Listed(ListedPrice, NewSlot)], BagStack - LotQuantity), Settled));
+        Assert.False(SaleReadBack.CanJudge(List(), unreadMarket));
+        Assert.Equal(ReadBackVerdict.Unknown(ReadBackCause.MarketUnreadable), SaleReadBack.Judge(List(), unreadMarket, Market([Listed(ListedPrice, NewSlot)], BagStack - LotQuantity), Settled));
+    }
+
     private static ListingSlot Listed(uint price, byte slot = (byte)MarketSlot)
     {
         return new ListingSlot(slot, Ore, false, LotQuantity, price);
