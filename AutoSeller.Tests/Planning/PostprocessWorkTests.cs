@@ -20,6 +20,13 @@ public sealed class PostprocessWorkTests
     }
 
     [Fact]
+    public void ARetainerNeverReadMayTakeTheLotsNoReadRetainerCouldTake()
+    {
+        Assert.Equal(PostprocessWork.MarketToRead + 1, PostprocessWork.Count(Build([], Captured(OreInTheBags)), Alpha));
+        Assert.Equal(PostprocessWork.MarketToRead, PostprocessWork.Count(Build([MarketAt(Beta)], Captured(OreInTheBags)), Alpha));
+    }
+
+    [Fact]
     public void ADueListingCountsForItsRetainerOnly()
     {
         var plan = Build([MarketAt(Alpha, OreListing(0, ListedPrice)), MarketAt(Beta)]);
