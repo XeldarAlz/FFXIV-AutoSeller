@@ -6,6 +6,8 @@ using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market;
+using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
@@ -46,6 +48,7 @@ public sealed class Plugin : IDalamudPlugin
     internal ItemCatalog Items { get; }
     internal GameItems GameItems { get; }
     internal MarketServices Market { get; }
+    internal RetainerReader Retainers { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -81,7 +84,8 @@ public sealed class Plugin : IDalamudPlugin
             GameItems = new GameItems();
             Market = new MarketServices(Configuration);
             completed.Push(Market.Dispose);
-            Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName);
+            Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
+            Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);

@@ -2,32 +2,31 @@ using System.IO;
 using System.Threading.Tasks;
 using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Ledger;
-using AutoSeller.Core.Retainers.Model;
-using AutoSeller.Core.Shared;
+using AutoSeller.Core.Retainers;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace AutoSeller.Core.Characters;
 
-internal sealed unsafe class CharacterStore : IDisposable
+internal sealed class CharacterStore : IDisposable
 {
     private const long SaveSettleMs = 2_000;
     private const long SaveRetryMs = 15_000;
     private const long RosterIntervalMs = 5_000;
 
     private readonly string directoryPath;
-    private readonly RetainerInfo[] roster = new RetainerInfo[MarketLimits.MaximumRetainers];
+    private readonly RetainerReader retainers;
     private readonly SaveSchedule schedule = new(SaveSettleMs, SaveRetryMs);
     private CheckpointStore<CharacterRecord>? store;
     private CheckpointStore<CharacterRecord>? writeTarget;
     private Task<bool>? write;
     private long lastRosterMs;
 
-    public CharacterStore(string configDirectory)
+    public CharacterStore(string configDirectory, RetainerReader retainers)
     {
         directoryPath = Path.Combine(configDirectory, CharacterRecord.FolderName);
+        this.retainers = retainers;
         Svc.Framework.Update += OnUpdate;
         Svc.ClientState.Logout += OnLogout;
     }
@@ -130,29 +129,14 @@ internal sealed unsafe class CharacterStore : IDisposable
         }
 
         lastRosterMs = now;
-        var retainers = RetainerManager.Instance();
-        if (retainers == null || !retainers->IsReady)
+        if (!retainers.TryRead(out var roster))
         {
             return;
         }
 
-        var count = 0;
-        var entries = retainers->Retainers;
-        for (var index = 0; index < entries.Length && count < roster.Length; index++)
+        if (data.UpdateRoster(roster))
         {
-            ref var entry = ref entries[index];
-            if (entry.RetainerId == 0)
-            {
-                continue;
-            }
-
-            roster[count] = new RetainerInfo(entry.RetainerId, entry.NameString, (byte)entry.Town, entry.Gil, entry.MarketItemCount, entry.Available);
-            count++;
-        }
-
-        if (data.UpdateRoster(roster.AsSpan(0, count)))
-        {
-            RunLog.Info($"Retainer roster now has {count} retainers, read at the summoning bell.");
+            RunLog.Info($"Retainer roster now has {roster.Length} retainers, read at the summoning bell.");
         }
     }
 
