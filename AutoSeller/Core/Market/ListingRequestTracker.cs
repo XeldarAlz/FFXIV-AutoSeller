@@ -61,6 +61,13 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     private bool historyThreadReported;
     private bool requestResultThreadReported;
 
+    private enum RequestOutcome : byte
+    {
+        Machine = 0,
+        Reused = 1,
+        Refused = 2,
+    }
+
     public ListingRequestTracker(Configuration configuration)
     {
         this.configuration = configuration;
@@ -73,13 +80,6 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         MarketHooks.Enable(endRequestHook);
         Svc.MarketBoard.OfferingsReceived += OnOfferingsReceived;
         Svc.MarketBoard.HistoryReceived += OnHistoryReceived;
-    }
-
-    private enum RequestOutcome : byte
-    {
-        Machine = 0,
-        Reused = 1,
-        Refused = 2,
     }
 
     public bool HasRequestResultHook => requestResultHook is not null;
