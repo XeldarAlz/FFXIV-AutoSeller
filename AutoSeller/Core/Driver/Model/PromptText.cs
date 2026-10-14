@@ -1,69 +1,53 @@
 namespace AutoSeller.Core.Driver.Model;
 
-internal static class PromptText
+internal readonly struct PromptText
 {
-    public const string MacroPlaceholder = "\uFFFC";
+    public const string MacroPlaceholder = "￼";
 
-    private const char Hole = '\uFFFC';
-    private const char SoftHyphen = '\u00AD';
-    private const char ZeroWidthSpace = '\u200B';
-    private const char FirstGameGlyph = '\uE000';
-    private const char LastGameGlyph = '\uF8FF';
-    private const int StackBufferLength = 256;
+    private const char Hole = '￼';
+    private const char SoftHyphen = '­';
+    private const char ZeroWidthSpace = '​';
+    private const char FirstGameGlyph = '';
+    private const char LastGameGlyph = '';
     private const int NoHole = -1;
 
-    public static bool Matches(string shown, string sheetText)
-    {
-        var templateBuffer = sheetText.Length <= StackBufferLength ? stackalloc char[StackBufferLength] : new char[sheetText.Length];
-        var template = Significant(sheetText, templateBuffer, keepHoles: true);
-        if (!HasLiteral(template))
-        {
-            return false;
-        }
+    private readonly string template;
 
-        var shownBuffer = shown.Length <= StackBufferLength ? stackalloc char[StackBufferLength] : new char[shown.Length];
-        return Fits(Significant(shown, shownBuffer, keepHoles: false), template);
+    private PromptText(string template)
+    {
+        this.template = template;
     }
 
-    private static ReadOnlySpan<char> Significant(string text, Span<char> buffer, bool keepHoles)
+    public static PromptText From(string sheetText)
     {
+        var buffer = new char[sheetText.Length];
         var length = 0;
-        for (var characterIndex = 0; characterIndex < text.Length; characterIndex++)
+        var hasLiteral = false;
+        for (var characterIndex = 0; characterIndex < sheetText.Length; characterIndex++)
         {
-            var character = text[characterIndex];
-            if (character == Hole && !keepHoles)
+            var character = sheetText[characterIndex];
+            if (IsLayout(character))
             {
                 continue;
             }
 
-            if (character is SoftHyphen or ZeroWidthSpace or (>= FirstGameGlyph and <= LastGameGlyph) || char.IsWhiteSpace(character))
-            {
-                continue;
-            }
-
+            hasLiteral |= character != Hole;
             buffer[length] = char.ToUpperInvariant(character);
             length++;
         }
 
-        return buffer[..length];
+        return new PromptText(hasLiteral ? new string(buffer, 0, length) : string.Empty);
     }
 
-    private static bool HasLiteral(ReadOnlySpan<char> template)
+    public bool Matches(ReadOnlySpan<char> shown)
     {
-        for (var characterIndex = 0; characterIndex < template.Length; characterIndex++)
-        {
-            if (template[characterIndex] != Hole)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        ReadOnlySpan<char> significant = template;
+        return !significant.IsEmpty && Fits(shown, significant);
     }
 
     private static bool Fits(ReadOnlySpan<char> shown, ReadOnlySpan<char> template)
     {
-        var shownIndex = 0;
+        var shownIndex = NextSignificant(shown, 0);
         var templateIndex = 0;
         var lastHoleIndex = NoHole;
         var resumeShownIndex = 0;
@@ -77,10 +61,10 @@ internal static class PromptText
                 continue;
             }
 
-            if (templateIndex < template.Length && template[templateIndex] == shown[shownIndex])
+            if (templateIndex < template.Length && template[templateIndex] == char.ToUpperInvariant(shown[shownIndex]))
             {
                 templateIndex++;
-                shownIndex++;
+                shownIndex = NextSignificant(shown, shownIndex + 1);
                 continue;
             }
 
@@ -90,7 +74,7 @@ internal static class PromptText
             }
 
             templateIndex = lastHoleIndex + 1;
-            resumeShownIndex++;
+            resumeShownIndex = NextSignificant(shown, resumeShownIndex + 1);
             shownIndex = resumeShownIndex;
         }
 
@@ -101,4 +85,18 @@ internal static class PromptText
 
         return templateIndex == template.Length;
     }
+
+    private static int NextSignificant(ReadOnlySpan<char> shown, int start)
+    {
+        var index = start;
+        while (index < shown.Length && (shown[index] == Hole || IsLayout(shown[index])))
+        {
+            index++;
+        }
+
+        return index;
+    }
+
+    private static bool IsLayout(char character)
+        => character is SoftHyphen or ZeroWidthSpace or (>= FirstGameGlyph and <= LastGameGlyph) || char.IsWhiteSpace(character);
 }
