@@ -90,7 +90,7 @@ internal static class SellPlanner
                 groups.Add(new PlanGroup(retainer.RetainerId, start, rows.Count - start, ChangesIn(start)));
             }
 
-            retainers.Add(Summarize(retainer, market, rows.Count - start));
+            retainers.Add(Summarize(retainer, market));
         }
 
         public void AddUnplaced()
@@ -255,15 +255,15 @@ internal static class SellPlanner
             return ReferenceSelector.IsUsable(reference, item, input.NowUtc) ? reference : default;
         }
 
-        private PlanRetainerSummary Summarize(in PlanRetainer retainer, RetainerSnapshot? market, int planned)
+        private PlanRetainerSummary Summarize(in PlanRetainer retainer, RetainerSnapshot? market)
         {
             if (market is null)
             {
-                return new PlanRetainerSummary(retainer.RetainerId, retainer.Name, retainer.Enabled, false, 0, 0, 0, default, false, planned);
+                return new PlanRetainerSummary(retainer.RetainerId, retainer.Name, retainer.Enabled, false, 0, 0, 0, default, false);
             }
 
             var nearCap = market.Gil >= gilWarning || LoadNearCap(retainer.RetainerId);
-            return new PlanRetainerSummary(retainer.RetainerId, retainer.Name, retainer.Enabled, true, market.Town, market.Gil, market.Slots.Length, market.ReadAtUtc, nearCap, planned);
+            return new PlanRetainerSummary(retainer.RetainerId, retainer.Name, retainer.Enabled, true, market.Town, market.Gil, market.Slots.Length, market.ReadAtUtc, nearCap);
         }
 
         private bool LoadNearCap(ulong retainerId)

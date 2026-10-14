@@ -44,7 +44,7 @@ internal sealed partial class PlanBuilder : IDisposable
     private CancellationTokenSource? planning;
     private SellPlan? latest;
     private PlanInput? runPlanned;
-    private volatile bool planningRunning;
+    private bool planningRunning;
 
     public PlanBuilder(Configuration configuration, CharacterStore characters, BagReader bags, GameItems items, ReferenceService references, OwnSellersProvider ownSellers, Func<PlanInput?> runInput)
     {
@@ -60,8 +60,6 @@ internal sealed partial class PlanBuilder : IDisposable
     }
 
     public SellPlan? Latest => Volatile.Read(ref latest);
-
-    public bool Planning => planningRunning || changedAtMs != 0;
 
     public void Dispose()
     {

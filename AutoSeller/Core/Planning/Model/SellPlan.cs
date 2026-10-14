@@ -80,8 +80,7 @@ internal readonly record struct PlanRetainerSummary(
     uint Gil,
     int Listings,
     DateTime LastVisitUtc,
-    bool GilNearCap,
-    int Planned);
+    bool GilNearCap);
 
 internal readonly record struct PlanTotals(
     int ListingsToChange,

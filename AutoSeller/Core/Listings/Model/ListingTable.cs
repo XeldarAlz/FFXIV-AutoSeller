@@ -18,7 +18,7 @@ internal enum ListingState : byte
     PriceWar,
 }
 
-internal readonly record struct ListingCharacter(ulong ContentId, string Name, uint HomeWorldId);
+internal readonly record struct ListingCharacter(ulong ContentId, string Name);
 
 internal readonly record struct ListingRetainer(ulong RetainerId, ulong ContentId, string Name);
 
@@ -86,7 +86,7 @@ internal sealed class ListingTable
         for (var characterIndex = 0; characterIndex < inputs.Characters.Length; characterIndex++)
         {
             var record = inputs.Characters[characterIndex];
-            characters.Add(new ListingCharacter(record.ContentId, record.Name ?? string.Empty, record.HomeWorldId));
+            characters.Add(new ListingCharacter(record.ContentId, record.Name ?? string.Empty));
             var roster = record.Retainers.IsDefault ? [] : record.Retainers;
             for (var retainerIndex = 0; retainerIndex < roster.Length; retainerIndex++)
             {
