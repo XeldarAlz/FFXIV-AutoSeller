@@ -1,3 +1,4 @@
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Rules.RuleFixtures;
@@ -15,13 +16,13 @@ public sealed class GearsetItemsTests
     [Fact]
     public void RawIdAboveTheOffsetIsHighQuality()
     {
-        Assert.Equal(new ItemKey(Sword, true), GearsetItems.Decode(GearsetItems.HighQualityOffset + Sword));
+        Assert.Equal(new ItemKey(Sword, true), GearsetItems.Decode(MarketItemId.HighQualityOffset + Sword));
     }
 
     [Fact]
     public void GuardMatchesItemAndQuality()
     {
-        var items = GearsetItems.From([Sword, GearsetItems.HighQualityOffset + Ring]);
+        var items = GearsetItems.From([Sword, MarketItemId.HighQualityOffset + Ring]);
 
         Assert.True(items.Contains(Sword, false));
         Assert.False(items.Contains(Sword, true));
@@ -33,7 +34,7 @@ public sealed class GearsetItemsTests
     [Fact]
     public void EmptySlotsAndRepeatsAreDropped()
     {
-        var items = GearsetItems.From([0, Sword, Sword, GearsetItems.HighQualityOffset, Ring]);
+        var items = GearsetItems.From([0, Sword, Sword, MarketItemId.HighQualityOffset, Ring]);
 
         Assert.Equal(2, items.Count);
     }

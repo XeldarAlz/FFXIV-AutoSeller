@@ -1,3 +1,4 @@
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Rules.Model;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
@@ -44,7 +45,7 @@ internal static unsafe class GearsetGuard
                 rawItemIds[count] = rawItemId;
                 count++;
                 largestRawId = Math.Max(largestRawId, rawItemId);
-                if (rawItemId >= GearsetItems.HighQualityOffset)
+                if (MarketItemId.HasHighQualityOffset(rawItemId))
                 {
                     highQualityIds++;
                 }
@@ -52,7 +53,7 @@ internal static unsafe class GearsetGuard
         }
 
         var guarded = GearsetItems.From(rawItemIds[..count]);
-        RunLog.Info($"Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {GearsetItems.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
+        RunLog.Info($"Gear sets: {gearsets} sets, {count} item slots, {highQualityIds} raw ids at or above {MarketItemId.HighQualityOffset}, largest raw id {largestRawId}, {guarded.Count} distinct items guarded.");
         return guarded;
     }
 }

@@ -1,13 +1,12 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
 
 internal readonly struct GearsetItems
 {
-    public const uint HighQualityOffset = 1_000_000;
-
     private readonly ImmutableArray<ItemKey> sortedKeys;
 
     private GearsetItems(ImmutableArray<ItemKey> sortedKeys)
@@ -21,9 +20,7 @@ internal readonly struct GearsetItems
 
     public static ItemKey Decode(uint rawItemId)
     {
-        return rawItemId >= HighQualityOffset
-            ? new ItemKey(rawItemId - HighQualityOffset, true)
-            : new ItemKey(rawItemId, false);
+        return new ItemKey(MarketItemId.Normalize(rawItemId), MarketItemId.HasHighQualityOffset(rawItemId));
     }
 
     public static GearsetItems From(ReadOnlySpan<uint> rawItemIds)
