@@ -167,8 +167,8 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
-            Diag("Driver: stopped at the retainer; closing the sell window, the search results and the sell list");
-            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+            Diag("Driver: stopped at the retainer; closing the sell window, the search results, the sale history and the sell list");
+            await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
         }
         catch (Exception exception)
         {
@@ -195,8 +195,8 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
-            Diag($"Driver: halted ({stop.Reason}); closing the sell windows, leaving the retainer and closing the retainer list");
-            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+            Diag($"Driver: halted ({stop.Reason}); closing the sell windows and the sale history, leaving the retainer and closing the retainer list");
+            await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
             await LeaveRetainerMenu();
             if (await RetainerWindows.RepeatUntil(RetainerClicks.CloseRetainerList, static () => !RetainerClicks.IsReady(RetainerClicks.RetainerListAddon), RetainerListCloseMs, unloaded))
             {

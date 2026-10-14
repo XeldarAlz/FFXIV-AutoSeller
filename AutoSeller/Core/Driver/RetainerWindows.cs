@@ -7,7 +7,6 @@ namespace AutoSeller.Core.Driver;
 internal static class RetainerWindows
 {
     public const ChainWindow AboveSellList = ChainWindow.InputNumeric | ChainWindow.ItemSearchResult | ChainWindow.ContextMenu | ChainWindow.RetainerSell;
-    public const ChainWindow SettledAfterStop = AboveSellList | ChainWindow.RetainerSellList;
 
     private const int PollMs = 100;
     private const int PollFrames = 2;

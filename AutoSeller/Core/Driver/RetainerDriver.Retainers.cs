@@ -339,7 +339,7 @@ internal sealed partial class RetainerDriver
             return Stop.None;
         }
 
-        await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
+        await RetainerWindows.CloseOwned(ChainUnwind.Owned, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
         if (!await WaitUntilTimed(static () => RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || TalkedBackToList(), MenuReturnMs, "driver-back-to-list", StepPollFrames))
         {
             return CancelToken.IsCancellationRequested ? Stop.None : new Stop(DriverHalt.WindowsDidNotClose, "neither the retainer menu nor the retainer list came back");
