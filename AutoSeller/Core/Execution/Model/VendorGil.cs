@@ -8,5 +8,5 @@ internal enum VendorGilSource : byte
 
 internal static class VendorGil
 {
-    public static readonly VendorGilSource Source = VendorGilSource.Character;
+    public const VendorGilSource Source = VendorGilSource.Character;
 }
