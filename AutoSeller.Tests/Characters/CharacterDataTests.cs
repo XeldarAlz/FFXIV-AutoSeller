@@ -6,6 +6,7 @@ using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Sales.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Tests.Ledger;
 
@@ -274,6 +275,7 @@ public sealed class CharacterDataTests : IDisposable
         var key = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
         Assert.Equal(data.RepriceEntryFor(key).LastRepriceUtc, restored.RepriceEntryFor(key).LastRepriceUtc);
         Assert.Equal<DateTime>(data.RepriceEntryFor(key).DropTimesUtc, restored.RepriceEntryFor(key).DropTimesUtc);
+        Assert.Equal(data.Streaks, restored.Streaks);
         Assert.Equal(0, restored.Revision);
     }
 
@@ -366,6 +368,64 @@ public sealed class CharacterDataTests : IDisposable
         Assert.Equal(0, data.RepriceCount);
     }
 
+    [Fact]
+    public void ABelowFloorDecisionStartsAStreakThatAJudgedMarketEnds()
+    {
+        var data = new CharacterData(Character);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
+        var key = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
+
+        data.TrackDecision(key, DecisionReason.BelowFloorKept, Now);
+        data.TrackDecision(key, DecisionReason.UnknownCompetition, Now.AddDays(1));
+        Assert.Equal(TimeSpan.FromDays(3), data.StreakFor(key).BelowFloorFor(Now.AddDays(3)));
+
+        data.TrackDecision(key, DecisionReason.Undercut, Now.AddDays(3));
+        Assert.Empty(data.Streaks);
+    }
+
+    [Fact]
+    public void TheLowestPriceStreakFollowsTheWatchedWorldPrice()
+    {
+        var data = new CharacterData(Character);
+        var key = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
+
+        data.TrackLowestPrice(key, 1_000, Now.AddHours(-2), new LowestPriceCheck(Now.AddHours(-1), 1_000));
+        data.TrackLowestPrice(key, 1_000, Now.AddHours(-2), new LowestPriceCheck(Now, 1_200));
+        Assert.Equal(Now.AddHours(-1), data.StreakFor(key).LowestSinceUtc);
+
+        data.TrackLowestPrice(key, 1_000, Now.AddHours(-2), new LowestPriceCheck(Now.AddHours(1), 900));
+        Assert.Equal(default, data.StreakFor(key).LowestSinceUtc);
+    }
+
+    [Fact]
+    public void AStreakOnlyChangesTheRevisionWhenItChanges()
+    {
+        var data = new CharacterData(Character);
+        var key = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
+        data.TrackDecision(key, DecisionReason.BelowFloorKept, Now);
+        var revision = data.Revision;
+
+        data.TrackDecision(key, DecisionReason.BelowFloorKept, Now.AddHours(1));
+        data.TrackDecision(new RepriceKey(FirstRetainer, 1, new ItemKey(Ore, false)), DecisionReason.AlreadyLowest, Now);
+
+        Assert.Equal(revision, data.Revision);
+    }
+
+    [Fact]
+    public void AListingGoneFromItsSlotTakesItsStreakAlong()
+    {
+        var data = new CharacterData(Character);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(1, Potion, 50)), []);
+        var gone = new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false));
+        var kept = new RepriceKey(FirstRetainer, 1, new ItemKey(Potion, false));
+        data.TrackDecision(gone, DecisionReason.BelowFloorKept, Now);
+        data.TrackDecision(kept, DecisionReason.BelowFloorKept, Now);
+
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, Now.AddDays(1), Listing(1, Potion, 45)), []);
+
+        Assert.Equal([new ListingStreak(kept, default, Now)], data.Streaks);
+    }
+
     private static CharacterData Filled()
     {
         var data = new CharacterData(Character);
@@ -376,6 +436,7 @@ public sealed class CharacterDataTests : IDisposable
         data.Approve(new ApprovedPrice(FirstRetainer, 0, Ore, false, 1_000, 700));
         data.RecordReprice(new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false)), Now - TimeSpan.FromHours(3), 1_200, 1_000);
         data.RecordReprice(new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false)), Now - TimeSpan.FromHours(1), 1_100, 1_000);
+        data.TrackDecision(new RepriceKey(FirstRetainer, 3, new ItemKey(Potion, false)), DecisionReason.BelowFloorKept, Now - TimeSpan.FromDays(2));
         var row = new PlanRowKey(FirstRetainer, ListingSlot.MarketContainer, 3, 0, Potion, false);
         PlanEdits.None.TryApply(PlanEdit.Price(row, 75, Now), new PlanEditTarget(row, 10, 0), out var edits);
         data.SetPlanEdits(edits);

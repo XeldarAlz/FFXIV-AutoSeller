@@ -376,6 +376,26 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void AListingHeldBelowItsFloorForThreeDaysIsPlannedForReturnWhenThatIsOn()
+    {
+        var floorAboveTheBoard = new ItemRule { ItemId = Ore, Floor = WorldLowest + 100 };
+        var below = new RepriceKey(Alpha, listedAtReference.Slot, listedAtReference.Key);
+        var input = Input([floorAboveTheBoard], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]) with
+        {
+            Pricing = new PricingSettings { BelowFloorListing = BelowFloorListing.ReturnAfterDelay },
+            Streaks = [new ListingStreak(below, default, Now - PricingSettings.BelowFloorReturnDelay)],
+        };
+
+        var returned = Row(Build(input), listingKey);
+        var kept = Row(Build(input with { Streaks = [new ListingStreak(below, default, Now.AddDays(-1))] }), listingKey);
+
+        Assert.Equal(SellAction.Return, returned.Decision.Action);
+        Assert.Equal(DecisionReason.BelowFloorReturned, returned.Decision.Reason);
+        Assert.Equal(SellAction.Keep, kept.Decision.Action);
+        Assert.Equal(DecisionReason.BelowFloorKept, kept.Decision.Reason);
+    }
+
+    [Fact]
     public void ACancelledPlanThrows()
     {
         using var cancellation = new CancellationTokenSource();
