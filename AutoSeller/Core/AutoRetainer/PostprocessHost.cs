@@ -45,6 +45,12 @@ internal sealed class PostprocessHost : IDisposable
         controller.PostprocessStoppedByPlayer -= OnStoppedByPlayer;
         autoRetainer.RetainerAdditionalTask -= OnAdditionalTask;
         autoRetainer.RetainerReadyForPostprocess -= OnReadyForPostprocess;
+        if (handshake.OwesFinish)
+        {
+            var open = RetainerWindows.CloseOwnedNow(ChainUnwind.Owned);
+            RunLog.Info($"AutoRetainer post-process: unloading while {handshake.RetainerName} is owed; {(open == ChainWindow.None ? "no sell window was open" : $"{open} closed at once")} before the hand-back.");
+        }
+
         HandBack("the plugin is unloading");
     }
 
