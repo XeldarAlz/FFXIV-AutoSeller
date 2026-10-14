@@ -284,6 +284,7 @@
   "run.block.trading": "まずトレードを完了するか中止してください。",
   "run.block.autoRetainerBusy": "AutoRetainer が作業中です。終わるまでお待ちください。",
   "run.block.autoRetainerNotHeld": "実行中に AutoRetainer を一時停止できませんでした。もう一度試すか、続く場合は AutoRetainer を再読み込みしてください。",
+  "run.block.protectListUnreadable": "AutoRetainer がこのキャラクターの保護リストを読めないため、読めるようになるまで何も出品しません。AutoRetainer がこのキャラクターのデータを持っていない場合に起こります。詳細はコンソールにあります。",
   "run.block.unresolvedJournal": "以前の実行の出品変更がまだ確定していません。先に販売ページの質問に答えてください。",
   "run.block.gatesClosed": "プラグイン読み込み時のマーケット確認に失敗したため、このセッションでは価格を読み取れません。詳細はコンソールにあります。",
   "run.block.noRules": "まずルールページで販売リストにアイテムを追加するか、カテゴリルールを追加してください。",

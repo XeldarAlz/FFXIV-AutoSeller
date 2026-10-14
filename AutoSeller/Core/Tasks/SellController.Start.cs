@@ -81,6 +81,7 @@ internal sealed partial class SellController
             Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
             Svc.Condition[ConditionFlag.TradeOpen],
             mode == RunMode.Standalone ? plugin.AutoRetainer.ProbeNow() : plugin.AutoRetainer.Status,
+            plugin.AutoRetainer.ProtectListReadable(),
             ledger.BlocksWrites,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,

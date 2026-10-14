@@ -284,6 +284,7 @@
   "run.block.trading": "Termina o cancela primero el intercambio.",
   "run.block.autoRetainerBusy": "AutoRetainer está ocupado; espera a que termine.",
   "run.block.autoRetainerNotHeld": "No se pudo detener AutoRetainer durante la ejecución; inténtalo de nuevo o recarga AutoRetainer si vuelve a pasar.",
+  "run.block.protectListUnreadable": "AutoRetainer no puede leer su lista de protección para este personaje, así que no se vende nada hasta que pueda. Ocurre cuando AutoRetainer no tiene datos del personaje; la consola tiene los detalles.",
   "run.block.unresolvedJournal": "Un cambio de anuncio de una ronda anterior aún no está resuelto; responde primero la pregunta en la página Vender.",
   "run.block.gatesClosed": "Las comprobaciones del mercado fallaron al cargar el plugin, así que en esta sesión no se pueden leer precios. La consola tiene los detalles.",
   "run.block.noRules": "Añade primero un objeto a la lista de venta o una regla de categoría en la página Reglas.",

@@ -284,6 +284,7 @@
   "run.block.trading": "请先完成或取消交易。",
   "run.block.autoRetainerBusy": "AutoRetainer 正忙；请等它完成。",
   "run.block.autoRetainerNotHeld": "无法在运行期间暂停 AutoRetainer；请重试，如果反复出现，请重新加载 AutoRetainer。",
+  "run.block.protectListUnreadable": "AutoRetainer 无法读取此角色的保护列表，因此在能读取之前不会出售任何物品。这通常是因为 AutoRetainer 没有此角色的数据；详情见控制台。",
   "run.block.unresolvedJournal": "之前运行的挂单变更尚未确认；请先在出售页面回答问题。",
   "run.block.gatesClosed": "插件加载时市场检查失败，因此本次会话无法读取价格。详情见控制台。",
   "run.block.noRules": "请先在规则页面把物品加入出售列表，或添加分类规则。",

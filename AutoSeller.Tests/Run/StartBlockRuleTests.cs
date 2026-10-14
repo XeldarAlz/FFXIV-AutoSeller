@@ -17,6 +17,7 @@ public sealed class StartBlockRuleTests
         InCutscene: false,
         Trading: false,
         AutoRetainer: idle,
+        ProtectListReadable: true,
         UnresolvedJournalEntry: false,
         CompatibilityGatesOpen: true,
         HasRules: true,
@@ -32,7 +33,7 @@ public sealed class StartBlockRuleTests
     [Fact]
     public void TheFirstBlockInOrderIsReported()
     {
-        var facts = new StartFacts(RunMode.Standalone, false, false, true, true, true, true, busy, true, false, false, false, true);
+        var facts = new StartFacts(RunMode.Standalone, false, false, true, true, true, true, busy, false, true, false, false, false, true);
 
         Assert.Equal(StartBlock.NotLoggedIn, StartBlockRule.Evaluate(facts));
         facts = facts with { LoggedIn = true };
@@ -48,6 +49,8 @@ public sealed class StartBlockRuleTests
         facts = facts with { Trading = false };
         Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
         facts = facts with { AutoRetainer = idle };
+        Assert.Equal(StartBlock.ProtectListUnreadable, StartBlockRule.Evaluate(facts));
+        facts = facts with { ProtectListReadable = true };
         Assert.Equal(StartBlock.UnresolvedJournalEntry, StartBlockRule.Evaluate(facts));
         facts = facts with { UnresolvedJournalEntry = false };
         Assert.Equal(StartBlock.CompatibilityGatesClosed, StartBlockRule.Evaluate(facts));
@@ -84,6 +87,15 @@ public sealed class StartBlockRuleTests
     public void AMissingOrOutdatedIdleAutoRetainerLeavesStandaloneFree(int readiness)
     {
         Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(ready with { AutoRetainer = new AutoRetainerStatus((AutoRetainerState)readiness, Busy: false) }));
+    }
+
+    [Fact]
+    public void AnUnreadableProtectListBlocksBothModes()
+    {
+        var facts = ready with { ProtectListReadable = false };
+
+        Assert.Equal(StartBlock.ProtectListUnreadable, StartBlockRule.Evaluate(facts));
+        Assert.Equal(StartBlock.ProtectListUnreadable, StartBlockRule.Evaluate(facts with { Mode = RunMode.Postprocess }));
     }
 
     [Fact]

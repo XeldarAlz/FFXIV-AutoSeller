@@ -284,6 +284,7 @@
   "run.block.trading": "Finish or cancel the trade first.",
   "run.block.autoRetainerBusy": "AutoRetainer is busy; wait until it is done.",
   "run.block.autoRetainerNotHeld": "AutoRetainer could not be held back for the run; try again, or reload AutoRetainer if this keeps happening.",
+  "run.block.protectListUnreadable": "AutoRetainer cannot read its protect list for this character, so nothing is sold until it can. This happens when AutoRetainer has no data for the character; the Console has the details.",
   "run.block.unresolvedJournal": "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.",
   "run.block.gatesClosed": "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.",
   "run.block.noRules": "Add an item to the sell list or a category rule on the Rules page first.",
