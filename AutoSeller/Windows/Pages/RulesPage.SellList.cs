@@ -86,7 +86,7 @@ internal sealed partial class RulesPage
         var sellList = configuration.SellList;
         if (sellList.Count == 0)
         {
-            DrawEmptyNote(Loc.T(L.Rules.SellEmpty));
+            EmptyState.Draw(Loc.T(L.Rules.SellEmpty));
             return;
         }
 

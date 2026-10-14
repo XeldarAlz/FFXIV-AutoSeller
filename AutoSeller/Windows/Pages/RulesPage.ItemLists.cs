@@ -28,7 +28,7 @@ internal sealed partial class RulesPage
         Styling.VSpace(SectionGap);
         if (configuration.NeverSell.Count == 0)
         {
-            DrawEmptyNote(Loc.T(L.Rules.NeverSellEmpty));
+            EmptyState.Draw(Loc.T(L.Rules.NeverSellEmpty));
             return;
         }
 
@@ -48,7 +48,7 @@ internal sealed partial class RulesPage
         Styling.VSpace(SectionGap);
         if (configuration.VendorList.Count == 0)
         {
-            DrawEmptyNote(Loc.T(L.Rules.VendorListEmpty));
+            EmptyState.Draw(Loc.T(L.Rules.VendorListEmpty));
             return;
         }
 

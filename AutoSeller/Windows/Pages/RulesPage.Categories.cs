@@ -45,7 +45,7 @@ internal sealed partial class RulesPage
         var categoryRules = configuration.CategoryRules;
         if (categoryRules.Count == 0)
         {
-            DrawEmptyNote(Loc.T(L.Rules.CategoriesEmpty));
+            EmptyState.Draw(Loc.T(L.Rules.CategoriesEmpty));
             return;
         }
 

@@ -179,18 +179,4 @@ internal sealed partial class RulesPage
             TextDraw.At(TextDraw.Truncate(caption, textWidth), new Vector2(textX, top + nameHeight), Styling.TextMuted);
         }
     }
-
-    private static void DrawEmptyNote(string text)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var width = ImGui.GetContentRegionAvail().X;
-        var padX = RowPadX * 2f * scale;
-        var textSize = TextDraw.MeasureWrapped(text, width - padX * 2f);
-        var size = new Vector2(width, textSize.Y + padX * 2f);
-        var origin = ImGui.GetCursorScreenPos();
-        var drawList = ImGui.GetWindowDrawList();
-        Paint.Surface(drawList, origin, origin + size, Styling.CardRounding * scale, Styling.WithAlpha(Styling.Surface0, 0.6f), Styling.WithAlpha(Styling.BorderDim, 0.5f), topLight: false);
-        TextDraw.Wrapped(text, origin + new Vector2(padX, padX), width - padX * 2f, Styling.TextMuted);
-        ImGui.Dummy(size);
-    }
 }

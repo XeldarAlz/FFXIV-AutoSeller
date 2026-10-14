@@ -38,19 +38,19 @@ internal sealed partial class RulesPage
         Styling.VSpace(SectionGap);
         if (scan.Revision == 0)
         {
-            DrawEmptyNote(Loc.T(L.Rules.BlockedReading));
+            EmptyState.Draw(Loc.T(L.Rules.BlockedReading));
             return;
         }
 
         if (!scan.LoggedIn)
         {
-            DrawEmptyNote(Loc.T(L.Rules.BlockedLoggedOut));
+            EmptyState.Draw(Loc.T(L.Rules.BlockedLoggedOut));
             return;
         }
 
         if (scan.Rows.IsEmpty)
         {
-            DrawEmptyNote(Loc.T(L.Rules.BlockedNone));
+            EmptyState.Draw(Loc.T(L.Rules.BlockedNone));
             return;
         }
 
