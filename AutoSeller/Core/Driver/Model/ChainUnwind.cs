@@ -29,6 +29,11 @@ internal static class ChainUnwind
         return ChainWindow.None;
     }
 
+    public static bool AtRetainerMenu(ChainWindow visible)
+    {
+        return ChainWindows.Contains(visible, ChainWindow.SelectString) && (visible & (Owned | ChainWindow.Talk)) == ChainWindow.None;
+    }
+
     private static ChainWindow Combine(ImmutableArray<ChainWindow> windows)
     {
         var combined = ChainWindow.None;

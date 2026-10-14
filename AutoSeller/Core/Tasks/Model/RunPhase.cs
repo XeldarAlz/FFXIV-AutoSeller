@@ -13,7 +13,7 @@ internal static class RunPhases
         RunState.MovingFromSaddlebag or RunState.Travelling => RunPhase.Travelling,
         RunState.PauseRequested or RunState.Paused => RunPhase.Paused,
         RunState.StopRequested => RunPhase.Stopping,
-        RunState.Finishing or RunState.Stopped or RunState.NeedsPlayer or RunState.Completed or RunState.CompletedPartial or RunState.Failed => RunPhase.Finishing,
+        RunState.Finishing or RunState.FinishingPostprocess or RunState.Stopped or RunState.NeedsPlayer or RunState.Completed or RunState.CompletedPartial or RunState.Failed => RunPhase.Finishing,
         _ => RunPhase.Selling,
     };
 }

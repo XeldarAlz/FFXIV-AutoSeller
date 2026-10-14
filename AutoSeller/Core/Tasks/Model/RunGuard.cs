@@ -68,9 +68,14 @@ internal static class RunGuard
         return verdict;
     }
 
+    public static bool SameCharacter(SellAuthorization authorization, ulong contentId)
+    {
+        return contentId != 0 && contentId == authorization.CharacterContentId;
+    }
+
     public static DriverHalt CheckBoundary(SellAuthorization authorization, in RunLiveFacts live)
     {
-        if (live.CharacterContentId != authorization.CharacterContentId)
+        if (!SameCharacter(authorization, live.CharacterContentId))
         {
             return DriverHalt.OtherCharacter;
         }
