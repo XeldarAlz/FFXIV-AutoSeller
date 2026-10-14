@@ -67,10 +67,16 @@ public abstract partial class AutoCommon
             return BellArrival.Cancelled;
         }
 
-        if (!inn.Entered)
+        switch (inn.Outcome)
         {
-            Warn($"{scope}: the inn room was not reached");
-            return BellArrival.NotReached;
+            case InnEntry.Entered:
+                break;
+            case InnEntry.UnexpectedWindow or InnEntry.MenuTextUnavailable:
+                Warn($"{scope}: the inn room was not entered ({inn.Outcome})");
+                return BellArrival.UnexpectedWindow;
+            default:
+                Warn($"{scope}: the inn room was not reached");
+                return BellArrival.NotReached;
         }
 
         BellSighting bell = default;
@@ -154,7 +160,7 @@ public abstract partial class AutoCommon
         var spot = StandSpot.Beside(bell.Position, player.Position, BellStandOffMeters);
         var label = $"{scope}-step-up";
         Diag($"{scope}: the summoning bell stands {bell.Distance:F1}m away at {FormatPosition(bell.Position)}; stepping straight up to it");
-        var operation = new MoveOp(move => move.StepTo(spot, BellWithinStepUpStop));
+        var operation = new MoveOp(move => move.StepStraightWithoutMesh(spot, BellWithinStepUpStop));
         await RunCancellable(operation, BellStepUpWatchdogMs, label, StuckDetector.IdleStallAbort(BellStepUpStallMs));
         if (operation.Fault is { } fault)
         {
