@@ -5,6 +5,10 @@ using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Market;
+using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Pricing;
+using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
@@ -44,6 +48,11 @@ public sealed class Plugin : IDalamudPlugin
     internal SellController Controller { get; }
     internal ItemCatalog Items { get; }
     internal GameItems GameItems { get; }
+    internal MarketServices Market { get; }
+    internal RetainerReader Retainers { get; }
+    internal MarketReader RetainerMarket { get; }
+    internal ReferenceService References { get; }
+    internal OwnSellersProvider OwnSellers { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -77,8 +86,15 @@ public sealed class Plugin : IDalamudPlugin
             Controller = new SellController();
             Items = new ItemCatalog();
             GameItems = new GameItems();
-            Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName);
+            Market = new MarketServices(Configuration, GameItems);
+            completed.Push(Market.Dispose);
+            Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
+            Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
+            RetainerMarket = new MarketReader(Retainers, Characters, Retainers.Available);
+            References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
+            completed.Push(References.Dispose);
+            OwnSellers = new OwnSellersProvider(Retainers, Characters);
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
@@ -142,6 +158,8 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.SaveIfPending();
         BlockedScanner.Dispose();
         Characters.Dispose();
+        References.Dispose();
+        Market.Dispose();
 
         WindowSystem.RemoveAllWindows();
         appWindow.Dispose();
@@ -220,11 +238,27 @@ public sealed class Plugin : IDalamudPlugin
         {
             TargetDumper.Dump();
         }
+        else if (trimmed.Equals(MarketDebugCommands.StatusSubcommand, StringComparison.OrdinalIgnoreCase))
+        {
+            MarketDebugCommands.PrintStatus(this);
+        }
+        else if (HasSubcommand(trimmed, MarketDebugCommands.LookSubcommand))
+        {
+            MarketDebugCommands.Look(trimmed[MarketDebugCommands.LookSubcommand.Length..].Trim(), this);
+        }
+        else if (HasSubcommand(trimmed, MarketDebugCommands.SendPathSubcommand))
+        {
+            MarketDebugCommands.SetSendPath(trimmed[MarketDebugCommands.SendPathSubcommand.Length..].Trim(), this);
+        }
         else
         {
             ToggleMainUi();
         }
     }
+
+    private static bool HasSubcommand(string arguments, string subcommand)
+        => arguments.StartsWith(subcommand, StringComparison.OrdinalIgnoreCase)
+        && (arguments.Length == subcommand.Length || char.IsWhiteSpace(arguments[subcommand.Length]));
 
     private void OnDraw()
     {

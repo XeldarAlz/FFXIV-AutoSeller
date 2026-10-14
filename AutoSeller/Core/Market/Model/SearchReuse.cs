@@ -47,10 +47,13 @@ internal sealed class SearchReuse
         }
     }
 
-    public bool TryReuse(ItemKey key, DateTime nowUtc, [NotNullWhen(true)] out CompetitorSnapshot? snapshot)
+    public bool TryReuse(ItemKey key, uint worldId, DateTime nowUtc, [NotNullWhen(true)] out CompetitorSnapshot? snapshot)
     {
         snapshot = null;
-        if (!searches.TryGetValue(key, out var stored) || !IsSettled(stored) || !IsFreshForReuse(stored.CapturedAtUtc, nowUtc))
+        if (!searches.TryGetValue(key, out var stored)
+            || stored.WorldId != worldId
+            || !IsSettled(stored)
+            || !IsFreshForReuse(stored.CapturedAtUtc, nowUtc))
         {
             return false;
         }

@@ -18,6 +18,8 @@ internal enum ListingRequestFailure : byte
     Superseded = 5,
     SnapshotMismatch = 6,
     Cancelled = 7,
+    ReadingOff = 8,
+    OtherItem = 9,
 }
 
 internal enum ListingRequestStep : byte

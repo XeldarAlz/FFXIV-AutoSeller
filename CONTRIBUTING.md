@@ -23,10 +23,10 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 - `AutoSeller/Core/Items/`: the marketable item catalog with its search and item categories, and the game data facts of any item, read once per item.
 - `AutoSeller/Core/Inventory/`: the bag reader and the containers each source reads.
 - `AutoSeller/Core/Characters/`: each character's retainer switches, last retainer snapshots, reprice history, approvals and plan edits, kept in `chars/<content id>.json`.
-- `AutoSeller/Core/Market/`: the Compare Prices search machine and its cross-check, the competitor snapshot and search reuse.
-- `AutoSeller/Core/Pricing/`: the price decision with its floor, bait filter, reference choice and reprice history, the undercut watch, and the Universalis client, throttle and translator under `Universalis/`.
+- `AutoSeller/Core/Market/`: the Compare Prices search machine and its cross-check, the competitor snapshot and search reuse, the send path choice, the sale history capture, the market gates, and the game side: the search tracker with its hooks, the market checks and the `/asell look`, `/asell mbstatus` and `/asell sendpath` commands.
+- `AutoSeller/Core/Pricing/`: the price decision with its floor, bait filter, reference choice and reprice history, the undercut watch, own sellers, the Universalis client, throttle, translator, reference snapshot and fetch generations under `Universalis/`, and the reference service that fetches them.
 - `AutoSeller/Core/Allocation/`: the slot allocator that spreads lots over retainers, and the player's plan row edits.
-- `AutoSeller/Core/Retainers/`: retainer market snapshots and the diff between two reads of a retainer.
+- `AutoSeller/Core/Retainers/`: retainer market snapshots and the diff between two reads of a retainer, the retainer roster reader and the market reader of the open retainer.
 - `AutoSeller/Core/Execution/`: the sell authorization frozen at Start with its fingerprints and approved prices, the sale guard, the sell window check, the read-back, the value book, the journal events and their replay.
 - `AutoSeller/Core/Ledger/`: the run journal, durable files and checkpoints.
 - `AutoSeller/Core/Sales/`: sale notice and sale history parsing, inferred sales, the sale matcher, stats, hints and the CSV export.
@@ -63,6 +63,12 @@ Some code started as a copy of my other plugins, under the same license, and was
 | `Windows/Sections/ItemSearch.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Windows/Pages/ListsPage.Search.cs` | Copied into a section each rule list draws |
 | `Windows/Components/GilField.cs` | Auto GC Supply `master` (`1c4f8dd`), `Windows/Components/GilField.cs` | Copied; a refused value can reset the field |
 | `Windows/Pages/RulesPage*.cs`, the Pricing, Sources, AutoRetainer, Assist and Sales settings sections | Auto Shopper `release/1.1` (`eda8fc8`), `Windows/Pages/ListsPage*.cs` and `Windows/Sections/Config/` | Written new on the same shape |
+| `Core/Market/ListingRequestTracker.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/ListingRequestTracker.cs` | Copied; sends through the sell window's Compare prices with the proxy request behind a setting, reads the sale history, builds the competitor snapshot and reuses searches |
+| `Core/Market/MarketHooks.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/MarketHooks.cs` | Copied |
+| `Core/Market/MarketCompatibility.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/MarketCompatibility.cs` | Copied; the purchase checks replaced by retainer market checks, the result grouped into gates |
+| `Core/Market/MarketServices.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/MarketServices.cs` | Copied; the purchase parts dropped |
+| `Core/Market/MarketDebugCommands.cs`, `Core/Market/MarketLookTask.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Market/MarketDebugCommands.cs` | Copied; the look takes an item id, searches through the sell window and writes the price inputs, the status adds the gates, the references and the own sellers |
+| `Core/Pricing/ReferenceService.cs` | Auto Shopper `release/1.1` (`eda8fc8`), `Core/Pricing/PriceService.cs` | Written new on the same shape |
 
 The retainer sale history byte layout was checked against [Thaliak.Network](https://github.com/menphina/Thaliak.Network) (MIT). No code was taken from it.
 

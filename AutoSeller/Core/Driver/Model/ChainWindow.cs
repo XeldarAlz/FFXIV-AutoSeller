@@ -47,4 +47,17 @@ internal static class ChainWindows
     ];
 
     public static bool Contains(ChainWindow set, ChainWindow window) => (set & window) != 0;
+
+    public static string NameOf(ChainWindow window)
+    {
+        for (var index = 0; index < Tracked.Length; index++)
+        {
+            if (Tracked[index].Window == window)
+            {
+                return Tracked[index].AddonName;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(window), window, "Only a single tracked window has an addon name.");
+    }
 }

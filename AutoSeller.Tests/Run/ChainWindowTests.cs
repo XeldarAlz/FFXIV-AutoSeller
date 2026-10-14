@@ -44,16 +44,15 @@ public sealed class ChainWindowTests
     [InlineData((uint)ChainWindow.InputNumeric, "InputNumeric")]
     public void TheGameWindowsKeepTheirAddonNames(uint window, string addonName)
     {
-        var found = string.Empty;
-        for (var index = 0; index < ChainWindows.Tracked.Length; index++)
-        {
-            if (ChainWindows.Tracked[index].Window == (ChainWindow)window)
-            {
-                found = ChainWindows.Tracked[index].AddonName;
-            }
-        }
+        Assert.Equal(addonName, ChainWindows.NameOf((ChainWindow)window));
+    }
 
-        Assert.Equal(addonName, found);
+    [Theory]
+    [InlineData((uint)ChainWindow.None)]
+    [InlineData((uint)(ChainWindow.RetainerSell | ChainWindow.ItemSearchResult))]
+    public void OnlyASingleTrackedWindowHasAName(uint window)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ChainWindows.NameOf((ChainWindow)window));
     }
 
     [Fact]
