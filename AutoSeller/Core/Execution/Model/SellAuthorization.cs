@@ -181,18 +181,12 @@ internal sealed class SellAuthorization
 
     public PriceOverride OverrideForLot(PlanRowKey row)
     {
-        return PlanEdits.TryGetPrice(row, out var price) ? PriceOverride.SetByPlayer(price) : PriceOverride.None;
+        return PriceOverrides.ForLot(PlanEdits, row);
     }
 
     public PriceOverride OverrideForListing(ulong retainerId, in ListingSlot listing)
     {
-        if (!TryGetApprovedPrice(retainerId, listing.Slot, listing.Key, listing.UnitPrice, out var approvedPrice))
-        {
-            return PriceOverride.None;
-        }
-
-        var setInThePlan = PlanEdits.TryGetPrice(PlanRowKey.ForListing(retainerId, listing), out var planPrice) && planPrice == approvedPrice;
-        return setInThePlan ? PriceOverride.SetByPlayer(approvedPrice) : PriceOverride.ApprovedAt(approvedPrice);
+        return PriceOverrides.ForListing(ApprovedPrices.AsSpan(), PlanEdits, retainerId, listing);
     }
 
     private static AuthorizationProblem Validate(
