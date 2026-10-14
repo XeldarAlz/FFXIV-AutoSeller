@@ -89,6 +89,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         StartBlock.Trading => Loc.T(L.Run.BlockTrading),
         StartBlock.AutoRetainerNotHeld => Loc.T(L.Run.BlockAutoRetainerNotHeld),
         StartBlock.ProtectListUnreadable => Loc.T(L.Run.BlockProtectListUnreadable),
+        StartBlock.NothingUndercut => Loc.T(L.Run.BlockNothingUndercut),
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 

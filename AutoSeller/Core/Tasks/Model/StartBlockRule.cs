@@ -21,6 +21,7 @@ internal enum StartBlock : byte
     Trading,
     AutoRetainerNotHeld,
     ProtectListUnreadable,
+    NothingUndercut,
 }
 
 internal readonly record struct StartFacts(

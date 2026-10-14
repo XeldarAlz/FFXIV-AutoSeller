@@ -2,6 +2,7 @@ using AutoSeller.Core.Game;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Pricing;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -30,8 +31,11 @@ internal sealed class SellHeader
     private string retainers = string.Empty;
     private string listings = string.Empty;
     private string prices = string.Empty;
+    private string watch = string.Empty;
+    private string watchHelp = string.Empty;
+    private bool undercut;
 
-    private readonly record struct HeaderKey(long Generation, LanguageInfo? Language, long Step, long ReferenceGeneration, bool Fetching, string CharacterName, uint HomeWorldId);
+    private readonly record struct HeaderKey(long Generation, LanguageInfo? Language, long Step, long ReferenceGeneration, bool Fetching, string CharacterName, uint HomeWorldId, bool OnlyUndercut, int WatchMinutes);
 
     public void Draw(Plugin plugin, SellPlan plan)
     {
@@ -47,6 +51,8 @@ internal sealed class SellHeader
         var midY = origin.Y + CardHeight * scale * 0.5f;
         var right = DrawRefresh(plugin, end.X - padX, midY);
         right -= DrawChip(drawList, prices, plugin.References.Fetching ? Styling.AccentBlueSoft : Styling.TextDim, right, midY) + ChipGap * scale;
+        var watchWidth = DrawChip(drawList, watch, undercut ? Styling.AccentRose : Styling.TextDim, right, midY, watchHelp);
+        right -= watchWidth > 0f ? watchWidth + ChipGap * scale : 0f;
         right -= DrawChip(drawList, listings, Styling.TextDim, right, midY) + ChipGap * scale;
         right -= DrawChip(drawList, retainers, Styling.TextDim, right, midY) + ChipGap * scale;
 
@@ -108,7 +114,7 @@ internal sealed class SellHeader
         }
     }
 
-    private static float DrawChip(ImDrawListPtr drawList, string label, Vector4 color, float right, float midY)
+    private static float DrawChip(ImDrawListPtr drawList, string label, Vector4 color, float right, float midY, string? tooltip = null)
     {
         if (label.Length == 0)
         {
@@ -124,6 +130,11 @@ internal sealed class SellHeader
             var max = new Vector2(right, midY + ChipHeight * scale * 0.5f);
             Paint.Pill(drawList, min, max, Styling.WithAlpha(color, 0.12f), Styling.WithAlpha(color, 0.40f));
             TextDraw.At(label, new Vector2(min.X + ChipPadX * scale, midY - size.Y * 0.5f), Styling.Lighten(color, 0.2f));
+            if (tooltip is not null && Hit.HoveringRect(min, max))
+            {
+                Tooltip.Show(tooltip);
+            }
+
             return width;
         }
     }
@@ -134,7 +145,8 @@ internal sealed class SellHeader
         var characterName = data?.Name ?? string.Empty;
         var homeWorldId = plan.Input.HomeWorldId;
         var references = plugin.References;
-        var next = new HeaderKey(plan.Generation, Loc.Current, Environment.TickCount64 / AgeRefreshMs, references.Latest?.Generation ?? 0, references.Fetching, characterName, homeWorldId);
+        var configuration = plugin.Configuration;
+        var next = new HeaderKey(plan.Generation, Loc.Current, Environment.TickCount64 / AgeRefreshMs, references.Latest?.Generation ?? 0, references.Fetching, characterName, homeWorldId, configuration.OnlyRetainersThatNeedIt, configuration.UndercutWatchMinutes);
         if (next == key)
         {
             return;
@@ -149,5 +161,25 @@ internal sealed class SellHeader
         prices = references.Fetching ? Loc.T(L.Plan.PricesFetching)
             : current is null ? Loc.T(L.Plan.PricesNone)
             : Loc.T(L.Plan.PricesAge, Formatting.RelativeTime(current.FetchedAtUtc));
+        RefreshWatch(plan, configuration);
+    }
+
+    private void RefreshWatch(SellPlan plan, Configuration configuration)
+    {
+        var undercutListings = 0;
+        var rows = plan.Rows;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (rows[index].IsUndercut)
+            {
+                undercutListings++;
+            }
+        }
+
+        undercut = undercutListings > 0;
+        watch = configuration.OnlyRetainersThatNeedIt ? Loc.Plural(L.Plan.WatchVisits, plan.Input.RetainersToVisit(true).Length)
+            : undercut ? Loc.Plural(L.Plan.WatchUndercut, undercutListings)
+            : string.Empty;
+        watchHelp = configuration.UndercutWatchMinutes > WatchInterval.OffMinutes ? Loc.T(L.Plan.WatchHelp, configuration.UndercutWatchMinutes) : Loc.T(L.Plan.WatchOffHelp);
     }
 }

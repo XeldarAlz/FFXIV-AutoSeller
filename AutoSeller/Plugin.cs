@@ -72,6 +72,7 @@ public sealed class Plugin : IDalamudPlugin
     internal PostprocessHost Postprocess { get; }
     internal SalesLedger Sales { get; }
     internal SaleHistoryReader SaleHistory { get; }
+    internal UndercutWatchService UndercutWatch { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -134,6 +135,8 @@ public sealed class Plugin : IDalamudPlugin
             Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References, Sales);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
+            UndercutWatch = new UndercutWatchService(Configuration, Characters, References, () => Controller.Running);
+            completed.Push(UndercutWatch.Dispose);
             Postprocess = new PostprocessHost(this);
             completed.Push(Postprocess.Dispose);
             sellNowButton = new SellNowButton(Configuration, AutoRetainer, Postprocess, Controller);
@@ -199,6 +202,7 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Login -= OnLoadedInGame;
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
+        UndercutWatch.Dispose();
         saleNotices.Dispose();
         SaleHistory.Dispose();
         Plan.Dispose();

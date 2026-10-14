@@ -118,7 +118,18 @@ internal sealed partial class SellController
         var markets = input.Markets.AsSpan();
         var edits = input.Edits;
         var dryRun = configuration.DryRun;
-        ImmutableArray<ulong> retainerIds = mode == RunMode.Standalone ? input.EnabledRetainerIds() : [onlyRetainerId];
+        var onlyUndercut = mode == RunMode.Standalone && configuration.OnlyRetainersThatNeedIt;
+        ImmutableArray<ulong> retainerIds = mode == RunMode.Standalone ? input.RetainersToVisit(onlyUndercut) : [onlyRetainerId];
+        if (onlyUndercut && retainerIds.IsEmpty)
+        {
+            return Refuse(mode, StartBlock.NothingUndercut, "only the retainers that need it are visited, and no enabled retainer has an undercut listing");
+        }
+
+        if (onlyUndercut)
+        {
+            RunLog.Info($"Run: only the {retainerIds.Length} retainer(s) with an undercut listing are visited.");
+        }
+
         var approvals = Approvals.Collect(edits, markets, retainerIds.AsSpan(), input.PlayerApprovals.AsSpan());
         var problem = SellAuthorization.TryCreate(
             runId,
