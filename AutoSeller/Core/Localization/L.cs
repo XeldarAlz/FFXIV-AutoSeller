@@ -167,6 +167,10 @@ internal static partial class L
         public static readonly LocString PurposeVnavmesh = new("plugins.purpose.vnavmesh", "Pathfinding and movement for walking to a summoning bell.");
         public static readonly LocString PurposeAutoRetainer = new("plugins.purpose.autoRetainer", "Runs Auto Seller after ventures, and shares its protect list and your alt characters.");
         public static readonly LocString PurposeMarketbuddy = new("plugins.purpose.marketbuddy", "Locked while Auto Seller types a price, so only one of them fills the sell window.");
+        public static readonly LocString StateReady = new("plugins.state.ready", "Ready");
+        public static readonly LocString StateBusy = new("plugins.state.busy", "Busy");
+        public static readonly LocString StateOutdated = new("plugins.state.outdated", "Outdated");
+        public static readonly LocString StateMissing = new("plugins.state.missing", "Not installed");
     }
 
     internal static class Log

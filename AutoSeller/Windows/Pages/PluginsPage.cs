@@ -1,6 +1,7 @@
 using AutoSeller.Core.External;
 using AutoSeller.Core.Localization;
 using AutoSeller.Windows.Components;
+using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -14,7 +15,7 @@ internal sealed class PluginsPage
     private const float DiscRadius = 17f;
     private const float InstallButtonHeight = 30f;
 
-    public void Draw()
+    public void Draw(Plugin plugin)
     {
         var plugins = ExternalPlugins.All;
         var missing = 0;
@@ -31,7 +32,7 @@ internal sealed class PluginsPage
 
         for (var index = 0; index < plugins.Count; index++)
         {
-            DrawCard(plugins[index]);
+            DrawCard(plugin, plugins[index]);
             Styling.VSpace(4f);
         }
 
@@ -54,7 +55,14 @@ internal sealed class PluginsPage
         _                           => ExternalPlugins.Catalog[plugin].Purpose,
     };
 
-    private static void DrawCard(ExternalPlugin plugin)
+    private static HelperState? StateOf(Plugin plugin, ExternalPlugin external) => external switch
+    {
+        ExternalPlugin.AutoRetainer => HelperStates.Of(plugin.AutoRetainer.Status),
+        ExternalPlugin.Marketbuddy => HelperStates.OfLock(plugin.Marketbuddy.Answers),
+        _ => null,
+    };
+
+    private static void DrawCard(Plugin owner, ExternalPlugin plugin)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var info = ExternalPlugins.Catalog[plugin];
@@ -108,7 +116,11 @@ internal sealed class PluginsPage
             TextDraw.At(info.DisplayName, new Vector2(textX, top), Styling.TextStrong);
         }
 
-        DrawRequirementTag(drawList, info.Required, textX + nameSize.X + 10f * scale, top + nameHeight * 0.5f);
+        var tagEnd = DrawRequirementTag(drawList, info.Required, textX + nameSize.X + 10f * scale, top + nameHeight * 0.5f);
+        if (installed && StateOf(owner, plugin) is { } state)
+        {
+            Badge.DrawLeft(drawList, Loc.T(state.Label), state.Color, tagEnd + 8f * scale, top + nameHeight * 0.5f);
+        }
 
         using (Fonts.PushCaption())
         {
@@ -134,7 +146,7 @@ internal sealed class PluginsPage
         ImGui.Dummy(size);
     }
 
-    private static void DrawRequirementTag(ImDrawListPtr drawList, bool required, float x, float midY)
+    private static float DrawRequirementTag(ImDrawListPtr drawList, bool required, float x, float midY)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var label = Loc.Upper(required ? Loc.T(L.Plugins.Required) : Loc.T(L.Plugins.Optional));
@@ -146,6 +158,7 @@ internal sealed class PluginsPage
             var accent = required ? Styling.AccentGlow : Styling.TextDim;
             Paint.Pill(drawList, tagMin, tagMax, Styling.WithAlpha(accent, 0.18f), Styling.WithAlpha(accent, 0.45f));
             TextDraw.Middle(label, tagMin, tagMax, required ? Styling.AccentGlowSoft : Styling.TextSecondary);
+            return tagMax.X;
         }
     }
 

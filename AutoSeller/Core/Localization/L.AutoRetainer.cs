@@ -16,5 +16,21 @@ internal static partial class L
         public static readonly LocString Alts = new("autoRetainer.alts", "Treat AutoRetainer characters as my alts");
         public static readonly LocString AltsHelp = new("autoRetainer.altsHelp", "Never undercut listings from the retainers of your other characters that AutoRetainer knows.");
         public static readonly LocString Footnote = new("autoRetainer.footnote", "These need AutoRetainer installed and up to date. Items AutoRetainer protects are never sold or vendored, whatever these switches say.");
+        public static readonly LocString StatusGroup = new("autoRetainer.statusGroup", "Right now");
+        public static readonly LocString State = new("autoRetainer.state", "AutoRetainer");
+        public static readonly LocString StateHelp = new("autoRetainer.stateHelp", "Whether AutoRetainer answers. Outdated means Auto Seller runs only from Start and does not hold AutoRetainer back.");
+        public static readonly LocString AltsKnown = new("autoRetainer.altsKnown", "Alts known");
+        public static readonly LocString AltsKnownHelp = new("autoRetainer.altsKnownHelp", "Your other characters that AutoRetainer knows, and their retainers, read again each time the plan is built.");
+        public static readonly LocPlural AltCharacters = new("autoRetainer.altCharacters", "{0} character", "{0} characters");
+        public static readonly LocString AltsOff = new("autoRetainer.altsOff", "Not counted");
+        public static readonly LocString Job = new("autoRetainer.job", "After ventures");
+        public static readonly LocString JobHelp = new("autoRetainer.jobHelp", "What Auto Seller is doing in AutoRetainer's venture cycle.");
+        public static readonly LocString JobOff = new("autoRetainer.job.off", "Off");
+        public static readonly LocString JobWaiting = new("autoRetainer.job.waiting", "Waiting for AutoRetainer");
+        public static readonly LocString JobStoodDown = new("autoRetainer.job.stoodDown", "Stopped by you at this bell");
+        public static readonly LocString JobRequested = new("autoRetainer.job.requested", "Asked for {0}");
+        public static readonly LocString JobWorking = new("autoRetainer.job.working", "Working on {0}");
+        public static readonly LocString JobReturning = new("autoRetainer.job.returning", "Handing {0} back");
+        public static readonly LocString Held = new("autoRetainer.held", "AutoRetainer is held back until the current run ends.");
     }
 }
