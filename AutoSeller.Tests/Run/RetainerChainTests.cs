@@ -109,15 +109,13 @@ public sealed class RetainerChainTests
     }
 
     [Theory]
-    [InlineData((uint)ChainWindow.ContentsFinderConfirm)]
     [InlineData((uint)ChainWindow.SelectOk)]
     [InlineData((uint)ChainWindow.Request)]
     [InlineData((uint)ChainWindow.SelectIconString)]
     [InlineData((uint)ChainWindow.ContextIconMenu)]
     [InlineData((uint)ChainWindow.Talk)]
-    [InlineData((uint)ChainWindow.ContextMenu)]
     [InlineData((uint)ChainWindow.RetainerList)]
-    public void AnyOtherWindowHalts(uint window)
+    public void AnyForeignWindowHalts(uint window)
     {
         var chain = Begun(openSellList);
 
@@ -140,11 +138,78 @@ public sealed class RetainerChainTests
     public void AHaltNamesTheMostForeignWindowAndStaysUntilTheNextStep()
     {
         var chain = Begun(openSellList);
-        var halt = ChainVerdict.Halt(ChainWindow.ContentsFinderConfirm, NeedsPlayerReason.UnexpectedWindow);
+        var halt = ChainVerdict.Halt(ChainWindow.SelectOk, NeedsPlayerReason.UnexpectedWindow);
 
-        Assert.Equal(halt, chain.Poll(View(ChainWindow.ContextMenu | ChainWindow.ContentsFinderConfirm), 100));
+        Assert.Equal(halt, chain.Poll(View(ChainWindow.Talk | ChainWindow.SelectOk), 100));
         Assert.Equal(halt, chain.Poll(View(ChainWindow.RetainerSellList), 200));
         Assert.Equal(halt, chain.Poll(View(ChainWindow.None), StepTimeoutMs * 3));
+    }
+
+    [Theory]
+    [InlineData((uint)ChainWindow.ItemSearchResult)]
+    [InlineData((uint)ChainWindow.ContextMenu)]
+    [InlineData((uint)ChainWindow.RetainerSell)]
+    [InlineData((uint)ChainWindow.RetainerHistory)]
+    public void AStrayWindowOfOursUnwinds(uint window)
+    {
+        var chain = Begun(openSellList);
+
+        var verdict = chain.Poll(View(ChainWindow.SelectString | (ChainWindow)window), 100);
+
+        Assert.Equal(ChainVerdict.Of(ChainAction.Unwind, (ChainWindow)window), verdict);
+    }
+
+    [Fact]
+    public void SeveralStrayWindowsOfOursUnwindFromTheTopmostAndStay()
+    {
+        var chain = Begun(ChainStep.Opens(ChainWindow.ContextMenu, StepTimeoutMs, ChainWindow.RetainerSellList));
+        var unwind = ChainVerdict.Of(ChainAction.Unwind, ChainWindow.ItemSearchResult);
+
+        Assert.Equal(unwind, chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.RetainerSell | ChainWindow.ItemSearchResult), 100));
+        Assert.Equal(unwind, chain.Poll(View(ChainWindow.RetainerSellList | ChainWindow.ContextMenu), 200));
+    }
+
+    [Fact]
+    public void AForeignWindowBesideOneOfOursHalts()
+    {
+        var chain = Begun(openSellList);
+
+        var verdict = chain.Poll(View(ChainWindow.SelectString | ChainWindow.ContextMenu | ChainWindow.Talk), 100);
+
+        Assert.Equal(ChainVerdict.Halt(ChainWindow.Talk, NeedsPlayerReason.UnexpectedWindow), verdict);
+    }
+
+    [Theory]
+    [InlineData((uint)ChainWindow.None)]
+    [InlineData((uint)ChainWindow.ContextMenu)]
+    [InlineData((uint)ChainWindow.RetainerSellList)]
+    public void ADutyPopPausesTheRunAndStays(uint besideIt)
+    {
+        var chain = Begun(openSellList);
+        var pause = ChainVerdict.Of(ChainAction.Pause, ChainWindow.ContentsFinderConfirm);
+
+        Assert.Equal(pause, chain.Poll(View(ChainWindow.SelectString | ChainWindow.ContentsFinderConfirm | (ChainWindow)besideIt), 100));
+        Assert.Equal(pause, chain.Poll(View(ChainWindow.RetainerSellList), 200));
+    }
+
+    [Fact]
+    public void ADutyPopBesideAForeignWindowHalts()
+    {
+        var chain = Begun(openSellList);
+
+        var verdict = chain.Poll(View(ChainWindow.SelectString | ChainWindow.ContentsFinderConfirm | ChainWindow.SelectOk), 100);
+
+        Assert.Equal(ChainVerdict.Halt(ChainWindow.SelectOk, NeedsPlayerReason.UnexpectedWindow), verdict);
+    }
+
+    [Fact]
+    public void ADutyPopBesideAnUnexpectedPromptHaltsForThePrompt()
+    {
+        var chain = Begun(openSellList);
+
+        var verdict = chain.Poll(View(ChainWindow.SelectString | ChainWindow.ContentsFinderConfirm | ChainWindow.SelectYesno, OtherPrompt), 100);
+
+        Assert.Equal(ChainVerdict.Halt(ChainWindow.SelectYesno, NeedsPlayerReason.UnexpectedWindow), verdict);
     }
 
     [Fact]

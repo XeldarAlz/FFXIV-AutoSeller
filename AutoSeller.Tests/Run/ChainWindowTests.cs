@@ -80,6 +80,14 @@ public sealed class ChainWindowTests
     }
 
     [Fact]
+    public void TheUnwindOwnsOnlyTheSellWindows()
+    {
+        var owned = ChainWindow.InputNumeric | ChainWindow.ItemSearchResult | ChainWindow.ContextMenu | ChainWindow.RetainerSell | ChainWindow.RetainerHistory | ChainWindow.RetainerSellList;
+
+        Assert.Equal(owned, ChainUnwind.Owned);
+    }
+
+    [Fact]
     public void UnwindNeverTouchesAPromptOrTheRetainerMenu()
     {
         Assert.Equal(ChainWindow.None, ChainUnwind.NextToClose(ChainWindow.SelectYesno | ChainWindow.SelectString | ChainWindow.Talk | ChainWindow.RetainerList | ChainWindow.SelectOk));

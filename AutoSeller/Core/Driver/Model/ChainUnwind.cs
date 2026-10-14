@@ -14,6 +14,8 @@ internal static class ChainUnwind
         ChainWindow.RetainerSellList,
     ];
 
+    public static readonly ChainWindow Owned = Combine(closeOrder);
+
     public static ChainWindow NextToClose(ChainWindow visible)
     {
         for (var index = 0; index < closeOrder.Length; index++)
@@ -25,5 +27,16 @@ internal static class ChainUnwind
         }
 
         return ChainWindow.None;
+    }
+
+    private static ChainWindow Combine(ImmutableArray<ChainWindow> windows)
+    {
+        var combined = ChainWindow.None;
+        for (var index = 0; index < windows.Length; index++)
+        {
+            combined |= windows[index];
+        }
+
+        return combined;
     }
 }

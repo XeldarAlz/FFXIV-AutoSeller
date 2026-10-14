@@ -5,7 +5,7 @@ namespace AutoSeller.Core.Driver.Model;
 
 internal enum ChainExpectation : byte { Opens, Closes }
 
-internal enum ChainAction : byte { Wait, Next, Retry, Unwind, Halt }
+internal enum ChainAction : byte { Wait, Next, Retry, Unwind, Halt, Pause }
 
 internal readonly record struct ChainStep(ChainWindow Window, ChainExpectation Expectation, int TimeoutMs, ChainWindow Tolerated, uint PromptRow)
 {
@@ -39,6 +39,7 @@ internal sealed class RetainerChain
 
     private const ChainWindow PromptWindow = ChainWindow.SelectYesno;
     private const ChainWindow AlwaysAllowed = ChainWindow.InputNumeric;
+    private const ChainWindow DutyPop = ChainWindow.ContentsFinderConfirm;
 
     private Phase phase;
     private ChainVerdict settled;
@@ -74,9 +75,9 @@ internal sealed class RetainerChain
             return settled;
         }
 
-        if (TryFindIntrusion(view, out var halt))
+        if (TryFindIntrusion(view, out var intrusion))
         {
-            return Settle(halt);
+            return Settle(intrusion);
         }
 
         if (Arrived(view.Visible))
@@ -99,19 +100,19 @@ internal sealed class RetainerChain
         return ChainVerdict.Of(ChainAction.Retry, Step.Window);
     }
 
-    private bool TryFindIntrusion(in ChainView view, out ChainVerdict halt)
+    private bool TryFindIntrusion(in ChainView view, out ChainVerdict verdict)
     {
         if (ChainWindows.Contains(view.Visible, PromptWindow))
         {
             if (IsGilLimitPrompt(view.PromptRow))
             {
-                halt = ChainVerdict.Halt(PromptWindow, NeedsPlayerReason.GilLimitPrompt);
+                verdict = ChainVerdict.Halt(PromptWindow, NeedsPlayerReason.GilLimitPrompt);
                 return true;
             }
 
             if (Step.PromptRow == ChainStep.NoPrompt || view.PromptRow != Step.PromptRow)
             {
-                halt = ChainVerdict.Halt(PromptWindow, NeedsPlayerReason.UnexpectedWindow);
+                verdict = ChainVerdict.Halt(PromptWindow, NeedsPlayerReason.UnexpectedWindow);
                 return true;
             }
         }
@@ -119,11 +120,20 @@ internal sealed class RetainerChain
         var stray = view.Visible & ~(Step.Window | Step.Tolerated | AlwaysAllowed | PromptWindow);
         if (stray == ChainWindow.None)
         {
-            halt = default;
+            verdict = default;
             return false;
         }
 
-        halt = ChainVerdict.Halt(First(stray), NeedsPlayerReason.UnexpectedWindow);
+        var foreign = stray & ~(ChainUnwind.Owned | DutyPop);
+        if (foreign != ChainWindow.None)
+        {
+            verdict = ChainVerdict.Halt(First(foreign), NeedsPlayerReason.UnexpectedWindow);
+            return true;
+        }
+
+        verdict = ChainWindows.Contains(stray, DutyPop)
+            ? ChainVerdict.Of(ChainAction.Pause, DutyPop)
+            : ChainVerdict.Of(ChainAction.Unwind, ChainUnwind.NextToClose(stray));
         return true;
     }
 
