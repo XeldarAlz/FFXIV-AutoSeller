@@ -261,7 +261,7 @@ public sealed class AppWindow : Window, IDisposable
         using var reveal = Motion.PushReveal(Motion.Reveal(pageShownTick, PageRevealMs), PageSlide);
         switch (page)
         {
-            case Page.Sell: sellPage.Draw(); break;
+            case Page.Sell: sellPage.Draw(plugin); break;
             case Page.Rules: rulesPage.Draw(plugin); break;
             case Page.Settings: settingsPage.Draw(plugin); break;
             case Page.History: historyPage.Draw(plugin.History); break;
