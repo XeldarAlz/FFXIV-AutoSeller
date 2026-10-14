@@ -22,8 +22,6 @@ internal static class SaleFixtures
 
     public const int CityTaxPercent = 5;
 
-    public const string SanitizedBuyerName = "Sanitized Buyer";
-
     public const string HistoryHeaderHex = "0100000000003000";
 
     public static readonly string[] HistoryRecordHex =

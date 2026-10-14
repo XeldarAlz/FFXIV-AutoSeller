@@ -119,14 +119,20 @@ public sealed class SaleHistoryParserTests
     }
 
     [Fact]
-    public void BuyerNamesNeverReachTheExport()
+    public void BuyerNameBytesLeaveTheParsedSalesUntouched()
     {
-        Assert.True(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
+        var packet = HistoryPacket();
+        Assert.True(SaleHistoryParser.TryParse(packet, CharacterId, FirstRetainerId, CityTaxPercent, out var original));
+        for (var recordIndex = 0; recordIndex < SaleHistoryLayout.RecordCount; recordIndex++)
+        {
+            var nameStart = SaleHistoryLayout.HeaderLength + recordIndex * SaleHistoryLayout.RecordLength + SaleHistoryLayout.BuyerNameOffset;
+            packet.AsSpan(nameStart, SaleHistoryLayout.BuyerNameLength).Fill((byte)'X');
+        }
 
-        var csv = SalesCsv.Write(sales.AsSpan(), new FixtureItemNames(new()));
+        Assert.True(SaleHistoryParser.TryParse(packet, CharacterId, FirstRetainerId, CityTaxPercent, out var renamed));
 
-        Assert.DoesNotContain(SanitizedBuyerName, csv, StringComparison.Ordinal);
-        Assert.DoesNotContain("Buyer", csv, StringComparison.Ordinal);
+        Assert.NotEmpty(original);
+        Assert.Equal(original.AsSpan().ToArray(), renamed.AsSpan().ToArray());
     }
 
     [Fact]

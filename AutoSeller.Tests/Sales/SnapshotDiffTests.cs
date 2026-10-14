@@ -292,6 +292,20 @@ public sealed class SnapshotDiffTests
     }
 
     [Fact]
+    public void LotWeListedInTheSlotASaleFreedIsNotTakenForTheLotThatSold()
+    {
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 100));
+        var current = Snapshot(CurrentRead, 950, Slot(0, DarksteelOre, 10, 120));
+        SnapshotDiffWrite[] writes = [Write(SnapshotDiffWriteKind.Listed, PreviousRead.AddHours(2), DarksteelOre, 10, 0, 120)];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        Assert.Equal(2, diff.Changes.Length);
+        Assert.Equal(100u, Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.Sold).Listing.UnitPrice);
+        Assert.Equal(120u, Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.ListedByUs).Listing.UnitPrice);
+    }
+
+    [Fact]
     public void NewLotWeListedAtAPriceThatDidNotStickIsStillOurs()
     {
         var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 100));
