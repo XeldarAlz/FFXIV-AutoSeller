@@ -21,7 +21,7 @@ internal readonly record struct StartFacts(
     bool LoggedIn,
     bool OnHomeWorld,
     bool InContent,
-    AutoRetainerState AutoRetainer,
+    AutoRetainerStatus AutoRetainer,
     bool UnresolvedJournalEntry,
     bool CompatibilityGatesOpen,
     bool HasRules,
@@ -47,7 +47,7 @@ internal static class StartBlockRule
             return StartBlock.InContent;
         }
 
-        if (facts.Mode == RunMode.Standalone && facts.AutoRetainer == AutoRetainerState.Busy)
+        if (facts.Mode == RunMode.Standalone && facts.AutoRetainer.Busy)
         {
             return StartBlock.AutoRetainerBusy;
         }

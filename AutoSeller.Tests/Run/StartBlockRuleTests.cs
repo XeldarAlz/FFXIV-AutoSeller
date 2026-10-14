@@ -5,12 +5,15 @@ namespace AutoSeller.Tests.Run;
 
 public sealed class StartBlockRuleTests
 {
+    private static readonly AutoRetainerStatus idle = new(AutoRetainerState.Available, Busy: false);
+    private static readonly AutoRetainerStatus busy = new(AutoRetainerState.Available, Busy: true);
+
     private static readonly StartFacts ready = new(
         Mode: RunMode.Standalone,
         LoggedIn: true,
         OnHomeWorld: true,
         InContent: false,
-        AutoRetainer: AutoRetainerState.Available,
+        AutoRetainer: idle,
         UnresolvedJournalEntry: false,
         CompatibilityGatesOpen: true,
         HasRules: true,
@@ -26,7 +29,7 @@ public sealed class StartBlockRuleTests
     [Fact]
     public void TheFirstBlockInOrderIsReported()
     {
-        var facts = new StartFacts(RunMode.Standalone, false, false, true, AutoRetainerState.Busy, true, false, false, false, true);
+        var facts = new StartFacts(RunMode.Standalone, false, false, true, busy, true, false, false, false, true);
 
         Assert.Equal(StartBlock.NotLoggedIn, StartBlockRule.Evaluate(facts));
         facts = facts with { LoggedIn = true };
@@ -35,7 +38,7 @@ public sealed class StartBlockRuleTests
         Assert.Equal(StartBlock.InContent, StartBlockRule.Evaluate(facts));
         facts = facts with { InContent = false };
         Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
-        facts = facts with { AutoRetainer = AutoRetainerState.Available };
+        facts = facts with { AutoRetainer = idle };
         Assert.Equal(StartBlock.UnresolvedJournalEntry, StartBlockRule.Evaluate(facts));
         facts = facts with { UnresolvedJournalEntry = false };
         Assert.Equal(StartBlock.CompatibilityGatesClosed, StartBlockRule.Evaluate(facts));
@@ -52,24 +55,32 @@ public sealed class StartBlockRuleTests
     [Fact]
     public void ABusyAutoRetainerBlocksOnlyAStandaloneRun()
     {
-        var busy = ready with { AutoRetainer = AutoRetainerState.Busy };
+        var facts = ready with { AutoRetainer = busy };
 
-        Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(busy));
-        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(busy with { Mode = RunMode.Postprocess }));
+        Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
+        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(facts with { Mode = RunMode.Postprocess }));
+    }
+
+    [Fact]
+    public void AnOutdatedAutoRetainerThatIsBusyStillBlocksAStandaloneRun()
+    {
+        var facts = ready with { AutoRetainer = new AutoRetainerStatus(AutoRetainerState.Outdated, Busy: true) };
+
+        Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
     }
 
     [Theory]
     [InlineData((int)AutoRetainerState.Missing)]
     [InlineData((int)AutoRetainerState.Outdated)]
-    public void AMissingOrOutdatedAutoRetainerLeavesStandaloneFree(int state)
+    public void AMissingOrOutdatedIdleAutoRetainerLeavesStandaloneFree(int readiness)
     {
-        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(ready with { AutoRetainer = (AutoRetainerState)state }));
+        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(ready with { AutoRetainer = new AutoRetainerStatus((AutoRetainerState)readiness, Busy: false) }));
     }
 
     [Fact]
     public void APostprocessJobStillNeedsTheHomeWorldAndAResolvedJournal()
     {
-        var postprocess = ready with { Mode = RunMode.Postprocess, AutoRetainer = AutoRetainerState.Busy };
+        var postprocess = ready with { Mode = RunMode.Postprocess, AutoRetainer = busy };
 
         Assert.Equal(StartBlock.NotOnHomeWorld, StartBlockRule.Evaluate(postprocess with { OnHomeWorld = false }));
         Assert.Equal(StartBlock.UnresolvedJournalEntry, StartBlockRule.Evaluate(postprocess with { UnresolvedJournalEntry = true }));
