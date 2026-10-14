@@ -113,7 +113,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             FreeBagSlots = inputs.FreeBagSlots,
             Rules = inputs.Rules,
             Edits = inputs.Edits,
-            Retainers = inputs.Retainers,
+            Retainers = RunPlanner.WithSellerTaxes(inputs.Retainers, plugin.References.Taxes),
         };
         session.ReferencesRead = true;
         Diag($"Run: reference prices read for {stock.Length} stack(s).");

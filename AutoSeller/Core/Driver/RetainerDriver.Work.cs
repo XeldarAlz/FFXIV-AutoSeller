@@ -129,7 +129,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> WorkLots(RunRetainer retainer, RetainerSnapshot market)
     {
-        var plan = RunPlanner.Build(session.PlanInputs, CurrentMarkets(), session.Handled);
+        var plan = RunPlanner.Build(session.PlanInputs, plugin.Characters.Current?.SnapshotArray() ?? [], session.Handled, session.Visits.SettledIdsOf(session.Retainers.AsSpan()));
         var assigned = plan.AssignedTo(retainer.RetainerId);
         Diag($"Driver: {plan.Lots.Lots.Length} lot(s) planned, {plan.Allocation.Assignments.Length} placed, {plan.Allocation.Overflow.Length} left over; {assigned.Length} for {retainer.Name}, which has {market.FreeSlots} free slot(s).");
         var freeSlots = market.FreeSlots;
@@ -221,22 +221,5 @@ internal sealed partial class RetainerDriver
 
         Record(RunDecision.ForLot(retainer.RetainerId, lot, decider.ForLot(lot, competition, DateTime.UtcNow)), retainer);
         return await CancelSellWindow();
-    }
-
-    private RetainerSnapshot[] CurrentMarkets()
-    {
-        var snapshots = plugin.Characters.Current?.Snapshots;
-        if (snapshots is null)
-        {
-            return [];
-        }
-
-        var markets = new RetainerSnapshot[snapshots.Count];
-        for (var index = 0; index < markets.Length; index++)
-        {
-            markets[index] = snapshots[index];
-        }
-
-        return markets;
     }
 }

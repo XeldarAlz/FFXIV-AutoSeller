@@ -47,6 +47,22 @@ internal sealed class RetainerVisits
         return NoRetainer;
     }
 
+    public ulong[] SettledIdsOf(ReadOnlySpan<RunRetainer> retainers)
+    {
+        var settled = new ulong[Settled];
+        var count = 0;
+        for (var index = 0; index < statuses.Length; index++)
+        {
+            if (statuses[index] != VisitStatus.Pending)
+            {
+                settled[count] = retainers[index].RetainerId;
+                count++;
+            }
+        }
+
+        return settled;
+    }
+
     public void MarkVisited(int index)
     {
         statuses[index] = VisitStatus.Visited;

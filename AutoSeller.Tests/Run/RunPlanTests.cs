@@ -1,7 +1,9 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks.Model;
 using static AutoSeller.Tests.EndToEnd.RunWorld;
 
@@ -12,13 +14,13 @@ public sealed class RunPlanTests
     private const ushort SecondBagSlot = 9;
 
     private static readonly SlotFacts secondStack = OreInTheBags with { Slot = SecondBagSlot };
-    private static readonly RunRetainer alpha = new(Alpha, "Alpha", AlphaTaxPercent);
-    private static readonly RunRetainer beta = new(Beta, "Beta", BetaTaxPercent);
+    private static readonly RunRetainer alpha = new(Alpha, "Alpha", AlphaTown, AlphaTaxPercent);
+    private static readonly RunRetainer beta = new(Beta, "Beta", BetaTown, BetaTaxPercent);
 
     [Fact]
     public void EveryLotGoesToARetainerWhoseMarketWasRead()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled());
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), []);
 
         Assert.Equal(2, plan.Allocation.Assignments.Length);
         Assert.Equal(2, plan.AssignedTo(Alpha).Length + plan.AssignedTo(Beta).Length);
@@ -28,7 +30,7 @@ public sealed class RunPlanTests
     [Fact]
     public void ARetainerWithNoMarketReadGetsNothing()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Beta)], Handled());
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Beta)], Handled(), []);
 
         Assert.Empty(plan.AssignedTo(Alpha));
         Assert.Equal(2, plan.AssignedTo(Beta).Length);
@@ -37,10 +39,10 @@ public sealed class RunPlanTests
     [Fact]
     public void AHandledLotIsNotPlacedAgain()
     {
-        var first = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled());
+        var first = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), []);
         var done = first.Allocation.Assignments[0].Lot.Row;
 
-        var again = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(done));
+        var again = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(done), []);
 
         Assert.Single(again.Allocation.Assignments);
         Assert.NotEqual(done, again.Allocation.Assignments[0].Lot.Row);
@@ -49,7 +51,7 @@ public sealed class RunPlanTests
     [Fact]
     public void AListingAlreadyUpCountsTowardTheListingsToKeepUp()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha, OreListing()), Market(Beta)], Handled());
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha, OreListing()), Market(Beta)], Handled(), []);
 
         Assert.Single(plan.Allocation.Assignments);
     }
@@ -57,10 +59,68 @@ public sealed class RunPlanTests
     [Fact]
     public void ALotIsValuedAtItsReferencePrice()
     {
-        var plan = RunPlanner.Build(Inputs(OreRule()), [Market(Alpha)], Handled());
+        var plan = RunPlanner.Build(Inputs(OreRule()), [Market(Alpha)], Handled(), []);
 
         Assert.Equal((long)OreReference * LotQuantity, plan.Allocation.Assignments[0].Lot.EstimatedValue);
-        Assert.Equal(long.MaxValue, RunPlanner.EstimatedValue(uint.MaxValue, uint.MaxValue));
+    }
+
+    [Fact]
+    public void ALotLeftForALaterRetainerIsNeverMovedBackToOneAlreadyVisited()
+    {
+        var inputs = Inputs(OreRule(listingsToKeepUp: 2), [beta, alpha]);
+        RetainerSnapshot[] markets = [Market(Beta, FullBut(1)), Market(Alpha)];
+        var atBeta = RunPlanner.Build(inputs, markets, Handled(), []);
+        var doneAtBeta = Assert.Single(atBeta.AssignedTo(Beta)).Lot.Row;
+        var leftForAlpha = Assert.Single(atBeta.AssignedTo(Alpha)).Lot.Row;
+
+        var atAlpha = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), [Beta]);
+        var withoutProgress = RunPlanner.Build(inputs, markets, Handled(doneAtBeta), []);
+
+        Assert.Equal(leftForAlpha, Assert.Single(atAlpha.AssignedTo(Alpha)).Lot.Row);
+        Assert.Empty(atAlpha.AssignedTo(Beta));
+        Assert.Empty(withoutProgress.AssignedTo(Alpha));
+    }
+
+    [Fact]
+    public void ASettledRetainerGetsNoLot()
+    {
+        var plan = RunPlanner.Build(Inputs(OreRule(listingsToKeepUp: 2)), [Market(Alpha), Market(Beta)], Handled(), [Alpha, Beta]);
+
+        Assert.Empty(plan.Allocation.Assignments);
+        Assert.Equal(2, plan.Allocation.Overflow.Length);
+    }
+
+    [Theory]
+    [InlineData((byte)SlotSource.Bags, true)]
+    [InlineData((byte)SlotSource.Crystals, true)]
+    [InlineData((byte)SlotSource.RetainerPage, false)]
+    [InlineData((byte)SlotSource.Saddlebag, false)]
+    [InlineData((byte)SlotSource.Armoury, false)]
+    public void TheRunListsFromTheBagsAndCrystalsOnly(byte source, bool listable)
+    {
+        Assert.Equal(listable, RunPlanner.CanListFrom((SlotSource)source));
+    }
+
+    [Fact]
+    public void SellerTaxesAreTakenFromEachRetainersTown()
+    {
+        var taxes = new TaxRatesResult(new TaxRates(1, AlphaTaxPercent, BetaTaxPercent, 4, 0, 5, 1, 3), UniversalisFailure.None);
+        ImmutableArray<RunRetainer> unread = [alpha with { SellerTaxPercent = MarketLimits.HighestSellerTaxPercent }, beta with { SellerTaxPercent = MarketLimits.HighestSellerTaxPercent }];
+
+        var taxed = RunPlanner.WithSellerTaxes(unread, taxes);
+
+        Assert.Equal([alpha, beta], taxed.AsSpan().ToArray());
+        Assert.Equal(MarketLimits.HighestSellerTaxPercent, RunPlanner.WithSellerTaxes([alpha], TaxRatesResult.FailedWith(UniversalisFailure.Timeout))[0].SellerTaxPercent);
+    }
+
+    [Fact]
+    public void TheSettledRetainersAreNamedById()
+    {
+        var visits = new RetainerVisits(3);
+        visits.MarkVisited(0);
+        visits.MarkSkipped(2, AutoSeller.Core.Driver.Model.DriverHalt.MarketNotRead);
+
+        Assert.Equal([Alpha, Beta], visits.SettledIdsOf([alpha, new RunRetainer(Beta + 1, "Gamma", BetaTown, BetaTaxPercent), beta]));
     }
 
     [Fact]
@@ -84,7 +144,7 @@ public sealed class RunPlanTests
         Assert.False(RunPlanner.StillHolds(OreInTheBags, default, 0));
     }
 
-    private static RunPlanInputs Inputs(ItemRule rule)
+    private static RunPlanInputs Inputs(ItemRule rule, ImmutableArray<RunRetainer> retainers = default)
     {
         return new RunPlanInputs
         {
@@ -92,13 +152,24 @@ public sealed class RunPlanTests
             FreeBagSlots = FreeBagSlots,
             Rules = RuleBook.Create([rule], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []),
             Edits = PlanEdits.None,
-            Retainers = [alpha, beta],
+            Retainers = retainers.IsDefault ? [alpha, beta] : retainers,
         };
     }
 
     private static RetainerSnapshot Market(ulong retainerId, params ListingSlot[] listings)
     {
         return MarketOf(retainerId, Now, 1_000, listings);
+    }
+
+    private static ListingSlot[] FullBut(int freeSlots)
+    {
+        var listings = new ListingSlot[RetainerSnapshot.SlotCount - freeSlots];
+        for (var index = 0; index < listings.Length; index++)
+        {
+            listings[index] = new ListingSlot((byte)index, Ore + 1, false, 1, ListedPrice);
+        }
+
+        return listings;
     }
 
     private static HashSet<PlanRowKey> Handled(params PlanRowKey[] rows)

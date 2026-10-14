@@ -55,7 +55,7 @@ internal sealed partial class SellController
             return Refuse(block, block.ToString());
         }
 
-        var markets = SnapshotsOf(data!);
+        var markets = data!.SnapshotArray();
         var nowUtc = DateTime.UtcNow;
         var edits = data!.PlanEdits;
         var approvals = Approvals.Collect(edits, markets, enabled.AsSpan(), ApprovalsOf(data));
@@ -112,18 +112,6 @@ internal sealed partial class SellController
         return JournalReview.Build(read.Entries);
     }
 
-    private static RetainerSnapshot[] SnapshotsOf(CharacterData data)
-    {
-        var snapshots = data.Snapshots;
-        var markets = new RetainerSnapshot[snapshots.Count];
-        for (var index = 0; index < markets.Length; index++)
-        {
-            markets[index] = snapshots[index];
-        }
-
-        return markets;
-    }
-
     private static ApprovedPrice[] ApprovalsOf(CharacterData data)
     {
         var stored = data.Approvals;
@@ -138,7 +126,7 @@ internal sealed partial class SellController
 
     private ImmutableArray<RunRetainer> RetainersOf(CharacterData data, SellAuthorization authorization, ReadOnlySpan<RetainerSnapshot> markets)
     {
-        var taxes = plugin.References.Current?.Taxes ?? TaxRatesResult.FailedWith(UniversalisFailure.NotFound);
+        var taxes = plugin.References.Taxes;
         var roster = data.Retainers;
         var retainers = ImmutableArray.CreateBuilder<RunRetainer>(authorization.RetainerIds.Length);
         for (var index = 0; index < roster.Count; index++)
@@ -150,7 +138,7 @@ internal sealed partial class SellController
             }
 
             var town = TownOf(markets, setting.RetainerId);
-            retainers.Add(new RunRetainer(setting.RetainerId, setting.Name, taxes.SellerTaxPercentFor(town)));
+            retainers.Add(new RunRetainer(setting.RetainerId, setting.Name, town, taxes.SellerTaxPercentFor(town)));
         }
 
         return retainers.ToImmutable();
@@ -174,16 +162,28 @@ internal sealed partial class SellController
         var rules = authorization.Rules;
         var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
         var stock = ImmutableArray.CreateBuilder<StockSlot>(read.Slots.Length);
+        var unsupported = 0;
         for (var index = 0; index < read.Slots.Length; index++)
         {
             var slot = read.Slots[index];
+            if (!RunPlanner.CanListFrom(slot.Source))
+            {
+                unsupported++;
+                continue;
+            }
+
             var reference = plugin.References.ReferenceFor(slot.Key, null, nowUtc);
             stock.Add(new StockSlot(slot, plugin.GameItems.FactsOf(slot.ItemId), reference.AverageSalePrice));
         }
 
+        if (unsupported > 0)
+        {
+            RunLog.Info($"Run: {unsupported} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
+        }
+
         return new RunPlanInputs
         {
-            Stock = stock.MoveToImmutable(),
+            Stock = stock.ToImmutable(),
             FreeBagSlots = read.FreeBagSlots,
             Rules = rules,
             Edits = data.PlanEdits,
