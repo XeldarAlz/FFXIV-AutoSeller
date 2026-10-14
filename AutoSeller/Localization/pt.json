@@ -722,6 +722,8 @@
   "autoRetainer.postprocessHelp": "Quando o AutoRetainer termina a expedição de um ajudante, reajustar e anunciar nesse ajudante antes de devolvê-lo.",
   "autoRetainer.sellNow": "Botão Vender agora",
   "autoRetainer.sellNowHelp": "Adiciona à lista de ajudantes do AutoRetainer um botão que passa cada ajudante pelo Auto Seller.",
+  "autoRetainer.sellNowTooltip": "Auto Seller: reajustar preços e anunciar em cada ajudante agora",
+  "autoRetainer.sellNowBusy": "O Auto Seller já está em execução",
   "autoRetainer.alts": "Tratar personagens do AutoRetainer como meus alternativos",
   "autoRetainer.altsHelp": "Nunca cobrir anúncios dos ajudantes dos seus outros personagens que o AutoRetainer conhece.",
   "autoRetainer.footnote": "Isto precisa do AutoRetainer instalado e atualizado. Itens que o AutoRetainer protege nunca são vendidos nem vão ao vendedor NPC, não importa o que estes botões digam.",

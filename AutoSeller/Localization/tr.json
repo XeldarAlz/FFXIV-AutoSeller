@@ -722,6 +722,8 @@
   "autoRetainer.postprocessHelp": "AutoRetainer bir yardımcının seferini bitirince, geri vermeden önce o yardımcıda yeniden fiyatla ve ilan ver.",
   "autoRetainer.sellNow": "Şimdi sat düğmesi",
   "autoRetainer.sellNowHelp": "AutoRetainer'ın yardımcı listesine, her yardımcıyı Auto Seller'dan geçiren bir düğme ekler.",
+  "autoRetainer.sellNowTooltip": "Auto Seller: her yardımcıda şimdi fiyatları güncelle ve satışa koy",
+  "autoRetainer.sellNowBusy": "Auto Seller zaten çalışıyor",
   "autoRetainer.alts": "AutoRetainer karakterlerini diğer karakterlerim say",
   "autoRetainer.altsHelp": "AutoRetainer'ın bildiği diğer karakterlerinizin yardımcılarının ilanlarının asla altına inme.",
   "autoRetainer.footnote": "Bunlar için AutoRetainer'ın kurulu ve güncel olması gerekir. AutoRetainer'ın koruduğu eşyalar, bu anahtarlar ne derse desin asla satılmaz veya tüccara verilmez.",

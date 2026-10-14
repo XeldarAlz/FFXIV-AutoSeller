@@ -17,6 +17,7 @@ using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows;
+using AutoSeller.Windows.Overlays;
 using AutoSeller.Windows.Shell;
 using clib;
 using Dalamud.Game.Command;
@@ -71,6 +72,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
     private readonly AppWindow appWindow;
+    private readonly SellNowButton sellNowButton;
     private readonly CommandInfo primaryCommand;
     private readonly CommandInfo aliasCommand;
 
@@ -124,6 +126,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(Controller.Shutdown);
             Postprocess = new PostprocessHost(this);
             completed.Push(Postprocess.Dispose);
+            sellNowButton = new SellNowButton(Configuration, AutoRetainer, Postprocess, Controller);
+            completed.Push(sellNowButton.Dispose);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -174,6 +178,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Controller.Shutdown();
+        sellNowButton.Dispose();
         Postprocess.Dispose();
         Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;

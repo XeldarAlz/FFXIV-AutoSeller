@@ -722,6 +722,8 @@
   "autoRetainer.postprocessHelp": "AutoRetainer 完成某个雇员的探险后，在交还前为该雇员改价并挂单。",
   "autoRetainer.sellNow": "“立即出售”按钮",
   "autoRetainer.sellNowHelp": "在 AutoRetainer 的雇员列表中添加一个按钮，让每个雇员都经过 Auto Seller。",
+  "autoRetainer.sellNowTooltip": "Auto Seller：立即在每个雇员处调整价格并上架",
+  "autoRetainer.sellNowBusy": "Auto Seller 已在运行",
   "autoRetainer.alts": "把 AutoRetainer 的角色视为我的小号",
   "autoRetainer.altsHelp": "绝不压 AutoRetainer 知道的、你其他角色雇员的挂单价。",
   "autoRetainer.footnote": "这些需要安装最新的 AutoRetainer。AutoRetainer 保护的物品永远不会出售或卖给商人，无论这些开关如何设置。",

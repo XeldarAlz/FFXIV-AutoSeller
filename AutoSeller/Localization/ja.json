@@ -722,6 +722,8 @@
   "autoRetainer.postprocessHelp": "AutoRetainer がリテイナーのベンチャーを終えたら、戻す前にそのリテイナーで価格改定と出品を行います。",
   "autoRetainer.sellNow": "「今すぐ販売」ボタン",
   "autoRetainer.sellNowHelp": "AutoRetainer のリテイナー一覧に、全リテイナーを Auto Seller に通すボタンを追加します。",
+  "autoRetainer.sellNowTooltip": "Auto Seller：今すぐ各リテイナーで価格を調整して出品する",
+  "autoRetainer.sellNowBusy": "Auto Seller はすでに実行中です",
   "autoRetainer.alts": "AutoRetainer のキャラクターをサブキャラとして扱う",
   "autoRetainer.altsHelp": "AutoRetainer が知っている、あなたの他のキャラクターのリテイナーの出品は決して下回りません。",
   "autoRetainer.footnote": "AutoRetainer が最新の状態でインストールされている必要があります。AutoRetainer が保護しているアイテムは、これらのスイッチに関係なく、販売もNPC売却もしません。",

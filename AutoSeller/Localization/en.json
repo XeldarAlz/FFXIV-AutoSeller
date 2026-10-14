@@ -722,6 +722,8 @@
   "autoRetainer.postprocessHelp": "When AutoRetainer finishes a retainer's venture, reprice and list on that retainer before handing it back.",
   "autoRetainer.sellNow": "Sell now button",
   "autoRetainer.sellNowHelp": "Add a button to AutoRetainer's retainer list that sends every retainer through Auto Seller.",
+  "autoRetainer.sellNowTooltip": "Auto Seller: reprice and list on each retainer now",
+  "autoRetainer.sellNowBusy": "Auto Seller is already running",
   "autoRetainer.alts": "Treat AutoRetainer characters as my alts",
   "autoRetainer.altsHelp": "Never undercut listings from the retainers of your other characters that AutoRetainer knows.",
   "autoRetainer.footnote": "These need AutoRetainer installed and up to date. Items AutoRetainer protects are never sold or vendored, whatever these switches say.",
