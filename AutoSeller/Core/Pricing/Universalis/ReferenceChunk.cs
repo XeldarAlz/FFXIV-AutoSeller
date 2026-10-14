@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace AutoSeller.Core.Pricing.Universalis;
 
-internal sealed record ReferenceChunk(UniversalisScope Scope, ImmutableArray<uint> ItemIds)
+internal readonly record struct ReferenceChunk(UniversalisScope Scope, ImmutableArray<uint> ItemIds)
 {
     public static ImmutableArray<ReferenceChunk> Split(UniversalisScope scope, ReadOnlySpan<uint> itemIds)
     {

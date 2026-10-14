@@ -46,12 +46,7 @@ internal static class UniversalisTranslator
                 : TranslateItem(itemView, itemId, chunk.Scope);
         }
 
-        return new ReferenceChunkResult
-        {
-            Chunk = chunk,
-            Failure = UniversalisFailure.None,
-            Items = ImmutableCollectionsMarshal.AsImmutableArray(items),
-        };
+        return new ReferenceChunkResult(chunk, UniversalisFailure.None, ImmutableCollectionsMarshal.AsImmutableArray(items));
     }
 
     public static TaxRatesResult TranslateTaxRates(ReadOnlySpan<byte> body)

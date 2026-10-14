@@ -3,14 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace AutoSeller.Core.Pricing.Universalis;
 
-internal sealed class ReferenceChunkResult
+internal readonly record struct ReferenceChunkResult(ReferenceChunk Chunk, UniversalisFailure Failure, ImmutableArray<UniversalisReference> Items)
 {
-    public required ReferenceChunk Chunk { get; init; }
-
-    public required UniversalisFailure Failure { get; init; }
-
-    public required ImmutableArray<UniversalisReference> Items { get; init; }
-
     public bool Failed => Failure != UniversalisFailure.None;
 
     public static ReferenceChunkResult FailedWith(ReferenceChunk chunk, UniversalisFailure failure)
@@ -22,11 +16,6 @@ internal sealed class ReferenceChunkResult
             items[index] = UniversalisReference.WithoutData(ids[index], ReferenceCoverage.RequestFailed);
         }
 
-        return new ReferenceChunkResult
-        {
-            Chunk = chunk,
-            Failure = failure,
-            Items = ImmutableCollectionsMarshal.AsImmutableArray(items),
-        };
+        return new ReferenceChunkResult(chunk, failure, ImmutableCollectionsMarshal.AsImmutableArray(items));
     }
 }
