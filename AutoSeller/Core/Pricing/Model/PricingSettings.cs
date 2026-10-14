@@ -1,3 +1,5 @@
+using AutoSeller.Core.Rules.Model;
+
 namespace AutoSeller.Core.Pricing.Model;
 
 internal enum PricingMode : byte
@@ -36,6 +38,7 @@ internal sealed record PricingSettings
     public static readonly PricingRange<int> PriceWarDropCountRange = new(2, 3, 10);
     public static readonly PricingRange<TimeSpan> RepriceCooldownRange = new(TimeSpan.FromMinutes(30), TimeSpan.FromHours(2), TimeSpan.FromDays(7));
     public static readonly PricingRange<TimeSpan> PriceWarWindowRange = new(TimeSpan.FromHours(1), TimeSpan.FromHours(24), TimeSpan.FromDays(7));
+    public static readonly PricingRange<byte> ListingsToKeepUpRange = new(1, ItemRule.DefaultListingsToKeepUp, ItemRule.MaximumListingsToKeepUp);
     public static readonly TimeSpan BelowFloorReturnDelay = TimeSpan.FromDays(3);
     public static readonly TimeSpan CompetitionLifetime = TimeSpan.FromMinutes(3);
 

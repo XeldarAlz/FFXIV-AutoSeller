@@ -35,6 +35,16 @@ public sealed class PricingSettingsTests
         Assert.Equal((10, 90), (PricingSettings.BaitRatioPercentRange.Minimum, PricingSettings.BaitRatioPercentRange.Maximum));
         Assert.Equal((5, 90), (PricingSettings.StepLimitPercentRange.Minimum, PricingSettings.StepLimitPercentRange.Maximum));
         Assert.Equal(TimeSpan.FromMinutes(30), PricingSettings.RepriceCooldownRange.Minimum);
+        Assert.Equal(((byte)1, (byte)1, (byte)20), (PricingSettings.ListingsToKeepUpRange.Minimum, PricingSettings.ListingsToKeepUpRange.Default, PricingSettings.ListingsToKeepUpRange.Maximum));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(7, 7)]
+    [InlineData(255, 20)]
+    public void ListingsToKeepUpClampToTheirRange(byte value, byte expected)
+    {
+        Assert.Equal(expected, PricingSettings.ListingsToKeepUpRange.Clamp(value));
     }
 
     [Fact]
