@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <em>Your retainers' listings, priced and kept selling for you. Built on Dalamud.</em>
+  <em>Your retainer listings, sold for you. Built on Dalamud.</em>
 </p>
 
 ---
