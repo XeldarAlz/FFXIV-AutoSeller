@@ -27,6 +27,9 @@ public sealed partial class Configuration : IPluginConfiguration
     public string LastSeenChangelogVersion { get; set; } = string.Empty;
 
     [JsonIgnore]
+    public int Revision { get; private set; }
+
+    [JsonIgnore]
     public bool HasUnseenChangelog => !string.Equals(LastSeenChangelogVersion, ChangelogData.LatestVersion, StringComparison.Ordinal);
 
     public static Configuration CreateFresh() => new()
@@ -67,6 +70,7 @@ public sealed partial class Configuration : IPluginConfiguration
 
     public void Save()
     {
+        Revision++;
         savePending = false;
         Plugin.PluginInterface.SavePluginConfig(this);
     }
@@ -75,6 +79,7 @@ public sealed partial class Configuration : IPluginConfiguration
     // pending, and FlushPendingSave writes the last one once the throttle window has passed.
     public void SaveDebounced()
     {
+        Revision++;
         savePending = true;
         FlushPendingSave();
     }

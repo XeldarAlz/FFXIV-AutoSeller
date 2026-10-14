@@ -10,9 +10,9 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace AutoSeller.Core.Inventory;
 
-internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots)
+internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots, bool Complete)
 {
-    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0);
+    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0, false);
 }
 
 internal sealed unsafe class BagReader
@@ -91,7 +91,7 @@ internal sealed unsafe class BagReader
 
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
         bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
-        return new BagRead(slots.ToImmutable(), freeBagSlots);
+        return new BagRead(slots.ToImmutable(), freeBagSlots, skipped == 0);
     }
 
     public static bool TryReadSlot(uint container, ushort slot, out ItemKey item, out uint quantity)
