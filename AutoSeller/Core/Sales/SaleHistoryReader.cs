@@ -8,7 +8,6 @@ using AutoSeller.Core.Market;
 using AutoSeller.Core.Sales.Model;
 using Dalamud.Hooking;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Sales;
 
