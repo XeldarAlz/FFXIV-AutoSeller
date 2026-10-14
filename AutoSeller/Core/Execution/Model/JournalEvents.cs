@@ -72,6 +72,8 @@ internal abstract record WriteIntent : WriteEvent
 
     public long GilBefore { get; init; } = Unread;
 
+    public long ListingsBefore { get; init; } = Unread;
+
     public static WriteIntent Record(in SaleWrite write, long sequence, Guid runId, DateTime atUtc, Guid writeId)
     {
         return write.Kind switch

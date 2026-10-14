@@ -189,7 +189,7 @@ internal static class SaleReadBack
         return listing.ItemId == write.ItemId && listing.IsHq == write.IsHq && listing.Quantity == write.Quantity;
     }
 
-    private static int CountListings(ReadOnlySpan<ListingSlot> market, in SaleWrite write, uint unitPrice)
+    public static int CountListings(ReadOnlySpan<ListingSlot> market, in SaleWrite write, uint unitPrice)
     {
         var count = 0;
         for (var index = 0; index < market.Length; index++)
