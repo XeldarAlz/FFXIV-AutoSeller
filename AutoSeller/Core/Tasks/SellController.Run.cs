@@ -85,6 +85,16 @@ internal sealed partial class SellController
         EndNow(active, "logged out or unloading");
     }
 
+    public void EndPostprocessJob(string reason)
+    {
+        if (session is not { Mode: RunMode.Postprocess } active)
+        {
+            return;
+        }
+
+        EndNow(active, reason);
+    }
+
     public void Pause(PauseReason reason)
     {
         if (reason == PauseReason.None || session is not { Ended: false } active)

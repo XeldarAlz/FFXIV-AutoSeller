@@ -66,6 +66,7 @@ public sealed class Plugin : IDalamudPlugin
     internal AutoRetainerIpc AutoRetainer { get; }
     internal MarketbuddyIpc Marketbuddy { get; }
     internal AutoRetainerSuppression Suppression { get; }
+    internal PostprocessHost Postprocess { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -121,6 +122,8 @@ public sealed class Plugin : IDalamudPlugin
             Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
+            Postprocess = new PostprocessHost(this);
+            completed.Push(Postprocess.Dispose);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -171,6 +174,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         Controller.Shutdown();
+        Postprocess.Dispose();
         Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
 
