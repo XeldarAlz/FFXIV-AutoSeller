@@ -22,6 +22,7 @@ internal sealed class MarketbuddyIpc : IDisposable
     private readonly Func<string, bool> isLockedCall;
     private LockAnswer reported;
     private bool answerReported;
+    private bool held;
 
     public MarketbuddyIpc()
     {
@@ -35,8 +36,6 @@ internal sealed class MarketbuddyIpc : IDisposable
         ReleaseLeftover();
     }
 
-    public bool Held { get; private set; }
-
     public bool Answers => lockGate.HasFunction && unlockGate.HasFunction;
 
     public void Dispose()
@@ -46,12 +45,12 @@ internal sealed class MarketbuddyIpc : IDisposable
 
     public void Hold()
     {
-        if (Held || !lockGate.HasFunction)
+        if (held || !lockGate.HasFunction)
         {
             return;
         }
 
-        Held = true;
+        held = true;
         var added = IpcGate.Invoke(true, lockCall, AsellConstants.InternalName, false, LockFailed);
         var locked = IpcGate.Invoke(isLockedGate.HasFunction, isLockedCall, AsellConstants.InternalName, false, IsLockedFailed);
         Report(new LockAnswer(added, locked));
@@ -59,12 +58,12 @@ internal sealed class MarketbuddyIpc : IDisposable
 
     public void Release()
     {
-        if (!Held)
+        if (!held)
         {
             return;
         }
 
-        Held = false;
+        held = false;
         var removed = IpcGate.Invoke(unlockGate.HasFunction, unlockCall, AsellConstants.InternalName, false, UnlockFailed);
         RunLog.Debug($"Marketbuddy: unlocked (lock found {removed}).");
     }

@@ -131,8 +131,6 @@ internal sealed class AutoRetainerIpc : IDisposable
         }
     }
 
-    public bool Available => Status.Readiness == AutoRetainerState.Available;
-
     public void Dispose()
     {
         additionalTask.Unsubscribe(onAdditionalTask);
