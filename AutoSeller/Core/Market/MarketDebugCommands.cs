@@ -4,6 +4,7 @@ using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing;
 using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Sales.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks;
 using ECommons.DalamudServices;
@@ -15,9 +16,12 @@ internal static class MarketDebugCommands
     public const string LookSubcommand = "look";
     public const string StatusSubcommand = "mbstatus";
     public const string SendPathSubcommand = "sendpath";
+    public const string HistoryPathSubcommand = "historypath";
 
     private const string ComparePricesArgument = "compare";
     private const string SearchProxyArgument = "proxy";
+    private const string HistoryWindowArgument = "window";
+    private const string HistoryPacketArgument = "packet";
 
     public static void Look(string arguments, Plugin plugin)
     {
@@ -83,6 +87,21 @@ internal static class MarketDebugCommands
         Print(Loc.T(L.Market.SendPathSet, PathText(path)));
     }
 
+    public static void SetHistoryPath(string arguments, Plugin plugin)
+    {
+        var configuration = plugin.Configuration;
+        if (!TryParseHistoryPath(arguments, out var source))
+        {
+            PrintError(Loc.T(L.Market.HistoryPathUsage, HistoryPathText(configuration.SaleHistorySource)));
+            return;
+        }
+
+        configuration.SaleHistorySource = source;
+        configuration.Save();
+        RunLog.Info($"Sale history: read from the {source} from the next retainer visit on.");
+        Print(Loc.T(L.Market.HistoryPathSet, HistoryPathText(source)));
+    }
+
     public static void PrintStatus(Plugin plugin)
     {
         var gates = plugin.Market.Gates;
@@ -145,6 +164,23 @@ internal static class MarketDebugCommands
     private static string PathText(SearchSendPath path)
     {
         return Loc.T(path == SearchSendPath.SearchProxy ? L.Market.SendPathSearchProxy : L.Market.SendPathComparePrices);
+    }
+
+    private static bool TryParseHistoryPath(string arguments, out SaleHistorySource source)
+    {
+        if (arguments.Equals(HistoryWindowArgument, StringComparison.OrdinalIgnoreCase))
+        {
+            source = SaleHistorySource.Window;
+            return true;
+        }
+
+        source = SaleHistorySource.Packet;
+        return arguments.Equals(HistoryPacketArgument, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string HistoryPathText(SaleHistorySource source)
+    {
+        return Loc.T(source == SaleHistorySource.Packet ? L.Market.HistoryPathPacket : L.Market.HistoryPathWindow);
     }
 
     private static string RefusalText(SendRefusal refusal, string name)

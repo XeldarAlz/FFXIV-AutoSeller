@@ -3,7 +3,7 @@ using AutoSeller.Core.Market.Model;
 
 namespace AutoSeller.Core.Sales.Model;
 
-internal enum SaleHistorySource : byte
+public enum SaleHistorySource : byte
 {
     Window,
     Packet,
@@ -11,8 +11,6 @@ internal enum SaleHistorySource : byte
 
 internal static class SaleHistoryWindowLayout
 {
-    public const SaleHistorySource Source = SaleHistorySource.Window;
-
     public const int RowCountIndex = 0;
     public const int FirstRowIndex = 1;
     public const int RowStride = 7;

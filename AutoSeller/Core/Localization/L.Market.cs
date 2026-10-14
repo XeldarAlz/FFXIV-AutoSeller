@@ -35,5 +35,9 @@ internal static partial class L
         public static readonly LocString SendPathSet = new("market.sendPath.set", "Market searches now go through {0}.");
         public static readonly LocString SendPathComparePrices = new("market.sendPath.comparePrices", "the Compare prices button of the sell window");
         public static readonly LocString SendPathSearchProxy = new("market.sendPath.searchProxy", "the item search proxy, at a summoning bell or a market board");
+        public static readonly LocString HistoryPathUsage = new("market.historyPath.usage", "Usage: /asell historypath window | packet. Retainer sale histories are currently read from {0}.");
+        public static readonly LocString HistoryPathSet = new("market.historyPath.set", "Retainer sale histories are now read from {0}, from the next visit on.");
+        public static readonly LocString HistoryPathWindow = new("market.historyPath.window", "the Sale History window");
+        public static readonly LocString HistoryPathPacket = new("market.historyPath.packet", "the data the game receives for the Sale History window");
     }
 }

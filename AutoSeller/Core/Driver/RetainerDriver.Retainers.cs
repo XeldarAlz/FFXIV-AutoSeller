@@ -142,7 +142,13 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> WorkRetainer(int index, RunRetainer retainer)
     {
-        var stop = await OpenSellList(retainer);
+        var stop = await ReadSaleHistory(retainer);
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return stop;
+        }
+
+        stop = await OpenSellList(retainer);
         if (stop.Halted)
         {
             return stop;

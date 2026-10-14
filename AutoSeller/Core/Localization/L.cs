@@ -78,6 +78,9 @@ internal static partial class L
         public static readonly LocString StatusReadingMarket = new("run.status.readingMarket", "{0}: reading the listings");
         public static readonly LocString StatusListing = new("run.status.listing", "{0}: checking {1} ({2} of {3})");
         public static readonly LocString StatusLot = new("run.status.lot", "{0}: pricing {1} for a new listing ({2} of {3})");
+        public static readonly LocString StatusSaleHistory = new("run.status.saleHistory", "{0}: reading the sale history");
+        public static readonly LocString StatusReturning = new("run.status.returning", "{0}: returning {1} to the retainer");
+        public static readonly LocString StatusVendoring = new("run.status.vendoring", "{0}: having the retainer sell {1} to a vendor");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
         public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");

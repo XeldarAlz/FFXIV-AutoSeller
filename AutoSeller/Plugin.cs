@@ -71,6 +71,7 @@ public sealed class Plugin : IDalamudPlugin
     internal AutoRetainerSuppression Suppression { get; }
     internal PostprocessHost Postprocess { get; }
     internal SalesLedger Sales { get; }
+    internal SaleHistoryReader SaleHistory { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -122,6 +123,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(References.Dispose);
             saleNotices = new SaleNoticeWatcher(Characters, Sales);
             completed.Push(saleNotices.Dispose);
+            SaleHistory = new SaleHistoryReader(Configuration);
+            completed.Push(SaleHistory.Dispose);
             OwnSellers = new OwnSellersProvider(Retainers, Characters, Configuration, AutoRetainer);
             Bags = new BagReader(AutoRetainer.IsItemProtected);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
@@ -197,6 +200,7 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
         saleNotices.Dispose();
+        SaleHistory.Dispose();
         Plan.Dispose();
         BlockedScanner.Dispose();
         History.Dispose();
@@ -294,6 +298,10 @@ public sealed class Plugin : IDalamudPlugin
         else if (HasSubcommand(trimmed, MarketDebugCommands.SendPathSubcommand))
         {
             MarketDebugCommands.SetSendPath(trimmed[MarketDebugCommands.SendPathSubcommand.Length..].Trim(), this);
+        }
+        else if (HasSubcommand(trimmed, MarketDebugCommands.HistoryPathSubcommand))
+        {
+            MarketDebugCommands.SetHistoryPath(trimmed[MarketDebugCommands.HistoryPathSubcommand.Length..].Trim(), this);
         }
         else
         {

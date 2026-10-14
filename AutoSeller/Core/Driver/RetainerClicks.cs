@@ -22,6 +22,8 @@ internal static unsafe class RetainerClicks
     private const string SelectRetainerThrottleKey = "AutoSeller.Retainer.SelectRetainer";
     private const string TalkThrottleKey = "AutoSeller.Retainer.Talk";
     private const string OpenSellListThrottleKey = "AutoSeller.Retainer.OpenSellList";
+    private const string OpenSaleHistoryThrottleKey = "AutoSeller.Retainer.OpenSaleHistory";
+    private const string CloseSaleHistoryThrottleKey = "AutoSeller.Retainer.CloseSaleHistory";
     private const string QuitThrottleKey = "AutoSeller.Retainer.Quit";
     private const string ListingMenuThrottleKey = "AutoSeller.Retainer.ListingMenu";
     private const string AdjustPriceThrottleKey = "AutoSeller.Retainer.AdjustPrice";
@@ -42,6 +44,7 @@ internal static unsafe class RetainerClicks
         CloseSellWindowThrottleKey,
         CloseResultWindowThrottleKey,
         CloseSellListThrottleKey,
+        CloseSaleHistoryThrottleKey,
         CloseWindowThrottleKey,
     ];
 
@@ -53,6 +56,7 @@ internal static unsafe class RetainerClicks
     public static readonly string SellWindowAddon = ChainWindows.NameOf(ChainWindow.RetainerSell);
     public static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
     public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
+    public static readonly string SaleHistoryAddon = ChainWindows.NameOf(ChainWindow.RetainerHistory);
 
     private static uint reportedOwner;
     private static ushort reportedSellList;
@@ -94,6 +98,10 @@ internal static unsafe class RetainerClicks
     public static bool OpenSellList(int entry, in PromptText expected) => NpcInteraction.SelectEntryShowing(entry, expected, OpenSellListThrottleKey);
 
     public static bool Quit(int entry, in PromptText expected) => NpcInteraction.SelectEntryShowing(entry, expected, QuitThrottleKey);
+
+    public static bool OpenSaleHistory(int entry, in PromptText expected) => NpcInteraction.SelectEntryShowing(entry, expected, OpenSaleHistoryThrottleKey);
+
+    public static bool CloseSaleHistory() => Close(SaleHistoryAddon, CloseSaleHistoryThrottleKey);
 
     public static bool OpenListingMenu(int row)
     {
