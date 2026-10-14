@@ -32,13 +32,7 @@ internal static class PriceDecision
         return competition.ItemId == item.ItemId
             && competition.IsComplete
             && !competition.IsCapped
-            && IsFresh(competition.CapturedAtUtc, nowUtc);
-    }
-
-    private static bool IsFresh(DateTime capturedAtUtc, DateTime nowUtc)
-    {
-        var age = nowUtc - capturedAtUtc;
-        return age >= TimeSpan.Zero && age <= PricingSettings.CompetitionLifetime;
+            && SearchReuse.IsFreshForReuse(competition.CapturedAtUtc, nowUtc);
     }
 
     private static bool IsPricedWithoutCompetition(in PriceDecisionInput input)

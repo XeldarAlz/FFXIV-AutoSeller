@@ -12,9 +12,14 @@ internal sealed class SearchReuse
     private readonly Dictionary<ItemKey, CompetitorSnapshot> searches = [];
     private readonly Dictionary<ItemKey, List<ulong>> ownListingRetainers = [];
 
-    public static bool IsFreshForTyping(CompetitorSnapshot snapshot, DateTime nowUtc)
+    public static bool IsFreshForReuse(DateTime capturedAtUtc, DateTime nowUtc)
     {
-        return IsWithin(snapshot.CapturedAtUtc, nowUtc, TypingWindow);
+        return IsWithin(capturedAtUtc, nowUtc, ReuseWindow);
+    }
+
+    public static bool IsFreshForTyping(DateTime capturedAtUtc, DateTime nowUtc)
+    {
+        return IsWithin(capturedAtUtc, nowUtc, TypingWindow);
     }
 
     public void Clear()
@@ -45,7 +50,7 @@ internal sealed class SearchReuse
     public bool TryReuse(ItemKey key, DateTime nowUtc, [NotNullWhen(true)] out CompetitorSnapshot? snapshot)
     {
         snapshot = null;
-        if (!searches.TryGetValue(key, out var stored) || !IsSettled(stored) || !IsWithin(stored.CapturedAtUtc, nowUtc, ReuseWindow))
+        if (!searches.TryGetValue(key, out var stored) || !IsSettled(stored) || !IsFreshForReuse(stored.CapturedAtUtc, nowUtc))
         {
             return false;
         }

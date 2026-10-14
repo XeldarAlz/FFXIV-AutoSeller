@@ -1,3 +1,4 @@
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
@@ -5,8 +6,6 @@ namespace AutoSeller.Core.Execution.Model;
 internal static class SaleGuard
 {
     private const long PercentDenominator = 100;
-
-    public static readonly TimeSpan MaximumSearchAge = TimeSpan.FromSeconds(60);
 
     public static SaleVerdict Evaluate(in SaleGuardInput input)
     {
@@ -106,7 +105,7 @@ internal static class SaleGuard
             return SaleRejection.StaleSearch;
         }
 
-        if (write.SetsPrice && input.NowUtc - input.SearchCapturedAtUtc > MaximumSearchAge)
+        if (write.SetsPrice && !SearchReuse.IsFreshForTyping(input.SearchCapturedAtUtc, input.NowUtc))
         {
             return SaleRejection.SearchTooOld;
         }

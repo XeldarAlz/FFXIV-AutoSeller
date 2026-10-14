@@ -400,7 +400,7 @@ public sealed class PriceDecisionTests
     [Fact]
     public void SearchIsCurrentFromItsCaptureToTheEndOfItsLifetime()
     {
-        var lifetime = PricingSettings.CompetitionLifetime;
+        var lifetime = SearchReuse.ReuseWindow;
         var tick = TimeSpan.FromTicks(1);
 
         Assert.False(PriceDecision.IsCurrent(Snapshot(Competitors(1_000), [], Now + tick), Normal, Now));
@@ -751,7 +751,7 @@ public sealed class PriceDecisionTests
             BlindSearch.Capped => Snapshot(CappedListings()),
             BlindSearch.Incomplete => Expecting(listings, listings.Length + 1),
             BlindSearch.CountUnknown => Expecting(listings, -1),
-            BlindSearch.Stale => Snapshot(listings, [], Now - PricingSettings.CompetitionLifetime - TimeSpan.FromTicks(1)),
+            BlindSearch.Stale => Snapshot(listings, [], Now - SearchReuse.ReuseWindow - TimeSpan.FromTicks(1)),
             BlindSearch.FromTheFuture => Snapshot(listings, [], Now + TimeSpan.FromMinutes(1)),
             _ => new CompetitorSnapshot
             {
