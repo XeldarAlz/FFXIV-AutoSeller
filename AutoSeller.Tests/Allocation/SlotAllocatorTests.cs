@@ -289,6 +289,28 @@ public sealed class SlotAllocatorTests
     }
 
     [Fact]
+    public void NegativeEstimatedValueIsRejected()
+    {
+        var planned = new PlannedLot(new PlanRowKey(0, 0, 0, 0, Ore, false), SlotSource.Bags, 1, 0, 1);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => AllocationLot.From(planned, -1));
+        Assert.Equal(0, AllocationLot.From(planned, 0).EstimatedValue);
+    }
+
+    [Fact]
+    public void LotsAtTheGilCapStillStepAsideWithoutOverflowingTheLoad()
+    {
+        var free = Lot(Ore, MarketLimits.RetainerGilCap, 0);
+        var bound = Lot(Potion, MarketLimits.RetainerGilCap, 1, boundRetainerId: Alpha);
+
+        var result = Allocate([free, bound], [Retainer(Alpha, freeSlots: 1, sellerTaxPercent: 0), Retainer(Beta, freeSlots: 1)]);
+
+        Assert.Equal(Beta, RetainerOf(result, free));
+        Assert.Equal(Alpha, RetainerOf(result, bound));
+        Assert.Equal(new RetainerLoad(Alpha, 1, MarketLimits.RetainerGilCap, false), LoadOf(result, Alpha));
+    }
+
+    [Fact]
     public void PlannedLotsCarryTheirTermsIntoTheAllocator()
     {
         var rules = RuleFixtures.Book([RuleFixtures.SellRule(lotSize: 10, listingsToKeepUp: 2, preferredRetainerId: Beta)], null, null, RuleFixtures.AllSources, [Gamma]);

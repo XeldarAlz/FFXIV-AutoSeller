@@ -246,7 +246,7 @@ internal static class SlotAllocator
                 }
 
                 var candidateValue = lots[candidate].EstimatedValue;
-                if (!GilFits(loads[target] - candidateValue, value))
+                if (!GilFits(Release(loads[target], candidateValue), value))
                 {
                     continue;
                 }
@@ -341,6 +341,11 @@ internal static class SlotAllocator
             return Gil.SaturatingAdd(load, value) <= MarketLimits.RetainerGilCap;
         }
 
+        private static long Release(long load, long value)
+        {
+            return Gil.SaturatingAdd(load, -value);
+        }
+
         private void Assign(int lotIndex, int retainerIndex)
         {
             var lot = lots[lotIndex];
@@ -362,8 +367,8 @@ internal static class SlotAllocator
             freeSlots[retainerIndex]++;
             listingCounts[retainerIndex]--;
             assignedCounts[retainerIndex]--;
-            loads[retainerIndex] -= lot.EstimatedValue;
-            assignedValues[retainerIndex] -= lot.EstimatedValue;
+            loads[retainerIndex] = Release(loads[retainerIndex], lot.EstimatedValue);
+            assignedValues[retainerIndex] = Release(assignedValues[retainerIndex], lot.EstimatedValue);
             placedByItem[lot.Item]--;
         }
 
