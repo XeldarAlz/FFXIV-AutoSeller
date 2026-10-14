@@ -19,6 +19,16 @@ internal readonly struct RunView(SellRunSession? session, bool live)
 
     public RunState State => session?.State ?? RunState.Idle;
 
+    public DateTime StartedAtUtc => session?.Authorization.CreatedAtUtc ?? default;
+
+    public NeedsPlayerReason NeedsPlayer => session?.NeedsPlayer ?? NeedsPlayerReason.None;
+
+    public string Failure => session?.Failure ?? string.Empty;
+
+    public int Visited => session?.Visits.Visited ?? 0;
+
+    public int Settled => session?.Visits.Settled ?? 0;
+
     public ImmutableArray<RunRetainer> Retainers => session?.Retainers ?? [];
 
     public int CurrentRetainer => session?.CurrentRetainer ?? RetainerVisits.NoRetainer;

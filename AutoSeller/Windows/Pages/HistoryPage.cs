@@ -128,7 +128,7 @@ internal sealed class HistoryPage
         TextDraw.At(text.When, new Vector2(textX, top), Styling.TextStrong);
         var badgeMid = top + whenSize.Y * 0.5f;
         var badgeX = textX + whenSize.X + BadgeGap * 2f * scale;
-        badgeX += Badge.DrawLeft(drawList, OutcomeLabel(record.Outcome), OutcomeColor(record.Outcome), badgeX, badgeMid);
+        badgeX += Badge.DrawLeft(drawList, RunLabels.OutcomeLabel(record.Outcome), RunLabels.OutcomeColor(record.Outcome), badgeX, badgeMid);
         if (record.DryRun)
         {
             Badge.DrawLeft(drawList, Loc.T(L.History.DryRun), Styling.AccentBlue, badgeX + BadgeGap * scale, badgeMid);
@@ -162,21 +162,4 @@ internal sealed class HistoryPage
         var ended = record.EndedAtUtc.ToLocalTime().ToString(DateFormat, Loc.Culture);
         return Loc.T(L.History.Tooltip, started, ended);
     }
-
-    private static string OutcomeLabel(RunState outcome) => outcome switch
-    {
-        RunState.Completed => Loc.T(L.History.OutcomeCompleted),
-        RunState.CompletedPartial => Loc.T(L.History.OutcomePartial),
-        RunState.Stopped => Loc.T(L.History.OutcomeStopped),
-        RunState.NeedsPlayer => Loc.T(L.History.OutcomeNeedsPlayer),
-        _ => Loc.T(L.History.OutcomeFailed),
-    };
-
-    private static Vector4 OutcomeColor(RunState outcome) => outcome switch
-    {
-        RunState.Completed => Styling.AccentMint,
-        RunState.CompletedPartial or RunState.NeedsPlayer => Styling.AccentAmber,
-        RunState.Stopped => Styling.TextDim,
-        _ => Styling.AccentRose,
-    };
 }
