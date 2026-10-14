@@ -28,6 +28,22 @@ public sealed class SalesHintsTests
     }
 
     [Fact]
+    public void SaleAfterExactlyAnHourStillCountsAsQuick()
+    {
+        var hints = SalesHints.Compute(Of(SoldAfter(SalesHints.QuickSale, Now.AddHours(-3))).AsSpan(), [], Now);
+
+        Assert.Equal(SalesHints.QuickSale, Assert.Single(hints).Elapsed);
+    }
+
+    [Fact]
+    public void SaleAfterJustOverAnHourIsNotQuick()
+    {
+        var hints = SalesHints.Compute(Of(SoldAfter(SalesHints.QuickSale + TimeSpan.FromSeconds(1), Now.AddHours(-3))).AsSpan(), [], Now);
+
+        Assert.Empty(hints);
+    }
+
+    [Fact]
     public void OnlyTheLatestTimedSaleOfAnItemCounts()
     {
         var hints = SalesHints.Compute(

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Sales.Model;
@@ -29,7 +30,8 @@ internal static class SalesHints
 
     private static void AddQuickSales(ReadOnlySpan<SaleRecord> sales, DateTime nowUtc, ImmutableArray<SalesHint>.Builder hints)
     {
-        var latestTimedSales = new Dictionary<ItemKey, SaleRecord>();
+        var latestIndices = new Dictionary<ItemKey, int>();
+        var latestTimedSales = new List<SaleRecord>();
         for (var index = 0; index < sales.Length; index++)
         {
             var sale = sales[index];
@@ -38,19 +40,28 @@ internal static class SalesHints
                 continue;
             }
 
-            if (!latestTimedSales.TryGetValue(sale.Key, out var latest) || sale.SoldAtUtc > latest.SoldAtUtc)
+            ref var latest = ref CollectionsMarshal.GetValueRefOrAddDefault(latestIndices, sale.Key, out var seen);
+            if (!seen)
             {
-                latestTimedSales[sale.Key] = sale;
+                latest = latestTimedSales.Count;
+                latestTimedSales.Add(sale);
+                continue;
+            }
+
+            if (sale.SoldAtUtc > latestTimedSales[latest].SoldAtUtc)
+            {
+                latestTimedSales[latest] = sale;
             }
         }
 
         var quickSales = new List<SalesHint>(latestTimedSales.Count);
-        foreach (var (item, sale) in latestTimedSales)
+        for (var index = 0; index < latestTimedSales.Count; index++)
         {
+            var sale = latestTimedSales[index];
             var timeOnMarket = sale.SoldAtUtc - sale.ListedAtUtc;
             if (timeOnMarket >= TimeSpan.Zero && timeOnMarket <= QuickSale)
             {
-                quickSales.Add(new SalesHint(SalesHintKind.SoldWithinAnHour, item, sale.RetainerId, timeOnMarket));
+                quickSales.Add(new SalesHint(SalesHintKind.SoldWithinAnHour, sale.Key, sale.RetainerId, timeOnMarket));
             }
         }
 
