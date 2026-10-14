@@ -1,3 +1,4 @@
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Sales.Model;
@@ -29,6 +30,8 @@ internal readonly record struct SaleRecord(
     SaleSource Source)
 {
     public const ulong UnknownRetainer = 0;
+
+    public SnapshotDiffCorroboration GilCorroboration { get; init; }
 
     public ItemKey Key => new(ItemId, IsHq);
 

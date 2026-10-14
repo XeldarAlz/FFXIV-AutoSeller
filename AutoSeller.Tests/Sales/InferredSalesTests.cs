@@ -38,6 +38,35 @@ public sealed class InferredSalesTests
         Assert.Equal(listedAt, sale.ListedAtUtc);
     }
 
+    [Theory]
+    [InlineData(11_900u, SnapshotDiffCorroboration.Corroborated)]
+    [InlineData(10_500u, SnapshotDiffCorroboration.Partial)]
+    [InlineData(10_000u, SnapshotDiffCorroboration.Uncorroborated)]
+    public void InferredSaleCarriesWhatTheRetainerGilSaysAboutIt(uint currentGil, object expected)
+    {
+        var previous = Snapshot(Morning, 10_000, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(Morning.AddHours(1), currentGil);
+
+        var sale = Assert.Single(InferredSales.From(SnapshotDiff.Compute(previous, current, []), CityTaxPercent));
+
+        Assert.Equal((SnapshotDiffCorroboration)expected, sale.GilCorroboration);
+        Assert.Equal(SaleConfidence.Inferred, sale.Confidence);
+    }
+
+    [Fact]
+    public void ConfirmedSaleThatAbsorbsAnUncorroboratedDiffStaysConfirmed()
+    {
+        var previous = Snapshot(Morning, 10_000, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(Morning.AddHours(1), 10_000);
+        var inferred = Assert.Single(InferredSales.From(SnapshotDiff.Compute(previous, current, []), CityTaxPercent));
+
+        var merged = SaleMatcher.Merge(Of(inferred, History(Morning.AddMinutes(20), DarksteelOre, 10, 200)).AsSpan());
+
+        var sale = Assert.Single(merged);
+        Assert.Equal(SaleConfidence.Confirmed, sale.Confidence);
+        Assert.Equal(SnapshotDiffCorroboration.NoInferredSales, sale.GilCorroboration);
+    }
+
     [Fact]
     public void DiffWithoutSalesGivesNoRecords()
     {

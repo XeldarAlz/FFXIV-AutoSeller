@@ -31,7 +31,10 @@ internal static class InferredSales
                 listing.Quantity,
                 listing.UnitPrice,
                 SalePrice.NetAfterSellerTax(gross, sellerTaxPercent),
-                SaleSource.Diff));
+                SaleSource.Diff)
+            {
+                GilCorroboration = diff.Corroboration,
+            });
         }
 
         return sales.ToImmutable();
