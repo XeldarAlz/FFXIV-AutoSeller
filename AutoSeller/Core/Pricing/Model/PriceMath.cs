@@ -4,15 +4,8 @@ namespace AutoSeller.Core.Pricing.Model;
 
 internal static class PriceMath
 {
-    public const uint MinimumPrice = 1;
-    public const uint MaximumPrice = 999_999_999;
     public const int PercentScale = 100;
     public const int BasisPointScale = 10_000;
-
-    public static uint Clamp(long price)
-    {
-        return (uint)Math.Clamp(price, MinimumPrice, MaximumPrice);
-    }
 
     public static long ScaleDown(long amount, long numerator, long denominator)
     {

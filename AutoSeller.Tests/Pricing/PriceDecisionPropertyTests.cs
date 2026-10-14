@@ -36,7 +36,7 @@ public sealed class PriceDecisionPropertyTests
 
             writes++;
             Assert.True(decision.Price >= floor, $"case {caseIndex}: {decision} under floor {floor}");
-            Assert.InRange(decision.Price, PriceMath.MinimumPrice, PriceMath.MaximumPrice);
+            Assert.InRange(decision.Price, MarketLimits.MinimumUnitPrice, MarketLimits.MaximumUnitPrice);
         }
 
         Assert.True(writes >= MinimumCoverage, $"only {writes} price writes");
@@ -261,7 +261,7 @@ public sealed class PriceDecisionPropertyTests
 
             Assert.Equal(released, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed) }));
             Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed + 1) }));
-            if (proposed > PriceMath.MinimumPrice)
+            if (proposed > MarketLimits.MinimumUnitPrice)
             {
                 Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed - 1) }));
             }
@@ -567,7 +567,7 @@ public sealed class PriceDecisionPropertyTests
             floor = Math.Max(floor, (share + PriceMath.PercentScale - 1) / PriceMath.PercentScale);
         }
 
-        return (uint)Math.Clamp(floor, PriceMath.MinimumPrice, PriceMath.MaximumPrice);
+        return (uint)Math.Clamp(floor, MarketLimits.MinimumUnitPrice, MarketLimits.MaximumUnitPrice);
     }
 
     private static int DropsInsideTheWindow(in PriceDecisionInput input)

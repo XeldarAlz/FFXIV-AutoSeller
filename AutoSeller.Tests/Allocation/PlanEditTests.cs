@@ -1,4 +1,5 @@
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Allocation.AllocationFixtures;
 
 namespace AutoSeller.Tests.Allocation;

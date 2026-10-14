@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
 namespace AutoSeller.Tests.Execution;
@@ -69,7 +70,7 @@ public sealed class SellAuthorizationTests
         Assert.Equal(AuthorizationProblem.InvalidStepLimit, Create(out _, stepLimitPercent: 91));
         Assert.Equal(AuthorizationProblem.InvalidCaps, Create(out _, caps: new RunCaps(-1, 100, 20_000)));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = 0 }]));
-        Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = PriceRange.Maximum + 1 }]));
+        Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { Price = MarketLimits.MaximumUnitPrice + 1 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { OldPrice = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { ItemId = 0 }]));
         Assert.Equal(AuthorizationProblem.InvalidApprovedPrice, Create(out _, approvedPrices: [FirstApproval with { RetainerId = StrangerRetainer }]));

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
 
@@ -222,8 +223,8 @@ internal sealed class SellAuthorization
         {
             var approved = sortedPrices[index];
             if (approved.ItemId == 0
-                || !PriceRange.Contains(approved.OldPrice)
-                || !PriceRange.Contains(approved.Price)
+                || !MarketLimits.IsListableUnitPrice(approved.OldPrice)
+                || !MarketLimits.IsListableUnitPrice(approved.Price)
                 || Array.BinarySearch(sortedRetainers, approved.RetainerId) < 0)
             {
                 return AuthorizationProblem.InvalidApprovedPrice;

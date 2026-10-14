@@ -1,6 +1,7 @@
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Pricing.PricingFixtures;
 
 namespace AutoSeller.Tests.Pricing;
@@ -656,7 +657,7 @@ public sealed class PriceDecisionTests
     {
         var input = NewLot(Snapshot(), FreshReference) with { Rule = Rule(fixedPrice: uint.MaxValue) };
 
-        AssertDecision(Decide(input), SellAction.List, PriceMath.MaximumPrice, PriceMath.MaximumPrice, DecisionReason.FixedPrice);
+        AssertDecision(Decide(input), SellAction.List, MarketLimits.MaximumUnitPrice, MarketLimits.MaximumUnitPrice, DecisionReason.FixedPrice);
     }
 
     [Fact]

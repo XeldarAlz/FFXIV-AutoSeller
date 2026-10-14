@@ -1,3 +1,5 @@
+using AutoSeller.Core.Shared;
+
 namespace AutoSeller.Core.Execution.Model;
 
 internal static class SaleGuard
@@ -192,7 +194,7 @@ internal static class SaleGuard
             return SaleRejection.OverStepLimit;
         }
 
-        return PriceRange.Contains(write.NewPrice) ? SaleRejection.None : SaleRejection.PriceOutOfRange;
+        return MarketLimits.IsListableUnitPrice(write.NewPrice) ? SaleRejection.None : SaleRejection.PriceOutOfRange;
     }
 
     private static bool WithinStepLimit(in SaleWrite write, int stepLimitPercent)

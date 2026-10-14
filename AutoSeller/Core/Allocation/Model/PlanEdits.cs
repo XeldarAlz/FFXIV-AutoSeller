@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Allocation.Model;
 
@@ -108,7 +109,7 @@ internal sealed class PlanEdits
 
     private static PlanEditRefusal ValidatePrice(in PlanEdit edit, in PlanEditTarget target)
     {
-        if (edit.Value == 0 || edit.Value > MarketLimits.MaximumUnitPrice)
+        if (edit.Value is < MarketLimits.MinimumUnitPrice or > MarketLimits.MaximumUnitPrice)
         {
             return PlanEditRefusal.PriceOutOfRange;
         }

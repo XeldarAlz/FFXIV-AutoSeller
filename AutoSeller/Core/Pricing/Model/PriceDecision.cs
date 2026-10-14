@@ -217,20 +217,20 @@ internal static class PriceDecision
     {
         if (rule.FixedPrice > 0)
         {
-            return new PriceTarget(PriceMath.Clamp(rule.FixedPrice), DecisionReason.FixedPrice);
+            return new PriceTarget(MarketLimits.ClampUnitPrice(rule.FixedPrice), DecisionReason.FixedPrice);
         }
 
         if (!sane.IsEmpty)
         {
             var lowest = sane.Lowest.UnitPrice;
             return settings.Mode == PricingMode.Match
-                ? new PriceTarget(PriceMath.Clamp(lowest), DecisionReason.Matched)
+                ? new PriceTarget(MarketLimits.ClampUnitPrice(lowest), DecisionReason.Matched)
                 : new PriceTarget(Undercut(lowest, settings), DecisionReason.Undercut);
         }
 
         if (reference.Exists)
         {
-            return new PriceTarget(PriceMath.Clamp(reference.AverageSalePrice), DecisionReason.NoCompetition);
+            return new PriceTarget(MarketLimits.ClampUnitPrice(reference.AverageSalePrice), DecisionReason.NoCompetition);
         }
 
         return default;
@@ -241,7 +241,7 @@ internal static class PriceDecision
         var amount = settings.UndercutUnit == UndercutUnit.Percent
             ? Math.Max(1, PriceMath.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))
             : settings.UndercutGil;
-        return PriceMath.Clamp(Gil.SaturatingAdd(lowest, -amount));
+        return MarketLimits.ClampUnitPrice(Gil.SaturatingAdd(lowest, -amount));
     }
 
     private static bool CallsForDrop(PriceTarget target, uint current, uint marketPrice)
@@ -278,7 +278,7 @@ internal static class PriceDecision
     private static uint RaiseLimit(uint current, int maximumRaisePercent)
     {
         var limit = PriceMath.ScaleDown(current, PriceMath.PercentScale + maximumRaisePercent, PriceMath.PercentScale);
-        return PriceMath.Clamp(Math.Max(Gil.SaturatingAdd(current, 1), limit));
+        return MarketLimits.ClampUnitPrice(Math.Max(Gil.SaturatingAdd(current, 1), limit));
     }
 
     private static bool IsApproved(PriceOverride priceOverride, uint target)

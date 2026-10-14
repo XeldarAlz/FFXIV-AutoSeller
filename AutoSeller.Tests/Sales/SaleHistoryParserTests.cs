@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using AutoSeller.Core.Sales.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Sales.SaleFixtures;
 
 namespace AutoSeller.Tests.Sales;
@@ -48,7 +49,7 @@ public sealed class SaleHistoryParserTests
         Assert.True(SaleHistoryParser.TryParse(HistoryPacket(), CharacterId, FirstRetainerId, CityTaxPercent, out var sales));
 
         Assert.DoesNotContain(sales, sale => sale.ItemId == MythriteIngot);
-        Assert.All(sales, sale => Assert.InRange(sale.UnitPrice, 1u, SalePrice.MaximumUnitPrice));
+        Assert.All(sales, sale => Assert.InRange(sale.UnitPrice, 1u, MarketLimits.MaximumUnitPrice));
     }
 
     [Fact]

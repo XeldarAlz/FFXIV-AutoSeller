@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
 using AutoSeller.Tests.Rules;
 using static AutoSeller.Tests.Allocation.AllocationFixtures;
 

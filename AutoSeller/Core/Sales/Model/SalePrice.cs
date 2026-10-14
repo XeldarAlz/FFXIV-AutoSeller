@@ -1,4 +1,3 @@
-using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Sales.Model;
@@ -13,21 +12,15 @@ internal enum SalePriceMeaning : byte
 internal static class SalePrice
 {
     public const int MannequinSellerTaxPercent = 0;
-    public const uint MaximumUnitPrice = 999_999_999;
-
-    public static bool IsListableUnitPrice(uint unitPrice)
-    {
-        return unitPrice is >= 1 and <= MaximumUnitPrice;
-    }
 
     public static bool IsListable(uint price, uint quantity, SalePriceMeaning meaning)
     {
         if (meaning == SalePriceMeaning.StackTotalAfterTax)
         {
-            return price >= 1 && price / quantity <= MaximumUnitPrice;
+            return price >= MarketLimits.MinimumUnitPrice && price / quantity <= MarketLimits.MaximumUnitPrice;
         }
 
-        return IsListableUnitPrice(ToUnitPrice(price, quantity, meaning));
+        return MarketLimits.IsListableUnitPrice(ToUnitPrice(price, quantity, meaning));
     }
 
     public static uint ToUnitPrice(uint price, uint quantity, SalePriceMeaning meaning)
@@ -63,7 +56,7 @@ internal static class SalePrice
 
     public static bool CouldNetTo(long gross, long netGil)
     {
-        Gil.TryPercentFloor(gross, SnapshotDiff.HighestSellerTaxPercent, out var highestTax);
+        Gil.TryPercentFloor(gross, MarketLimits.HighestSellerTaxPercent, out var highestTax);
         return netGil <= gross && netGil >= gross - highestTax;
     }
 }

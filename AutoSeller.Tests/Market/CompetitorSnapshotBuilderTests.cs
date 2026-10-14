@@ -1,4 +1,5 @@
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Market.MarketFixtures;
 
 namespace AutoSeller.Tests.Market;
@@ -71,7 +72,7 @@ public sealed class CompetitorSnapshotBuilderTests
     [Theory]
     [InlineData(0u, 900u)]
     [InlineData(5u, 0u)]
-    [InlineData(5u, CompetitorSnapshotBuilder.MaximumUnitPrice + 1)]
+    [InlineData(5u, MarketLimits.MaximumUnitPrice + 1)]
     [InlineData(5u, uint.MaxValue)]
     public void RowWithoutQuantityOrWithAnImpossiblePriceRefusesTheCopy(uint quantity, uint unitPrice)
     {
@@ -85,24 +86,24 @@ public sealed class CompetitorSnapshotBuilderTests
     [Fact]
     public void RowAtTheMarketPriceCeilingIsKept()
     {
-        ObservedListing[] rows = [Row(1, CompetitorSnapshotBuilder.MaximumUnitPrice)];
+        ObservedListing[] rows = [Row(1, MarketLimits.MaximumUnitPrice)];
 
         var snapshot = Built(rows);
 
-        Assert.Equal(CompetitorSnapshotBuilder.MaximumUnitPrice, snapshot.Listings[0].UnitPrice);
+        Assert.Equal(MarketLimits.MaximumUnitPrice, snapshot.Listings[0].UnitPrice);
     }
 
     [Fact]
     public void SalesWithoutQuantityOrWithAnImpossiblePriceAreLeftOutOfTheHistory()
     {
         var kept = new MarketSale(950, 3, false, false, Now.AddHours(-2));
-        var atTheCeiling = new MarketSale(CompetitorSnapshotBuilder.MaximumUnitPrice, 1, true, false, Now.AddHours(-3));
+        var atTheCeiling = new MarketSale(MarketLimits.MaximumUnitPrice, 1, true, false, Now.AddHours(-3));
         MarketSale[] history =
         [
             kept,
             new(0, 3, false, false, Now.AddHours(-4)),
             new(900, 0, false, false, Now.AddHours(-5)),
-            new(CompetitorSnapshotBuilder.MaximumUnitPrice + 1, 1, false, false, Now.AddHours(-6)),
+            new(MarketLimits.MaximumUnitPrice + 1, 1, false, false, Now.AddHours(-6)),
             default,
             atTheCeiling,
         ];

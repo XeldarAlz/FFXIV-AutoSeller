@@ -1,4 +1,5 @@
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
 namespace AutoSeller.Tests.Execution;
@@ -32,7 +33,7 @@ public sealed class SaleGuardTests
         (SaleRejection.PriceUnchanged, () => GuardInput(Reprice(ListedPrice))),
         (SaleRejection.BelowFloor, () => GuardInput(Reprice(DecisionFloor - 1))),
         (SaleRejection.OverStepLimit, () => GuardInput(Reprice(700))),
-        (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(PriceRange.Maximum + 1))),
+        (SaleRejection.PriceOutOfRange, () => GuardInput(Reprice(MarketLimits.MaximumUnitPrice + 1))),
         (SaleRejection.VendorPriceMismatch, () => GuardInput(Vendor() with { NewPrice = VendorUnitPrice - 1 })),
         (SaleRejection.RepriceCapReached, () => GuardInput(Reprice()) with { Value = new ValueState(RunCaps.DefaultMaxReprices, 0, 0, Guid.Empty) }),
         (SaleRejection.ListingCapReached, () => GuardInput(List()) with { Value = new ValueState(0, RunCaps.DefaultMaxNewListings, 0, Guid.Empty) }),

@@ -13,6 +13,6 @@ internal static class FloorCalculator
             floor = Math.Max(floor, referenceFloor);
         }
 
-        return PriceMath.Clamp(floor);
+        return MarketLimits.ClampUnitPrice(floor);
     }
 }
