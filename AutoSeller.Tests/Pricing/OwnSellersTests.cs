@@ -43,6 +43,38 @@ public sealed class OwnSellersTests
     }
 
     [Fact]
+    public void TheCharacterRetainersAndAltsMakeOneSet()
+    {
+        var sellers = OwnSellers.Of([OwnRetainer, 9_003, OwnRetainer], OwnCharacter, new AltSellers([AltRetainer], [AltCharacter]));
+
+        Assert.Equal(3, sellers.RetainerCount);
+        Assert.Equal(2, sellers.CharacterCount);
+        Assert.True(sellers.IsOwnRetainer(9_003));
+        Assert.True(sellers.IsOwnRetainer(AltRetainer));
+        Assert.True(sellers.IsOwnCharacter(OwnCharacter));
+        Assert.True(sellers.IsOwnCharacter(AltCharacter));
+    }
+
+    [Fact]
+    public void WithoutAltsOnlyTheCharacterAndItsRetainersAreOwned()
+    {
+        var sellers = OwnSellers.Of([OwnRetainer], OwnCharacter, AltSellers.None);
+
+        Assert.Equal(1, sellers.RetainerCount);
+        Assert.Equal(1, sellers.CharacterCount);
+        Assert.False(sellers.Owns(Competitor(100) with { RetainerId = AltRetainer, SellerContentId = AltCharacter }));
+    }
+
+    [Fact]
+    public void ACharacterNotYetLoadedOwnsOnlyItsKnownRetainers()
+    {
+        var sellers = OwnSellers.Of([OwnRetainer], 0, AltSellers.None);
+
+        Assert.Equal(1, sellers.RetainerCount);
+        Assert.Equal(0, sellers.CharacterCount);
+    }
+
+    [Fact]
     public void NoSellersOwnNothing()
     {
         Assert.False(OwnSellers.None.Owns(Competitor(100) with { RetainerId = OwnRetainer, SellerContentId = OwnCharacter }));
