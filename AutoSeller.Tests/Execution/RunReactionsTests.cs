@@ -58,7 +58,7 @@ public sealed class RunReactionsTests
 
     private static readonly Dictionary<ReadBackOutcome, RunReaction> ReadBackReactions = new()
     {
-        [ReadBackOutcome.Pending] = RunReaction.Continue,
+        [ReadBackOutcome.Pending] = RunReaction.KeepReading,
         [ReadBackOutcome.Confirmed] = RunReaction.Continue,
         [ReadBackOutcome.Rejected] = RunReaction.SkipItem,
         [ReadBackOutcome.Unknown] = RunReaction.NeedsReconciliation,
@@ -126,12 +126,19 @@ public sealed class RunReactionsTests
         Assert.Equal(InterruptHandling.ReadBackFirst, RunReactions.ForInterruption(stoppedIn));
         ListingSlot[] before = [new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, ListedPrice)];
         ListingSlot[] after = [new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, UndercutPrice)];
+        var notYet = SaleReadBack.Judge(
+            Reprice(),
+            new ReadBackSample(before, true, ReadBackSample.Unread, ReadBackSample.Unread),
+            new ReadBackSample(before, true, ReadBackSample.Unread, ReadBackSample.Unread),
+            200);
+        Assert.Equal(RunReaction.KeepReading, RunReactions.ForReadBack(notYet.Outcome));
         var verdict = SaleReadBack.Judge(
             Reprice(),
             new ReadBackSample(before, true, ReadBackSample.Unread, ReadBackSample.Unread),
             new ReadBackSample(after, true, ReadBackSample.Unread, ReadBackSample.Unread),
             400);
         Assert.Equal(ReadBackVerdict.Confirmed, verdict);
+        Assert.Equal(RunReaction.Continue, RunReactions.ForReadBack(verdict.Outcome));
         writer.Confirmed(CaughtWrite).Ended(RunState.Stopped);
 
         var review = JournalReview.Build(journal.Read().Entries);

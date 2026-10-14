@@ -8,6 +8,7 @@ internal enum RunReaction : byte
     EndRun,
     NeedsReconciliation,
     SearchAgain,
+    KeepReading,
 }
 
 internal enum InterruptHandling : byte
@@ -68,7 +69,7 @@ internal static class RunReactions
 
     public static RunReaction ForReadBack(ReadBackOutcome outcome) => outcome switch
     {
-        ReadBackOutcome.Pending => RunReaction.Continue,
+        ReadBackOutcome.Pending => RunReaction.KeepReading,
         ReadBackOutcome.Confirmed => RunReaction.Continue,
         ReadBackOutcome.Rejected => RunReaction.SkipItem,
         _ => RunReaction.NeedsReconciliation,
