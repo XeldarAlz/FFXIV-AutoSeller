@@ -8,8 +8,7 @@ namespace AutoSeller;
 [Serializable]
 public sealed partial class Configuration : IPluginConfiguration
 {
-    // 1: the first version of these settings. 2: adds pricing, rules, sources, AutoRetainer, Assist, the undercut
-    // watch, sale history and the run caps. A later layout change bumps it and adds its step to Migrate.
+    // 1: the first version of these settings. A later layout change bumps it and adds its step to Migrate.
     public const int CurrentVersion = 2;
 
     [JsonIgnore]
