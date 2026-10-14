@@ -9,30 +9,30 @@ internal static class AutoRetainerSettings
     {
         using (SettingsGroup.Begin(Loc.T(L.AutoRetainer.Group)))
         {
-            SettingsRow.Draw(Loc.T(L.AutoRetainer.Postprocess), Loc.T(L.AutoRetainer.PostprocessHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+            SettingsRow.Draw(Loc.T(L.AutoRetainer.Postprocess), Loc.T(L.AutoRetainer.PostprocessHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
             {
-                if (SettingsControls.Toggle("##asell_autoretainer_postprocess", cfg.AutoRetainerPostprocess, out var value))
+                if (SettingsControls.Toggle("##asell_autoretainer_postprocess", configuration.AutoRetainerPostprocess, out var value))
                 {
-                    cfg.AutoRetainerPostprocess = value;
-                    cfg.SaveDebounced();
+                    configuration.AutoRetainerPostprocess = value;
+                    configuration.SaveDebounced();
                 }
             }, SettingsRow.ToggleHeight);
 
-            SettingsRow.Draw(Loc.T(L.AutoRetainer.SellNow), Loc.T(L.AutoRetainer.SellNowHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+            SettingsRow.Draw(Loc.T(L.AutoRetainer.SellNow), Loc.T(L.AutoRetainer.SellNowHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
             {
-                if (SettingsControls.Toggle("##asell_autoretainer_sellnow", cfg.AutoRetainerSellNowButton, out var value))
+                if (SettingsControls.Toggle("##asell_autoretainer_sellnow", configuration.AutoRetainerSellNowButton, out var value))
                 {
-                    cfg.AutoRetainerSellNowButton = value;
-                    cfg.SaveDebounced();
+                    configuration.AutoRetainerSellNowButton = value;
+                    configuration.SaveDebounced();
                 }
             }, SettingsRow.ToggleHeight);
 
-            SettingsRow.Draw(Loc.T(L.AutoRetainer.Alts), Loc.T(L.AutoRetainer.AltsHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+            SettingsRow.Draw(Loc.T(L.AutoRetainer.Alts), Loc.T(L.AutoRetainer.AltsHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
             {
-                if (SettingsControls.Toggle("##asell_autoretainer_alts", cfg.AutoRetainerAltsAreOwn, out var value))
+                if (SettingsControls.Toggle("##asell_autoretainer_alts", configuration.AutoRetainerAltsAreOwn, out var value))
                 {
-                    cfg.AutoRetainerAltsAreOwn = value;
-                    cfg.SaveDebounced();
+                    configuration.AutoRetainerAltsAreOwn = value;
+                    configuration.SaveDebounced();
                 }
             }, SettingsRow.ToggleHeight);
         }

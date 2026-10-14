@@ -9,12 +9,12 @@ internal static class SaleSettings
     {
         using (SettingsGroup.Begin(Loc.T(L.SaleHistory.Group)))
         {
-            SettingsRow.Draw(Loc.T(L.SaleHistory.Read), Loc.T(L.SaleHistory.ReadHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+            SettingsRow.Draw(Loc.T(L.SaleHistory.Read), Loc.T(L.SaleHistory.ReadHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
             {
-                if (SettingsControls.Toggle("##asell_sales_read_history", cfg.ReadSaleHistory, out var value))
+                if (SettingsControls.Toggle("##asell_sales_read_history", configuration.ReadSaleHistory, out var value))
                 {
-                    cfg.ReadSaleHistory = value;
-                    cfg.SaveDebounced();
+                    configuration.ReadSaleHistory = value;
+                    configuration.SaveDebounced();
                 }
             }, SettingsRow.ToggleHeight);
         }

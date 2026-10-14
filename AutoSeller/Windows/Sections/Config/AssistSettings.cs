@@ -22,12 +22,12 @@ internal static class AssistSettings
     private static void DrawAssistGroup(Configuration configuration)
     {
         using var group = SettingsGroup.Begin(Loc.T(L.Assist.Group));
-        SettingsRow.Draw(Loc.T(L.Assist.Enabled), Loc.T(L.Assist.EnabledHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Assist.Enabled), Loc.T(L.Assist.EnabledHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
         {
-            if (SettingsControls.Toggle("##asell_assist_enabled", cfg.AssistEnabled, out var value))
+            if (SettingsControls.Toggle("##asell_assist_enabled", configuration.AssistEnabled, out var value))
             {
-                cfg.AssistEnabled = value;
-                cfg.SaveDebounced();
+                configuration.AssistEnabled = value;
+                configuration.SaveDebounced();
             }
         }, SettingsRow.ToggleHeight);
 
@@ -37,13 +37,13 @@ internal static class AssistSettings
             return;
         }
 
-        SettingsRow.Draw(Loc.T(L.Assist.SkipKey), Loc.T(L.Assist.SkipKeyHelp), SettingsControls.RowComboWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Assist.SkipKey), Loc.T(L.Assist.SkipKeyHelp), SettingsControls.RowComboWidth, configuration, static configuration =>
         {
-            var selected = (int)cfg.AssistSkipKey;
+            var selected = (int)configuration.AssistSkipKey;
             if (SettingsControls.DrawPlainCombo("##asell_assist_skip_key", ref selected, skipKeyLabels, SettingsControls.RowComboWidth))
             {
-                cfg.AssistSkipKey = (AssistSkipKey)selected;
-                cfg.SaveDebounced();
+                configuration.AssistSkipKey = (AssistSkipKey)selected;
+                configuration.SaveDebounced();
             }
         });
     }
@@ -51,22 +51,22 @@ internal static class AssistSettings
     private static void DrawWatchGroup(Configuration configuration)
     {
         using var group = SettingsGroup.Begin(Loc.T(L.Assist.GroupWatch));
-        SettingsRow.Draw(Loc.T(L.Assist.WatchInterval), Loc.T(L.Assist.WatchIntervalHelp), SettingsControls.RowComboWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Assist.WatchInterval), Loc.T(L.Assist.WatchIntervalHelp), SettingsControls.RowComboWidth, configuration, static configuration =>
         {
-            var selected = WatchInterval.IndexOf(cfg.UndercutWatchMinutes);
+            var selected = WatchInterval.IndexOf(configuration.UndercutWatchMinutes);
             if (SettingsControls.DrawPlainCombo("##asell_assist_watch", ref selected, watchLabels, SettingsControls.RowComboWidth))
             {
-                cfg.UndercutWatchMinutes = WatchInterval.ChoiceMinutes[selected];
-                cfg.SaveDebounced();
+                configuration.UndercutWatchMinutes = WatchInterval.ChoiceMinutes[selected];
+                configuration.SaveDebounced();
             }
         });
 
-        SettingsRow.Draw(Loc.T(L.Assist.OnlyNeeded), Loc.T(L.Assist.OnlyNeededHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Assist.OnlyNeeded), Loc.T(L.Assist.OnlyNeededHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
         {
-            if (SettingsControls.Toggle("##asell_assist_only_needed", cfg.OnlyRetainersThatNeedIt, out var value))
+            if (SettingsControls.Toggle("##asell_assist_only_needed", configuration.OnlyRetainersThatNeedIt, out var value))
             {
-                cfg.OnlyRetainersThatNeedIt = value;
-                cfg.SaveDebounced();
+                configuration.OnlyRetainersThatNeedIt = value;
+                configuration.SaveDebounced();
             }
         }, SettingsRow.ToggleHeight);
     }

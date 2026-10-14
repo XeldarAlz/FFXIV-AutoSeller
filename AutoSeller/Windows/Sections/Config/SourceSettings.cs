@@ -18,21 +18,21 @@ internal static class SourceSettings
     private static void DrawPlayerGroup(Configuration configuration)
     {
         using var group = SettingsGroup.Begin(Loc.T(L.Sources.GroupPlayer));
-        SettingsRow.Draw(Loc.T(L.Sources.Saddlebag), Loc.T(L.Sources.SaddlebagHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Sources.Saddlebag), Loc.T(L.Sources.SaddlebagHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
         {
-            if (SettingsControls.Toggle("##asell_sources_saddlebag", cfg.SellFromSaddlebag, out var value))
+            if (SettingsControls.Toggle("##asell_sources_saddlebag", configuration.SellFromSaddlebag, out var value))
             {
-                cfg.SellFromSaddlebag = value;
-                cfg.RulesChanged();
+                configuration.SellFromSaddlebag = value;
+                configuration.RulesChanged();
             }
         }, SettingsRow.ToggleHeight);
 
-        SettingsRow.Draw(Loc.T(L.Sources.Armoury), Loc.T(L.Sources.ArmouryHelp), SettingsControls.ToggleWidth, configuration, static cfg =>
+        SettingsRow.Draw(Loc.T(L.Sources.Armoury), Loc.T(L.Sources.ArmouryHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
         {
-            if (SettingsControls.Toggle("##asell_sources_armoury", cfg.SellFromArmoury, out var value))
+            if (SettingsControls.Toggle("##asell_sources_armoury", configuration.SellFromArmoury, out var value))
             {
-                cfg.SellFromArmoury = value;
-                cfg.RulesChanged();
+                configuration.SellFromArmoury = value;
+                configuration.RulesChanged();
             }
         }, SettingsRow.ToggleHeight);
     }
