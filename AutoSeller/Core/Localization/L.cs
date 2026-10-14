@@ -16,6 +16,7 @@ internal static partial class L
     internal static class Shell
     {
         public static readonly LocString NavSell = new("shell.nav.sell", "Sell");
+        public static readonly LocString NavRules = new("shell.nav.rules", "Rules");
         public static readonly LocString NavSettings = new("shell.nav.settings", "Settings");
         public static readonly LocString NavHistory = new("shell.nav.history", "History");
         public static readonly LocString NavPlugins = new("shell.nav.plugins", "Plugins");
