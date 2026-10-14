@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ledger;
+using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Tasks.Model;
 
 namespace AutoSeller.Core.Tasks;
@@ -12,16 +13,19 @@ internal sealed class SellRunSession
     private readonly List<RunDecision> decisions = [];
     private readonly HashSet<PlanRowKey> handled = [];
 
-    public SellRunSession(SellAuthorization authorization, RunPlanInputs planInputs, JournalReview review)
+    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review)
     {
         Authorization = authorization;
-        PlanInputs = planInputs;
+        Input = input;
+        PlanInputs = input.ToRunInputs();
         Review = review;
-        Visits = new RetainerVisits(planInputs.Retainers.Length);
+        Visits = new RetainerVisits(PlanInputs.Retainers.Length);
         Values = new ValueBook(authorization.Caps);
     }
 
     public SellAuthorization Authorization { get; }
+
+    public PlanInput Input { get; }
 
     public ImmutableArray<RunRetainer> Retainers => PlanInputs.Retainers;
 

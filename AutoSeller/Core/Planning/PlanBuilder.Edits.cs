@@ -7,7 +7,7 @@ namespace AutoSeller.Core.Planning;
 
 internal sealed partial class PlanBuilder
 {
-    public bool CanEdit => !runLive() && characters.Current is not null;
+    public bool CanEdit => runInput() is null && characters.Current is not null;
 
     public PlanEditRefusal SetExcluded(in PlanRow row, bool excluded)
     {

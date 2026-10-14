@@ -96,7 +96,7 @@ internal sealed partial class SellController
             RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
         }
 
-        var active = new SellRunSession(authorization!, input.ToRunInputs(), review);
+        var active = new SellRunSession(authorization!, input, review);
         active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc));
         var items = PlanStock.ItemsToPrice(input.Stock.AsSpan(), markets);
         RunLog.Info($"Run: reference prices for {items.Length} item(s): {plugin.References.Fetch(items.AsSpan())}.");

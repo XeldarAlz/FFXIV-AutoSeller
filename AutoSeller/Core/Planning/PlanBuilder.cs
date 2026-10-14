@@ -26,6 +26,7 @@ internal sealed partial class PlanBuilder : IDisposable
     private const long ReplanMs = 60_000;
     private const int FetchThrottleMs = 60_000;
     private const string FetchThrottleKey = "AutoSeller.Plan.Fetch";
+    private const long AfterTheRun = -1;
 
     private readonly Configuration configuration;
     private readonly CharacterStore characters;
@@ -33,7 +34,7 @@ internal sealed partial class PlanBuilder : IDisposable
     private readonly GameItems items;
     private readonly ReferenceService references;
     private readonly OwnSellersProvider ownSellers;
-    private readonly Func<bool> runLive;
+    private readonly Func<PlanInput?> runInput;
     private readonly PlanHandoff handoff = new();
     private readonly DiagnosticLog planLog = new();
     private PlanKey key;
@@ -42,9 +43,10 @@ internal sealed partial class PlanBuilder : IDisposable
     private int bagsVersion;
     private CancellationTokenSource? planning;
     private SellPlan? latest;
+    private PlanInput? runPlanned;
     private volatile bool planningRunning;
 
-    public PlanBuilder(Configuration configuration, CharacterStore characters, BagReader bags, GameItems items, ReferenceService references, OwnSellersProvider ownSellers, Func<bool> runLive)
+    public PlanBuilder(Configuration configuration, CharacterStore characters, BagReader bags, GameItems items, ReferenceService references, OwnSellersProvider ownSellers, Func<PlanInput?> runInput)
     {
         this.configuration = configuration;
         this.characters = characters;
@@ -52,7 +54,7 @@ internal sealed partial class PlanBuilder : IDisposable
         this.items = items;
         this.references = references;
         this.ownSellers = ownSellers;
-        this.runLive = runLive;
+        this.runInput = runInput;
         Svc.Framework.Update += OnUpdate;
         Svc.GameInventory.InventoryChanged += OnInventoryChanged;
     }
@@ -124,6 +126,13 @@ internal sealed partial class PlanBuilder : IDisposable
     private void OnUpdate(IFramework framework)
     {
         AdoptPlanning();
+        if (runInput() is { } frozen)
+        {
+            PlanTheRun(frozen);
+            return;
+        }
+
+        runPlanned = null;
         var next = ReadKey();
         if (next != key)
         {
@@ -147,6 +156,20 @@ internal sealed partial class PlanBuilder : IDisposable
 
         changedAtMs = 0;
         StartPlanning();
+    }
+
+    private void PlanTheRun(PlanInput frozen)
+    {
+        if (ReferenceEquals(frozen, runPlanned))
+        {
+            return;
+        }
+
+        runPlanned = frozen;
+        key = key with { ReplanStep = AfterTheRun };
+        changedAtMs = 0;
+        RunLog.Info("Plan: the Sell page shows the plan from the run's Start until the run ends.");
+        Schedule(frozen);
     }
 
     private PlanKey ReadKey()
@@ -177,6 +200,11 @@ internal sealed partial class PlanBuilder : IDisposable
             return;
         }
 
+        Schedule(captured);
+    }
+
+    private void Schedule(PlanInput captured)
+    {
         var input = captured with { Generation = Interlocked.Increment(ref inputGeneration) };
         CancelPlanning();
         planning = new CancellationTokenSource();
@@ -231,7 +259,7 @@ internal sealed partial class PlanBuilder : IDisposable
 
     private void RefreshEdits(SellPlan plan)
     {
-        if (runLive() || !plan.Input.BagsComplete || characters.Current is not { } data || data.ContentId != plan.Input.CharacterContentId)
+        if (runInput() is not null || !plan.Input.BagsComplete || characters.Current is not { } data || data.ContentId != plan.Input.CharacterContentId)
         {
             return;
         }

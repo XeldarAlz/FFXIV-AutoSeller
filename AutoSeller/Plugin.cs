@@ -102,7 +102,7 @@ public sealed class Plugin : IDalamudPlugin
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
-            Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller is { Running: true });
+            Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller?.RunInput);
             completed.Push(Plan.Dispose);
             Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
             Controller = new SellController(this, History);
