@@ -46,29 +46,36 @@ internal static class Gil
         return true;
     }
 
-    public static bool TryPercentFloor(long amount, int percent, out long portion)
+    public static long ScaleDown(long amount, long numerator, long denominator)
     {
-        if (amount < 0 || percent < 0)
-        {
-            portion = 0;
-            return false;
-        }
+        return Saturate((Int128)amount * numerator / denominator);
+    }
 
-        var wide = (Int128)amount * percent / PercentScale;
-        if (wide > long.MaxValue)
-        {
-            portion = 0;
-            return false;
-        }
+    public static long ScaleUp(long amount, long numerator, long denominator)
+    {
+        var product = (Int128)amount * numerator;
+        var quotient = product / denominator;
+        return Saturate(product % denominator > 0 ? quotient + 1 : quotient);
+    }
 
-        portion = (long)wide;
-        return true;
+    public static bool ExceedsRatio(long amount, long baseline, long numerator, long denominator)
+    {
+        return (Int128)amount * denominator > (Int128)baseline * numerator;
+    }
+
+    public static bool BelowRatio(long amount, long baseline, long numerator, long denominator)
+    {
+        return (Int128)amount * denominator < (Int128)baseline * numerator;
     }
 
     public static long AfterTax(long gross, int taxPercent)
     {
-        TryPercentFloor(gross, taxPercent, out var tax);
-        return gross - tax;
+        if (gross < 0 || taxPercent < 0)
+        {
+            return gross;
+        }
+
+        return gross - ScaleDown(gross, taxPercent, PercentScale);
     }
 
     public static bool TryStackPayable(long unitPrice, int quantity, long fee, out long payable)
@@ -144,6 +151,11 @@ internal static class Gil
 
         amount = value;
         return true;
+    }
+
+    private static long Saturate(Int128 value)
+    {
+        return (long)Int128.Clamp(value, long.MinValue, long.MaxValue);
     }
 
     private static bool IsCompleteGroup(int groupLength, bool separatorSeen)

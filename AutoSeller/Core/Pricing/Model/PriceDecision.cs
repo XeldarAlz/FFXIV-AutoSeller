@@ -246,7 +246,7 @@ internal static class PriceDecision
     private static uint Undercut(uint lowest, PricingSettings settings)
     {
         var amount = settings.UndercutUnit == UndercutUnit.Percent
-            ? Math.Max(1, PriceMath.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))
+            ? Math.Max(1, Gil.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))
             : settings.UndercutGil;
         return MarketLimits.ClampUnitPrice(Gil.SaturatingAdd(lowest, -amount));
     }
@@ -273,12 +273,12 @@ internal static class PriceDecision
 
     private static bool IsBeyondRaiseGap(uint current, uint marketPrice, int raiseGapPercent)
     {
-        return PriceMath.ExceedsRatio(marketPrice, current, Gil.PercentScale + raiseGapPercent, Gil.PercentScale);
+        return Gil.ExceedsRatio(marketPrice, current, Gil.PercentScale + raiseGapPercent, Gil.PercentScale);
     }
 
     private static uint RaiseLimit(uint current, int maximumRaisePercent)
     {
-        var limit = PriceMath.ScaleDown(current, Gil.PercentScale + maximumRaisePercent, Gil.PercentScale);
+        var limit = Gil.ScaleDown(current, Gil.PercentScale + maximumRaisePercent, Gil.PercentScale);
         return MarketLimits.ClampUnitPrice(Math.Max(Gil.SaturatingAdd(current, 1), limit));
     }
 

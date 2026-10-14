@@ -72,7 +72,7 @@ internal static class BaitFilter
 
         var count = 0;
         while (count < sorted.Length
-            && PriceMath.BelowRatio(sorted[count].UnitPrice, reference.AverageSalePrice, baitRatioPercent, Gil.PercentScale))
+            && Gil.BelowRatio(sorted[count].UnitPrice, reference.AverageSalePrice, baitRatioPercent, Gil.PercentScale))
         {
             count++;
         }
@@ -95,7 +95,7 @@ internal static class BaitFilter
 
     private static bool IsGap(uint lower, uint next)
     {
-        return !PriceMath.BelowRatio(next, lower, GapNumerator, GapDenominator);
+        return !Gil.BelowRatio(next, lower, GapNumerator, GapDenominator);
     }
 
     private readonly struct CheapestFirst : IComparer<CompetitorListing>

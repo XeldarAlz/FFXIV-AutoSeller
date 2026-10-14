@@ -26,6 +26,36 @@ public sealed class GilTests
     }
 
     [Theory]
+    [InlineData(999, 25, 100, 249, 250)]
+    [InlineData(1_000, 25, 100, 250, 250)]
+    [InlineData(999_999_999, 150, 100, 1_499_999_998, 1_499_999_999)]
+    [InlineData(long.MaxValue, 5, 100, 461_168_601_842_738_790, 461_168_601_842_738_791)]
+    [InlineData(long.MaxValue, 3, 2, long.MaxValue, long.MaxValue)]
+    public void ScaleRoundsDownOrUpWithoutLosingTheProductAndStopsAtTheLimit(long amount, long numerator, long denominator, long down, long up)
+    {
+        Assert.Equal(down, Gil.ScaleDown(amount, numerator, denominator));
+        Assert.Equal(up, Gil.ScaleUp(amount, numerator, denominator));
+    }
+
+    [Fact]
+    public void RatioComparisonsAreExactAtTheBoundary()
+    {
+        Assert.False(Gil.ExceedsRatio(250, 1_000, 25, 100));
+        Assert.True(Gil.ExceedsRatio(251, 1_000, 25, 100));
+        Assert.False(Gil.BelowRatio(400, 1_000, 40, 100));
+        Assert.True(Gil.BelowRatio(399, 1_000, 40, 100));
+        Assert.True(Gil.ExceedsRatio(long.MaxValue, long.MaxValue - 1, 1, 1));
+        Assert.True(Gil.BelowRatio(long.MaxValue - 1, long.MaxValue, 1, 1));
+    }
+
+    [Fact]
+    public void TaxOnAHugeGrossIsStillFivePercent()
+    {
+        Assert.Equal(long.MaxValue - 461_168_601_842_738_790, Gil.AfterTax(long.MaxValue, 5));
+        Assert.Equal(-5, Gil.AfterTax(-5, 5));
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("abc")]
     [InlineData("-5")]
