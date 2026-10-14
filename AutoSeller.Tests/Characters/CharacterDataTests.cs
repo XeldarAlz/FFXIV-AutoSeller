@@ -80,6 +80,24 @@ public sealed class CharacterDataTests : IDisposable
     }
 
     [Fact]
+    public void RosterReadThatFindsNoRetainerKeepsTheRosterAndItsData()
+    {
+        var data = new CharacterData(Character);
+        data.UpdateRoster([Retainer(FirstRetainer, "Alpha")]);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+        data.Approve(new ApprovedPrice(FirstRetainer, 0, Ore, false, 1_000, 800));
+        var revision = data.Revision;
+
+        Assert.False(data.UpdateRoster([]));
+        Assert.False(data.UpdateRoster([Retainer(0, "Ghost")]));
+
+        Assert.Single(data.Retainers);
+        Assert.True(data.TryGetSnapshot(FirstRetainer, out _));
+        Assert.Single(data.Approvals);
+        Assert.Equal(revision, data.Revision);
+    }
+
+    [Fact]
     public void LatestSnapshotReplacesTheLastOne()
     {
         var data = new CharacterData(Character);
@@ -181,6 +199,43 @@ public sealed class CharacterDataTests : IDisposable
         Assert.Equal(data.RepriceEntryFor(key).LastRepriceUtc, restored.RepriceEntryFor(key).LastRepriceUtc);
         Assert.Equal<DateTime>(data.RepriceEntryFor(key).DropTimesUtc, restored.RepriceEntryFor(key).DropTimesUtc);
         Assert.Equal(0, restored.Revision);
+    }
+
+    [Fact]
+    public void RecordOfThisCharacterAtThisVersionFits()
+    {
+        Assert.Equal(CharacterRecordFit.Fits, CharacterRecord.FitFor(new CharacterRecord { ContentId = Character }, Character));
+        Assert.Equal(CharacterRecordFit.Fits, CharacterRecord.FitFor(new CharacterRecord { ContentId = Character, Version = CharacterRecord.CurrentVersion - 1 }, Character));
+    }
+
+    [Fact]
+    public void RecordThatDoesNotFitSaysWhy()
+    {
+        Assert.Equal(CharacterRecordFit.Missing, CharacterRecord.FitFor(null, Character));
+        Assert.Equal(CharacterRecordFit.OtherCharacter, CharacterRecord.FitFor(new CharacterRecord { ContentId = Other }, Character));
+        Assert.Equal(CharacterRecordFit.NewerVersion, CharacterRecord.FitFor(new CharacterRecord { ContentId = Character, Version = CharacterRecord.CurrentVersion + 1 }, Character));
+    }
+
+    [Fact]
+    public void SetAsideCopyIsNamedAfterItsVersionAndTime()
+    {
+        Assert.Equal(".v3-20260314-090507", CharacterRecord.SetAsideSuffix(3, new DateTime(2026, 3, 14, 9, 5, 7, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public void NewerFileIsCopiedAsideBeforeTheFirstSaveReplacesIt()
+    {
+        var store = new CheckpointStore<CharacterRecord>(Path.Combine(directory.Path, CharacterRecord.FolderName), CharacterRecord.FileNameFor(Character));
+        Assert.True(store.TrySave(new CharacterRecord { ContentId = Character, Version = CharacterRecord.CurrentVersion + 1 }));
+        var load = store.Load();
+        Assert.Equal(CharacterRecordFit.NewerVersion, CharacterRecord.FitFor(load.Value, Character));
+
+        Assert.True(store.TryKeepCopy(load.Source, CharacterRecord.SetAsideSuffix(load.Value!.Version, Now), out var copyPath));
+        Assert.True(store.TrySave(new CharacterData(Character).ToRecord(Now)));
+        Assert.True(store.TrySave(new CharacterData(Character).ToRecord(Now)));
+
+        var kept = new CheckpointStore<CharacterRecord>(Path.GetDirectoryName(copyPath)!, Path.GetFileName(copyPath)!).Load().Value;
+        Assert.Equal(CharacterRecord.CurrentVersion + 1, kept!.Version);
     }
 
     [Fact]
