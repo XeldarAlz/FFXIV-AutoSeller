@@ -1,5 +1,4 @@
 using AutoSeller.Core.Rules.Model;
-using Newtonsoft.Json;
 
 namespace AutoSeller;
 
@@ -10,9 +9,6 @@ public sealed partial class Configuration
     public bool SellFromArmoury { get; set; } = false;
 
     public List<ulong> InventoryRetainerIds { get; set; } = [];
-
-    [JsonIgnore]
-    internal SellSources Sources => RuleBookBuilder.SourcesFor(SellFromSaddlebag, SellFromArmoury, InventoryRetainerIds.Count);
 
     public bool SellsFromRetainerInventory(ulong retainerId) => InventoryRetainerIds.Contains(retainerId);
 
