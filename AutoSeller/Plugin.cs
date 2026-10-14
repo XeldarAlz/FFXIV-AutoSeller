@@ -13,7 +13,9 @@ using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning;
 using AutoSeller.Core.Pricing;
 using AutoSeller.Core.Retainers;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules;
+using AutoSeller.Core.Sales;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows;
@@ -68,11 +70,13 @@ public sealed class Plugin : IDalamudPlugin
     internal MarketbuddyIpc Marketbuddy { get; }
     internal AutoRetainerSuppression Suppression { get; }
     internal PostprocessHost Postprocess { get; }
+    internal SalesLedger Sales { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
     private readonly AppWindow appWindow;
     private readonly SellNowButton sellNowButton;
+    private readonly SaleNoticeWatcher saleNotices;
     private readonly CommandInfo primaryCommand;
     private readonly CommandInfo aliasCommand;
 
@@ -112,16 +116,19 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(Characters.Dispose);
             Ledger = new SellLedger(PluginInterface.ConfigDirectory.FullName);
             PrepareLedger();
-            RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, Retainers.Available);
+            Sales = new SalesLedger(PluginInterface.ConfigDirectory.FullName);
+            RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, RecordInferredSales, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
+            saleNotices = new SaleNoticeWatcher(Characters, Sales);
+            completed.Push(saleNotices.Dispose);
             OwnSellers = new OwnSellersProvider(Retainers, Characters, Configuration, AutoRetainer);
             Bags = new BagReader(AutoRetainer.IsItemProtected);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
             Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller?.RunInput);
             completed.Push(Plan.Dispose);
-            Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
+            Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References, Sales);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
             Postprocess = new PostprocessHost(this);
@@ -189,6 +196,7 @@ public sealed class Plugin : IDalamudPlugin
         Svc.ClientState.Login -= OnLoadedInGame;
         Svc.ClientState.Logout -= OnLogout;
         Configuration.SaveIfPending();
+        saleNotices.Dispose();
         Plan.Dispose();
         BlockedScanner.Dispose();
         History.Dispose();
@@ -353,6 +361,11 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnLogout(int type, int code) => Controller.Interrupt();
+
+    private void RecordInferredSales(SnapshotDiff diff, byte town)
+    {
+        Sales.RecordInferred(diff, References.Taxes.SellerTaxPercentFor(town));
+    }
 
     private void PrepareLedger()
     {

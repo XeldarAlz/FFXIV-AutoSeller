@@ -28,7 +28,7 @@ internal sealed partial class RetainerDriver
             var read = plugin.RetainerMarket.ReadOpenRetainer(DateTime.UtcNow);
             if (read.Status == MarketReadStatus.Read && read.RetainerId == retainer.RetainerId && read.Snapshot is { } snapshot)
             {
-                ReportDiff(retainer, read.Previous, snapshot);
+                ReportDiff(retainer, read.Previous, read.Diff, snapshot);
                 return snapshot;
             }
 
@@ -38,15 +38,14 @@ internal sealed partial class RetainerDriver
         return null;
     }
 
-    private void ReportDiff(RunRetainer retainer, RetainerSnapshot? previous, RetainerSnapshot current)
+    private void ReportDiff(RunRetainer retainer, RetainerSnapshot? previous, SnapshotDiff? diff, RetainerSnapshot current)
     {
-        if (previous is null)
+        if (previous is null || diff is null)
         {
             Diag($"Driver: {retainer.Name} has no earlier snapshot to compare with; {current.Slots.Length} listing(s) now.");
             return;
         }
 
-        var diff = SnapshotDiff.Compute(previous, current, plugin.Ledger.ConfirmedWritesFor(retainer.RetainerId).AsSpan());
         var line = new StringBuilder()
             .Append("Driver: ").Append(retainer.Name).Append(" since ").Append(RunLog.Time(previous.ReadAtUtc)).Append(": ")
             .Append(diff.Changes.Length).Append(" change(s), gil ").Append(diff.GilGrowth)

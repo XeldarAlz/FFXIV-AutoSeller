@@ -21,7 +21,7 @@ internal enum MarketReadStatus : byte
     NotSettled = 6,
 }
 
-internal readonly record struct MarketRead(MarketReadStatus Status, MarketReadRefusal Refusal, ulong RetainerId, RetainerSnapshot? Snapshot, RetainerSnapshot? Previous);
+internal readonly record struct MarketRead(MarketReadStatus Status, MarketReadRefusal Refusal, ulong RetainerId, RetainerSnapshot? Snapshot, RetainerSnapshot? Previous, SnapshotDiff? Diff);
 
 internal sealed unsafe class MarketReader
 {
@@ -34,15 +34,17 @@ internal sealed unsafe class MarketReader
     private readonly RetainerReader retainers;
     private readonly CharacterStore characters;
     private readonly Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites;
+    private readonly Action<SnapshotDiff, byte> diffed;
     private readonly StringBuilder line = new();
     private RawReadSummary reportedSummary;
     private MarketReadNotice lastNotice;
 
-    public MarketReader(RetainerReader retainers, CharacterStore characters, Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites, bool available)
+    public MarketReader(RetainerReader retainers, CharacterStore characters, Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites, Action<SnapshotDiff, byte> diffed, bool available)
     {
         this.retainers = retainers;
         this.characters = characters;
         this.confirmedWrites = confirmedWrites;
+        this.diffed = diffed;
         Available = available;
     }
 
@@ -93,10 +95,17 @@ internal sealed unsafe class MarketReader
 
         lastNotice = default;
         data.TryGetSnapshot(retainer.RetainerId, out var previous);
-        data.RecordSnapshot(snapshot, confirmedWrites(retainer.RetainerId).AsSpan());
+        var writes = confirmedWrites(retainer.RetainerId);
+        data.RecordSnapshot(snapshot, writes.AsSpan());
         var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
         RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");
-        return new MarketRead(MarketReadStatus.Read, MarketReadRefusal.None, retainer.RetainerId, snapshot, previous);
+        var diff = previous is null ? null : SnapshotDiff.Compute(previous, snapshot, writes.AsSpan());
+        if (diff is not null)
+        {
+            diffed(diff, snapshot.Town);
+        }
+
+        return new MarketRead(MarketReadStatus.Read, MarketReadRefusal.None, retainer.RetainerId, snapshot, previous, diff);
     }
 
     public bool TrySample(ulong retainerId, Span<ListingSlot> listings, out int count, out uint gil)
@@ -161,7 +170,7 @@ internal sealed unsafe class MarketReader
             RunLog.Info($"Retainer market: no read of retainer {retainerId}: {status}{(refusal == MarketReadRefusal.None ? string.Empty : $" ({refusal})")}, {count} slot(s) held, {announced} announced.");
         }
 
-        return new MarketRead(status, refusal, retainerId, null, null);
+        return new MarketRead(status, refusal, retainerId, null, null, null);
     }
 
     private void ReportRawWhenChanged(in RawReadSummary summary)
