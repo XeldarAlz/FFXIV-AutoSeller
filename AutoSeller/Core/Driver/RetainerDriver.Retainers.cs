@@ -1,4 +1,5 @@
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Core.Tasks.Model;
@@ -99,7 +100,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> OpenSellList(RunRetainer retainer)
     {
-        var entries = RetainerReads.MenuEntries();
+        var entries = NpcInteraction.SelectStringEntries();
         var sellText = RetainerMenuText.SellFromInventory();
         ReportMenu(entries);
         if (!sellText.IsKnown)
@@ -142,7 +143,7 @@ internal sealed partial class RetainerDriver
             return new Stop(DriverHalt.MenuTextUnavailable, $"Addon row {RetainerMenuText.QuitRow} could not be read");
         }
 
-        var entries = RetainerReads.MenuEntries();
+        var entries = NpcInteraction.SelectStringEntries();
         var entry = quitText.FirstMatchIn(entries);
         if (entry == PromptText.NoMatch)
         {

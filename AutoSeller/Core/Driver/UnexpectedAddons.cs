@@ -1,13 +1,11 @@
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Game.Ops;
 using Dalamud.Game.ClientState.Conditions;
-using ECommons;
 using ECommons.DalamudServices;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Driver;
 
-internal static unsafe class UnexpectedAddons
+internal static class UnexpectedAddons
 {
     private static ChainView reported;
 
@@ -17,7 +15,7 @@ internal static unsafe class UnexpectedAddons
         var tracked = ChainWindows.Tracked;
         for (var index = 0; index < tracked.Length; index++)
         {
-            if (AddonReady(tracked[index].AddonName))
+            if (NpcInteraction.IsAddonReady(tracked[index].AddonName))
             {
                 visible |= tracked[index].Window;
             }
@@ -37,7 +35,4 @@ internal static unsafe class UnexpectedAddons
     }
 
     public static bool InCombat() => Svc.Condition[ConditionFlag.InCombat];
-
-    private static bool AddonReady(string addonName)
-        => GenericHelpers.TryGetAddonByName(addonName, out AtkUnitBase* addon) && GenericHelpers.IsAddonReady(addon);
 }

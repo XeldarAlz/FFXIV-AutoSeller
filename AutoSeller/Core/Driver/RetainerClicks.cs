@@ -1,4 +1,5 @@
 using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Game.Ops;
 using Dalamud.Game.ClientState.Objects.Types;
 using ECommons;
 using ECommons.Automation;
@@ -42,7 +43,7 @@ internal static unsafe class RetainerClicks
     public static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
     public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
 
-    public static bool IsReady(string addonName) => AddonReady(addonName, out _);
+    public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
 
     public static bool IsPresent(string addonName) => GenericHelpers.TryGetAddonByName<AtkUnitBase>(addonName, out _);
 
@@ -61,7 +62,7 @@ internal static unsafe class RetainerClicks
 
     public static bool SelectRetainer(int row)
     {
-        if (!AddonReady(RetainerListAddon, out var list) || !EzThrottler.Throttle(SelectRetainerThrottleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(RetainerListAddon, out var list) || !EzThrottler.Throttle(SelectRetainerThrottleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -76,16 +77,7 @@ internal static unsafe class RetainerClicks
         return true;
     }
 
-    public static bool ProgressTalk()
-    {
-        if (!AddonReady(TalkAddon, out var talk) || !EzThrottler.Throttle(TalkThrottleKey, ClickThrottleMs))
-        {
-            return false;
-        }
-
-        new AddonMaster.Talk(talk).Click();
-        return true;
-    }
+    public static bool ProgressTalk() => NpcInteraction.ProgressTalk(TalkThrottleKey);
 
     public static bool OpenSellList(int entry) => ChooseMenuEntry(entry, OpenSellListThrottleKey);
 
@@ -93,7 +85,7 @@ internal static unsafe class RetainerClicks
 
     public static bool OpenListingMenu(int row)
     {
-        if (IsReady(ContextMenuAddon) || !AddonReady(SellListAddon, out var sellList) || !EzThrottler.Throttle(ListingMenuThrottleKey, ClickThrottleMs))
+        if (IsReady(ContextMenuAddon) || !NpcInteraction.TryGetReadyAddon(SellListAddon, out var sellList) || !EzThrottler.Throttle(ListingMenuThrottleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -105,7 +97,7 @@ internal static unsafe class RetainerClicks
 
     public static bool ChooseAdjustPrice(int entry)
     {
-        if (!AddonReady(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(AdjustPriceThrottleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(AdjustPriceThrottleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -129,7 +121,7 @@ internal static unsafe class RetainerClicks
 
     public static bool CancelSell()
     {
-        if (!AddonReady(SellWindowAddon, out var sellWindow) || !EzThrottler.Throttle(CancelSellThrottleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(SellWindowAddon, out var sellWindow) || !EzThrottler.Throttle(CancelSellThrottleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -156,20 +148,11 @@ internal static unsafe class RetainerClicks
 
     public static bool CloseAddon(string addonName) => Close(addonName, CloseWindowThrottleKey);
 
-    public static bool DeclinePrompt()
-    {
-        if (!AddonReady(PromptAddon, out var prompt) || !EzThrottler.Throttle(DeclinePromptThrottleKey, ClickThrottleMs))
-        {
-            return false;
-        }
-
-        new AddonMaster.SelectYesno(prompt).No();
-        return true;
-    }
+    public static bool DeclinePrompt() => NpcInteraction.AnswerNo(DeclinePromptThrottleKey);
 
     private static bool ChooseMenuEntry(int entry, string throttleKey)
     {
-        if (!AddonReady(SelectStringAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(SelectStringAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -186,7 +169,7 @@ internal static unsafe class RetainerClicks
 
     private static bool Close(string addonName, string throttleKey)
     {
-        if (!AddonReady(addonName, out var addon) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        if (!NpcInteraction.TryGetReadyAddon(addonName, out var addon) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
         {
             return false;
         }
@@ -195,7 +178,4 @@ internal static unsafe class RetainerClicks
         addon->Close(true);
         return true;
     }
-
-    private static bool AddonReady(string addonName, out AtkUnitBase* addon)
-        => GenericHelpers.TryGetAddonByName(addonName, out addon) && GenericHelpers.IsAddonReady(addon);
 }
