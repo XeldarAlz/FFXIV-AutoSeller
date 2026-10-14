@@ -77,6 +77,13 @@ public sealed class MarketGatesTests
         Assert.True(report.Allows(MarketGate.ReadListings));
     }
 
+    [Fact]
+    public void TheSummaryNamesEachGate()
+    {
+        Assert.Equal("reading listings on, reading the retainer market on, writing prices on", MarketGateReport.Evaluate(Checks(true, true, true)).Describe());
+        Assert.Equal("reading listings on, reading the retainer market off, writing prices off", MarketGateReport.Evaluate(Checks(true, false, true)).Describe());
+    }
+
     private static ImmutableArray<MarketCheck> Checks(bool listingHook, bool retainerAddress, bool unrelated)
     {
         return

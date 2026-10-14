@@ -50,4 +50,14 @@ internal sealed class MarketGateReport
     {
         return gate != MarketGate.None && (Open & gate) == gate;
     }
+
+    public string Describe()
+    {
+        return $"reading listings {OnOff(MarketGate.ReadListings)}, reading the retainer market {OnOff(MarketGate.ReadRetainerMarket)}, writing prices {OnOff(MarketGate.WritePrices)}";
+    }
+
+    private string OnOff(MarketGate gate)
+    {
+        return Allows(gate) ? "on" : "off";
+    }
 }
