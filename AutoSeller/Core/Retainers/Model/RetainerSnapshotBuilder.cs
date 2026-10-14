@@ -16,6 +16,12 @@ internal enum MarketReadRefusal : byte
     PriceOutOfRange = 5,
 }
 
+internal enum MarketCountCheck : byte
+{
+    Enforce = 0,
+    LogOnly = 1,
+}
+
 internal readonly ref struct RetainerMarketCapture
 {
     public required ulong RetainerId { get; init; }
@@ -31,6 +37,10 @@ internal readonly ref struct RetainerMarketCapture
     public required int AnnouncedCount { get; init; }
 
     public required ReadOnlySpan<RawMarketSlot> Slots { get; init; }
+
+    public MarketCountCheck CountCheck { get; init; }
+
+    public bool CountMatches => Slots.Length == AnnouncedCount;
 }
 
 internal static class RetainerSnapshotBuilder
@@ -67,7 +77,7 @@ internal static class RetainerSnapshotBuilder
     public static MarketReadRefusal Inspect(in RetainerMarketCapture capture)
     {
         var slots = capture.Slots;
-        if (slots.Length != capture.AnnouncedCount)
+        if (!capture.CountMatches && capture.CountCheck == MarketCountCheck.Enforce)
         {
             return MarketReadRefusal.CountMismatch;
         }

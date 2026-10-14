@@ -52,6 +52,38 @@ public sealed class RetainerSnapshotBuilderTests
         Assert.Equal(MarketReadRefusal.CountMismatch, refusal);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void ACountMismatchOnlyNotedIsStillRead(int announced)
+    {
+        RawMarketSlot[] slots = [new(0, Ore, false, 99, 1_200), new(1, Cloth, false, 1, 300)];
+        var capture = Capture(slots, announced) with { CountCheck = MarketCountCheck.LogOnly };
+
+        Assert.False(capture.CountMatches);
+        Assert.True(RetainerSnapshotBuilder.TryBuild(capture, out var snapshot, out var refusal));
+
+        Assert.Equal(MarketReadRefusal.None, refusal);
+        Assert.Equal(2, snapshot.Slots.Length);
+    }
+
+    [Fact]
+    public void TheCountIsEnforcedUnlessToldOtherwise()
+    {
+        RawMarketSlot[] slots = [new(0, Ore, false, 99, 1_200)];
+
+        Assert.Equal(MarketCountCheck.Enforce, Capture(slots, 2).CountCheck);
+        Assert.True(Capture(slots, 1).CountMatches);
+    }
+
+    [Fact]
+    public void ALogOnlyCountStillRefusesABrokenSlot()
+    {
+        RawMarketSlot[] slots = [new(0, Ore, false, 99, 0)];
+
+        Assert.Equal(MarketReadRefusal.MissingPrice, RetainerSnapshotBuilder.Inspect(Capture(slots, 3) with { CountCheck = MarketCountCheck.LogOnly }));
+    }
+
     [Fact]
     public void ASlotWithoutItsPriceYetIsNotSettled()
     {
