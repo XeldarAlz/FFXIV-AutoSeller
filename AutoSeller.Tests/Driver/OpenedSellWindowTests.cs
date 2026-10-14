@@ -54,29 +54,6 @@ public sealed class OpenedSellWindowTests
     }
 
     [Fact]
-    public void ANewLotIsCheckedByItsItemQualityAndQuantity()
-    {
-        var shown = Shown(OreName, LotQuantity, 0);
-
-        Assert.Equal(SellWindowVerdict.Matches, OpenedSellWindow.ForLot(shown, OreName, false, LotQuantity));
-        Assert.Equal(SellWindowVerdict.OtherItem, OpenedSellWindow.ForLot(shown, "Iron Ore", false, LotQuantity));
-        Assert.Equal(SellWindowVerdict.OtherQuality, OpenedSellWindow.ForLot(shown, OreName, true, LotQuantity));
-        Assert.Equal(SellWindowVerdict.OtherQuality, OpenedSellWindow.ForLot(shown with { ItemName = highQualityOreName }, OreName, false, LotQuantity));
-        Assert.Equal(SellWindowVerdict.OtherQuantity, OpenedSellWindow.ForLot(shown, OreName, false, LotQuantity - 1));
-        Assert.Equal(SellWindowVerdict.Unreadable, OpenedSellWindow.ForLot(SellWindowShown.Unreadable, OreName, false, LotQuantity));
-    }
-
-    [Fact]
-    public void TheQuantityIsSetOnlyWhenTheWindowShowsAnother()
-    {
-        var shown = Shown(OreName, LotQuantity, 0);
-
-        Assert.False(OpenedSellWindow.NeedsQuantity(shown, LotQuantity));
-        Assert.True(OpenedSellWindow.NeedsQuantity(shown, LotQuantity - 1));
-        Assert.True(OpenedSellWindow.NeedsQuantity(shown with { Quantity = 1 }, LotQuantity));
-    }
-
-    [Fact]
     public void ALotOutsideTheWindowsQuantityBoundsIsRefused()
     {
         var shown = Shown(OreName, LotQuantity, 0) with { Bounds = new QuantityBounds(1, 99) };

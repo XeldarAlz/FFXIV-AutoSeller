@@ -1,7 +1,6 @@
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
-using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
@@ -136,15 +135,10 @@ internal sealed partial class RetainerDriver
 
     private static SellWindowSample SampleWindow(string itemName, in SaleWrite write)
     {
-        var shown = RetainerReads.SellWindow();
         var typed = PriceWriter.Shown();
-        if (!shown.Readable || !typed.Readable)
-        {
-            return SellWindowSample.Unreadable;
-        }
-
-        var itemId = ItemNameMatch.Matches(shown.ItemName, itemName) ? write.ItemId : 0;
-        return new SellWindowSample(true, itemId, shown.IsHq, (uint)Math.Max(0, PriceWriter.ShownQuantity(typed)), (uint)Math.Max(0, PriceWriter.ShownPrice(typed)));
+        return typed.Readable
+            ? OpenedSellWindow.Typed(RetainerReads.SellWindow(), itemName, write, PriceWriter.ShownQuantity(typed), PriceWriter.ShownPrice(typed))
+            : SellWindowSample.Unreadable;
     }
 
     private async Task<ReadBackResult> ReadBack(SaleWrite write, ulong retainerId, long confirmedAtMs)

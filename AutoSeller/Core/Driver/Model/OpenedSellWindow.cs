@@ -31,17 +31,6 @@ internal static class OpenedSellWindow
         return shown.AskingPrice == listing.UnitPrice ? SellWindowVerdict.Matches : SellWindowVerdict.OtherPrice;
     }
 
-    public static SellWindowVerdict ForLot(in SellWindowShown shown, string itemName, bool isHq, uint quantity)
-    {
-        var verdict = ForItem(shown, itemName, isHq);
-        if (verdict != SellWindowVerdict.Matches)
-        {
-            return verdict;
-        }
-
-        return shown.Quantity == quantity ? SellWindowVerdict.Matches : SellWindowVerdict.OtherQuantity;
-    }
-
     public static SellWindowVerdict ForItem(in SellWindowShown shown, string itemName, bool isHq)
     {
         if (!shown.Readable)
@@ -62,8 +51,14 @@ internal static class OpenedSellWindow
         return quantity >= shown.Bounds.Smallest && quantity <= shown.Bounds.Maximum;
     }
 
-    public static bool NeedsQuantity(in SellWindowShown shown, uint quantity)
+    public static SellWindowSample Typed(in SellWindowShown shown, string itemName, in SaleWrite write, int typedQuantity, int typedPrice)
     {
-        return shown.Quantity != quantity;
+        if (!shown.Readable)
+        {
+            return SellWindowSample.Unreadable;
+        }
+
+        var itemId = ItemNameMatch.Matches(shown.ItemName, itemName) ? write.ItemId : 0;
+        return new SellWindowSample(true, itemId, shown.IsHq, (uint)Math.Max(0, typedQuantity), (uint)Math.Max(0, typedPrice));
     }
 }
