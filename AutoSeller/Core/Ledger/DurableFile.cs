@@ -18,6 +18,26 @@ internal static class DurableFile
     public static FileStream OpenForAppend(string path)
         => new(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, BufferSize, FileOptions.WriteThrough);
 
+    public static bool TryAppendLines(string directoryPath, string path, ReadOnlySpan<byte> lines, out string? error)
+    {
+        try
+        {
+            Directory.CreateDirectory(directoryPath);
+            using var stream = OpenForAppend(path);
+            TrimTornTail(stream);
+            stream.Seek(0, SeekOrigin.End);
+            stream.Write(lines);
+            stream.Flush(true);
+            error = null;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            error = exception.Message;
+            return false;
+        }
+    }
+
     public static bool TryReplace(string path, ReadOnlySpan<byte> content, string? backupPath, out string? error)
     {
         var temporaryPath = path + TemporarySuffix;

@@ -52,18 +52,9 @@ internal sealed class RunJournal : IRunJournal
             return false;
         }
 
-        try
+        if (!DurableFile.TryAppendLines(DirectoryPath, FilePath, line.WrittenSpan, out var error))
         {
-            Directory.CreateDirectory(DirectoryPath);
-            using var stream = DurableFile.OpenForAppend(FilePath);
-            DurableFile.TrimTornTail(stream);
-            stream.Seek(0, SeekOrigin.End);
-            stream.Write(line.WrittenSpan);
-            stream.Flush(true);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            LastError = exception.Message;
+            LastError = error;
             return false;
         }
 

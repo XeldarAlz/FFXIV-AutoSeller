@@ -88,23 +88,9 @@ internal sealed class SalesFile
             return false;
         }
 
-        try
-        {
-            Directory.CreateDirectory(DirectoryPath);
-            using var stream = DurableFile.OpenForAppend(FilePath);
-            DurableFile.TrimTornTail(stream);
-            stream.Seek(0, SeekOrigin.End);
-            stream.Write(lines.WrittenSpan);
-            stream.Flush(true);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            LastError = exception.Message;
-            return false;
-        }
-
-        LastError = null;
-        return true;
+        var appended = DurableFile.TryAppendLines(DirectoryPath, FilePath, lines.WrittenSpan, out var error);
+        LastError = error;
+        return appended;
     }
 
     public SalesReadResult Read()
