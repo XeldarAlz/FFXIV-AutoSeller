@@ -6,6 +6,11 @@ using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Driver.Model;
 
+internal readonly record struct SellWindowFields(bool Readable, int Quantity, int AskingPrice)
+{
+    public static SellWindowFields Unreadable => new(false, 0, 0);
+}
+
 internal readonly record struct SellWindowShown(bool Readable, string ItemName, int Quantity, int AskingPrice, QuantityBounds Bounds)
 {
     public static SellWindowShown Unreadable => new(false, string.Empty, 0, 0, QuantityBounds.Unread);
@@ -51,7 +56,7 @@ internal static class OpenedSellWindow
         return quantity >= shown.Bounds.Smallest && quantity <= shown.Bounds.Maximum;
     }
 
-    public static SellWindowSample Typed(in SellWindowShown shown, string itemName, in SaleWrite write, int typedQuantity, int typedPrice)
+    public static SellWindowSample Typed(in SellWindowShown shown, string itemName, in SaleWrite write)
     {
         if (!shown.Readable)
         {
@@ -59,6 +64,13 @@ internal static class OpenedSellWindow
         }
 
         var itemId = ItemNameMatch.Matches(shown.ItemName, itemName) ? write.ItemId : 0;
-        return new SellWindowSample(true, itemId, shown.IsHq, (uint)Math.Max(0, typedQuantity), (uint)Math.Max(0, typedPrice));
+        return new SellWindowSample(true, itemId, shown.IsHq, (uint)Math.Max(0, shown.Quantity), (uint)Math.Max(0, shown.AskingPrice));
+    }
+
+    public static bool Shows(in SellWindowFields fields, in SaleWrite write, bool withPrice)
+    {
+        return fields.Readable
+            && fields.Quantity == write.Quantity
+            && (!withPrice || fields.AskingPrice == write.NewPrice);
     }
 }

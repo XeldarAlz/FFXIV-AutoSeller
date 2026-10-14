@@ -145,7 +145,7 @@ internal sealed partial class RetainerDriver
 
     private async Task Type(SaleWrite write)
     {
-        if (write.Kind == WriteKind.List && PriceWriter.ShownQuantity(PriceWriter.Shown()) != write.Quantity)
+        if (write.Kind == WriteKind.List && RetainerReads.TypedFields().Quantity != write.Quantity)
         {
             await DelayMs(PacingPlan.UiStepMs(Random.Shared.NextDouble()));
             await ClickOnce(() => PriceWriter.TypeQuantity(write.Quantity));
@@ -160,25 +160,15 @@ internal sealed partial class RetainerDriver
     private async Task WaitTyped(SaleWrite write, bool withPrice)
     {
         var deadline = Environment.TickCount64 + TypedShownMs;
-        while (!Typed(PriceWriter.Shown(), write, withPrice) && Environment.TickCount64 < deadline && !CancelToken.IsCancellationRequested)
+        while (!OpenedSellWindow.Shows(RetainerReads.TypedFields(), write, withPrice) && Environment.TickCount64 < deadline && !CancelToken.IsCancellationRequested)
         {
             await NextFrame(StepPollFrames);
         }
     }
 
-    private static bool Typed(in TypedFields fields, in SaleWrite write, bool withPrice)
-    {
-        return fields.Readable
-            && PriceWriter.ShownQuantity(fields) == write.Quantity
-            && (!withPrice || PriceWriter.ShownPrice(fields) == write.NewPrice);
-    }
-
     private static SellWindowSample SampleWindow(string itemName, in SaleWrite write)
     {
-        var typed = PriceWriter.Shown();
-        return typed.Readable
-            ? OpenedSellWindow.Typed(RetainerReads.SellWindow(), itemName, write, PriceWriter.ShownQuantity(typed), PriceWriter.ShownPrice(typed))
-            : SellWindowSample.Unreadable;
+        return OpenedSellWindow.Typed(RetainerReads.SellWindow(), itemName, write);
     }
 
     private async Task<ReadBackResult> ReadBack(SaleWrite write, ulong retainerId, long confirmedAtMs)
