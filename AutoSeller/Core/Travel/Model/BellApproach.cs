@@ -17,6 +17,7 @@ internal enum BellArrival : byte
     NoBell,
     NotReached,
     Cancelled,
+    UnexpectedWindow,
 }
 
 internal readonly record struct BellSituation(

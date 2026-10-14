@@ -129,7 +129,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
                 return true;
             case BellArrival.Cancelled:
                 return false;
-            case BellArrival.BellBusy:
+            case BellArrival.BellBusy or BellArrival.UnexpectedWindow:
                 session.NeedPlayer(NeedsPlayerReason.UnexpectedWindow);
                 return false;
             default:
