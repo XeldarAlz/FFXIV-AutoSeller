@@ -180,7 +180,13 @@ internal sealed partial class RetainerDriver
 
     private async Task LeaveRetainerMenu()
     {
-        if (!RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || !plugin.Retainers.TryGetOpenRetainer(out var open) || !session.Authorization.AllowsRetainer(open.RetainerId))
+        if (!plugin.Retainers.TryGetOpenRetainer(out var open) || !session.Authorization.AllowsRetainer(open.RetainerId))
+        {
+            return;
+        }
+
+        await WaitUntilTimed(static () => RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || TalkedBackToList(), MenuReturnMs, "driver-unwind-menu", StepPollFrames);
+        if (!RetainerClicks.IsReady(RetainerClicks.SelectStringAddon))
         {
             return;
         }
@@ -216,17 +222,12 @@ internal sealed partial class RetainerDriver
         }
 
         await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
-        if (RetainerClicks.IsReady(RetainerClicks.SelectStringAddon))
+        if (!await WaitUntilTimed(static () => RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || TalkedBackToList(), MenuReturnMs, "driver-back-to-list", StepPollFrames))
         {
-            return await QuitRetainer();
+            return CancelToken.IsCancellationRequested ? Stop.None : new Stop(DriverHalt.WindowsDidNotClose, "neither the retainer menu nor the retainer list came back");
         }
 
-        if (await WaitUntilTimed(TalkedBackToList, MenuReturnMs, "driver-back-to-list", StepPollFrames))
-        {
-            return Stop.None;
-        }
-
-        return CancelToken.IsCancellationRequested ? Stop.None : new Stop(DriverHalt.WindowsDidNotClose, "the retainer list did not come back");
+        return RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) ? await QuitRetainer() : Stop.None;
     }
 
     private async Task<Stop> CloseRetainerList()
