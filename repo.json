@@ -1,0 +1,33 @@
+[
+  {
+    "Author": "XeldarAlz",
+    "Name": "Auto Seller",
+    "InternalName": "AutoSeller",
+    "AssemblyVersion": "1.0.0.0",
+    "TestingAssemblyVersion": "1.0.0.0",
+    "Description": "Reprices your retainers' market listings, lists what your rules allow, and records every sale. Plans before it clicks, guards every price, and can run after AutoRetainer's ventures.",
+    "Punchline": "Your retainers' listings, priced and kept selling for you.",
+    "RepoUrl": "https://github.com/XeldarAlz/FFXIV-AutoSeller",
+    "ApplicableVersion": "any",
+    "Tags": [
+      "Market Board",
+      "Retainer",
+      "Selling",
+      "Undercut",
+      "Gil",
+      "Automation"
+    ],
+    "CategoryTags": [
+      "utility"
+    ],
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://raw.githubusercontent.com/XeldarAlz/FFXIV-AutoSeller/master/AutoSeller/Images/Icon.png",
+    "DownloadLinkInstall": "https://github.com/XeldarAlz/FFXIV-AutoSeller/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/XeldarAlz/FFXIV-AutoSeller/releases/latest/download/latest.zip",
+    "DownloadLinkTesting": "https://github.com/XeldarAlz/FFXIV-AutoSeller/releases/latest/download/latest.zip",
+    "IsTestingExclusive": false,
+    "AcceptsFeedback": true,
+    "DownloadCount": 0,
+    "LastUpdate": "0"
+  }
+]

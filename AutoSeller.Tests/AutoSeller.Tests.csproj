@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\AutoSeller\Core\Shared\**\*.cs" Link="Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\AutoSeller\Core\Changelog\**\*.cs" Link="Changelog\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\AutoSeller\Core\Localization\L.cs;..\AutoSeller\Core\Localization\L.*.cs;..\AutoSeller\Core\Localization\LocString.cs" Link="Localization\%(Filename)%(Extension)" />
+    <Compile Include="..\AutoSeller\Core\Ledger\**\*.cs" Link="Ledger\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\AutoSeller\Core\Pricing\Universalis\**\*.cs" Link="Pricing\Universalis\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\AutoSeller\Core\**\Model\**\*.cs"
+             Exclude="..\AutoSeller\Core\Shared\**;..\AutoSeller\Core\Changelog\**;..\AutoSeller\Core\Ledger\**;..\AutoSeller\Core\Pricing\Universalis\**"
+             Link="Model\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\AutoSeller\Localization\*.json" Link="Localization\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,134 @@
+<p align="center">
+  <img src="AutoSeller/Images/Icon.png" width="180" alt="Auto Seller icon" />
+</p>
+
+<h1 align="center">Auto Seller</h1>
+
+<p align="center">
+  <a href="https://discord.gg/hppkAvdBEE"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
+  <a href="https://github.com/XeldarAlz/FFXIV-AutoSeller/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/XeldarAlz/FFXIV-AutoSeller?style=flat-square&color=blue"></a>
+  <a href="https://github.com/XeldarAlz/FFXIV-AutoSeller/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/XeldarAlz/FFXIV-AutoSeller/total?style=flat-square&color=blue&cacheSeconds=300"></a>
+  <a href="https://github.com/XeldarAlz/FFXIV-AutoSeller/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/XeldarAlz/FFXIV-AutoSeller/release.yml?style=flat-square"></a>
+  <a href="LICENSE.md"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <em>Your retainers' listings, priced and kept selling for you. Built on Dalamud.</em>
+</p>
+
+---
+
+> **In development.** This page describes what version 1.0 will do. Until it ships, the plugin is a skeleton and Start does not run anything yet.
+
+## What it does
+
+Keeping your retainers' listings at a price that sells means visiting a bell, comparing prices and retyping them, retainer by retainer, every time someone undercuts you. Auto Seller reads your bags and your retainers' listings, plans every change across all of them and shows you that plan before anything is clicked. One Start then goes to a summoning bell, reprices what was undercut, lists what your rules allow, vendors what your rules call junk, checks every change and records your sales.
+
+Nothing is sold unless a rule you wrote allows it, no price goes below its floor, and the dry run, on by default, goes through the whole run up to typing a price.
+
+## Features
+
+- **Sell page**: one plan across all your retainers' slots: what is repriced, what is listed where, at what price and why ("Undercut by 1 seller", "Already lowest", "Bait listing ignored", "Below floor, kept", "Price war, paused"). Retainer tiles show listings in use, gil and the last visit, totals show what the run will change, and a drop over the step limit waits for your approval. Before Start you can leave a row out, move a lot to another retainer or set its price.
+- **Guarded pricing**: Undercut or Match mode against listings of the same quality only. Your own retainers and your alts are never undercut, bait listings are ignored, the reference price comes from real sales, the floor never goes below vendor value, and a maximum drop per reprice, a cooldown and price-war detection keep a race to the bottom in check.
+- **Rules**: a sell list with a floor, ceiling, fixed price, lot size, bag keep count, listings to keep up and preferred retainer per item, plus category rules with a minimum value. Items on the never-sell list, in a gear set, equipped or protected in AutoRetainer are never sold.
+- **Sources**: your bags and crystals, and when you opt in, a retainer's own inventory, the saddlebag and the armoury chest (never items in a gear set).
+- **Three ways to run**: Start, which goes to a nearby summoning bell or the bell in your inn room; an AutoRetainer post-process after each venture; or Assist, which fills the suggested price when you open a sell window by hand and leaves Confirm to you.
+- **In-game buttons**: "Run all retainers" on the retainer list and "Reprice this retainer" on a retainer's sell list, so a run can start without opening the window.
+- **Undercut watch**: your listings are checked against Universalis on a timer, with no game request, and a run can visit only the retainers that need it.
+- **Listings**: every listing of every character and retainer from their last visit, with its price, the lowest competitor, its age and its state.
+- **Sales**: a ledger built from sale notices, the retainer sale history and listing changes, with daily, 7-day and 30-day totals, a daily chart, views per item, retainer and character, and hints when an item sells fast or sits unsold.
+- **Run controls**: Pause, Resume and Stop in the dock at the bottom of the window or as commands, auto-pause while you are in a duty, and hold new moves while you type in chat.
+- **Humanizer**: short random delays before the character moves off or casts a teleport.
+- **GM alert**: ends a run when a GM is near, with an optional toast, chat line, beeps, custom commands, or closing the game.
+- **History and console**: your past runs with their outcome, and every step logged on the Console page, ready to copy into a bug report.
+
+## How a run works
+
+1. Write your rules, check the plan on the Sell page and press **Start** (or type `/asell start`). The run keeps to the rules, floors, caps and edits you saw at that moment.
+2. It walks to a nearby summoning bell, or travels to the inn of your Grand Company's city and uses the bell in your room. AutoRetainer, when installed, is held back for the run and restored afterwards.
+3. For each enabled retainer it reads the listings and the sale history, compares prices, reprices what is due, lists the planned lots and, when your rules allow it, vendors junk.
+4. Every price is checked in the sell window before Confirm and read back from the retainer's listings after it. A write it cannot confirm stops the run and asks you to check.
+5. It closes the retainer windows and records the run in History and the sales in the ledger.
+
+As an AutoRetainer post-process it skips the walk, works on the one retainer AutoRetainer hands over after its venture, and always hands it back.
+
+## Safety
+
+- **Dry run.** On by default, it goes through the whole run up to typing a price and marks what it would change. Turning it off asks first.
+- **Nothing sold without a rule.** Only items your sell list or category rules allow are listed or vendored.
+- **Floors and step limit.** No price is written below the item's floor, and no reprice drops a price further than the step limit without your approval.
+- **Never against yourself.** Your own listings are never undercut, and neither are your alts' listings when AutoRetainer knows them.
+- **The player's path.** Prices go through the game's sell window, the same one you use. There are no direct market writes.
+- **Checked twice.** Every write is checked before Confirm and read back after it. A write it cannot confirm stops the run in a "needs you" state, and nothing resumes on its own.
+- **Menus by text.** Retainer menu entries are chosen by their text from the game data, never by their place in the menu, and there is no blanket Yes to prompts.
+- **Hands back.** As an AutoRetainer post-process it hands the retainer back on success, failure, Stop and unload.
+- **What it never does**: list an item outside your rules, go below a floor, vendor anything your rules do not call junk, or recover on its own from a write it could not confirm. Its only network calls go to Universalis for price data.
+
+## Install
+
+In-game: `/xlsettings` → **Experimental** → paste into **Custom Plugin Repositories**:
+
+```
+https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
+```
+
+Tick **Enabled**, click **+**, then **Save and Close**. Open `/xlplugins` → **All Plugins**, search for **Auto Seller**, and install.
+
+## Requirements
+
+- **vnavmesh** for walking to a summoning bell. Start stays off until it is installed and loaded.
+- **AutoRetainer** to run Auto Seller after ventures, for its protect list and to know your alts. It is optional: without it, Start and Assist still work.
+- **Marketbuddy** is not needed. When it is installed, Auto Seller locks it while it types a price, so only one of them fills the sell window.
+- **At least one retainer**, with runs started from your home world.
+
+Open `/asell deps` after install to see the helpers and one-click each missing one.
+
+## Commands
+
+| Command | Action |
+|---|---|
+| `/asell` | Toggle the main window |
+| `/seller` | Alias for `/asell` |
+| `/asell config` | Open the Settings page |
+| `/asell stats` | Open the History page (`/asell history` works too) |
+| `/asell deps` | Open the Plugins page (`/asell dependencies` works too) |
+| `/asell log` | Open the Console page |
+| `/asell changelog` | Open the Changelog page |
+| `/asell about` | Open the About page |
+| `/asell start` | Open the Sell page and start a run of the current plan |
+| `/asell stop` | Stop the run |
+| `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
+| `/asell target` | Log the targeted NPC's BaseId (debug helper) |
+
+## Known limits
+
+- **Home world, one character at a time.** Runs work for the current character on its home world. Other characters sell through AutoRetainer's multi mode, one after another. Travelling home from another world, and house and Free Company bells, are not part of 1.0.
+- **No entrusting.** Gil and items are never entrusted to or withdrawn from retainers; AutoRetainer's entrust plans and gil withdrawal already do that.
+- **Sales inform, they do not steer.** The Sales page shows hints such as "sold in under an hour, consider raising"; prices do not change on their own because of them.
+- **Equipped gear is never a source.**
+- **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer and no Discord or toast notification yet.
+- **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
+
+## Languages
+
+The windows are available in English, Deutsch, Français, Español, Português (Brasil), Русский, Türkçe, 日本語, and 中文. The plugin picks a language from your Dalamud and game client settings on first launch; change it any time under Settings, General, Language. Game data such as zone, item, and world names always follows the game client.
+
+Spotted a wrong or awkward translation? Open a [translation issue](https://github.com/XeldarAlz/FFXIV-AutoSeller/issues/new?template=translation_report.yml) and tell me what it should say instead.
+
+## Community
+
+Questions, ideas, or just want to hang out with other players? Come say hi on Discord.
+
+→ [Join our Discord](https://discord.gg/hppkAvdBEE)
+
+## More from me
+
+If you liked this plugin, take a look at my other Dalamud work. You might find something else there for you.
+
+→ [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
+
+## License
+
+AGPL-3.0-or-later. See [LICENSE.md](LICENSE.md). [NOTICE](NOTICE) adds the attribution terms the AGPL allows: a fork, or any project that reuses this code, must credit the original author and must not pass itself off as the original. The license covers the code, not the name or the icon: read the [trademark and naming policy](TRADEMARK.md) before you publish a fork.
+
+How AI is used to build this plugin is written down in [AI usage](AI-USAGE.md).

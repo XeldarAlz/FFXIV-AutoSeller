@@ -1,0 +1,18 @@
+{
+  "Author": "XeldarAlz",
+  "Name": "Auto Seller",
+  "InternalName": "AutoSeller",
+  "Punchline": "Your retainers' listings, priced and kept selling for you.",
+  "Description": "Reprices your retainers' market listings, lists what your rules allow, and records every sale. Plans before it clicks, guards every price, and can run after AutoRetainer's ventures.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/XeldarAlz/FFXIV-AutoSeller",
+  "IconUrl": "https://raw.githubusercontent.com/XeldarAlz/FFXIV-AutoSeller/master/AutoSeller/Images/Icon.png",
+  "Tags": [
+    "Market Board",
+    "Retainer",
+    "Selling",
+    "Undercut",
+    "Gil",
+    "Automation"
+  ]
+}

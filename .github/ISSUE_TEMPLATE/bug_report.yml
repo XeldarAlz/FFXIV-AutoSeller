@@ -1,0 +1,149 @@
+name: Bug report
+description: Something's broken or behaving unexpectedly.
+title: "[Bug] "
+labels: ["bug"]
+assignees: ["XeldarAlz"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill out as much as you can; it makes a huge difference.
+
+        If you're not sure whether it's a bug or expected behavior, prefer the [Q&A discussions](https://github.com/XeldarAlz/FFXIV-AutoSeller/discussions/new?category=q-a); triage is faster there.
+
+        For security issues, please use [private vulnerability reporting](https://github.com/XeldarAlz/FFXIV-AutoSeller/security/advisories/new) instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see? What did you expect to see instead?
+      placeholder: "The plugin opened the retainer's sell list but repriced a listing below the floor I set..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug. If it's intermittent, say so.
+      placeholder: |
+        1. Open `/asell`
+        2. Check the plan on the Sell page
+        3. Press Start
+        4. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: Shown in `/xlplugins` next to "Auto Seller".
+      options:
+        - 1.0.0.0
+        - Older / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: region
+    attributes:
+      label: Region
+      description: Game data, client languages and market board prices differ per region, so the region is a frequent root cause.
+      options:
+        - North America
+        - Europe
+        - Japan
+        - Oceania
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: How did the run start?
+      description: Auto Seller runs at a summoning bell after Start, as an AutoRetainer post-process after a venture, or as Assist when you open a sell window by hand.
+      options:
+        - At a bell (Start, /asell start or an in-game button)
+        - AutoRetainer post-process (after a venture or from its retainer list)
+        - Assist (I opened the sell window myself)
+        - No run (a page, a setting or the undercut watch)
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: world
+    attributes:
+      label: World and client language
+      description: The world the run was on and your game client's language. Retainer menus and the sell window read differently per language.
+      placeholder: "Gilgamesh (Aether), English client"
+
+  - type: input
+    id: helper-versions
+    attributes:
+      label: AutoRetainer and Marketbuddy versions
+      description: Shown in `/xlplugins`. Write "not installed" for either one you do not use.
+      placeholder: "AutoRetainer 4.6.2.13, Marketbuddy not installed"
+
+  - type: dropdown
+    id: dry-run
+    attributes:
+      label: Was the dry run on?
+      description: The Dry run switch next to Start. While it is on, a run goes through everything up to typing a price and writes nothing.
+      options:
+        - Yes, it was a dry run (nothing listed, repriced or vendored)
+        - No, it listed, repriced or vendored for real
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where in the run did it fail?
+      description: The running panel on the Sell page and the Console show the stage a run is in. A run goes to the bell -> reads each retainer's listings -> compares prices -> reprices -> lists -> vendors -> records the sales.
+      options:
+        - Before Start (the Sell page, the plan, rules, settings, Start refusing to start)
+        - Going to the bell (teleport, the inn room, walking to a summoning bell)
+        - Reading listings (the retainer list, a retainer's sell list, the sale history)
+        - Comparing prices (the market board search, Universalis prices, a price that looks wrong)
+        - Repricing (the sell window, a price, the floor or step limit, a write marked unconfirmed)
+        - Listing (a lot, its quantity or retainer, the sell window, a write marked unconfirmed)
+        - Vendoring (an item sold to the vendor, the junk rules)
+        - AutoRetainer post-process (a retainer not handed back, AutoRetainer waiting or held back)
+        - Assist (the suggested price, the card beside the sell window)
+        - Sales page (a sale missing, counted twice or wrong)
+        - History or the Console
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Attachments
+      description: |
+        **If you can provide any of these, it turns guesswork into a fix.**
+
+        - **Plugin console**: open `/asell log`, press *Copy log* and paste the result into the console field below. It already includes the plugin version, Dalamud version and zone.
+        - **Dalamud log**: open `/xllog`, click the *Open log folder* button at the bottom-right, attach `dalamud.log`. Filter by `[ASELL]` if you want to trim it down; when AutoRetainer was involved, keep its lines too.
+        - **The sell window and the retainer's sell list** as screenshots, if the plugin read a listing wrong, typed the wrong price, or stopped on a prompt.
+        - **Screenshots / short clip** if the issue is visual (plan rows, wrong tooltip, frozen card, etc.)
+        - **Other plugins active** that touch retainers, the market board, dialogs, movement, or input, which helps rule out conflicts.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output (optional)
+      description: |
+        Paste what *Copy log* on the plugin's Console page (`/asell log`) put on your clipboard. Short snippets (chat-log tail, Dalamud error text) also belong here; attach full `dalamud.log` files under **Attachments** above.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: The item and its rule (floor, ceiling, lot size), your pricing mode and step limit under Settings, how many retainers you run, hunches, anything that helps the bug land.
