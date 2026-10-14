@@ -2,11 +2,11 @@ using System.Collections.Immutable;
 using System.Text;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory.Model;
+using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks.Model;
-using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 
@@ -133,7 +133,7 @@ internal sealed unsafe class BagReader
     private ulong OpenRetainerId(InventoryManager* manager)
     {
         var retainers = RetainerManager.Instance();
-        var atBell = Svc.Condition[ConditionFlag.OccupiedSummoningBell];
+        var atBell = RetainerReader.CanReadRoster;
         var lastSelected = retainers == null ? 0 : retainers->LastSelectedRetainerId;
         var retainerObjectId = retainers == null ? 0 : retainers->RetainerObjectId;
         var firstPage = manager->GetInventoryContainer(InventoryType.RetainerPage1);
