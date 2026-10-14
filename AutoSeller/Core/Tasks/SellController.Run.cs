@@ -75,13 +75,16 @@ internal sealed partial class SellController
             return;
         }
 
-        if (reason == PauseReason.Manual && currentTask is { HoldsWindows: true })
+        var writing = RunReactions.ForInterruption(active.State) != InterruptHandling.Immediate;
+        if (currentTask is { HoldsWindows: true } && (reason == PauseReason.Manual || writing))
         {
             if (!active.PauseRequested)
             {
                 active.PauseRequested = true;
                 deferredPause = reason;
-                RunLog.Info("Pause requested; the run pauses after the current item and closes the retainer windows first.");
+                RunLog.Info(writing
+                    ? $"Pause asked for ({reason}) while a price is being written; the run settles that write before it pauses."
+                    : "Pause requested; the run pauses after the current item and closes the retainer windows first.");
             }
 
             return;
@@ -168,7 +171,7 @@ internal sealed partial class SellController
                 return;
             }
 
-            PauseReason = deferredPause == PauseReason.Manual || active.PausedFor == PauseReason.None ? PauseReason.Manual : active.PausedFor;
+            PauseReason = deferredPause != PauseReason.None ? deferredPause : active.PausedFor != PauseReason.None ? active.PausedFor : PauseReason.Manual;
             deferredPause = PauseReason.None;
             active.Enter(RunState.Paused);
             RunLog.Info($"Run paused at an item boundary ({PauseReason}); Resume reads the game again and carries on.");
@@ -255,21 +258,26 @@ internal sealed partial class SellController
         }
 
         var authorization = active.Authorization;
-        var endedAtUtc = DateTime.UtcNow;
-        active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State });
+        var endedAtUtc = active.EndedAtUtc;
+        if (!active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State }))
+        {
+            RunLog.Warning($"The journal refused the end of run {authorization.RunId}: {active.Journal.LastError}");
+        }
+
+        plugin.Ledger.Invalidate();
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);
         RunLog.Info(
             $"Run {authorization.RunId} ended {active.State}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
-            $"{tally.WouldReprice} would reprice, {tally.WouldList} would list, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
+            $"{tally.Repriced} {(authorization.DryRun ? "would reprice" : "repriced")}, {tally.Listed} {(authorization.DryRun ? "would list" : "listed")} worth {tally.ListedValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
     }
 
     private static void Announce(SellRunSession active, in RunTally tally)
     {
         var message = active.State switch
         {
-            RunState.Completed or RunState.CompletedPartial => Loc.T(L.Run.StatusDone, tally.WouldReprice, tally.WouldList, tally.Kept, tally.Skipped),
+            RunState.Completed or RunState.CompletedPartial => Loc.T(active.Authorization.DryRun ? L.Run.StatusDone : L.Run.StatusDoneLive, tally.Repriced, tally.Listed, tally.Kept, tally.Skipped),
             RunState.NeedsPlayer => Loc.T(L.Run.StatusNeedsPlayer, Describe(active.NeedsPlayer)),
             RunState.Failed => Loc.T(L.Run.StatusFailed, active.Failure),
             _ => Loc.T(L.Run.StatusStopped),
@@ -302,8 +310,9 @@ internal sealed partial class SellController
             authorization.HomeWorldId,
             active.Visits.Visited,
             active.Visits.Count,
-            tally.WouldReprice,
-            tally.WouldList,
+            tally.Repriced,
+            tally.Listed,
+            tally.ListedValue,
             tally.Kept,
             tally.Skipped,
             [.. active.Decisions]));

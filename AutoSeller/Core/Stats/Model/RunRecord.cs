@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Tasks.Model;
 
@@ -13,8 +14,9 @@ internal sealed record RunRecord(
     uint WorldId,
     int RetainersVisited,
     int RetainersPlanned,
-    int WouldReprice,
-    int WouldList,
+    [property: JsonPropertyName("WouldReprice")] int Repriced,
+    [property: JsonPropertyName("WouldList")] int Listed,
+    long ListedValue,
     int Kept,
     int Skipped,
     ImmutableArray<RunDecision> Decisions);

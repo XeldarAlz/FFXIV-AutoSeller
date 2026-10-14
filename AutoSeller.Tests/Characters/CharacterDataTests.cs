@@ -72,7 +72,7 @@ public sealed class CharacterDataTests : IDisposable
     {
         var data = new CharacterData(Character);
         data.UpdateRoster([Retainer(FirstRetainer, "Alpha"), Retainer(SecondRetainer, "Beta")]);
-        data.RecordSnapshot(Snapshot(SecondRetainer, Listing(0, Ore, 1_000)));
+        data.RecordSnapshot(Snapshot(SecondRetainer, Listing(0, Ore, 1_000)), []);
         data.Approve(new ApprovedPrice(SecondRetainer, 0, Ore, false, 1_000, 800));
 
         data.UpdateRoster([Retainer(FirstRetainer, "Alpha")]);
@@ -87,7 +87,7 @@ public sealed class CharacterDataTests : IDisposable
     {
         var data = new CharacterData(Character);
         data.UpdateRoster([Retainer(FirstRetainer, "Alpha")]);
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
         data.Approve(new ApprovedPrice(FirstRetainer, 0, Ore, false, 1_000, 800));
         var revision = data.Revision;
 
@@ -104,10 +104,10 @@ public sealed class CharacterDataTests : IDisposable
     public void LatestSnapshotReplacesTheLastOne()
     {
         var data = new CharacterData(Character);
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
         var latest = Snapshot(FirstRetainer, Listing(0, Potion, 50));
 
-        data.RecordSnapshot(latest);
+        data.RecordSnapshot(latest, []);
 
         Assert.True(data.TryGetSnapshot(FirstRetainer, out var kept));
         Assert.Same(latest, kept);
@@ -119,9 +119,9 @@ public sealed class CharacterDataTests : IDisposable
     {
         var data = new CharacterData(Character);
         var nextDay = Now.AddDays(1);
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
 
-        data.RecordSnapshot(SnapshotAt(FirstRetainer, nextDay, Listing(0, Ore, 900), Listing(1, Potion, 50)));
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, nextDay, Listing(0, Ore, 900), Listing(1, Potion, 50)), []);
 
         Assert.Equal<ListingAge>(
             [new ListingAge(FirstRetainer, Listing(0, Ore, 900), Now), new ListingAge(FirstRetainer, Listing(1, Potion, 50), nextDay)],
@@ -129,13 +129,26 @@ public sealed class CharacterDataTests : IDisposable
     }
 
     [Fact]
+    public void ALotTheJournalListedInAnEmptiedSlotStartsItsOwnAge()
+    {
+        var data = new CharacterData(Character);
+        var nextDay = Now.AddDays(1);
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
+        SnapshotDiffWrite[] listed = [new(SnapshotDiffWriteKind.Listed, byte.MaxValue, Ore, false, 5, 0, 950, nextDay.AddMinutes(-1))];
+
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, nextDay, Listing(0, Ore, 950)), listed);
+
+        Assert.Equal<ListingAge>([new ListingAge(FirstRetainer, Listing(0, Ore, 950), nextDay)], data.ToRecord(nextDay).ListingAges);
+    }
+
+    [Fact]
     public void AListingGoneFromItsSlotTakesItsTimeAlong()
     {
         var data = new CharacterData(Character);
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)));
-        data.RecordSnapshot(Snapshot(SecondRetainer, Listing(0, Potion, 50)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000)), []);
+        data.RecordSnapshot(Snapshot(SecondRetainer, Listing(0, Potion, 50)), []);
 
-        data.RecordSnapshot(SnapshotAt(FirstRetainer, Now.AddDays(1)));
+        data.RecordSnapshot(SnapshotAt(FirstRetainer, Now.AddDays(1)), []);
 
         Assert.Equal<ListingAge>([new ListingAge(SecondRetainer, Listing(0, Potion, 50), Now)], data.ToRecord(Now).ListingAges);
     }
@@ -145,7 +158,7 @@ public sealed class CharacterDataTests : IDisposable
     {
         var data = new CharacterData(Character);
 
-        Assert.Throws<ArgumentException>(() => data.RecordSnapshot(SnapshotOf(Other, FirstRetainer)));
+        Assert.Throws<ArgumentException>(() => data.RecordSnapshot(SnapshotOf(Other, FirstRetainer), []));
         Assert.Empty(data.Snapshots);
     }
 
@@ -160,7 +173,7 @@ public sealed class CharacterDataTests : IDisposable
         data.Approve(repriced);
         data.Approve(otherRetainer);
 
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(1, Potion, 85)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(1, Potion, 85)), []);
 
         Assert.Equal([kept, otherRetainer], data.Approvals);
     }
@@ -359,7 +372,7 @@ public sealed class CharacterDataTests : IDisposable
         data.Describe(CharacterName, HomeWorld);
         data.UpdateRoster([Retainer(FirstRetainer, "Alpha"), Retainer(SecondRetainer, "Beta")]);
         data.SetEnabled(SecondRetainer, false);
-        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(3, Potion, 60)));
+        data.RecordSnapshot(Snapshot(FirstRetainer, Listing(0, Ore, 1_000), Listing(3, Potion, 60)), []);
         data.Approve(new ApprovedPrice(FirstRetainer, 0, Ore, false, 1_000, 700));
         data.RecordReprice(new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false)), Now - TimeSpan.FromHours(3), 1_200, 1_000);
         data.RecordReprice(new RepriceKey(FirstRetainer, 0, new ItemKey(Ore, false)), Now - TimeSpan.FromHours(1), 1_100, 1_000);

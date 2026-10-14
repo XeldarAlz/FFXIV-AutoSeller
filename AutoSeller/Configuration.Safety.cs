@@ -2,6 +2,8 @@ namespace AutoSeller;
 
 public sealed partial class Configuration
 {
+    public bool DryRun { get; set; } = true;
+
     public bool GmAlertStopRun { get; set; } = true;
     public bool GmAlertToast { get; set; } = false;
     public bool GmAlertChat { get; set; } = false;

@@ -1,5 +1,6 @@
 using System.Globalization;
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Planning.Model;
@@ -36,7 +37,7 @@ internal static class PlanLabels
         _ => Styling.TextDim,
     };
 
-    public static string Done(in RunDecision decision)
+    public static string Done(in RunDecision decision, bool dryRun)
     {
         if (decision.Skip != RunSkip.None)
         {
@@ -48,10 +49,15 @@ internal static class PlanLabels
             return Loc.T(L.Plan.DoneRefused);
         }
 
+        if (decision.Failed)
+        {
+            return Loc.T(Failed(decision));
+        }
+
         return decision.Decision.Action switch
         {
-            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(L.Plan.DoneReprice),
-            SellAction.List => Loc.T(L.Plan.DoneList),
+            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced),
+            SellAction.List => Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed),
             SellAction.Skip => Loc.T(L.Plan.DoneSkipped),
             _ => Loc.T(L.Plan.DoneKept),
         };
@@ -64,6 +70,16 @@ internal static class PlanLabels
             return Styling.TextMuted;
         }
 
+        if (decision.Write == RunWrite.Unknown)
+        {
+            return Styling.AccentAmber;
+        }
+
+        if (decision.Failed)
+        {
+            return decision.Rejection == WriteRejection.Cancelled ? Styling.TextMuted : Styling.AccentRose;
+        }
+
         return decision.Refused ? Styling.AccentRose : ActionColor(decision.Decision.Action);
     }
 
@@ -72,6 +88,11 @@ internal static class PlanLabels
         if (decision.Skip != RunSkip.None)
         {
             return Skip(decision.Skip);
+        }
+
+        if (decision.Failed)
+        {
+            return Loc.T(FailedReason(decision));
         }
 
         return decision.Refused ? Loc.T(L.Plan.SkipRefused) : WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);
@@ -139,6 +160,7 @@ internal static class PlanLabels
         RunSkip.SlotChanged => Loc.T(L.Plan.SkipSlotChanged),
         RunSkip.NoFreeSlot => Loc.T(L.Plan.ReasonNoFreeSlot),
         RunSkip.QuantityOutOfBounds => Loc.T(L.Plan.SkipQuantity),
+        RunSkip.ReadBackUnavailable => Loc.T(L.Plan.SkipReadBackUnavailable),
         _ => string.Empty,
     };
 
@@ -180,6 +202,31 @@ internal static class PlanLabels
     {
         var name = items.Get(itemId).Name;
         return name.Length > 0 ? name : Loc.T(L.Rules.ItemFallback, itemId.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static LocString Failed(in RunDecision decision)
+    {
+        if (decision.Write == RunWrite.Unknown)
+        {
+            return L.Plan.DoneUnknown;
+        }
+
+        return decision.Rejection == WriteRejection.Cancelled ? L.Plan.DoneCancelled : L.Plan.DoneRejected;
+    }
+
+    private static LocString FailedReason(in RunDecision decision)
+    {
+        if (decision.Write == RunWrite.Unknown)
+        {
+            return L.Plan.DoneUnknownReason;
+        }
+
+        return decision.Rejection switch
+        {
+            WriteRejection.Cancelled => L.Plan.DoneCancelledReason,
+            WriteRejection.PromptRefused => L.Plan.DonePromptRefusedReason,
+            _ => L.Plan.DoneRejectedReason,
+        };
     }
 
     private static string WithBait(string reason, in DecisionEvidence evidence)

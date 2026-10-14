@@ -1,7 +1,6 @@
 using AutoSeller.Core.AutoRetainer.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
-using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning.Model;
@@ -13,11 +12,7 @@ namespace AutoSeller.Core.Tasks;
 
 internal sealed partial class SellController
 {
-    private const bool DryRunOnly = true;
-
     private static readonly AutoRetainerStatus autoRetainerUnread = new(AutoRetainerState.Missing, false);
-
-    public bool DryRun => DryRunOnly;
 
     public StartBlock Start()
     {
@@ -36,7 +31,14 @@ internal sealed partial class SellController
         var rules = configuration.BuildRuleBook();
         var data = plugin.Characters.Current;
         var enabled = data?.EnabledRetainerIds() ?? [];
-        var review = ReviewJournal();
+        var ledger = plugin.Ledger;
+        ledger.Invalidate();
+        var journalBlocks = ledger.BlocksWrites;
+        if (ledger.ReadError is { } readError)
+        {
+            RunLog.Warning($"The journal could not be read: {readError}");
+        }
+
         var block = StartBlockRule.Evaluate(new StartFacts(
             RunMode.Standalone,
             Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer is not null && data is not null,
@@ -46,7 +48,7 @@ internal sealed partial class SellController
             Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
             Svc.Condition[ConditionFlag.TradeOpen],
             autoRetainerUnread,
-            review.BlocksWrites,
+            journalBlocks,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
             enabled.Length > 0,
@@ -69,17 +71,19 @@ internal sealed partial class SellController
 
         var markets = input.Markets.AsSpan();
         var edits = input.Edits;
-        var approvals = Approvals.Collect(edits, markets, enabled.AsSpan(), input.PlayerApprovals.AsSpan());
+        var authorized = input.EnabledRetainerIds();
+        var dryRun = configuration.DryRun;
+        var approvals = Approvals.Collect(edits, markets, authorized.AsSpan(), input.PlayerApprovals.AsSpan());
         var problem = SellAuthorization.TryCreate(
             Guid.NewGuid(),
             input.CharacterContentId,
             input.HomeWorldId,
-            enabled,
+            authorized,
             input.Rules,
             input.Pricing,
             edits,
             configuration.BuildRunCaps(),
-            DryRunOnly,
+            dryRun,
             SellAuthorization.CurrentPolicyVersion,
             approvals,
             nowUtc,
@@ -96,8 +100,14 @@ internal sealed partial class SellController
             RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
         }
 
-        var active = new SellRunSession(authorization!, input, review);
-        active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc));
+        var active = new SellRunSession(authorization!, input, ledger.Review, ledger.JournalFor(dryRun));
+        if (!active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
+        {
+            ledger.Invalidate();
+            return Refuse(StartBlock.NotAuthorized, $"the journal refused the run's authorization: {active.Journal.LastError}");
+        }
+
+        ledger.Invalidate();
         var items = PlanStock.ItemsToPrice(input.Stock.AsSpan(), markets);
         RunLog.Info($"Run: reference prices for {items.Length} item(s): {plugin.References.Fetch(items.AsSpan())}.");
         session = active;
@@ -106,7 +116,7 @@ internal sealed partial class SellController
         RunLog.Info(
             $"Run {authorization.RunId} authorized: {active.Retainers.Length} retainer(s), {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
             $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, dry run {authorization.DryRun}, policy {authorization.PolicyVersion}.");
-        Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.Plural(L.Run.ChatStarted, active.Retainers.Length)}");
+        Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.Plural(dryRun ? L.Run.ChatStarted : L.Run.ChatStartedLive, active.Retainers.Length)}");
         Launch(active);
         return StartBlock.None;
     }
@@ -116,17 +126,5 @@ internal sealed partial class SellController
         RunLog.Info($"Start refused: {detail}.");
         Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {Loc.T(L.Run.ChatRefused, Describe(block))}");
         return block;
-    }
-
-    private JournalReview ReviewJournal()
-    {
-        var read = new RunJournal(Plugin.PluginInterface.ConfigDirectory.FullName).Read();
-        if (read.Failed)
-        {
-            RunLog.Warning($"The journal could not be read: {read.Error}");
-            return JournalReview.Empty;
-        }
-
-        return JournalReview.Build(read.Entries);
     }
 }

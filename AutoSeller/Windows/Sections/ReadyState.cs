@@ -15,7 +15,7 @@ internal static class ReadyState
     private static int cachedFrame = -1;
     private static Info cached;
 
-    public static Info Resolve(SellController controller)
+    public static Info Resolve(Plugin plugin)
     {
         var frame = ImGui.GetFrameCount();
         if (frame == cachedFrame)
@@ -23,13 +23,14 @@ internal static class ReadyState
             return cached;
         }
 
-        cached = Compute(controller);
+        cached = Compute(plugin);
         cachedFrame = frame;
         return cached;
     }
 
-    private static Info Compute(SellController controller)
+    private static Info Compute(Plugin plugin)
     {
+        var controller = plugin.Controller;
         if (controller.Running)
         {
             return controller.Paused
@@ -37,7 +38,7 @@ internal static class ReadyState
                 : new Info(Kind.Running, Styling.AccentBlue, Styling.AccentBlueSoft);
         }
 
-        return RunReadiness.Evaluate() switch
+        return RunReadiness.Evaluate(plugin.Ledger.BlocksWrites) switch
         {
             Readiness.Ready => new Info(Kind.Ready, Styling.AccentMint, Styling.AccentMintSoft),
             Readiness.SetupNeeded => new Info(Kind.SetupNeeded, Styling.AccentRose, Styling.AccentRoseSoft),

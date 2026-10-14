@@ -196,7 +196,7 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         Settled = true;
         var visits = session.Visits;
         var tally = session.Tally;
-        var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.WouldReprice} would reprice, {tally.WouldList} would list, {tally.Kept} kept, {tally.Skipped} skipped";
+        var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.Repriced} repriced, {tally.Listed} listed, {tally.Kept} kept, {tally.Skipped} skipped{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";
         if (stop.Halted)
         {
             Warn($"{summary}; halted ({stop.Reason}): {stop.Detail}");

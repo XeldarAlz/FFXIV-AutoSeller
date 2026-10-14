@@ -2,6 +2,8 @@ using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 
 namespace AutoSeller.Windows.Sections.Config;
 
@@ -12,6 +14,7 @@ internal static class PriceSettings
     private const int CapStep = 5;
     private const float BasisPointsPerPercent = 100f;
     private const float PercentTenth = 0.1f;
+    private const float ConfirmationGap = 6f;
 
     private static readonly SettingsControls.Choices.Choice[] modeChoices =
     [
@@ -232,6 +235,19 @@ internal static class PriceSettings
     private static void DrawCapGroup(Configuration configuration)
     {
         using var group = SettingsGroup.Begin(Loc.T(L.Pricing.GroupCaps));
+        SettingsRow.Draw(Loc.T(L.Plan.DryRun), Loc.T(L.Pricing.DryRunHelp), SettingsControls.ToggleWidth, configuration, DryRunControl.DrawToggle, SettingsRow.ToggleHeight);
+        if (DryRunControl.Confirming)
+        {
+            Styling.VSpace(ConfirmationGap);
+            var width = SettingsGroup.ContentRightEdge - ImGui.GetCursorScreenPos().X;
+            DryRunControl.DrawConfirmation(configuration, width, Layout.HeroButtonHeight * ImGuiHelpers.GlobalScale);
+            Styling.VSpace(ConfirmationGap);
+        }
+        else if (!configuration.DryRun)
+        {
+            SettingsRow.Note(Loc.T(L.Plan.DryRunOffCaption), Styling.AccentAmberSoft);
+        }
+
         SettingsRow.Draw(Loc.T(L.Pricing.MaxReprices), Loc.T(L.Pricing.MaxRepricesHelp), SettingsControls.RowStepperWidth, configuration, static configuration =>
         {
             if (SettingsControls.Step("##asell_pricing_max_reprices", configuration.MaxRepricesPerRun, CapStep, 0, RunCaps.MaximumWritesPerRun, "%d", out var value))

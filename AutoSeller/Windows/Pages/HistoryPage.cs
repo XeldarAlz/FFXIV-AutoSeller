@@ -149,8 +149,7 @@ internal sealed class HistoryPage
     {
         return string.Concat(
             Loc.T(L.History.Retainers, record.RetainersVisited, record.RetainersPlanned), TextDraw.Separator,
-            Loc.T(L.History.ToReprice, record.WouldReprice), TextDraw.Separator,
-            Loc.T(L.History.ToList, record.WouldList), TextDraw.Separator,
+            RunLabels.Changes(record.DryRun, record.Repriced, record.Listed, record.ListedValue), TextDraw.Separator,
             Loc.T(L.History.Kept, record.Kept), TextDraw.Separator,
             Loc.T(L.History.Skipped, record.Skipped), TextDraw.Separator,
             Formatting.Elapsed(record.EndedAtUtc - record.StartedAtUtc));

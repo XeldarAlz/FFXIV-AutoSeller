@@ -56,7 +56,7 @@ internal static class SellPlanner
             this.input = input;
             var runInputs = input.ToRunInputs();
             stock = runInputs.Stock;
-            runPlan = RunPlanner.Build(runInputs, input.Markets.AsSpan(), nothingHandled, []);
+            runPlan = RunPlanner.Build(runInputs, input.Markets.AsSpan(), nothingHandled, [], []);
             approved = Approvals.Collect(input.Edits, input.Markets.AsSpan(), input.EnabledRetainerIds().AsSpan(), input.PlayerApprovals.AsSpan());
             for (var index = 0; index < input.ListingItems.Length; index++)
             {

@@ -34,7 +34,6 @@ internal static unsafe class RetainerClicks
     private const string CloseRetainerListThrottleKey = "AutoSeller.Retainer.CloseRetainerList";
     private const string DeclinePromptThrottleKey = "AutoSeller.Retainer.DeclinePrompt";
     private const string CloseWindowThrottleKey = "AutoSeller.Retainer.CloseWindow";
-    private const string SetQuantityThrottleKey = "AutoSeller.Retainer.SetQuantity";
 
     public static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
     public static readonly string SelectStringAddon = ChainWindows.NameOf(ChainWindow.SelectString);
@@ -165,18 +164,6 @@ internal static unsafe class RetainerClicks
     public static bool CloseAddon(string addonName) => Close(addonName, CloseWindowThrottleKey);
 
     public static bool DeclinePrompt() => NpcInteraction.AnswerNo(DeclinePromptThrottleKey);
-
-    public static bool SetQuantity(int quantity)
-    {
-        if (!NpcInteraction.TryGetReadyAddon(SellWindowAddon, out var sellWindow) || !EzThrottler.Throttle(SetQuantityThrottleKey, ClickThrottleMs))
-        {
-            return false;
-        }
-
-        RunLog.Info($"Retainer: setting the sell window's quantity to {quantity}.");
-        new AddonMaster.RetainerSell(sellWindow).Quantity = quantity;
-        return true;
-    }
 
     private static void ReportContextOwner()
     {

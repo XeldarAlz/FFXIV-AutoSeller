@@ -21,6 +21,8 @@ internal readonly struct RunView(SellRunSession? session, bool live)
 
     public DateTime StartedAtUtc => session?.Authorization.CreatedAtUtc ?? default;
 
+    public DateTime EndedAtUtc => session?.EndedAtUtc ?? default;
+
     public NeedsPlayerReason NeedsPlayer => session?.NeedsPlayer ?? NeedsPlayerReason.None;
 
     public string Failure => session?.Failure ?? string.Empty;

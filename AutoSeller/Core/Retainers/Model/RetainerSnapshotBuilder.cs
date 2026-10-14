@@ -58,8 +58,7 @@ internal static class RetainerSnapshotBuilder
         var slots = new ListingSlot[raw.Length];
         for (var index = 0; index < slots.Length; index++)
         {
-            var slot = raw[index];
-            slots[index] = new ListingSlot(slot.Slot, slot.ItemId, slot.IsHq, slot.Quantity, (uint)slot.Price);
+            slots[index] = ToListing(raw[index]);
         }
 
         snapshot = new RetainerSnapshot
@@ -71,6 +70,26 @@ internal static class RetainerSnapshotBuilder
             Gil = capture.Gil,
             Slots = ImmutableCollectionsMarshal.AsImmutableArray(slots),
         };
+        return true;
+    }
+
+    public static bool TryCopySlots(ReadOnlySpan<RawMarketSlot> raw, Span<ListingSlot> listings)
+    {
+        if (raw.Length > listings.Length)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < raw.Length; index++)
+        {
+            if (InspectSlot(raw[index]) != MarketReadRefusal.None)
+            {
+                return false;
+            }
+
+            listings[index] = ToListing(raw[index]);
+        }
+
         return true;
     }
 
@@ -92,6 +111,11 @@ internal static class RetainerSnapshotBuilder
         }
 
         return MarketReadRefusal.None;
+    }
+
+    private static ListingSlot ToListing(in RawMarketSlot slot)
+    {
+        return new ListingSlot(slot.Slot, slot.ItemId, slot.IsHq, slot.Quantity, (uint)slot.Price);
     }
 
     private static MarketReadRefusal InspectSlot(in RawMarketSlot slot)

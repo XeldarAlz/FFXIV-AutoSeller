@@ -35,6 +35,34 @@ internal sealed class ListingCounts
         return new ListingCounts(byKey, itemIds);
     }
 
+    public ListingCounts Without(ReadOnlySpan<ItemKey> listings)
+    {
+        if (listings.IsEmpty)
+        {
+            return this;
+        }
+
+        var byKeyLeft = new Dictionary<ItemKey, int>(byKey);
+        for (var index = 0; index < listings.Length; index++)
+        {
+            if (byKeyLeft.TryGetValue(listings[index], out var count))
+            {
+                byKeyLeft[listings[index]] = Math.Max(0, count - 1);
+            }
+        }
+
+        var itemIdsLeft = new HashSet<uint>();
+        foreach (var pair in byKeyLeft)
+        {
+            if (pair.Value > 0)
+            {
+                itemIdsLeft.Add(pair.Key.ItemId);
+            }
+        }
+
+        return new ListingCounts(byKeyLeft, itemIdsLeft);
+    }
+
     public int Of(ItemKey key)
     {
         return byKey.TryGetValue(key, out var count) ? count : 0;

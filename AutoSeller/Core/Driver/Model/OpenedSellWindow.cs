@@ -6,6 +6,11 @@ using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Driver.Model;
 
+internal readonly record struct SellWindowFields(bool Readable, int Quantity, int AskingPrice)
+{
+    public static SellWindowFields Unreadable => new(false, 0, 0);
+}
+
 internal readonly record struct SellWindowShown(bool Readable, string ItemName, int Quantity, int AskingPrice, QuantityBounds Bounds)
 {
     public static SellWindowShown Unreadable => new(false, string.Empty, 0, 0, QuantityBounds.Unread);
@@ -31,17 +36,6 @@ internal static class OpenedSellWindow
         return shown.AskingPrice == listing.UnitPrice ? SellWindowVerdict.Matches : SellWindowVerdict.OtherPrice;
     }
 
-    public static SellWindowVerdict ForLot(in SellWindowShown shown, string itemName, bool isHq, uint quantity)
-    {
-        var verdict = ForItem(shown, itemName, isHq);
-        if (verdict != SellWindowVerdict.Matches)
-        {
-            return verdict;
-        }
-
-        return shown.Quantity == quantity ? SellWindowVerdict.Matches : SellWindowVerdict.OtherQuantity;
-    }
-
     public static SellWindowVerdict ForItem(in SellWindowShown shown, string itemName, bool isHq)
     {
         if (!shown.Readable)
@@ -62,8 +56,21 @@ internal static class OpenedSellWindow
         return quantity >= shown.Bounds.Smallest && quantity <= shown.Bounds.Maximum;
     }
 
-    public static bool NeedsQuantity(in SellWindowShown shown, uint quantity)
+    public static SellWindowSample Typed(in SellWindowShown shown, string itemName, in SaleWrite write)
     {
-        return shown.Quantity != quantity;
+        if (!shown.Readable)
+        {
+            return SellWindowSample.Unreadable;
+        }
+
+        var itemId = ItemNameMatch.Matches(shown.ItemName, itemName) ? write.ItemId : 0;
+        return new SellWindowSample(true, itemId, shown.IsHq, (uint)Math.Max(0, shown.Quantity), (uint)Math.Max(0, shown.AskingPrice));
+    }
+
+    public static bool Shows(in SellWindowFields fields, in SaleWrite write, bool withPrice)
+    {
+        return fields.Readable
+            && fields.Quantity == write.Quantity
+            && (!withPrice || fields.AskingPrice == write.NewPrice);
     }
 }

@@ -9,11 +9,12 @@ internal enum Readiness : byte
     Ready,
     SetupNeeded,
     LoggedOut,
+    JournalBlocks,
 }
 
 internal static class RunReadiness
 {
-    public static Readiness Evaluate()
+    public static Readiness Evaluate(bool journalBlocks)
     {
         if (!ExternalPlugins.AllRequiredInstalled())
         {
@@ -25,13 +26,14 @@ internal static class RunReadiness
             return Readiness.LoggedOut;
         }
 
-        return Readiness.Ready;
+        return journalBlocks ? Readiness.JournalBlocks : Readiness.Ready;
     }
 
     public static string Reason(Readiness readiness) => readiness switch
     {
         Readiness.SetupNeeded => Loc.T(L.Dock.ReasonInstall),
         Readiness.LoggedOut => Loc.T(L.Dock.ReasonLoggedOut),
+        Readiness.JournalBlocks => Loc.T(L.Dock.ReasonJournal),
         _ => string.Empty,
     };
 }

@@ -33,7 +33,7 @@ internal static class ActionDock
         }
         else
         {
-            DrawStart(controller, innerWidth, buttonHeight);
+            DrawStart(plugin, innerWidth, buttonHeight);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -59,24 +59,24 @@ internal static class ActionDock
         }
     }
 
-    private static void DrawStart(SellController controller, float innerWidth, float height)
+    private static void DrawStart(Plugin plugin, float innerWidth, float height)
     {
-        var readiness = RunReadiness.Evaluate();
-        var showTile = controller.DryRun;
-        var gap = ButtonGap * ImGuiHelpers.GlobalScale;
-        var tileWidth = showTile ? DryRunTile.Width(innerWidth) : 0f;
-        var buttonWidth = showTile ? innerWidth - tileWidth - gap : innerWidth;
-        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), buttonWidth))
+        var configuration = plugin.Configuration;
+        if (DryRunControl.Confirming)
         {
-            controller.Start();
-        }
-
-        if (!showTile)
-        {
+            DryRunControl.DrawConfirmation(configuration, innerWidth, height);
             return;
         }
 
+        var readiness = RunReadiness.Evaluate(plugin.Ledger.BlocksWrites);
+        var gap = ButtonGap * ImGuiHelpers.GlobalScale;
+        var tileWidth = DryRunControl.TileWidth(innerWidth);
+        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth - tileWidth - gap))
+        {
+            plugin.Controller.Start();
+        }
+
         ImGui.SameLine(0f, gap);
-        DryRunTile.Draw(tileWidth, height);
+        DryRunControl.DrawTile(configuration, tileWidth, height);
     }
 }

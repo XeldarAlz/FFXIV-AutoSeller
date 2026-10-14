@@ -6,14 +6,14 @@ internal readonly record struct ListingAge(ulong RetainerId, ListingSlot Listing
 
 internal static class ListingAges
 {
-    public static ImmutableArray<ListingAge> Carry(RetainerSnapshot? previous, RetainerSnapshot current, ReadOnlySpan<ListingAge> known)
+    public static ImmutableArray<ListingAge> Carry(RetainerSnapshot? previous, RetainerSnapshot current, ReadOnlySpan<ListingAge> known, ReadOnlySpan<SnapshotDiffWrite> writes)
     {
         var slots = current.Slots;
         Span<int> previousOfCurrent = stackalloc int[slots.Length];
         previousOfCurrent.Fill(SnapshotDiff.Unpaired);
         if (previous is not null)
         {
-            SnapshotDiff.PairListings(previous, current, [], previousOfCurrent);
+            SnapshotDiff.PairListings(previous, current, writes, previousOfCurrent);
         }
 
         var ages = ImmutableArray.CreateBuilder<ListingAge>(slots.Length);

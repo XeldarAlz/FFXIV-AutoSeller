@@ -1,4 +1,5 @@
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Tasks.Model;
 using AutoSeller.Windows.Components;
 using AutoSeller.Windows.Sections;
 using Dalamud.Interface;
@@ -46,6 +47,13 @@ internal sealed class SellPage
         }
 
         Styling.VSpace(SectionGap);
+        var ledgerQuestion = LedgerCards.Shows(plugin);
+        if (ledgerQuestion)
+        {
+            LedgerCards.Draw(plugin);
+            Styling.VSpace(SectionGap);
+        }
+
         var run = plugin.Controller.View;
         var showRun = run.Exists && (run.Live || run.RunId != dismissedRunId);
         if (run.Live)
@@ -55,7 +63,8 @@ internal sealed class SellPage
         }
         else if (showRun)
         {
-            var dismissed = NeedsPlayerCard.Shows(run) ? NeedsPlayerCard.Draw(run) : finished.Draw(run);
+            var asksThePlayer = NeedsPlayerCard.Shows(run) && !(ledgerQuestion && run.NeedsPlayer == NeedsPlayerReason.UnknownWrite);
+            var dismissed = asksThePlayer ? NeedsPlayerCard.Draw(run) : finished.Draw(run);
             if (dismissed)
             {
                 dismissedRunId = run.RunId;

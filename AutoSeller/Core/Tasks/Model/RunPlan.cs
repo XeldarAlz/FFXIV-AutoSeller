@@ -46,9 +46,9 @@ internal sealed class RunPlan
 
 internal static class RunPlanner
 {
-    public static RunPlan Build(RunPlanInputs inputs, ReadOnlySpan<RetainerSnapshot> markets, IReadOnlySet<PlanRowKey> handled, ReadOnlySpan<ulong> settledRetainers)
+    public static RunPlan Build(RunPlanInputs inputs, ReadOnlySpan<RetainerSnapshot> markets, IReadOnlySet<PlanRowKey> handled, ReadOnlySpan<ulong> settledRetainers, ReadOnlySpan<ItemKey> listedThisRun)
     {
-        var listed = ListingCounts.From(markets);
+        var listed = ListingCounts.From(markets).Without(listedThisRun);
         var lots = LotPlanner.Plan(inputs.Stock, inputs.Rules, listed, QuantityBounds.Unread, inputs.FreeBagSlots);
         var allocation = SlotAllocator.Allocate(new AllocationRequest
         {
@@ -80,6 +80,54 @@ internal static class RunPlanner
     public static bool StillHolds(in SlotFacts planned, ItemKey item, uint quantity)
     {
         return planned.Key == item && planned.Quantity == quantity;
+    }
+
+    public static RunPlanInputs Replan(RunPlanInputs inputs, ItemKey item, ReadOnlySpan<SlotFacts> fresh, int freeBagSlots)
+    {
+        return new RunPlanInputs
+        {
+            Stock = Restock(inputs.Stock, item, fresh),
+            FreeBagSlots = freeBagSlots,
+            Rules = inputs.Rules,
+            Edits = inputs.Edits,
+            Retainers = inputs.Retainers,
+        };
+    }
+
+    public static void ForgetLots(HashSet<PlanRowKey> handled, ItemKey item)
+    {
+        handled.RemoveWhere(row => !row.IsListing && row.Item == item);
+    }
+
+    public static ImmutableArray<StockSlot> Restock(ImmutableArray<StockSlot> stock, ItemKey item, ReadOnlySpan<SlotFacts> fresh)
+    {
+        var restocked = ImmutableArray.CreateBuilder<StockSlot>(stock.Length + fresh.Length);
+        StockSlot? model = null;
+        for (var index = 0; index < stock.Length; index++)
+        {
+            if (stock[index].Slot.Key != item)
+            {
+                restocked.Add(stock[index]);
+                continue;
+            }
+
+            model ??= stock[index];
+        }
+
+        if (model is not { } known)
+        {
+            return restocked.ToImmutable();
+        }
+
+        for (var index = 0; index < fresh.Length; index++)
+        {
+            if (fresh[index].Key == item && CanListFrom(fresh[index].Source))
+            {
+                restocked.Add(known with { Slot = fresh[index] });
+            }
+        }
+
+        return restocked.ToImmutable();
     }
 
     public static bool TryFindStock(ReadOnlySpan<StockSlot> stock, PlanRowKey row, out StockSlot found)

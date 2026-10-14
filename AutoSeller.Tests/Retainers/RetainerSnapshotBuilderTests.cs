@@ -31,6 +31,28 @@ public sealed class RetainerSnapshotBuilderTests
     }
 
     [Fact]
+    public void ARawReadCopiesIntoListingsLikeTheSnapshot()
+    {
+        RawMarketSlot[] slots = [new(0, Ore, false, 99, 1_200), new(4, Cloth, true, 3, 45_000)];
+        var listings = new ListingSlot[RetainerSnapshot.SlotCount];
+
+        Assert.True(RetainerSnapshotBuilder.TryCopySlots(slots, listings));
+
+        Assert.True(RetainerSnapshotBuilder.TryBuild(Capture(slots, 2), out var snapshot, out _));
+        Assert.Equal<ListingSlot>(snapshot.Slots, listings[..2]);
+    }
+
+    [Fact]
+    public void ARawReadWithASlotTheSnapshotRefusesIsNotCopied()
+    {
+        var listings = new ListingSlot[RetainerSnapshot.SlotCount];
+
+        Assert.False(RetainerSnapshotBuilder.TryCopySlots([new(0, Ore, false, 99, 0)], listings));
+        Assert.False(RetainerSnapshotBuilder.TryCopySlots([new(0, Ore, false, 0, 1_200)], listings));
+        Assert.False(RetainerSnapshotBuilder.TryCopySlots([new(0, Ore, false, 99, 1_200), new(1, Ore, false, 99, 1_200)], listings.AsSpan(0, 1)));
+    }
+
+    [Fact]
     public void AnEmptyMarketIsAValidRead()
     {
         Assert.True(RetainerSnapshotBuilder.TryBuild(Capture([], 0), out var snapshot, out _));

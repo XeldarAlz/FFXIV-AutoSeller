@@ -1,4 +1,5 @@
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Driver;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Market;
@@ -97,34 +98,52 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
 
     public string Describe(in RunDecision row, string retainerName)
     {
+        var mode = Authorization.DryRun ? "Dry run" : "Run";
         var item = $"{ItemName(row.Row.ItemId)} {QualityLabel.Of(row.Row.IsHq)} x{row.Quantity}";
         var where = row.Kind == RunRowKind.Listing ? $"listing in slot {row.Row.Slot} at {row.CurrentPrice} gil" : $"new lot from container {row.Row.Container} slot {row.Row.Slot}";
         if (row.Skip != RunSkip.None)
         {
-            return $"Dry run, {retainerName}: {item}, {where}: skipped ({row.Skip}).";
+            return $"{mode}, {retainerName}: {item}, {where}: skipped ({row.Skip}{(row.Write == RunWrite.None ? string.Empty : $", write {row.Write}")}).";
         }
 
         var decision = row.Decision;
         var evidence = decision.Evidence;
         var verdict = decision.Action switch
         {
-            SellAction.RepriceDown or SellAction.RepriceUp => $"would reprice to {decision.Price} gil",
-            SellAction.List => $"would list at {decision.Price} gil",
-            SellAction.Keep => decision.ProposedPrice > 0 && decision.ProposedPrice != decision.Price ? $"would keep (proposed {decision.ProposedPrice} gil)" : "would keep",
-            _ => $"would {decision.Action}",
+            SellAction.RepriceDown or SellAction.RepriceUp => Outcome(row, $"repriced to {decision.Price} gil", $"reprice to {decision.Price} gil"),
+            SellAction.List => Outcome(row, $"listed at {decision.Price} gil", $"list at {decision.Price} gil"),
+            SellAction.Keep => decision.ProposedPrice > 0 && decision.ProposedPrice != decision.Price ? $"keeps it (proposed {decision.ProposedPrice} gil)" : "keeps it",
+            _ => $"leaves it ({decision.Action})",
         };
         var guard = row.Refused ? $", refused by the sale guard ({row.Guard})" : string.Empty;
-        return $"Dry run, {retainerName}: {item}, {where}: {verdict}{guard}, {decision.Reason}; lowest sane competitor {evidence.CompetitorPrice} gil, {evidence.BaitListingsIgnored} bait listing(s) ignored, reference {evidence.ReferencePrice} gil ({evidence.ReferenceSource}), floor {evidence.Floor} gil, generation {evidence.SearchGeneration}.";
+        return $"{mode}, {retainerName}: {item}, {where}: {verdict}{guard}, {decision.Reason}; lowest sane competitor {evidence.CompetitorPrice} gil, {evidence.BaitListingsIgnored} bait listing(s) ignored, reference {evidence.ReferencePrice} gil ({evidence.ReferenceSource}), floor {evidence.Floor} gil, generation {evidence.SearchGeneration}.";
     }
+
+    private static string Outcome(in RunDecision row, string done, string intended) => row.Write switch
+    {
+        RunWrite.Confirmed => done,
+        RunWrite.Rejected => row.Rejection switch
+        {
+            WriteRejection.Cancelled => $"was going to {intended} but cancelled before Confirm",
+            WriteRejection.PromptRefused => $"tried to {intended}; the gil limit question was answered No and nothing changed",
+            _ => $"tried to {intended}, which the game did not take",
+        },
+        RunWrite.Unknown => $"tried to {intended}, which could not be confirmed",
+        _ => $"would {intended}",
+    };
 
     private RunLiveFacts Live(DateTime nowUtc)
     {
         var configuration = plugin.Configuration;
         var openRetainerId = plugin.Retainers.TryGetOpenRetainer(out var open) ? open.RetainerId : 0;
+        var windowChainReady = RetainerClicks.IsReady(RetainerClicks.SellWindowAddon)
+            && !RetainerClicks.IsReady(RetainerClicks.ResultWindowAddon)
+            && !RetainerClicks.IsReady(RetainerClicks.PromptAddon);
         return new RunLiveFacts(
             Svc.PlayerState.ContentId,
             Svc.PlayerState.CurrentWorld.RowId,
             openRetainerId,
+            windowChainReady,
             configuration.BuildRuleBook(),
             configuration.BuildPricingSettings(),
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,

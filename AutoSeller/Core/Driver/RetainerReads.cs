@@ -12,9 +12,13 @@ namespace AutoSeller.Core.Driver;
 
 internal static unsafe class RetainerReads
 {
+    private const int AskingPriceValue = 5;
+    private const int QuantityValue = 8;
+
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
     private static QuantityBounds reportedBounds;
+    private static SellWindowFields reportedFields;
 
     public static string[] RetainerNames()
     {
@@ -89,9 +93,31 @@ internal static unsafe class RetainerReads
             return SellWindowShown.Unreadable;
         }
 
-        var master = new AddonMaster.RetainerSell(sellWindow);
+        var fields = FieldsOf(sellWindow);
         var name = ListingRequestTracker.ShownItemName(sellWindow);
-        return new SellWindowShown(name.Length > 0, name, master.Quantity, master.AskingPrice, QuantityBoundsOf((AddonRetainerSell*)sellWindow));
+        return new SellWindowShown(fields.Readable && name.Length > 0, name, fields.Quantity, fields.AskingPrice, QuantityBoundsOf((AddonRetainerSell*)sellWindow));
+    }
+
+    public static SellWindowFields TypedFields()
+    {
+        return NpcInteraction.TryGetReadyAddon(RetainerClicks.SellWindowAddon, out var sellWindow) ? FieldsOf(sellWindow) : SellWindowFields.Unreadable;
+    }
+
+    private static SellWindowFields FieldsOf(AtkUnitBase* sellWindow)
+    {
+        if (sellWindow->AtkValues == null || sellWindow->AtkValuesCount <= QuantityValue)
+        {
+            return SellWindowFields.Unreadable;
+        }
+
+        var fields = new SellWindowFields(true, AtkValueReads.Integer(sellWindow->AtkValues[QuantityValue]), AtkValueReads.Integer(sellWindow->AtkValues[AskingPriceValue]));
+        if (fields != reportedFields)
+        {
+            reportedFields = fields;
+            RunLog.Info($"Sell window: the asking price reads {fields.AskingPrice} and the quantity {fields.Quantity}.");
+        }
+
+        return fields;
     }
 
     private static QuantityBounds QuantityBoundsOf(AddonRetainerSell* sellWindow)

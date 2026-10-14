@@ -310,7 +310,7 @@ public sealed class SellPlannerTests
         var input = Input([OreRule(listingsToKeepUp: 3)], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags), Captured(OreInTheBags with { Slot = 9 }));
 
         var plan = Build(input);
-        var run = RunPlanner.Build(input.ToRunInputs(), input.Markets.AsSpan(), new HashSet<PlanRowKey>(), []);
+        var run = RunPlanner.Build(input.ToRunInputs(), input.Markets.AsSpan(), new HashSet<PlanRowKey>(), [], []);
 
         Assert.Equal(run.Allocation.Assignments.Length, plan.Rows.Length);
         for (var index = 0; index < run.Allocation.Assignments.Length; index++)

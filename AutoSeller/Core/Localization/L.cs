@@ -55,6 +55,7 @@ internal static partial class L
         public static readonly LocString InContent = new("dock.inContent", "in content");
         public static readonly LocString ReasonInstall = new("dock.reason.install", "install the required plugins");
         public static readonly LocString ReasonLoggedOut = new("dock.reason.loggedOut", "log in first");
+        public static readonly LocString ReasonJournal = new("dock.reason.journal", "answer the card on the Sell page first");
         public static readonly LocString StateRunning = new("dock.state.running", "running");
         public static readonly LocString StatePaused = new("dock.state.paused", "paused");
     }
@@ -84,6 +85,7 @@ internal static partial class L
         public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");
         public static readonly LocString StatusStopping = new("run.status.stopping", "Stopping and closing the sell windows");
         public static readonly LocString StatusDone = new("run.status.done", "Dry run done: {0} to reprice, {1} to list, {2} kept, {3} skipped");
+        public static readonly LocString StatusDoneLive = new("run.status.doneLive", "Run done: {0} repriced, {1} listed, {2} kept, {3} skipped");
         public static readonly LocString StatusNeedsPlayer = new("run.status.needsPlayer", "Needs you: {0}");
         public static readonly LocString StatusFailed = new("run.status.failed", "The run failed: {0}");
         public static readonly LocString StatusStopped = new("run.status.stopped", "Stopped");
@@ -95,7 +97,7 @@ internal static partial class L
         public static readonly LocString BlockInCutscene = new("run.block.inCutscene", "Wait until the cutscene is over.");
         public static readonly LocString BlockTrading = new("run.block.trading", "Finish or cancel the trade first.");
         public static readonly LocString BlockAutoRetainerBusy = new("run.block.autoRetainerBusy", "AutoRetainer is busy; wait until it is done.");
-        public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet.");
+        public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
@@ -104,7 +106,7 @@ internal static partial class L
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
         public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
         public static readonly LocString NeedsGilLimit = new("run.needs.gilLimit", "a retainer is close to its gil limit");
-        public static readonly LocString NeedsUnknownWrite = new("run.needs.unknownWrite", "a listing change from this run is not confirmed yet");
+        public static readonly LocString NeedsUnknownWrite = new("run.needs.unknownWrite", "a listing change from this run is not confirmed yet; answer the question on the Sell page");
         public static readonly LocString FailedFault = new("run.failed.fault", "an unexpected error; the Console has the details");
         public static readonly LocString FailedOtherCharacter = new("run.failed.otherCharacter", "another character is logged in than the one the run started for");
         public static readonly LocString FailedMenuText = new("run.failed.menuText", "the retainer menu text could not be read from the game data");
@@ -112,7 +114,9 @@ internal static partial class L
         public static readonly LocString FailedLeftHomeWorld = new("run.failed.leftHomeWorld", "the character left its home world");
         public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after Start; start again for the new day");
         public static readonly LocString FailedGuard = new("run.failed.guard", "a safety check refused the run's next step; the Console has the details");
+        public static readonly LocString FailedJournal = new("run.failed.journal", "the journal could not be written, so nothing more is typed; the Console has the details");
         public static readonly LocPlural ChatStarted = new("run.chat.started", "Dry run started for {0} retainer: prices are compared and nothing is listed or repriced.", "Dry run started for {0} retainers: prices are compared and nothing is listed or repriced.");
+        public static readonly LocPlural ChatStartedLive = new("run.chat.startedLive", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
         public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
         public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
     }
@@ -136,6 +140,9 @@ internal static partial class L
         public static readonly LocString Retainers = new("history.retainers", "{0} of {1} retainers");
         public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
         public static readonly LocString ToList = new("history.toList", "{0} to list");
+        public static readonly LocString Repriced = new("history.repriced", "{0} repriced");
+        public static readonly LocString Listed = new("history.listed", "{0} listed");
+        public static readonly LocString Worth = new("history.worth", "worth {0}");
         public static readonly LocString Kept = new("history.kept", "{0} kept");
         public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
         public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");
