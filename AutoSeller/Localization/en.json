@@ -728,6 +728,7 @@
   "autoRetainer.sellNowHelp": "Add a button to AutoRetainer's retainer list that sends every retainer through Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller: reprice and list on each retainer now",
   "autoRetainer.sellNowBusy": "Auto Seller is already running",
+  "autoRetainer.sellNowUnavailable": "Off while AutoRetainer is outdated or not answering",
   "autoRetainer.alts": "Treat AutoRetainer characters as my alts",
   "autoRetainer.altsHelp": "Never undercut listings from the retainers of your other characters that AutoRetainer knows.",
   "autoRetainer.footnote": "These need AutoRetainer installed and up to date. Items AutoRetainer protects are never sold or vendored, whatever these switches say.",

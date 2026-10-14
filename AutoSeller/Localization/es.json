@@ -728,6 +728,7 @@
   "autoRetainer.sellNowHelp": "Añade a la lista de empleados de AutoRetainer un botón que pasa cada empleado por Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller: reajustar precios y poner a la venta en cada empleado ahora",
   "autoRetainer.sellNowBusy": "Auto Seller ya está en marcha",
+  "autoRetainer.sellNowUnavailable": "Desactivado mientras AutoRetainer esté desactualizado o no responda",
   "autoRetainer.alts": "Tratar los personajes de AutoRetainer como mis alternativos",
   "autoRetainer.altsHelp": "Nunca rebajar los anuncios de los empleados de tus otros personajes que AutoRetainer conoce.",
   "autoRetainer.footnote": "Esto requiere AutoRetainer instalado y actualizado. Los objetos que AutoRetainer protege nunca se venden ni van al mercader, digan lo que digan estos interruptores.",

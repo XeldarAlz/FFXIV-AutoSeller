@@ -728,6 +728,7 @@
   "autoRetainer.sellNowHelp": "Fügt AutoRetainers Gehilfenliste eine Schaltfläche hinzu, die jeden Gehilfen durch Auto Seller schickt.",
   "autoRetainer.sellNowTooltip": "Auto Seller: jetzt bei jedem Gehilfen Preise anpassen und einstellen",
   "autoRetainer.sellNowBusy": "Auto Seller läuft bereits",
+  "autoRetainer.sellNowUnavailable": "Aus, solange AutoRetainer veraltet ist oder nicht antwortet",
   "autoRetainer.alts": "AutoRetainer-Charaktere als meine Zweitcharaktere behandeln",
   "autoRetainer.altsHelp": "Angebote der Gehilfen deiner anderen Charaktere, die AutoRetainer kennt, nie unterbieten.",
   "autoRetainer.footnote": "Dafür muss AutoRetainer installiert und aktuell sein. Von AutoRetainer geschützte Gegenstände werden nie verkauft oder an den Händler gegeben, egal was diese Schalter sagen.",

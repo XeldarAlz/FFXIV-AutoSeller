@@ -728,6 +728,7 @@
   "autoRetainer.sellNowHelp": "Добавляет в список помощников AutoRetainer кнопку, которая проводит каждого помощника через Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller: сейчас обновить цены и выставить товары у каждого помощника",
   "autoRetainer.sellNowBusy": "Auto Seller уже работает",
+  "autoRetainer.sellNowUnavailable": "Недоступно, пока AutoRetainer устарел или не отвечает",
   "autoRetainer.alts": "Считать персонажей AutoRetainer моими другими персонажами",
   "autoRetainer.altsHelp": "Никогда не перебивать лоты помощников ваших других персонажей, известных AutoRetainer.",
   "autoRetainer.footnote": "Для этого нужен установленный и обновлённый AutoRetainer. Предметы под защитой AutoRetainer никогда не продаются и не сдаются торговцу, что бы ни говорили эти переключатели.",

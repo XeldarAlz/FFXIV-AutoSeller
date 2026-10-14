@@ -1,4 +1,5 @@
 using AutoSeller.Core.AutoRetainer;
+using AutoSeller.Core.AutoRetainer.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
 using Dalamud.Bindings.ImGui;
@@ -38,8 +39,9 @@ internal sealed class SellNowButton : IDisposable
         }
 
         var running = controller.Running;
+        var available = autoRetainer.Status.Readiness == AutoRetainerState.Available;
         ImGui.SameLine();
-        ImGui.BeginDisabled(running);
+        ImGui.BeginDisabled(running || !available);
         if (ImGuiComponents.IconButton(iconText))
         {
             host.SellNow();
@@ -48,7 +50,7 @@ internal sealed class SellNowButton : IDisposable
         ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            ImGui.SetTooltip(Loc.T(running ? L.AutoRetainer.SellNowBusy : L.AutoRetainer.SellNowTooltip));
+            ImGui.SetTooltip(Loc.T(running ? L.AutoRetainer.SellNowBusy : available ? L.AutoRetainer.SellNowTooltip : L.AutoRetainer.SellNowUnavailable));
         }
     }
 }

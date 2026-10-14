@@ -7,6 +7,7 @@ public sealed class PostprocessRequestRuleTests
 {
     private static readonly PostprocessRequestFacts worthAsking = new(
         Enabled: true,
+        AutoRetainerAvailable: true,
         SellNowArmed: false,
         StoodDown: false,
         RunActive: false,
@@ -25,6 +26,14 @@ public sealed class PostprocessRequestRuleTests
     {
         Assert.Equal(PostprocessSkip.Off, PostprocessRequestRule.Evaluate(worthAsking with { Enabled = false }));
         Assert.Equal(PostprocessSkip.None, PostprocessRequestRule.Evaluate(worthAsking with { Enabled = false, SellNowArmed = true }));
+    }
+
+    [Fact]
+    public void AnOutdatedOrUnreadableAutoRetainerIsNeverAskedEvenFromSellNow()
+    {
+        Assert.Equal(PostprocessSkip.Unavailable, PostprocessRequestRule.Evaluate(worthAsking with { AutoRetainerAvailable = false }));
+        Assert.Equal(PostprocessSkip.Unavailable, PostprocessRequestRule.Evaluate(worthAsking with { AutoRetainerAvailable = false, Enabled = false, SellNowArmed = true }));
+        Assert.Equal(PostprocessSkip.Off, PostprocessRequestRule.Evaluate(worthAsking with { AutoRetainerAvailable = false, Enabled = false }));
     }
 
     [Fact]
@@ -52,7 +61,7 @@ public sealed class PostprocessRequestRuleTests
     [Fact]
     public void ThePlayersStopOutranksEverythingButTheSwitch()
     {
-        var everything = new PostprocessRequestFacts(true, true, true, true, false, StartBlock.NotLoggedIn, 0);
+        var everything = new PostprocessRequestFacts(true, true, true, true, true, false, StartBlock.NotLoggedIn, 0);
 
         Assert.Equal(PostprocessSkip.StoodDown, PostprocessRequestRule.Evaluate(everything));
         Assert.Equal(PostprocessSkip.Off, PostprocessRequestRule.Evaluate(everything with { Enabled = false, SellNowArmed = false }));

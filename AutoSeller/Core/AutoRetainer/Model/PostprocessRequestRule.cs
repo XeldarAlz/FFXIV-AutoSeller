@@ -11,10 +11,12 @@ internal enum PostprocessSkip : byte
     UnknownRetainer,
     Blocked,
     NoWork,
+    Unavailable,
 }
 
 internal readonly record struct PostprocessRequestFacts(
     bool Enabled,
+    bool AutoRetainerAvailable,
     bool SellNowArmed,
     bool StoodDown,
     bool RunActive,
@@ -29,6 +31,11 @@ internal static class PostprocessRequestRule
         if (!facts.Enabled && !facts.SellNowArmed)
         {
             return PostprocessSkip.Off;
+        }
+
+        if (!facts.AutoRetainerAvailable)
+        {
+            return PostprocessSkip.Unavailable;
         }
 
         if (facts.StoodDown)

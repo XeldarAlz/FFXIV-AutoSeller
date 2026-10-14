@@ -728,6 +728,7 @@
   "autoRetainer.sellNowHelp": "AutoRetainer のリテイナー一覧に、全リテイナーを Auto Seller に通すボタンを追加します。",
   "autoRetainer.sellNowTooltip": "Auto Seller：今すぐ各リテイナーで価格を調整して出品する",
   "autoRetainer.sellNowBusy": "Auto Seller はすでに実行中です",
+  "autoRetainer.sellNowUnavailable": "AutoRetainer が古いか応答しない間は使えません",
   "autoRetainer.alts": "AutoRetainer のキャラクターをサブキャラとして扱う",
   "autoRetainer.altsHelp": "AutoRetainer が知っている、あなたの他のキャラクターのリテイナーの出品は決して下回りません。",
   "autoRetainer.footnote": "AutoRetainer が最新の状態でインストールされている必要があります。AutoRetainer が保護しているアイテムは、これらのスイッチに関係なく、販売もNPC売却もしません。",

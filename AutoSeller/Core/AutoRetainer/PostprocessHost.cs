@@ -92,6 +92,7 @@ internal sealed class PostprocessHost : IDisposable
         retainerId = ResolveRetainer(retainerName);
         var facts = new PostprocessRequestFacts(
             plugin.Configuration.AutoRetainerPostprocess,
+            autoRetainer.Status.Readiness == AutoRetainerState.Available,
             handshake.SellNowArmed,
             handshake.StoodDown,
             controller.Running,
