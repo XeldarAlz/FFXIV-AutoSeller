@@ -230,7 +230,7 @@ public sealed class PriceDecisionPropertyTests
             if (decision.Reason == DecisionReason.Approved)
             {
                 Assert.Equal(PriceOverrideKind.Approved, input.Override.Kind);
-                Assert.True(decision.Price >= input.Override.Price, $"case {caseIndex}: {decision} under approval {input.Override}");
+                Assert.True(decision.Price == input.Override.Price, $"case {caseIndex}: {decision} under approval {input.Override}");
                 continue;
             }
 
@@ -239,6 +239,35 @@ public sealed class PriceDecisionPropertyTests
         }
 
         Assert.True(drops >= MinimumCoverage, $"only {drops} drops");
+    }
+
+    [Fact]
+    public void ApprovalReleasesOnlyTheProposedPrice()
+    {
+        var random = new Random(7_014);
+        var held = 0;
+        for (var caseIndex = 0; caseIndex < CaseCount; caseIndex++)
+        {
+            var input = RandomInput(random) with { Override = PriceOverride.None };
+            var decision = PriceDecision.Decide(input);
+            if (decision.Reason != DecisionReason.OverStepLimit)
+            {
+                continue;
+            }
+
+            held++;
+            var proposed = decision.ProposedPrice;
+            var released = decision with { Action = SellAction.RepriceDown, Price = proposed, Reason = DecisionReason.Approved };
+
+            Assert.Equal(released, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed) }));
+            Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed + 1) }));
+            if (proposed > PriceMath.MinimumPrice)
+            {
+                Assert.Equal(decision, PriceDecision.Decide(input with { Override = PriceOverride.ApprovedAt(proposed - 1) }));
+            }
+        }
+
+        Assert.True(held >= MinimumCoverage, $"only {held} drops over the step limit");
     }
 
     [Fact]

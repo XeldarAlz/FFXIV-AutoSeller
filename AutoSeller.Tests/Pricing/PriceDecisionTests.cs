@@ -125,20 +125,20 @@ public sealed class PriceDecisionTests
         AssertDecision(decision, SellAction.Keep, 1_500, 999, DecisionReason.OverStepLimit);
     }
 
-    [Theory]
-    [InlineData(999u)]
-    [InlineData(950u)]
-    public void ApprovalCoversItsPriceAndAnyHigherTarget(uint approvedPrice)
+    [Fact]
+    public void ApprovalCoversTheApprovedPrice()
     {
-        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.ApprovedAt(approvedPrice) };
+        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.ApprovedAt(999) };
 
         AssertDecision(Decide(input), SellAction.RepriceDown, 999, 999, DecisionReason.Approved);
     }
 
-    [Fact]
-    public void ApprovalNeverCoversADeeperDrop()
+    [Theory]
+    [InlineData(950u)]
+    [InlineData(1_000u)]
+    public void ApprovalCoversNoOtherPrice(uint approvedPrice)
     {
-        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.ApprovedAt(1_000) };
+        var input = Existing(1_500, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.ApprovedAt(approvedPrice) };
 
         AssertDecision(Decide(input), SellAction.Keep, 1_500, 999, DecisionReason.OverStepLimit);
     }

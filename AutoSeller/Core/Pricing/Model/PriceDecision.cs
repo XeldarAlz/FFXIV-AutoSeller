@@ -263,7 +263,7 @@ internal static class PriceDecision
 
     private static bool IsApproved(PriceOverride priceOverride, uint target)
     {
-        return priceOverride.Kind == PriceOverrideKind.Approved && target >= priceOverride.Price;
+        return priceOverride.Kind == PriceOverrideKind.Approved && target == priceOverride.Price;
     }
 
     private static DecisionReason StayReason(DecisionReason targetReason)
