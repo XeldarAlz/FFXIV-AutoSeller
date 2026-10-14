@@ -7,6 +7,7 @@ using AutoSeller.Core.Items;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Pricing;
 using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Stats;
@@ -50,6 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     internal MarketServices Market { get; }
     internal RetainerReader Retainers { get; }
     internal MarketReader RetainerMarket { get; }
+    internal ReferenceService References { get; }
     internal CharacterStore Characters { get; }
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
@@ -89,6 +91,8 @@ public sealed class Plugin : IDalamudPlugin
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
             completed.Push(Characters.Dispose);
             RetainerMarket = new MarketReader(Retainers, Characters, Retainers.Available);
+            References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
+            completed.Push(References.Dispose);
             Bags = new BagReader(static _ => false);
             BlockedScanner = new BlockedScanner(Configuration, Bags, GameItems, Characters);
             completed.Push(BlockedScanner.Dispose);
@@ -152,6 +156,7 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.SaveIfPending();
         BlockedScanner.Dispose();
         Characters.Dispose();
+        References.Dispose();
         Market.Dispose();
 
         WindowSystem.RemoveAllWindows();
