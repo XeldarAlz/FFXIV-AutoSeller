@@ -4,6 +4,7 @@ using AutoSeller.Core.Debug;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
+using AutoSeller.Core.Listings;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Market.Model;
@@ -58,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
     internal BagReader Bags { get; }
     internal BlockedScanner BlockedScanner { get; }
     internal PlanBuilder Plan { get; }
+    internal ListingsBook Listings { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -102,6 +104,7 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(BlockedScanner.Dispose);
             Plan = new PlanBuilder(Configuration, Characters, Bags, GameItems, References, OwnSellers, () => Controller is { Running: true });
             completed.Push(Plan.Dispose);
+            Listings = new ListingsBook(PluginInterface.ConfigDirectory.FullName, Configuration, Characters, GameItems, References);
             Controller = new SellController(this, History);
             completed.Push(Controller.Shutdown);
             dutyWatcher = new DutyWatcher();
