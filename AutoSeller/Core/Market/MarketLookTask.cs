@@ -57,9 +57,9 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
     private static ItemRuleSnapshot RuleFor(RuleBook rules, ItemKey key, out string match)
     {
         var entries = rules.EntriesFor(key.ItemId);
-        var reason = Eligibility.MatchSellList(entries, key.IsHq, out var rule);
+        var reason = Eligibility.MatchSellList(entries, key.IsHq, out _);
         match = entries.IsEmpty ? "no sell list entry" : $"sell list {reason}";
-        return rule ?? new ItemRuleSnapshot(0, key.ItemId, 0, 0, 0, 0, 0, QualityFilter.Both, ItemRule.DefaultListingsToKeepUp, false);
+        return PricingRule.For(rules, key, out _);
     }
 
     private static void WriteSnapshot(CompetitorSnapshot snapshot, in OwnSellers sellers, string name)
