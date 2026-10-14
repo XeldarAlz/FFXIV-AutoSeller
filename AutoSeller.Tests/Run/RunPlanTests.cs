@@ -212,6 +212,75 @@ public sealed class RunPlanTests
 
         Assert.Equal(LotQuantity, listed.Remaining(OreInTheBags).Quantity);
         Assert.Equal(LotQuantity - 5, listed.Remaining(OreInTheBags with { ItemId = Ore + 1, Slot = SecondBagSlot }).Quantity);
+        Assert.Equal([otherItem], listed.Lots.ToArray());
+    }
+
+    [Fact]
+    public void ForgettingTheLotsOfAnItemKeepsItsListingsAndOtherItems()
+    {
+        var lot = new PlanRowKey(0, BagContainer, BagSlot, 0, Ore, false);
+        var otherLot = lot with { ItemId = Ore + 1 };
+        var listing = PlanRowKey.ForListing(Alpha, OreListing());
+        var handled = Handled(lot, lot with { LotIndex = 1 }, otherLot, listing);
+
+        RunPlanner.ForgetLots(handled, NormalOre);
+
+        Assert.Equal(Handled(otherLot, listing), handled);
+    }
+
+    [Fact]
+    public void AReplanAfterALotFromTheSameSlotWasListedPlacesWhatTheFreshStackAllows()
+    {
+        var inputs = SingleStack(30, LotOfTen(listingsToKeepUp: 3));
+        var first = RunPlanner.Build(inputs, [Market(Alpha), Market(Beta)], Handled(), [], []);
+        Assert.Equal(3, first.Allocation.Assignments.Length);
+        var handled = Handled(first.Allocation.Assignments[0].Lot.Row);
+        var listed = new ListedStock();
+        listed.Add(BagContainer, BagSlot, NormalOre, 10);
+        RetainerSnapshot[] afterListing = [Market(Alpha, OreListing() with { Quantity = 10 }), Market(Beta)];
+        SlotFacts[] split = [OreInTheBags with { Quantity = 10 }, OreInTheBags with { Slot = SecondBagSlot, Quantity = 10 }];
+
+        var replanned = RunPlanner.Replan(inputs, NormalOre, split, FreeBagSlots);
+        RunPlanner.ForgetLots(handled, NormalOre);
+        listed.Forget(NormalOre);
+        var again = RunPlanner.Build(replanned, afterListing, handled, [], listed.Lots);
+
+        Assert.Equal(2, again.Allocation.Assignments.Length);
+        Assert.Contains(again.Allocation.Assignments, assignment => assignment.Lot.Row.Slot == BagSlot);
+        Assert.Contains(again.Allocation.Assignments, assignment => assignment.Lot.Row.Slot == SecondBagSlot);
+    }
+
+    [Fact]
+    public void AReplanCountsTheListingsTheRunMadeBeforeItTowardTheListingsToKeepUp()
+    {
+        var inputs = SingleStack(50, LotOfTen(listingsToKeepUp: 3));
+        var first = RunPlanner.Build(inputs, [Market(Alpha), Market(Beta)], Handled(), [], []);
+        var handled = Handled(first.Allocation.Assignments[0].Lot.Row);
+        var listed = new ListedStock();
+        listed.Add(BagContainer, BagSlot, NormalOre, 10);
+        RetainerSnapshot[] afterListing = [Market(Alpha, OreListing() with { Quantity = 10 }), Market(Beta)];
+        SlotFacts[] moved = [OreInTheBags with { Slot = 20, Quantity = 40 }];
+
+        var replanned = RunPlanner.Replan(inputs, NormalOre, moved, FreeBagSlots);
+        RunPlanner.ForgetLots(handled, NormalOre);
+        listed.Forget(NormalOre);
+        var again = RunPlanner.Build(replanned, afterListing, handled, [], listed.Lots);
+
+        Assert.Equal(2, again.Allocation.Assignments.Length);
+        Assert.All(again.Allocation.Assignments, assignment => Assert.Equal(20, assignment.Lot.Row.Slot));
+    }
+
+    [Fact]
+    public void AReplanKeepsTheRestOfThePlanInputs()
+    {
+        var inputs = Inputs(OreRule());
+
+        var replanned = RunPlanner.Replan(inputs, NormalOre, [OreInTheBags], FreeBagSlots - 1);
+
+        Assert.Equal([new StockSlot(OreInTheBags, OreFacts, OreReference)], replanned.Stock.AsSpan().ToArray());
+        Assert.Equal(FreeBagSlots - 1, replanned.FreeBagSlots);
+        Assert.Same(inputs.Rules, replanned.Rules);
+        Assert.Equal(inputs.Retainers, replanned.Retainers);
     }
 
     [Fact]
@@ -239,6 +308,25 @@ public sealed class RunPlanTests
 
         Assert.Equal([other], restocked.AsSpan().ToArray());
         Assert.Equal(stock.AsSpan().ToArray(), RunPlanner.Restock(stock, new ItemKey(Ore + 2, false), [OreInTheBags with { ItemId = Ore + 2 }]).AsSpan().ToArray());
+    }
+
+    private static ItemRule LotOfTen(byte listingsToKeepUp)
+    {
+        var rule = OreRule(listingsToKeepUp);
+        rule.LotSize = 10;
+        return rule;
+    }
+
+    private static RunPlanInputs SingleStack(uint quantity, ItemRule rule)
+    {
+        return new RunPlanInputs
+        {
+            Stock = [new StockSlot(OreInTheBags with { Quantity = quantity }, OreFacts, OreReference)],
+            FreeBagSlots = FreeBagSlots,
+            Rules = RuleBook.Create([rule], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []),
+            Edits = PlanEdits.None,
+            Retainers = [alpha, beta],
+        };
     }
 
     private static RunPlanInputs Inputs(ItemRule rule, ImmutableArray<RunRetainer> retainers = default)
