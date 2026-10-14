@@ -376,6 +376,21 @@ public sealed class JournalReplayerTests
     }
 
     [Fact]
+    public void AStopThatSkipsTheReadBackLeavesTheWriteBlocking()
+    {
+        var writer = Authorized();
+        writer.Intent(FirstWrite).Ended(RunState.Stopped);
+
+        var progress = JournalReplayer.Replay(writer.Entries);
+
+        Assert.Equal(WriteStatus.Unknown, Assert.Single(progress.Writes).Status);
+        Assert.True(progress.NeedsReconciliation);
+        Assert.Equal(RunState.NeedsPlayer, progress.RecoveredState);
+        Assert.Equal(FirstWrite, progress.ToValueBook().PendingWriteId);
+        Assert.True(JournalReview.Build(writer.Entries).BlocksWrites);
+    }
+
+    [Fact]
     public void ResumedValueBookCarriesTheConfirmedCountsAndKnowsTheSettledWrites()
     {
         var writer = Authorized();
