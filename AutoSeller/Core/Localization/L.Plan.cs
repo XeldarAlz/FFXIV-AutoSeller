@@ -15,8 +15,14 @@ internal static partial class L
         public static readonly LocString RefreshNothing = new("plan.refreshNothing", "Nothing to price yet");
         public static readonly LocString RefreshNoWorld = new("plan.refreshNoWorld", "Prices are fetched for your home world once you are logged in");
         public static readonly LocString DryRun = new("plan.dryRun", "Dry run");
-        public static readonly LocString DryRunHelp = new("plan.dryRunHelp", "Runs stay dry in this version: they go to the bell, compare prices and record what they would change. Nothing is typed, listed or repriced.");
+        public static readonly LocString DryRunHelp = new("plan.dryRunHelp", "Runs go to the bell, compare prices and record what they would change; nothing is typed, listed or repriced. Click to turn it off.");
         public static readonly LocString DryRunCaption = new("plan.dryRunCaption", "Nothing is typed or listed");
+        public static readonly LocString DryRunOffCaption = new("plan.dryRunOffCaption", "Prices are typed and confirmed");
+        public static readonly LocString DryRunOffHelp = new("plan.dryRunOffHelp", "Runs reprice and list for real, within your rules, floors and caps. Click to turn the dry run back on.");
+        public static readonly LocString DryRunConfirmTitle = new("plan.dryRunConfirmTitle", "Turn the dry run off?");
+        public static readonly LocString DryRunConfirmBody = new("plan.dryRunConfirmBody", "Every run after this types prices and presses Confirm at your retainers, within your rules, floors and caps.");
+        public static readonly LocString DryRunConfirmYes = new("plan.dryRunConfirmYes", "Sell for real");
+        public static readonly LocString DryRunConfirmNo = new("plan.dryRunConfirmNo", "Keep it on");
 
         public static readonly LocString StripListed = new("plan.strip.listed", "{0} of {1} listed");
         public static readonly LocString StripVisited = new("plan.strip.visited", "Visited {0}");
