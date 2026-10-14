@@ -24,7 +24,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
     public ListingDuty DutyOf(ulong retainerId, in ListingSlot listing, bool handled, DateTime nowUtc)
     {
         var facts = plugin.GameItems.FactsOf(listing.ItemId);
-        return ListingDuties.Of(Authorization.Rules, listing, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc), HistoryOf(retainerId, listing), Authorization.Pricing.RepriceCooldown, handled, nowUtc);
+        var excluded = Authorization.PlanEdits.IsExcluded(PlanRowKey.ForListing(retainerId, listing));
+        return ListingDuties.Of(Authorization.Rules, listing, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc), HistoryOf(retainerId, listing), Authorization.Pricing.RepriceCooldown, handled, excluded, nowUtc);
     }
 
     public Decision ForListing(ulong retainerId, in ListingSlot listing, CompetitorSnapshot competition, DateTime nowUtc)

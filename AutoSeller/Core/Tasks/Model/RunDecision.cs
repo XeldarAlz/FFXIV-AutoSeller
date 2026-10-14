@@ -60,6 +60,12 @@ internal readonly record struct RunDecision(
         return ForListing(retainerId, listing, decision);
     }
 
+    public static RunDecision Excluded(ulong retainerId, in ListingSlot listing)
+    {
+        var decision = new Decision(SellAction.Keep, listing.UnitPrice, 0, DecisionReason.Excluded, default);
+        return ForListing(retainerId, listing, decision);
+    }
+
     public static RunDecision ListingSkipped(ulong retainerId, in ListingSlot listing, RunSkip skip)
     {
         return new RunDecision(retainerId, RunRowKind.Listing, PlanRowKey.ForListing(retainerId, listing), listing.Quantity, listing.UnitPrice, default, skip);
