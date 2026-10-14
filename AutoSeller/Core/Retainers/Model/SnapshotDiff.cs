@@ -40,8 +40,9 @@ internal sealed class SnapshotDiff
 
         Span<int> partners = stackalloc int[previous.Slots.Length];
         Span<bool> currentPaired = stackalloc bool[current.Slots.Length];
-        Span<bool> writeUsed = writes.Length <= StackWriteLimit ? stackalloc bool[writes.Length] : new bool[writes.Length];
-        var walk = new Walk(previous, current, writes, partners, currentPaired, writeUsed);
+        Span<int> currentListedBy = stackalloc int[current.Slots.Length];
+        Span<WriteState> writeStates = writes.Length <= StackWriteLimit ? stackalloc WriteState[writes.Length] : new WriteState[writes.Length];
+        var walk = new Walk(previous, current, writes, partners, currentPaired, currentListedBy, writeStates);
         var changes = ImmutableArray.CreateBuilder<SnapshotDiffChange>();
         walk.PairListings();
         walk.ClassifyKeptListings(changes);
@@ -100,14 +101,23 @@ internal sealed class SnapshotDiff
 
     private enum PairingPass : byte
     {
-        SameSlotAndLot,
+        SameSlotLotAndPrice,
         SameLotAndPrice,
+        SameSlotAndLot,
         SameLot,
+    }
+
+    private enum WriteState : byte
+    {
+        Free,
+        Held,
+        Taken,
     }
 
     private readonly ref struct Walk
     {
         private const int Unpaired = -1;
+        private const int NoWrite = -1;
         private const uint AnyPrice = 0;
 
         private readonly DateTime windowStartUtc;
@@ -117,7 +127,8 @@ internal sealed class SnapshotDiff
         private readonly ReadOnlySpan<SnapshotDiffWrite> writes;
         private readonly Span<int> partners;
         private readonly Span<bool> currentPaired;
-        private readonly Span<bool> writeUsed;
+        private readonly Span<int> currentListedBy;
+        private readonly Span<WriteState> writeStates;
 
         public Walk(
             RetainerSnapshot previous,
@@ -125,7 +136,8 @@ internal sealed class SnapshotDiff
             ReadOnlySpan<SnapshotDiffWrite> writes,
             Span<int> partners,
             Span<bool> currentPaired,
-            Span<bool> writeUsed)
+            Span<int> currentListedBy,
+            Span<WriteState> writeStates)
         {
             windowStartUtc = previous.ReadAtUtc;
             windowEndUtc = current.ReadAtUtc;
@@ -134,14 +146,18 @@ internal sealed class SnapshotDiff
             this.writes = writes;
             this.partners = partners;
             this.currentPaired = currentPaired;
-            this.writeUsed = writeUsed;
+            this.currentListedBy = currentListedBy;
+            this.writeStates = writeStates;
         }
 
         public void PairListings()
         {
             partners.Fill(Unpaired);
-            Pair(PairingPass.SameSlotAndLot);
+            currentListedBy.Fill(NoWrite);
+            Pair(PairingPass.SameSlotLotAndPrice);
             Pair(PairingPass.SameLotAndPrice);
+            ClaimListingsWeListedAtTheirPrice();
+            Pair(PairingPass.SameSlotAndLot);
             Pair(PairingPass.SameLot);
         }
 
@@ -162,12 +178,15 @@ internal sealed class SnapshotDiff
                     continue;
                 }
 
-                if (TryTakeWrite(SnapshotDiffWriteKind.Repriced, after, AnyPrice, after.UnitPrice, out var reprice))
+                if (HoldRepriceChain(after, before.UnitPrice, windowStartUtc, out var finalPrice, out var repricedAtUtc) > 0
+                    && finalPrice == after.UnitPrice)
                 {
-                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.RepricedByUs, after, before.UnitPrice, reprice.AtUtc, default));
+                    SettleHeldWrites(WriteState.Taken);
+                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.RepricedByUs, after, before.UnitPrice, repricedAtUtc, default));
                     continue;
                 }
 
+                SettleHeldWrites(WriteState.Free);
                 changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.ChangedOutside, after, before.UnitPrice, windowStartUtc, default));
             }
         }
@@ -182,22 +201,17 @@ internal sealed class SnapshotDiff
                 }
 
                 var before = previousSlots[previousIndex];
-                if (TryTakeWrite(SnapshotDiffWriteKind.Returned, before, AnyPrice, AnyPrice, out var returned))
+                var returned = TakeWrite(SnapshotDiffWriteKind.Returned, before, AnyPrice);
+                if (returned != NoWrite)
                 {
-                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.ReturnedByUs, before, before.UnitPrice, returned.AtUtc, default));
+                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.ReturnedByUs, before, before.UnitPrice, writes[returned].AtUtc, default));
                     continue;
                 }
 
-                var sold = before;
-                var changedAfter = windowStartUtc;
-                if (TryTakeWrite(SnapshotDiffWriteKind.Repriced, before, before.UnitPrice, AnyPrice, out var reprice))
-                {
-                    sold = before with { UnitPrice = reprice.NewUnitPrice };
-                    changedAfter = reprice.AtUtc;
-                }
-
+                HoldRepriceChain(before, before.UnitPrice, windowStartUtc, out var soldPrice, out var changedAfterUtc);
+                SettleHeldWrites(WriteState.Taken);
                 var listedAt = LatestListingTime(before, windowStartUtc);
-                changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.Sold, sold, before.UnitPrice, changedAfter, listedAt));
+                changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.Sold, before with { UnitPrice = soldPrice }, before.UnitPrice, changedAfterUtc, listedAt));
             }
         }
 
@@ -211,10 +225,16 @@ internal sealed class SnapshotDiff
                 }
 
                 var after = currentSlots[currentIndex];
-                if (TryTakeWrite(SnapshotDiffWriteKind.Listed, after, AnyPrice, after.UnitPrice, out var listed)
-                    || TryTakeWrite(SnapshotDiffWriteKind.Listed, after, AnyPrice, AnyPrice, out listed))
+                var listed = currentListedBy[currentIndex];
+                if (listed == NoWrite)
                 {
-                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.ListedByUs, after, 0, listed.AtUtc, listed.AtUtc));
+                    listed = TakeWrite(SnapshotDiffWriteKind.Listed, after, AnyPrice);
+                }
+
+                if (listed != NoWrite)
+                {
+                    var listedAt = writes[listed].AtUtc;
+                    changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.ListedByUs, after, 0, listedAt, listedAt));
                     continue;
                 }
 
@@ -227,27 +247,35 @@ internal sealed class SnapshotDiff
             for (var writeIndex = 0; writeIndex < writes.Length; writeIndex++)
             {
                 var listed = writes[writeIndex];
-                if (writeUsed[writeIndex] || listed.Kind != SnapshotDiffWriteKind.Listed || !InWindow(listed.AtUtc))
+                if (writeStates[writeIndex] != WriteState.Free || listed.Kind != SnapshotDiffWriteKind.Listed || !InWindow(listed.AtUtc))
                 {
                     continue;
                 }
 
-                writeUsed[writeIndex] = true;
+                writeStates[writeIndex] = WriteState.Taken;
                 var lot = new ListingSlot(listed.Slot, listed.ItemId, listed.IsHq, listed.Quantity, listed.NewUnitPrice);
-                if (TryTakeWrite(SnapshotDiffWriteKind.Returned, lot, AnyPrice, AnyPrice, out _))
+                if (TakeWrite(SnapshotDiffWriteKind.Returned, lot, AnyPrice) != NoWrite)
                 {
                     continue;
                 }
 
-                var sold = lot;
-                var changedAfter = listed.AtUtc;
-                if (TryTakeWrite(SnapshotDiffWriteKind.Repriced, lot, lot.UnitPrice, AnyPrice, out var reprice))
+                HoldRepriceChain(lot, lot.UnitPrice, listed.AtUtc, out var soldPrice, out var changedAfterUtc);
+                SettleHeldWrites(WriteState.Taken);
+                changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.Sold, lot with { UnitPrice = soldPrice }, 0, changedAfterUtc, listed.AtUtc));
+            }
+        }
+
+        private void ClaimListingsWeListedAtTheirPrice()
+        {
+            for (var currentIndex = 0; currentIndex < currentSlots.Length; currentIndex++)
+            {
+                if (currentPaired[currentIndex])
                 {
-                    sold = lot with { UnitPrice = reprice.NewUnitPrice };
-                    changedAfter = reprice.AtUtc;
+                    continue;
                 }
 
-                changes.Add(new SnapshotDiffChange(SnapshotDiffChangeKind.Sold, sold, 0, changedAfter, listed.AtUtc));
+                var after = currentSlots[currentIndex];
+                currentListedBy[currentIndex] = TakeWrite(SnapshotDiffWriteKind.Listed, after, after.UnitPrice);
             }
         }
 
@@ -260,9 +288,16 @@ internal sealed class SnapshotDiff
                     continue;
                 }
 
+                var before = previousSlots[previousIndex];
                 for (var currentIndex = 0; currentIndex < currentSlots.Length; currentIndex++)
                 {
-                    if (currentPaired[currentIndex] || !IsSameListing(previousSlots[previousIndex], currentSlots[currentIndex], pass))
+                    if (currentPaired[currentIndex] || currentListedBy[currentIndex] != NoWrite)
+                    {
+                        continue;
+                    }
+
+                    var after = currentSlots[currentIndex];
+                    if (!IsSameListing(before, after, pass) || (!IsSamePricePass(pass) && !MayHaveChangedPrice(before, after)))
                     {
                         continue;
                     }
@@ -274,28 +309,100 @@ internal sealed class SnapshotDiff
             }
         }
 
-        private bool TryTakeWrite(SnapshotDiffWriteKind kind, in ListingSlot listing, uint oldUnitPrice, uint newUnitPrice, out SnapshotDiffWrite taken)
+        private bool MayHaveChangedPrice(in ListingSlot before, in ListingSlot after)
+        {
+            var steps = HoldRepriceChain(after, before.UnitPrice, windowStartUtc, out var finalPrice, out _);
+            SettleHeldWrites(WriteState.Free);
+            if (steps > 0 && finalPrice == after.UnitPrice)
+            {
+                return true;
+            }
+
+            return FindWrite(SnapshotDiffWriteKind.Listed, after, AnyPrice) == NoWrite;
+        }
+
+        private int HoldRepriceChain(in ListingSlot lot, uint fromUnitPrice, DateTime notBeforeUtc, out uint finalUnitPrice, out DateTime lastRepricedAtUtc)
+        {
+            finalUnitPrice = fromUnitPrice;
+            lastRepricedAtUtc = notBeforeUtc;
+            var steps = 0;
+            var next = NextReprice(lot, finalUnitPrice, lastRepricedAtUtc);
+            while (next != NoWrite)
+            {
+                writeStates[next] = WriteState.Held;
+                finalUnitPrice = writes[next].NewUnitPrice;
+                lastRepricedAtUtc = writes[next].AtUtc;
+                steps++;
+                next = NextReprice(lot, finalUnitPrice, lastRepricedAtUtc);
+            }
+
+            return steps;
+        }
+
+        private int NextReprice(in ListingSlot lot, uint oldUnitPrice, DateTime notBeforeUtc)
+        {
+            var earliest = NoWrite;
+            for (var index = 0; index < writes.Length; index++)
+            {
+                var write = writes[index];
+                if (writeStates[index] != WriteState.Free
+                    || write.Kind != SnapshotDiffWriteKind.Repriced
+                    || write.OldUnitPrice != oldUnitPrice
+                    || write.AtUtc < notBeforeUtc
+                    || !IsSameLot(write, lot)
+                    || !InWindow(write.AtUtc))
+                {
+                    continue;
+                }
+
+                if (earliest == NoWrite || write.AtUtc < writes[earliest].AtUtc)
+                {
+                    earliest = index;
+                }
+            }
+
+            return earliest;
+        }
+
+        private void SettleHeldWrites(WriteState settled)
+        {
+            for (var index = 0; index < writeStates.Length; index++)
+            {
+                if (writeStates[index] == WriteState.Held)
+                {
+                    writeStates[index] = settled;
+                }
+            }
+        }
+
+        private int TakeWrite(SnapshotDiffWriteKind kind, in ListingSlot listing, uint newUnitPrice)
+        {
+            var found = FindWrite(kind, listing, newUnitPrice);
+            if (found != NoWrite)
+            {
+                writeStates[found] = WriteState.Taken;
+            }
+
+            return found;
+        }
+
+        private int FindWrite(SnapshotDiffWriteKind kind, in ListingSlot listing, uint newUnitPrice)
         {
             for (var index = 0; index < writes.Length; index++)
             {
                 var write = writes[index];
-                if (writeUsed[index] || write.Kind != kind || !IsSameLot(write, listing) || !InWindow(write.AtUtc))
+                if (writeStates[index] != WriteState.Free || write.Kind != kind || !IsSameLot(write, listing) || !InWindow(write.AtUtc))
                 {
                     continue;
                 }
 
-                if (!PriceFits(write.OldUnitPrice, oldUnitPrice) || !PriceFits(write.NewUnitPrice, newUnitPrice))
+                if (newUnitPrice == AnyPrice || write.NewUnitPrice == newUnitPrice)
                 {
-                    continue;
+                    return index;
                 }
-
-                writeUsed[index] = true;
-                taken = write;
-                return true;
             }
 
-            taken = default;
-            return false;
+            return NoWrite;
         }
 
         private DateTime LatestListingTime(in ListingSlot listing, DateTime notAfterUtc)
@@ -318,14 +425,14 @@ internal sealed class SnapshotDiff
             return atUtc >= windowStartUtc && atUtc <= windowEndUtc;
         }
 
-        private static bool PriceFits(uint price, uint required)
-        {
-            return required == AnyPrice || price == required;
-        }
-
         private static bool IsSameLot(in SnapshotDiffWrite write, in ListingSlot listing)
         {
             return write.Key == listing.Key && write.Quantity == listing.Quantity;
+        }
+
+        private static bool IsSamePricePass(PairingPass pass)
+        {
+            return pass is PairingPass.SameSlotLotAndPrice or PairingPass.SameLotAndPrice;
         }
 
         private static bool IsSameListing(in ListingSlot before, in ListingSlot after, PairingPass pass)
@@ -337,8 +444,9 @@ internal sealed class SnapshotDiff
 
             return pass switch
             {
-                PairingPass.SameSlotAndLot => before.Slot == after.Slot,
+                PairingPass.SameSlotLotAndPrice => before.Slot == after.Slot && before.UnitPrice == after.UnitPrice,
                 PairingPass.SameLotAndPrice => before.UnitPrice == after.UnitPrice,
+                PairingPass.SameSlotAndLot => before.Slot == after.Slot,
                 _ => true,
             };
         }

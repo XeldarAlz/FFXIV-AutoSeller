@@ -222,6 +222,133 @@ public sealed class SnapshotDiffTests
     }
 
     [Fact]
+    public void ListThatCompactedAfterASaleKeepsTheLotAtItsOwnPrice()
+    {
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 100), Slot(1, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 950, Slot(0, DarksteelOre, 10, 200));
+
+        var diff = SnapshotDiff.Compute(previous, current, []);
+
+        var change = Assert.Single(diff.Changes);
+        Assert.Equal(SnapshotDiffChangeKind.Sold, change.Kind);
+        Assert.Equal(100u, change.Listing.UnitPrice);
+        Assert.Equal(SnapshotDiffCorroboration.Corroborated, diff.Corroboration);
+    }
+
+    [Fact]
+    public void NewLotWeListedAtAnotherPriceIsNotTakenForTheLotThatSold()
+    {
+        var listedAt = PreviousRead.AddMinutes(4);
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 100));
+        var current = Snapshot(CurrentRead, 950, Slot(1, DarksteelOre, 10, 90));
+        SnapshotDiffWrite[] writes = [Write(SnapshotDiffWriteKind.Listed, listedAt, DarksteelOre, 10, 0, 90, 1)];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        Assert.Equal(2, diff.Changes.Length);
+        Assert.DoesNotContain(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.ChangedOutside);
+        var sold = Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.Sold);
+        Assert.Equal(Slot(0, DarksteelOre, 10, 100), sold.Listing);
+        var listed = Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.ListedByUs);
+        Assert.Equal(Slot(1, DarksteelOre, 10, 90), listed.Listing);
+        Assert.Equal(listedAt, listed.ListedAtUtc);
+        Assert.Equal(1_000, diff.InferredSoldGross);
+    }
+
+    [Fact]
+    public void NewLotWeListedAtAPriceThatDidNotStickIsStillOurs()
+    {
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 100));
+        var current = Snapshot(CurrentRead, 0, Slot(0, DarksteelOre, 10, 89));
+        SnapshotDiffWrite[] writes = [Write(SnapshotDiffWriteKind.Listed, PreviousRead.AddMinutes(4), DarksteelOre, 10, 0, 90)];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        Assert.Equal(2, diff.Changes.Length);
+        Assert.Equal(100u, Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.Sold).Listing.UnitPrice);
+        Assert.Equal(89u, Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.ListedByUs).Listing.UnitPrice);
+    }
+
+    [Fact]
+    public void RepriceThatMovedTheListingToAnotherSlotIsStillOurs()
+    {
+        var repricedAt = PreviousRead.AddMinutes(2);
+        var previous = Snapshot(PreviousRead, 0, Slot(0, CottonBoll, 99, 15), Slot(1, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 1_411, Slot(0, DarksteelOre, 10, 185));
+        SnapshotDiffWrite[] writes = [Write(SnapshotDiffWriteKind.Repriced, repricedAt, DarksteelOre, 10, 200, 185, 1)];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        Assert.Equal(2, diff.Changes.Length);
+        var repriced = Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.RepricedByUs);
+        Assert.Equal(185u, repriced.Listing.UnitPrice);
+        Assert.Equal(200u, repriced.PreviousUnitPrice);
+        Assert.Equal(CottonBoll, Assert.Single(diff.Changes, change => change.Kind == SnapshotDiffChangeKind.Sold).Listing.ItemId);
+    }
+
+    [Fact]
+    public void ListingRepricedTwiceAndThenSoldSoldAtTheLastPrice()
+    {
+        var lastRepricedAt = PreviousRead.AddMinutes(40);
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 1_710);
+        SnapshotDiffWrite[] writes =
+        [
+            Write(SnapshotDiffWriteKind.Repriced, lastRepricedAt, DarksteelOre, 10, 190, 180),
+            Write(SnapshotDiffWriteKind.Repriced, PreviousRead.AddMinutes(10), DarksteelOre, 10, 200, 190),
+        ];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        var change = Assert.Single(diff.Changes);
+        Assert.Equal(SnapshotDiffChangeKind.Sold, change.Kind);
+        Assert.Equal(180u, change.Listing.UnitPrice);
+        Assert.Equal(200u, change.PreviousUnitPrice);
+        Assert.Equal(lastRepricedAt, change.ChangedAfterUtc);
+        Assert.Equal(1_800, diff.InferredSoldGross);
+    }
+
+    [Fact]
+    public void ListingRepricedTwiceIsOneRepriceByUs()
+    {
+        var lastRepricedAt = PreviousRead.AddMinutes(40);
+        var previous = Snapshot(PreviousRead, 0, Slot(0, DarksteelOre, 10, 200));
+        var current = Snapshot(CurrentRead, 0, Slot(0, DarksteelOre, 10, 180));
+        SnapshotDiffWrite[] writes =
+        [
+            Write(SnapshotDiffWriteKind.Repriced, PreviousRead.AddMinutes(10), DarksteelOre, 10, 200, 190),
+            Write(SnapshotDiffWriteKind.Repriced, lastRepricedAt, DarksteelOre, 10, 190, 180),
+        ];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        var change = Assert.Single(diff.Changes);
+        Assert.Equal(SnapshotDiffChangeKind.RepricedByUs, change.Kind);
+        Assert.Equal(200u, change.PreviousUnitPrice);
+        Assert.Equal(lastRepricedAt, change.ChangedAfterUtc);
+    }
+
+    [Fact]
+    public void LotListedAndRepricedTwiceBeforeItSoldSoldAtTheLastPrice()
+    {
+        var previous = Snapshot(PreviousRead, 0);
+        var current = Snapshot(CurrentRead, 0);
+        SnapshotDiffWrite[] writes =
+        [
+            Write(SnapshotDiffWriteKind.Listed, PreviousRead.AddMinutes(5), CottonBoll, 99, 0, 15),
+            Write(SnapshotDiffWriteKind.Repriced, PreviousRead.AddMinutes(35), CottonBoll, 99, 15, 14),
+            Write(SnapshotDiffWriteKind.Repriced, PreviousRead.AddMinutes(65), CottonBoll, 99, 14, 13),
+        ];
+
+        var diff = SnapshotDiff.Compute(previous, current, writes);
+
+        var change = Assert.Single(diff.Changes);
+        Assert.Equal(SnapshotDiffChangeKind.Sold, change.Kind);
+        Assert.Equal(13u, change.Listing.UnitPrice);
+        Assert.Equal(PreviousRead.AddMinutes(65), change.ChangedAfterUtc);
+    }
+
+    [Fact]
     public void SoldListingCarriesTheTimeWeListedIt()
     {
         var listedAt = PreviousRead.AddDays(-2);
