@@ -8,16 +8,13 @@ internal static class PostprocessWork
 
     public static int Count(SellPlan plan, ulong retainerId)
     {
-        if (plan.Input.MarketOf(retainerId) is null)
-        {
-            return MarketToRead;
-        }
-
+        var unread = plan.Input.MarketOf(retainerId) is null;
         var rows = plan.Rows;
-        var count = 0;
+        var count = unread ? MarketToRead : 0;
         for (var index = 0; index < rows.Length; index++)
         {
-            if (rows[index].RetainerId == retainerId && rows[index].Searches)
+            var row = rows[index];
+            if (unread ? !row.IsListing && !row.IsPlaced : row.RetainerId == retainerId && row.Searches)
             {
                 count++;
             }
