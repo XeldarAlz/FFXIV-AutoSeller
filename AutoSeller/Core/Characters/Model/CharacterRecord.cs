@@ -41,6 +41,8 @@ internal sealed record CharacterRecord
 
     public ImmutableArray<ListingAge> ListingAges { get; init; } = [];
 
+    public ImmutableArray<ListingStreak> Streaks { get; init; } = [];
+
     public ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> Reprices { get; init; } = [];
 
     public ImmutableArray<ApprovedPrice> Approvals { get; init; } = [];

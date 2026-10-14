@@ -4,6 +4,7 @@ using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Sales.Model;
 
 namespace AutoSeller.Core.Characters.Model;
 
@@ -17,6 +18,7 @@ internal sealed class CharacterData
     private readonly List<RetainerSnapshot> snapshots = [];
     private readonly List<ApprovedPrice> approvals = [];
     private readonly List<ListingAge> listingAges = [];
+    private readonly List<ListingStreak> streaks = [];
     private RepriceHistory reprices = new();
 
     public CharacterData(ulong contentId)
@@ -42,6 +44,8 @@ internal sealed class CharacterData
     public IReadOnlyList<RetainerSnapshot> Snapshots => snapshots;
 
     public IReadOnlyList<ApprovedPrice> Approvals => approvals;
+
+    public IReadOnlyList<ListingStreak> Streaks => streaks;
 
     public PlanEdits PlanEdits { get; private set; } = PlanEdits.None;
 
@@ -79,6 +83,17 @@ internal sealed class CharacterData
             data.listingAges.AddRange(record.ListingAges);
         }
 
+        if (!record.Streaks.IsDefault)
+        {
+            for (var index = 0; index < record.Streaks.Length; index++)
+            {
+                if (!record.Streaks[index].IsEmpty && data.IndexOfStreak(record.Streaks[index].Key) < 0)
+                {
+                    data.streaks.Add(record.Streaks[index]);
+                }
+            }
+        }
+
         var savedReprices = record.Reprices.IsDefault ? [] : record.Reprices;
         data.reprices = RepriceHistory.Restore(savedReprices.AsSpan());
         if (!record.Approvals.IsDefault)
@@ -112,6 +127,7 @@ internal sealed class CharacterData
             Retainers = [.. retainers],
             Snapshots = [.. snapshots],
             ListingAges = [.. listingAges],
+            Streaks = [.. streaks],
             Reprices = kept.ToImmutable(),
             Approvals = [.. approvals],
             PlanEdits = PlanEdits.Items,
@@ -189,6 +205,7 @@ internal sealed class CharacterData
         retainers.AddRange(updated);
         snapshots.RemoveAll(snapshot => IndexOfRetainer(snapshot.RetainerId) < 0);
         listingAges.RemoveAll(age => IndexOfRetainer(age.RetainerId) < 0);
+        streaks.RemoveAll(streak => IndexOfRetainer(streak.Key.RetainerId) < 0);
         approvals.RemoveAll(approval => IndexOfRetainer(approval.RetainerId) < 0);
         Revision++;
         return true;
@@ -219,7 +236,31 @@ internal sealed class CharacterData
         listingAges.AddRange(ages);
         PutSnapshot(snapshot);
         approvals.RemoveAll(approval => approval.RetainerId == snapshot.RetainerId && !StillListed(approval, snapshot));
+        streaks.RemoveAll(streak => streak.Key.RetainerId == snapshot.RetainerId && !HoldsListing(snapshot, streak.Key));
         Revision++;
+    }
+
+    public DateTime ListedSince(ulong retainerId, in ListingSlot listing, DateTime seenAtUtc)
+    {
+        return ListingAges.ListedSince(CollectionsMarshal.AsSpan(listingAges), retainerId, listing, seenAtUtc);
+    }
+
+    public ListingStreak StreakFor(RepriceKey key)
+    {
+        var index = IndexOfStreak(key);
+        return index < 0 ? new ListingStreak(key, default, default) : streaks[index];
+    }
+
+    public void TrackDecision(RepriceKey key, DecisionReason reason, DateTime nowUtc)
+    {
+        var streak = StreakFor(key);
+        PutStreak(streak with { BelowFloorSinceUtc = BelowFloorStreak.Advance(streak.BelowFloorSinceUtc, reason, nowUtc) });
+    }
+
+    public void TrackLowestPrice(RepriceKey key, uint ourUnitPrice, DateTime priceSetAtUtc, in LowestPriceCheck check)
+    {
+        var streak = StreakFor(key);
+        PutStreak(streak with { LowestSinceUtc = LowestPriceStreak.Advance(streak.LowestSinceUtc, ourUnitPrice, priceSetAtUtc, check) });
     }
 
     public RepriceEntry RepriceEntryFor(RepriceKey key)
@@ -261,6 +302,62 @@ internal sealed class CharacterData
 
         PlanEdits = edits;
         Revision++;
+    }
+
+    private static bool HoldsListing(RetainerSnapshot snapshot, RepriceKey key)
+    {
+        var slots = snapshot.Slots;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            if (slots[index].Slot == key.Slot && slots[index].Key == key.Item)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void PutStreak(in ListingStreak streak)
+    {
+        var index = IndexOfStreak(streak.Key);
+        if (index >= 0 && streaks[index] == streak)
+        {
+            return;
+        }
+
+        if (streak.IsEmpty)
+        {
+            if (index < 0)
+            {
+                return;
+            }
+
+            streaks.RemoveAt(index);
+        }
+        else if (index < 0)
+        {
+            streaks.Add(streak);
+        }
+        else
+        {
+            streaks[index] = streak;
+        }
+
+        Revision++;
+    }
+
+    private int IndexOfStreak(RepriceKey key)
+    {
+        for (var index = 0; index < streaks.Count; index++)
+        {
+            if (streaks[index].Key == key)
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private static bool StillListed(in ApprovedPrice approval, RetainerSnapshot snapshot)
