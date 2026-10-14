@@ -12,7 +12,7 @@ internal enum ReconcileHint : byte
 
 internal static class ReconcileHints
 {
-    public static ReconcileHint From(WriteIntent intent, RetainerSnapshot? latest)
+    public static ReconcileHint From(WriteIntent intent, RetainerSnapshot? latest, long heldNow)
     {
         var write = intent.Write;
         if (latest is null || latest.RetainerId != write.RetainerId || latest.ReadAtUtc <= intent.AtUtc)
@@ -24,7 +24,7 @@ internal static class ReconcileHints
         return write.Kind switch
         {
             WriteKind.Reprice => Repriced(write, market),
-            WriteKind.List => Listed(write, intent.ListingsBefore, market),
+            WriteKind.List => Combine(Listed(write, intent.ListingsBefore, market), Held(intent.ItemCountBefore, heldNow, write.Quantity)),
             _ => ReconcileHint.Unclear,
         };
     }
@@ -55,11 +55,11 @@ internal static class ReconcileHints
         return ReconcileHint.Unclear;
     }
 
-    private static ReconcileHint Listed(in SaleWrite write, long listingsBefore, ReadOnlySpan<ListingSlot> market)
+    private static ReconcileHint? Listed(in SaleWrite write, long listingsBefore, ReadOnlySpan<ListingSlot> market)
     {
         if (listingsBefore < 0)
         {
-            return ReconcileHint.Unclear;
+            return null;
         }
 
         var listedNow = SaleReadBack.CountListings(market, write, write.NewPrice);
@@ -70,4 +70,28 @@ internal static class ReconcileHints
 
         return listedNow == listingsBefore ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
     }
+
+    private static ReconcileHint? Held(long heldBefore, long heldNow, uint quantity)
+    {
+        if (heldBefore < 0 || heldNow < 0)
+        {
+            return null;
+        }
+
+        var dropped = heldBefore - heldNow;
+        if (dropped == quantity)
+        {
+            return ReconcileHint.Applied;
+        }
+
+        return dropped == 0 ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
+    }
+
+    private static ReconcileHint Combine(ReconcileHint? listings, ReconcileHint? held) => held switch
+    {
+        null => listings ?? ReconcileHint.Unclear,
+        ReconcileHint.Applied => ReconcileHint.Applied,
+        ReconcileHint.NotApplied => listings == ReconcileHint.Applied ? ReconcileHint.Unclear : ReconcileHint.NotApplied,
+        _ => listings == ReconcileHint.Applied ? ReconcileHint.Applied : ReconcileHint.Unclear,
+    };
 }
