@@ -31,24 +31,30 @@ internal sealed partial class RetainerDriver
         }
 
         var written = await WriteAndConfirm(buildWrite(), retainer, itemName);
-        Record(written.WindowMismatch ? outcome with { Skip = RunSkip.WindowMismatch, Write = written.Settlement.Write } : outcome with { Write = written.Settlement.Write }, retainer);
+        var settlement = written.Settlement;
+        Record(outcome with { Skip = written.Skip, Write = settlement.Write, Rejection = settlement.Rejection }, retainer);
         var closed = RetainerClicks.IsReady(RetainerClicks.SellWindowAddon) ? await CancelSellWindow() : Stop.None;
         return written.Stop.Halted ? written.Stop : closed;
     }
 
     private async Task<Written> WriteAndConfirm(SaleWrite write, RunRetainer retainer, string itemName)
     {
-        var writeId = Guid.NewGuid();
         session.Enter(RunState.PersistingIntent);
+        before = Sample(write, retainer.RetainerId, marketBefore);
+        if (!SaleReadBack.CanJudge(write, BeforeSample()))
+        {
+            return Unverifiable(write, retainer);
+        }
+
+        var writeId = Guid.NewGuid();
         var reserved = session.Values.TryReserve(writeId, write);
         if (reserved != ValueBookResult.Applied)
         {
             Warn($"Driver: the value book refused write {writeId} ({reserved}); nothing is typed.");
             var unresolved = reserved == ValueBookResult.WritePending ? new Stop(DriverHalt.WriteUnresolved, "an earlier write is still unresolved") : Stop.None;
-            return new Written(WriteSettlement.NotConfirmed(WriteRejection.Cancelled), false, unresolved);
+            return new Written(WriteSettlement.NotConfirmed(WriteRejection.Cancelled), RunSkip.None, unresolved);
         }
 
-        before = Sample(write, retainer.RetainerId, marketBefore);
         var intent = WriteIntent.Record(write, session.Journal.NextSequence, session.Authorization.RunId, DateTime.UtcNow, writeId) with
         {
             ItemCountBefore = before.ItemCount,
@@ -58,7 +64,7 @@ internal sealed partial class RetainerDriver
         if (!Journal(intent))
         {
             session.Values.Release(writeId);
-            return new Written(WriteSettlement.NotConfirmed(WriteRejection.Cancelled), false, new Stop(DriverHalt.JournalWriteFailed, $"the journal refused the intent of write {writeId}: {session.Journal.LastError}"));
+            return new Written(WriteSettlement.NotConfirmed(WriteRejection.Cancelled), RunSkip.None, new Stop(DriverHalt.JournalWriteFailed, $"the journal refused the intent of write {writeId}: {session.Journal.LastError}"));
         }
 
         Diag($"Driver: write {writeId} journaled on {retainer.Name}: {write.Kind} of item {write.ItemId} {QualityLabel.Of(write.IsHq)} x{write.Quantity} from {write.OldPrice} to {write.NewPrice} gil; before it the market read {before.MarketReadable} with {before.Count} listing(s), {intent.ListingsBefore} matching, and the slot held {before.ItemCount}.");
@@ -71,36 +77,43 @@ internal sealed partial class RetainerDriver
         {
             Warn($"Driver: before Confirm the sell window does not show write {writeId} ({check}); it is cancelled.");
             var mismatch = WriteSettlement.NotConfirmed(WriteRejection.WindowMismatch);
-            var settled = Settle(write, writeId, mismatch, retainer);
+            var settled = Settle(intent, mismatch, retainer);
             var unreadable = RunReactions.ForWindow(check) == RunReaction.EndRetainer ? new Stop(DriverHalt.SellWindowUnreadable, $"the sell window could not be read before Confirm ({check})") : Stop.None;
-            return new Written(mismatch, true, settled.Halted ? settled : unreadable);
+            return new Written(mismatch, RunSkip.WindowMismatch, settled.Halted ? settled : unreadable);
         }
 
         if (session.StopRequested)
         {
             Diag($"Driver: Stop came before Confirm; write {writeId} is cancelled.");
-            return NotConfirmed(write, writeId, retainer);
+            return NotConfirmed(intent, retainer);
         }
 
         session.Enter(RunState.Confirming);
         if (!await ClickOnce(PriceWriter.Confirm))
         {
             Warn($"Driver: Confirm could not be pressed for write {writeId}; it is cancelled.");
-            return NotConfirmed(write, writeId, retainer);
+            return NotConfirmed(intent, retainer);
         }
 
         var confirmedAtMs = Environment.TickCount64;
         session.Enter(RunState.ReadingBack);
         var readBack = await ReadBack(write, retainer.RetainerId, confirmedAtMs);
         var settlement = WriteSettlement.Of(readBack.Verdict, readBack.PromptRefused);
-        var journaled = Settle(write, writeId, settlement, retainer);
-        return new Written(settlement, false, journaled.Halted ? journaled : StopFor(settlement));
+        var journaled = Settle(intent, settlement, retainer);
+        return new Written(settlement, RunSkip.None, journaled.Halted ? journaled : StopFor(settlement));
     }
 
-    private Written NotConfirmed(in SaleWrite write, Guid writeId, RunRetainer retainer)
+    private Written Unverifiable(in SaleWrite write, RunRetainer retainer)
+    {
+        Warn($"Driver: before writing item {write.ItemId} {QualityLabel.Of(write.IsHq)} on {retainer.Name} the market read {before.MarketReadable} and the slot held {before.ItemCount}; the read-back could not judge the write, so nothing is journaled or typed.");
+        var stop = before.MarketReadable ? Stop.None : new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} could not be read while its sell window was open");
+        return new Written(default, RunSkip.ReadBackUnavailable, stop);
+    }
+
+    private Written NotConfirmed(WriteIntent intent, RunRetainer retainer)
     {
         var cancelled = WriteSettlement.NotConfirmed(WriteRejection.Cancelled);
-        return new Written(cancelled, false, Settle(write, writeId, cancelled, retainer));
+        return new Written(cancelled, RunSkip.None, Settle(intent, cancelled, retainer));
     }
 
     private async Task Type(SaleWrite write)
@@ -160,9 +173,13 @@ internal sealed partial class RetainerDriver
     private ReadBackVerdict JudgeReadBack(in SaleWrite write, ulong retainerId, long sinceConfirmMs)
     {
         var after = Sample(write, retainerId, marketAfter);
-        var beforeSample = new ReadBackSample(marketBefore.AsSpan(0, before.Count), before.MarketReadable, before.ItemCount, before.Gil);
         var afterSample = new ReadBackSample(marketAfter.AsSpan(0, after.Count), after.MarketReadable, after.ItemCount, after.Gil);
-        return SaleReadBack.Judge(write, beforeSample, afterSample, sinceConfirmMs);
+        return SaleReadBack.Judge(write, BeforeSample(), afterSample, sinceConfirmMs);
+    }
+
+    private ReadBackSample BeforeSample()
+    {
+        return new ReadBackSample(marketBefore.AsSpan(0, before.Count), before.MarketReadable, before.ItemCount, before.Gil);
     }
 
     private bool RefuseGilLimitPrompt()
@@ -193,16 +210,17 @@ internal sealed partial class RetainerDriver
         return new MarketSample(readable, count, itemCount, readable ? gil : WriteIntent.Unread);
     }
 
-    private Stop Settle(in SaleWrite write, Guid writeId, in WriteSettlement settlement, RunRetainer retainer)
+    private Stop Settle(WriteIntent intent, in WriteSettlement settlement, RunRetainer retainer)
     {
-        var outcome = settlement.ToJournalEvent(write, writeId, session.Authorization.RunId, session.Journal.NextSequence, DateTime.UtcNow);
+        var writeId = intent.WriteId;
+        var outcome = settlement.ToJournalEvent(intent.Write, writeId, session.Authorization.RunId, session.Journal.NextSequence, DateTime.UtcNow);
         var journaled = Journal(outcome);
         var booked = settlement.ApplyTo(session.Values, writeId);
         var line = $"Driver: write {writeId} on {retainer.Name} settled as {settlement.Write} ({settlement.Rejection}, cause {settlement.Cause}), journaled {journaled}, value book {booked}.";
         if (settlement.Write == RunWrite.Confirmed)
         {
             Diag(line);
-            AfterConfirmed(write);
+            AfterConfirmed(intent);
         }
         else
         {
@@ -212,8 +230,9 @@ internal sealed partial class RetainerDriver
         return journaled ? Stop.None : new Stop(DriverHalt.JournalWriteFailed, $"the journal refused the outcome of write {writeId}: {session.Journal.LastError}");
     }
 
-    private void AfterConfirmed(in SaleWrite write)
+    private void AfterConfirmed(WriteIntent intent)
     {
+        var write = intent.Write;
         var nowUtc = DateTime.UtcNow;
         var item = new ItemKey(write.ItemId, write.IsHq);
         if (write.Kind == WriteKind.Reprice)
@@ -252,5 +271,5 @@ internal sealed partial class RetainerDriver
 
     private readonly record struct ReadBackResult(ReadBackVerdict Verdict, bool PromptRefused);
 
-    private readonly record struct Written(WriteSettlement Settlement, bool WindowMismatch, Stop Stop);
+    private readonly record struct Written(WriteSettlement Settlement, RunSkip Skip, Stop Stop);
 }
