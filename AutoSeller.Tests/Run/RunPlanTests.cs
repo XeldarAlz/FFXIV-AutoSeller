@@ -144,6 +144,71 @@ public sealed class RunPlanTests
         Assert.False(RunPlanner.StillHolds(OreInTheBags, default, 0));
     }
 
+    [Fact]
+    public void ASlotShrinksByEachLotListedFromIt()
+    {
+        var listed = new ListedStock();
+
+        listed.Add(BagContainer, BagSlot, NormalOre, 5);
+        listed.Add(BagContainer, BagSlot, NormalOre, 5);
+
+        Assert.Equal(LotQuantity - 10, listed.Remaining(OreInTheBags).Quantity);
+        Assert.Equal(LotQuantity, listed.Remaining(secondStack).Quantity);
+        Assert.Equal(LotQuantity, listed.Remaining(OreInTheBags with { IsHq = true }).Quantity);
+        Assert.True(RunPlanner.StillHolds(listed.Remaining(OreInTheBags), NormalOre, LotQuantity - 10));
+    }
+
+    [Fact]
+    public void ASlotNeverShrinksBelowEmpty()
+    {
+        var listed = new ListedStock();
+
+        listed.Add(BagContainer, BagSlot, NormalOre, LotQuantity + 1);
+
+        Assert.Equal(0u, listed.Remaining(OreInTheBags).Quantity);
+    }
+
+    [Fact]
+    public void ForgettingAnItemRestoresItsSlotsOnly()
+    {
+        var listed = new ListedStock();
+        var otherItem = new ItemKey(Ore + 1, false);
+        listed.Add(BagContainer, BagSlot, NormalOre, 5);
+        listed.Add(BagContainer, SecondBagSlot, otherItem, 5);
+
+        listed.Forget(NormalOre);
+
+        Assert.Equal(LotQuantity, listed.Remaining(OreInTheBags).Quantity);
+        Assert.Equal(LotQuantity - 5, listed.Remaining(OreInTheBags with { ItemId = Ore + 1, Slot = SecondBagSlot }).Quantity);
+    }
+
+    [Fact]
+    public void RestockingAnItemTakesItsStacksFromTheFreshRead()
+    {
+        var inputs = Inputs(OreRule());
+        var moved = OreInTheBags with { Slot = 20, Quantity = LotQuantity - 3 };
+        var saddlebag = OreInTheBags with { Container = 4_000, Slot = 1, Source = SlotSource.Saddlebag };
+        var other = OreInTheBags with { ItemId = Ore + 1, Slot = 30 };
+
+        var restocked = RunPlanner.Restock(inputs.Stock, NormalOre, [moved, saddlebag, other]);
+
+        var stack = Assert.Single(restocked.AsSpan().ToArray());
+        Assert.Equal(moved, stack.Slot);
+        Assert.Equal((OreFacts, OreReference), (stack.Item, stack.ReferenceUnitPrice));
+    }
+
+    [Fact]
+    public void RestockingKeepsOtherItemsAndDropsAnItemThatIsGone()
+    {
+        var other = new StockSlot(OreInTheBags with { ItemId = Ore + 1, Slot = 30 }, OreFacts, OreReference);
+        ImmutableArray<StockSlot> stock = [new StockSlot(OreInTheBags, OreFacts, OreReference), other];
+
+        var restocked = RunPlanner.Restock(stock, NormalOre, []);
+
+        Assert.Equal([other], restocked.AsSpan().ToArray());
+        Assert.Equal(stock.AsSpan().ToArray(), RunPlanner.Restock(stock, new ItemKey(Ore + 2, false), [OreInTheBags with { ItemId = Ore + 2 }]).AsSpan().ToArray());
+    }
+
     private static RunPlanInputs Inputs(ItemRule rule, ImmutableArray<RunRetainer> retainers = default)
     {
         return new RunPlanInputs
