@@ -76,6 +76,30 @@ public sealed class RetainerChainTests
     }
 
     [Fact]
+    public void AWindowThatStaysOpenIsRetriedOnceThenUnwound()
+    {
+        var chain = Begun(ChainStep.Closes(ChainWindow.RetainerSell, StepTimeoutMs, ChainWindow.RetainerSellList));
+        var stillOpen = View(ChainWindow.RetainerSellList | ChainWindow.RetainerSell);
+
+        Assert.Equal(ChainVerdict.Wait, chain.Poll(stillOpen, StepTimeoutMs - 1));
+        Assert.Equal(ChainVerdict.Of(ChainAction.Retry, ChainWindow.RetainerSell), chain.Poll(stillOpen, StepTimeoutMs));
+        Assert.Equal(ChainVerdict.Wait, chain.Poll(stillOpen, (StepTimeoutMs * 2) - 1));
+        Assert.Equal(ChainVerdict.Of(ChainAction.Unwind, ChainWindow.RetainerSell), chain.Poll(stillOpen, StepTimeoutMs * 2));
+    }
+
+    [Fact]
+    public void AnIntruderAfterARetryHalts()
+    {
+        var chain = Begun(openSellList);
+        chain.Poll(View(ChainWindow.SelectString), StepTimeoutMs);
+
+        var verdict = chain.Poll(View(ChainWindow.SelectString | ChainWindow.Talk), StepTimeoutMs + 100);
+
+        Assert.True(chain.Retried);
+        Assert.Equal(ChainVerdict.Halt(ChainWindow.Talk, NeedsPlayerReason.UnexpectedWindow), verdict);
+    }
+
+    [Fact]
     public void InputNumericIsAlwaysAllowed()
     {
         var chain = Begun(ChainStep.Opens(ChainWindow.RetainerSell, StepTimeoutMs));
