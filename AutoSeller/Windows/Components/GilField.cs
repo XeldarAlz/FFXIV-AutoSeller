@@ -14,7 +14,7 @@ internal static class GilField
         public void Reset() => Observed = -1;
     }
 
-    public static bool Draw(string id, Buffer buffer, long current, long maximum, string hint, float width, out long value, string? tooltip = null)
+    public static bool Draw(string id, Buffer buffer, long current, long maximum, string hint, float width, out long value, string? tooltip = null, bool commitOnExit = false)
     {
         value = current;
         if (buffer.Observed != current)
@@ -23,7 +23,7 @@ internal static class GilField
             buffer.Text = Format(current);
         }
 
-        if (!NumberField.Draw(id, ref buffer.Text, hint, width, Digits, tooltip))
+        if (!NumberField.Draw(id, ref buffer.Text, hint, width, Digits, tooltip, commitOnExit: commitOnExit))
         {
             return false;
         }

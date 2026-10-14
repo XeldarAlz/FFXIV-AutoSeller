@@ -220,14 +220,14 @@ internal sealed partial class RulesPage
         switch (field)
         {
             case SellField.Floor:
-                if (GilField.Draw("##asell_rule_floor", buffers.Floor, rule.Floor, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_floor", buffers.Floor, rule.Floor, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help, commitOnExit: true))
                 {
                     TrySetFloor(configuration, rule, buffers, (uint)value);
                 }
 
                 break;
             case SellField.Ceiling:
-                if (GilField.Draw("##asell_rule_ceiling", buffers.Ceiling, rule.Ceiling, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help))
+                if (GilField.Draw("##asell_rule_ceiling", buffers.Ceiling, rule.Ceiling, MarketLimits.MaximumUnitPrice, Loc.T(L.Rules.NoneHint), width, out value, help, commitOnExit: true))
                 {
                     TrySetCeiling(configuration, rule, buffers, (uint)value);
                 }
