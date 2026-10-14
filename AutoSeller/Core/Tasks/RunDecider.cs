@@ -63,6 +63,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         });
     }
 
+    public bool SameCharacter()
+    {
+        return RunGuard.SameCharacter(Authorization, Svc.PlayerState.ContentId);
+    }
+
     public DriverHalt Boundary(DateTime nowUtc)
     {
         return RunGuard.CheckBoundary(Authorization, Live(nowUtc));
