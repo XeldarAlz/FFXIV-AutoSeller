@@ -8,10 +8,11 @@ namespace AutoSeller.Core.Retainers;
 internal sealed unsafe class RetainerReader
 {
     private readonly RetainerInfo[] roster = new RetainerInfo[MarketLimits.MaximumRetainers];
-    private readonly DiagnosticLog rosterLog = new();
-    private readonly DiagnosticLog openLog = new();
     private readonly StringBuilder line = new();
     private int count;
+    private RetainerInfo openRetainer;
+    private OpenRetainerProbe lastProbe;
+    private bool probed;
 
     public RetainerReader(bool available)
     {
@@ -21,6 +22,13 @@ internal sealed unsafe class RetainerReader
     public bool Available { get; }
 
     public ReadOnlySpan<RetainerInfo> Last => roster.AsSpan(0, count);
+
+    public void Reset()
+    {
+        count = 0;
+        openRetainer = default;
+        probed = false;
+    }
 
     public bool TryRead(out ReadOnlySpan<RetainerInfo> retainers)
     {
@@ -37,6 +45,7 @@ internal sealed unsafe class RetainerReader
         }
 
         var read = 0;
+        var changed = false;
         var entries = manager->Retainers;
         for (var index = 0; index < entries.Length && read < roster.Length; index++)
         {
@@ -46,7 +55,9 @@ internal sealed unsafe class RetainerReader
                 continue;
             }
 
-            roster[read] = Describe(entry);
+            var described = Describe(entry);
+            changed |= read >= count || roster[read] != described;
+            roster[read] = described;
             read++;
         }
 
@@ -55,9 +66,14 @@ internal sealed unsafe class RetainerReader
             return false;
         }
 
+        changed |= read != count;
         count = read;
         retainers = Last;
-        ReportRoster();
+        if (changed)
+        {
+            ReportRoster();
+        }
+
         return true;
     }
 
@@ -71,15 +87,23 @@ internal sealed unsafe class RetainerReader
 
         var manager = RetainerManager.Instance();
         var active = manager->GetActiveRetainer();
-        var activeId = active == null ? 0 : active->RetainerId;
-        var lastSelectedId = manager->LastSelectedRetainerId;
-        openLog.Report($"Retainers: open retainer check: active {activeId}, last selected {lastSelectedId}, ready {manager->IsReady}.");
-        if (activeId == 0 || activeId != lastSelectedId)
+        var probe = new OpenRetainerProbe(active == null ? 0 : active->RetainerId, manager->LastSelectedRetainerId, manager->IsReady);
+        if (!probed || probe != lastProbe)
+        {
+            probed = true;
+            lastProbe = probe;
+            RunLog.Info($"Retainers: open retainer check: active {probe.ActiveId}, last selected {probe.LastSelectedId}, ready {probe.Ready}.");
+        }
+
+        if (probe.ActiveId == 0 || probe.ActiveId != probe.LastSelectedId)
         {
             return false;
         }
 
-        retainer = Describe(*active);
+        openRetainer = openRetainer.RetainerId == probe.ActiveId
+            ? openRetainer with { Town = (byte)active->Town, Gil = active->Gil, MarketItemCount = active->MarketItemCount, Available = active->Available }
+            : Describe(*active);
+        retainer = openRetainer;
         return true;
     }
 
@@ -102,6 +126,8 @@ internal sealed unsafe class RetainerReader
                 .Append(')');
         }
 
-        rosterLog.Report(line.ToString());
+        RunLog.Info(line.ToString());
     }
+
+    private readonly record struct OpenRetainerProbe(ulong ActiveId, ulong LastSelectedId, bool Ready);
 }

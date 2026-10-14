@@ -71,6 +71,7 @@ internal sealed class CharacterStore : IDisposable
         if (Current is null || Current.ContentId != contentId)
         {
             Flush();
+            retainers.Reset();
             Load(contentId);
         }
 
@@ -84,6 +85,7 @@ internal sealed class CharacterStore : IDisposable
         RunLog.Info("Character data flushed on logout.");
         Current = null;
         store = null;
+        retainers.Reset();
     }
 
     private void Load(ulong contentId)

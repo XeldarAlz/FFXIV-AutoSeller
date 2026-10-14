@@ -1,20 +1,40 @@
 using System.Text;
 using AutoSeller.Core.Characters;
+using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Shared;
+using ECommons;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Retainers;
 
-internal readonly record struct MarketRead(RetainerSnapshot Snapshot, RetainerSnapshot? Previous);
+internal enum MarketReadStatus : byte
+{
+    Read = 0,
+    Off = 1,
+    NoCharacter = 2,
+    NoOpenRetainer = 3,
+    SellListClosed = 4,
+    ContainerNotLoaded = 5,
+    NotSettled = 6,
+}
+
+internal readonly record struct MarketRead(MarketReadStatus Status, MarketReadRefusal Refusal, ulong RetainerId, RetainerSnapshot? Snapshot, RetainerSnapshot? Previous);
 
 internal sealed unsafe class MarketReader
 {
+    private const MarketCountCheck CountCheck = MarketCountCheck.LogOnly;
+
+    private static readonly string SellListAddon = ChainWindows.NameOf(ChainWindow.RetainerSellList);
+
     private readonly RawMarketSlot[] slots = new RawMarketSlot[RetainerSnapshot.SlotCount];
+    private readonly RawMarketSlot[] reportedSlots = new RawMarketSlot[RetainerSnapshot.SlotCount];
     private readonly RetainerReader retainers;
     private readonly CharacterStore characters;
-    private readonly DiagnosticLog rawLog = new();
-    private readonly DiagnosticLog refusalLog = new();
     private readonly StringBuilder line = new();
+    private RawReadSummary reportedSummary;
+    private MarketReadNotice lastNotice;
 
     public MarketReader(RetainerReader retainers, CharacterStore characters, bool available)
     {
@@ -25,20 +45,33 @@ internal sealed unsafe class MarketReader
 
     public bool Available { get; }
 
-    public bool TryReadOpenRetainer(DateTime nowUtc, out MarketRead read)
+    public MarketRead ReadOpenRetainer(DateTime nowUtc)
     {
-        read = default;
-        if (!Available || characters.Current is not { } data || !retainers.TryGetOpenRetainer(out var retainer))
+        if (!Available)
         {
-            return false;
+            return Refuse(MarketReadStatus.Off, 0);
+        }
+
+        if (characters.Current is not { } data)
+        {
+            return Refuse(MarketReadStatus.NoCharacter, 0);
+        }
+
+        if (!retainers.TryGetOpenRetainer(out var retainer))
+        {
+            return Refuse(MarketReadStatus.NoOpenRetainer, 0);
+        }
+
+        if (!SellListReady())
+        {
+            return Refuse(MarketReadStatus.SellListClosed, retainer.RetainerId);
         }
 
         var manager = InventoryManager.Instance();
         var container = manager->GetInventoryContainer(InventoryType.RetainerMarket);
         if (container == null || !container->IsLoaded)
         {
-            refusalLog.Report($"Retainer market: the market container of retainer {retainer.RetainerId} is not loaded yet.");
-            return false;
+            return Refuse(MarketReadStatus.ContainerNotLoaded, retainer.RetainerId);
         }
 
         var prices = manager->RetainerMarketPrices;
@@ -57,7 +90,7 @@ internal sealed unsafe class MarketReader
             count++;
         }
 
-        ReportRaw(retainer, (int)container->Size, count);
+        ReportRawWhenChanged(new RawReadSummary(retainer.RetainerId, (int)container->Size, count, retainer.MarketItemCount, retainer.Gil, retainer.Town));
         var capture = new RetainerMarketCapture
         {
             RetainerId = retainer.RetainerId,
@@ -67,39 +100,69 @@ internal sealed unsafe class MarketReader
             Gil = retainer.Gil,
             AnnouncedCount = retainer.MarketItemCount,
             Slots = slots.AsSpan(0, count),
+            CountCheck = CountCheck,
         };
         if (!RetainerSnapshotBuilder.TryBuild(capture, out var snapshot, out var refusal))
         {
-            refusalLog.Report($"Retainer market: the read of retainer {retainer.RetainerId} is not settled ({refusal}): {count} slot(s) held, {retainer.MarketItemCount} announced.");
-            return false;
+            return Refuse(MarketReadStatus.NotSettled, retainer.RetainerId, refusal, count, retainer.MarketItemCount);
         }
 
+        lastNotice = default;
         data.TryGetSnapshot(retainer.RetainerId, out var previous);
         data.RecordSnapshot(snapshot);
-        read = new MarketRead(snapshot, previous);
-        RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s) and {snapshot.Gil} gil; kept as its last snapshot.");
-        return true;
+        var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
+        RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");
+        return new MarketRead(MarketReadStatus.Read, MarketReadRefusal.None, retainer.RetainerId, snapshot, previous);
     }
 
-    private void ReportRaw(in RetainerInfo retainer, int containerSize, int count)
+    private static bool SellListReady()
     {
-        line.Clear()
-            .Append("Retainer market: raw read of retainer ").Append(retainer.RetainerId)
-            .Append(": container size ").Append(containerSize)
-            .Append(", ").Append(count).Append(" slot(s) held, ")
-            .Append(retainer.MarketItemCount).Append(" announced, town ").Append(retainer.Town)
-            .Append(", gil ").Append(retainer.Gil).Append('.');
-        for (var index = 0; index < count; index++)
+        return GenericHelpers.TryGetAddonByName<AtkUnitBase>(SellListAddon, out var addon) && GenericHelpers.IsAddonReady(addon);
+    }
+
+    private MarketRead Refuse(MarketReadStatus status, ulong retainerId, MarketReadRefusal refusal = MarketReadRefusal.None, int count = 0, int announced = 0)
+    {
+        var notice = new MarketReadNotice(status, refusal, retainerId, count, announced);
+        if (notice != lastNotice)
         {
-            var slot = slots[index];
+            lastNotice = notice;
+            RunLog.Info($"Retainer market: no read of retainer {retainerId}: {status}{(refusal == MarketReadRefusal.None ? string.Empty : $" ({refusal})")}, {count} slot(s) held, {announced} announced.");
+        }
+
+        return new MarketRead(status, refusal, retainerId, null, null);
+    }
+
+    private void ReportRawWhenChanged(in RawReadSummary summary)
+    {
+        var read = slots.AsSpan(0, summary.Count);
+        if (summary == reportedSummary && read.SequenceEqual(reportedSlots.AsSpan(0, summary.Count)))
+        {
+            return;
+        }
+
+        reportedSummary = summary;
+        read.CopyTo(reportedSlots);
+        line.Clear()
+            .Append("Retainer market: raw read of retainer ").Append(summary.RetainerId)
+            .Append(": container size ").Append(summary.ContainerSize)
+            .Append(", ").Append(summary.Count).Append(" slot(s) held, ")
+            .Append(summary.Announced).Append(" announced, town ").Append(summary.Town)
+            .Append(", gil ").Append(summary.Gil).Append('.');
+        for (var index = 0; index < read.Length; index++)
+        {
+            var slot = read[index];
             line.Append(" [").Append(slot.Slot)
                 .Append(": item ").Append(slot.ItemId)
-                .Append(slot.IsHq ? " HQ" : " NQ")
+                .Append(' ').Append(QualityLabel.Of(slot.IsHq))
                 .Append(" x").Append(slot.Quantity)
                 .Append(" at ").Append(slot.Price)
                 .Append(']');
         }
 
-        rawLog.Report(line.ToString());
+        RunLog.Info(line.ToString());
     }
+
+    private readonly record struct RawReadSummary(ulong RetainerId, int ContainerSize, int Count, int Announced, uint Gil, byte Town);
+
+    private readonly record struct MarketReadNotice(MarketReadStatus Status, MarketReadRefusal Refusal, ulong RetainerId, int Count, int Announced);
 }
