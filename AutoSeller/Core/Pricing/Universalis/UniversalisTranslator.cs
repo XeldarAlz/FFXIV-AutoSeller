@@ -7,8 +7,6 @@ namespace AutoSeller.Core.Pricing.Universalis;
 
 internal static class UniversalisTranslator
 {
-    private const long MaximumTaxPercent = 100;
-
     private const long MaximumUnixMilliseconds = 253_402_300_799_999;
 
     public static ReferenceChunkResult TranslateReferences(ReadOnlySpan<byte> body, ReferenceChunk chunk)
@@ -217,7 +215,7 @@ internal static class UniversalisTranslator
 
     private static bool TryPercent(long? value, out byte percent)
     {
-        if (value is not (>= 0 and <= MaximumTaxPercent))
+        if (value is not (>= 0 and <= Gil.PercentScale))
         {
             percent = 0;
             return false;
