@@ -1,11 +1,14 @@
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Game.Ops;
+using AutoSeller.Core.Items;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Shared;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Network.Structures;
 using Dalamud.Hooking;
 using ECommons;
 using ECommons.DalamudServices;
+using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
@@ -27,20 +30,25 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     private const uint ThrottleNoticeRow = 1_997;
     private const uint ThrottleNoticeAlternateRow = 1_998;
     private const int ThrottleNoticeCheckMs = 250;
-    private const int HistoryCapacity = 20;
+    private const uint SellWindowItemNameNode = 7;
+    private const long NeverMs = long.MinValue;
+    private const string MarketBoardAddon = "ItemSearch";
+    private const string ComparePricesThrottleKey = "AutoSeller.Market.ComparePrices";
 
     private static readonly string SellWindowAddon = ChainWindows.NameOf(ChainWindow.RetainerSell);
     private static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
 
     private readonly Configuration configuration;
+    private readonly GameItems gameItems;
     private readonly ListingRequestMachine machine = new();
     private readonly SearchReuse reuse = new();
+    private readonly SaleHistoryCapture history = new();
     private readonly OfferedListing[] pageBuffer = new OfferedListing[ListingRequestMachine.MaximumListings];
     private readonly ObservedListing[] captureBuffer = new ObservedListing[ListingRequestMachine.MaximumListings];
-    private readonly MarketSale[] historyBuffer = new MarketSale[HistoryCapacity];
     private readonly Hook<InfoProxyItemSearch.Delegates.ProcessRequestResult>? requestResultHook;
     private readonly Hook<InfoProxyItemSearch.Delegates.EndRequest>? endRequestHook;
     private ItemKey requested;
+    private SearchSendPath searchPath;
     private RequestOutcome outcome;
     private ListingRequestFailure refusal;
     private CompetitorSnapshot? snapshot;
@@ -49,17 +57,19 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     private int capturedExpectedCount;
     private uint capturedWorldId;
     private DateTime capturedAtUtc;
-    private uint historyItemId;
-    private int historyGeneration;
-    private int historyCount;
     private string[]? throttleNotices;
     private bool issuingRequest;
     private bool ownsResultWindow;
+    private bool comparePricesMissing;
+    private bool awaitingProxyItem;
+    private ProxyRequestIds idsAtPress;
+    private long resultWindowSeenAtMs = NeverMs;
     private long nextThrottleCheckMs;
     private int reportedFailures;
     private bool offeringsThreadReported;
     private bool historyThreadReported;
     private bool requestResultThreadReported;
+    private bool disposed;
 
     private enum RequestOutcome : byte
     {
@@ -68,9 +78,10 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         Refused = 2,
     }
 
-    public ListingRequestTracker(Configuration configuration)
+    public ListingRequestTracker(Configuration configuration, GameItems gameItems)
     {
         this.configuration = configuration;
+        this.gameItems = gameItems;
         requestResultHook = MarketHooks.FromAddress<InfoProxyItemSearch.Delegates.ProcessRequestResult>(
             InfoProxyItemSearch.Addresses.ProcessRequestResult.Value,
             OnProcessRequestResult,
@@ -80,6 +91,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         MarketHooks.Enable(endRequestHook);
         Svc.MarketBoard.OfferingsReceived += OnOfferingsReceived;
         Svc.MarketBoard.HistoryReceived += OnHistoryReceived;
+        Svc.ClientState.Logout += OnLogout;
     }
 
     public bool HasRequestResultHook => requestResultHook is not null;
@@ -89,6 +101,12 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     public bool ReadingAllowed { get; set; }
 
     public static bool SellWindowReady => ReadySellWindow() != null;
+
+    public static bool AtSummoningBell => Svc.Condition[ConditionFlag.OccupiedSummoningBell];
+
+    public static bool MarketBoardOpen => AddonReady(MarketBoardAddon) != null;
+
+    public bool ComparePricesMissing => comparePricesMissing;
 
     public int Attempts => machine.Attempts;
 
@@ -109,10 +127,33 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         Svc.MarketBoard.OfferingsReceived -= OnOfferingsReceived;
         Svc.MarketBoard.HistoryReceived -= OnHistoryReceived;
+        Svc.ClientState.Logout -= OnLogout;
         requestResultHook?.Dispose();
         endRequestHook?.Dispose();
+    }
+
+    public SendRefusal Preflight(uint itemId)
+    {
+        if (configuration.SearchSendPath == SearchSendPath.SearchProxy)
+        {
+            return SendPathChoice.ProxyAllowed(AtSummoningBell, MarketBoardOpen) ? SendRefusal.None : SendRefusal.NotAtMarket;
+        }
+
+        var sellWindow = ReadySellWindow();
+        if (sellWindow == null)
+        {
+            return SendRefusal.NoSellWindow;
+        }
+
+        if (CompareButtonOf(sellWindow) == CompareButtonState.Missing)
+        {
+            return SendRefusal.ButtonMissing;
+        }
+
+        return SellWindowHolds(sellWindow, itemId) ? SendRefusal.None : SendRefusal.OtherItem;
     }
 
     public ListingRequestState Request(ItemKey item, bool allowReuse)
@@ -120,30 +161,31 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         requested = item;
         snapshot = null;
         reportedFailures = 0;
+        awaitingProxyItem = false;
+        resultWindowSeenAtMs = NeverMs;
         if (!ReadingAllowed)
         {
-            outcome = RequestOutcome.Refused;
-            refusal = ListingRequestFailure.ReadingOff;
-            RunLog.Warning($"Market: search for item {item.ItemId} refused: reading listings is off this session.");
-            return State;
+            return Refuse(ListingRequestFailure.ReadingOff, $"Market: search for item {item.ItemId} refused: reading listings is off this session.");
         }
 
         if (allowReuse && reuse.TryReuse(item, Svc.PlayerState.CurrentWorld.RowId, DateTime.UtcNow, out var reused))
         {
             outcome = RequestOutcome.Reused;
             snapshot = reused;
-            RunLog.Info($"Market: search for item {item.ItemId} {QualityOf(item.IsHq)} reused from generation {reused.Generation}, captured at {RunLog.Time(reused.CapturedAtUtc)}.");
+            RunLog.Info($"Market: search for item {item.ItemId} {QualityLabel.Of(item.IsHq)} reused from generation {reused.Generation}, captured at {RunLog.Time(reused.CapturedAtUtc)}.");
             return State;
         }
 
         outcome = RequestOutcome.Machine;
+        searchPath = configuration.SearchSendPath;
         machine.Begin(item.ItemId, DrawJitterMs());
-        RunLog.Info($"Market: search for item {item.ItemId} {QualityOf(item.IsHq)} queued; it goes out in {NextSendInMs} ms.");
+        RunLog.Info($"Market: search for item {item.ItemId} {QualityLabel.Of(item.IsHq)} queued through {searchPath}; it goes out in {NextSendInMs} ms.");
         return Poll();
     }
 
     public void Cancel()
     {
+        awaitingProxyItem = false;
         if (outcome != RequestOutcome.Machine || machine.Status != ListingRequestStatus.Waiting)
         {
             return;
@@ -151,6 +193,17 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
 
         machine.Cancel();
         RunLog.Info($"Market: search for item {machine.ItemId} cancelled.");
+    }
+
+    public void ClearReuse()
+    {
+        reuse.Clear();
+        RunLog.Debug("Market: the reused searches were cleared.");
+    }
+
+    public void NoteOwnListing(ItemKey item, ulong retainerId)
+    {
+        reuse.NoteOwnListing(item, retainerId);
     }
 
     public ListingRequestState Poll()
@@ -175,8 +228,13 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
             machine.OnThrottleNotice(now);
         }
 
+        if (!TryReadProxyItem(proxy, out var proxyItemId))
+        {
+            return State;
+        }
+
         var listingCount = (int)Math.Min(proxy->ListingCount, int.MaxValue);
-        switch (machine.Poll(now, proxy->SearchItemId, listingCount))
+        switch (machine.Poll(now, proxyItemId, listingCount))
         {
             case ListingRequestStep.Send:
                 Send(proxy, now);
@@ -216,9 +274,37 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return false;
     }
 
+    public void ReleaseResultWindow()
+    {
+        if (!ownsResultWindow)
+        {
+            return;
+        }
+
+        ownsResultWindow = false;
+        if (disposed)
+        {
+            return;
+        }
+
+        var addon = AddonReady(ResultWindowAddon);
+        if (addon == null)
+        {
+            return;
+        }
+
+        addon->Close(true);
+        RunLog.Info($"Market: {ResultWindowAddon} was left open by a stopped search; closed it once.");
+    }
+
+    private static AtkUnitBase* AddonReady(string addonName)
+    {
+        return GenericHelpers.TryGetAddonByName<AtkUnitBase>(addonName, out var addon) && GenericHelpers.IsAddonReady(addon) ? addon : null;
+    }
+
     private static AtkUnitBase* ReadySellWindow()
     {
-        return GenericHelpers.TryGetAddonByName<AtkUnitBase>(SellWindowAddon, out var addon) && GenericHelpers.IsAddonReady(addon) ? addon : null;
+        return AddonReady(SellWindowAddon);
     }
 
     private static bool ResultWindowPresent()
@@ -231,9 +317,15 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return Random.Shared.Next(ListingRequestMachine.DefaultJitterMinimumMs, ListingRequestMachine.DefaultJitterMaximumMs + 1);
     }
 
-    private static string QualityOf(bool isHq)
+    private static ProxyRequestIds RequestIdsOf(InfoProxyItemSearch* proxy)
     {
-        return isHq ? "HQ" : "NQ";
+        return new ProxyRequestIds(proxy->NextRequestId, proxy->CurrentRequestId);
+    }
+
+    private static string ShownItemName(AtkUnitBase* sellWindow)
+    {
+        var node = sellWindow->GetTextNodeById(SellWindowItemNameNode);
+        return node == null ? string.Empty : node->NodeText.GetText();
     }
 
     private static ObservedListing Observe(in MarketBoardListing listing)
@@ -261,6 +353,33 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         ];
     }
 
+    private CompareButtonState CompareButtonOf(AtkUnitBase* sellWindow)
+    {
+        if (sellWindow == null || comparePricesMissing)
+        {
+            return CompareButtonState.Missing;
+        }
+
+        var button = new AddonMaster.RetainerSell(sellWindow).ComparePricesButton;
+        if (button == null)
+        {
+            comparePricesMissing = true;
+            RunLog.Warning($"Market: {SellWindowAddon} has no Compare prices button; searches through it are off this session.");
+            return CompareButtonState.Missing;
+        }
+
+        return button->IsEnabled && button->AtkResNode->IsVisible() ? CompareButtonState.Ready : CompareButtonState.Disabled;
+    }
+
+    private bool SellWindowHolds(AtkUnitBase* sellWindow, uint itemId)
+    {
+        var shown = ShownItemName(sellWindow);
+        var expected = gameItems.Get(itemId).Name;
+        var holds = ItemNameMatch.Matches(shown, expected);
+        RunLog.Info($"Market: {SellWindowAddon} shows \"{shown}\"; item {itemId} is \"{expected}\"; same item {holds}.");
+        return holds;
+    }
+
     private ListingRequestState MachineState()
     {
         var status = machine.Status;
@@ -268,54 +387,120 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return new ListingRequestState(status, requested, machine.Generation, machine.Failure, current, false);
     }
 
+    private ListingRequestState Refuse(ListingRequestFailure failure, string reason)
+    {
+        if (outcome == RequestOutcome.Machine)
+        {
+            machine.Cancel();
+        }
+
+        awaitingProxyItem = false;
+        outcome = RequestOutcome.Refused;
+        refusal = failure;
+        RunLog.Warning(reason);
+        return State;
+    }
+
+    private bool TryReadProxyItem(InfoProxyItemSearch* proxy, out uint proxyItemId)
+    {
+        var rawItemId = proxy->SearchItemId;
+        proxyItemId = MarketItemId.Normalize(rawItemId);
+        if (!awaitingProxyItem || !machine.IsSending)
+        {
+            return true;
+        }
+
+        switch (ProxyItemCheck.Check(idsAtPress, RequestIdsOf(proxy), rawItemId, machine.ItemId))
+        {
+            case ProxyItemVerdict.NotTaken:
+                proxyItemId = machine.ItemId;
+                return true;
+            case ProxyItemVerdict.SameItem:
+                awaitingProxyItem = false;
+                RunLog.Info($"Market: the proxy took the Compare prices search of item {machine.ItemId} (raw item {rawItemId}, request ids next {proxy->NextRequestId} current {proxy->CurrentRequestId}).");
+                return true;
+            default:
+                Refuse(ListingRequestFailure.OtherItem, $"Market: the sell window compares item {rawItemId}, not item {machine.ItemId}; the search ends here.");
+                return false;
+        }
+    }
+
     private void Send(InfoProxyItemSearch* proxy, long now)
     {
         var sellWindow = ReadySellWindow();
-        if (sellWindow != null && configuration.SearchSendPath == SearchSendPath.ComparePrices)
+        var resultWindowPresent = ResultWindowPresent();
+        var decision = SendPathChoice.Choose(new SendConditions(
+            searchPath,
+            sellWindow != null,
+            CompareButtonOf(sellWindow),
+            resultWindowPresent,
+            ResultWindowOpenMs(resultWindowPresent, now),
+            AtSummoningBell,
+            MarketBoardOpen));
+        switch (decision.Step)
         {
-            SendThroughSellWindow(sellWindow, proxy, now);
-            return;
+            case SendStep.PressComparePrices:
+                PressComparePrices(sellWindow, proxy, now);
+                break;
+            case SendStep.CloseResultWindow:
+                CloseResultWindowBeforeSending();
+                break;
+            case SendStep.RequestThroughProxy:
+                SendThroughProxy(proxy, now);
+                break;
+            case SendStep.RefuseAttempt:
+                RefuseAttempt(decision.Refusal, now);
+                break;
+            default:
+                Refuse(ListingRequestFailure.RequestRefused, $"Market: search for item {machine.ItemId} ended: {decision.Refusal}.");
+                break;
         }
-
-        SendThroughProxy(proxy, now);
     }
 
-    private void SendThroughSellWindow(AtkUnitBase* sellWindow, InfoProxyItemSearch* proxy, long now)
+    private long ResultWindowOpenMs(bool present, long now)
     {
-        if (ResultWindowPresent())
+        if (!present)
         {
-            CloseResultWindowBeforeSending();
+            resultWindowSeenAtMs = NeverMs;
+            return 0;
+        }
+
+        if (resultWindowSeenAtMs == NeverMs)
+        {
+            resultWindowSeenAtMs = now;
+        }
+
+        return now - resultWindowSeenAtMs;
+    }
+
+    private void PressComparePrices(AtkUnitBase* sellWindow, InfoProxyItemSearch* proxy, long now)
+    {
+        if (!EzThrottler.Throttle(ComparePricesThrottleKey, ListingRequestMachine.MinimumIntervalMs))
+        {
             return;
         }
 
-        var sell = new AddonMaster.RetainerSell(sellWindow);
-        var button = sell.ComparePricesButton;
-        var accepted = button->IsEnabled && button->AtkResNode->IsVisible();
+        if (!SellWindowHolds(sellWindow, machine.ItemId))
+        {
+            Refuse(ListingRequestFailure.OtherItem, $"Market: {SellWindowAddon} holds another item than item {machine.ItemId}; nothing was compared.");
+            return;
+        }
+
+        idsAtPress = RequestIdsOf(proxy);
         issuingRequest = true;
         try
         {
-            if (accepted)
-            {
-                sell.ComparePrices();
-            }
+            new AddonMaster.RetainerSell(sellWindow).ComparePrices();
         }
         finally
         {
             issuingRequest = false;
         }
 
-        ownsResultWindow |= accepted;
-        machine.OnSent(now, accepted, DrawJitterMs());
-        RunLog.Info($"Market: Compare prices pressed for item {machine.ItemId}: generation {machine.Generation}, attempt {machine.Attempts}, accepted {accepted}; the proxy now holds item {proxy->SearchItemId}, waiting {proxy->WaitingForListings}, request ids next {proxy->NextRequestId} current {proxy->CurrentRequestId}.");
-        if (!accepted || proxy->SearchItemId == machine.ItemId)
-        {
-            return;
-        }
-
-        machine.Cancel();
-        outcome = RequestOutcome.Refused;
-        refusal = ListingRequestFailure.OtherItem;
-        RunLog.Warning($"Market: the sell window compares item {proxy->SearchItemId}, not item {requested.ItemId}; the search ends here.");
+        ownsResultWindow = true;
+        awaitingProxyItem = true;
+        machine.OnSent(now, true, DrawJitterMs());
+        RunLog.Info($"Market: Compare prices pressed for item {machine.ItemId}: generation {machine.Generation}, attempt {machine.Attempts}; the proxy holds item {proxy->SearchItemId}, waiting {proxy->WaitingForListings}, request ids next {idsAtPress.Next} -> {proxy->NextRequestId}, current {idsAtPress.Current} -> {proxy->CurrentRequestId}.");
     }
 
     private void CloseResultWindowBeforeSending()
@@ -326,9 +511,18 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         }
     }
 
+    private void RefuseAttempt(SendRefusal reason, long now)
+    {
+        resultWindowSeenAtMs = NeverMs;
+        awaitingProxyItem = false;
+        machine.OnSent(now, false, DrawJitterMs());
+        RunLog.Info($"Market: search for item {machine.ItemId} not sent through {searchPath} ({reason}); attempt {machine.Attempts} counted as refused.");
+    }
+
     private void SendThroughProxy(InfoProxyItemSearch* proxy, long now)
     {
         bool accepted;
+        awaitingProxyItem = false;
         issuingRequest = true;
         try
         {
@@ -348,7 +542,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     private void Capture(InfoProxyItemSearch* proxy, long now)
     {
         var listings = proxy->Listings;
-        if (proxy->SearchItemId != machine.ItemId || proxy->ListingCount > (uint)listings.Length)
+        if (MarketItemId.Normalize(proxy->SearchItemId) != machine.ItemId || proxy->ListingCount > (uint)listings.Length)
         {
             RunLog.Info($"Market: copy of item {machine.ItemId} refused: the proxy holds item {proxy->SearchItemId} with {proxy->ListingCount} listing(s).");
             machine.OnCaptureFailed(now);
@@ -396,7 +590,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
             CapturedAtUtc = capturedAtUtc,
             AnnouncedCount = capturedExpectedCount,
             Listings = captureBuffer.AsSpan(0, capturedCount),
-            History = HistoryOf(machine.ItemId, capturedGeneration),
+            History = history.For(machine.ItemId, capturedGeneration),
         };
         if (!CompetitorSnapshotBuilder.TryBuild(capture, machine.Generation, out var built, out snapshotRefusal))
         {
@@ -408,18 +602,9 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return true;
     }
 
-    private ReadOnlySpan<MarketSale> HistoryOf(uint itemId, int generation)
-    {
-        return historyItemId == itemId && historyGeneration == generation ? historyBuffer.AsSpan(0, historyCount) : [];
-    }
-
     private void AttachLateHistory()
     {
-        if (snapshot is null
-            || outcome != RequestOutcome.Machine
-            || !snapshot.History.IsEmpty
-            || snapshot.Generation != historyGeneration
-            || machine.Generation != historyGeneration)
+        if (outcome != RequestOutcome.Machine || snapshot is null || !history.AttachesLateTo(snapshot, machine.Generation))
         {
             return;
         }
@@ -485,6 +670,16 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return false;
     }
 
+    private void OnLogout(int type, int code)
+    {
+        Cancel();
+        reuse.Clear();
+        history.Clear();
+        snapshot = null;
+        ownsResultWindow = false;
+        RunLog.Info("Market: the reused searches and the sale history were cleared on logout.");
+    }
+
     private void OnOfferingsReceived(IMarketBoardCurrentOfferings offerings)
     {
         try
@@ -517,33 +712,29 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         }
     }
 
-    private void OnHistoryReceived(IMarketBoardHistory history)
+    private void OnHistoryReceived(IMarketBoardHistory received)
     {
         try
         {
             MarketHooks.ReportThreadOnce(ref historyThreadReported, "HistoryReceived");
-            var itemId = MarketItemId.Normalize(history.ItemId);
-            var sales = history.HistoryListings;
-            if (outcome != RequestOutcome.Machine
-                || itemId != machine.ItemId
-                || machine.Status is not (ListingRequestStatus.Waiting or ListingRequestStatus.Complete))
+            var itemId = MarketItemId.Normalize(received.ItemId);
+            var sales = received.HistoryListings;
+            if (outcome != RequestOutcome.Machine || !SaleHistoryCapture.BelongsToSearch(itemId, machine.ItemId, machine.Status))
             {
                 RunLog.Info($"Market: sale history of item {itemId} with {sales.Count} sale(s) arrived outside a search of this plugin.");
                 return;
             }
 
-            var count = Math.Min(sales.Count, historyBuffer.Length);
-            for (var index = 0; index < count; index++)
+            history.Begin(itemId, machine.Generation);
+            for (var index = 0; index < sales.Count; index++)
             {
                 var sale = sales[index];
-                historyBuffer[index] = new MarketSale(sale.SalePrice, sale.Quantity, sale.IsHq, sale.OnMannequin, sale.PurchaseTime);
+                history.Add(new MarketSale(sale.SalePrice, sale.Quantity, sale.IsHq, sale.OnMannequin, sale.PurchaseTime));
             }
 
-            historyItemId = itemId;
-            historyGeneration = machine.Generation;
-            historyCount = count;
-            var first = count > 0 ? $", first {QualityOf(historyBuffer[0].IsHq)} {historyBuffer[0].Quantity} x {historyBuffer[0].UnitPrice} gil at {RunLog.Time(historyBuffer[0].SoldAtUtc)}" : string.Empty;
-            RunLog.Info($"Market: sale history of item {itemId}: {sales.Count} sale(s), generation {historyGeneration}{first}.");
+            var kept = history.Sales;
+            var first = kept.IsEmpty ? string.Empty : $", first {QualityLabel.Of(kept[0].IsHq)} {kept[0].Quantity} x {kept[0].UnitPrice} gil at {RunLog.Time(kept[0].SoldAtUtc)}";
+            RunLog.Info($"Market: sale history of item {itemId}: {sales.Count} sale(s), generation {history.Generation}{first}.");
             AttachLateHistory();
         }
         catch (Exception exception)
