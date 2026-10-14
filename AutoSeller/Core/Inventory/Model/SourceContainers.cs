@@ -57,6 +57,8 @@ internal static class SourceContainers
         new(RetainerCrystals, SlotSource.RetainerPage),
     ];
 
+    public static ImmutableArray<SourceContainer> RetainerInventory => retainerPages;
+
     public static ImmutableArray<SourceContainer> For(SellSources sources, bool readRetainer)
     {
         var containers = ImmutableArray.CreateBuilder<SourceContainer>(player.Length + armoury.Length + saddlebag.Length + retainerPages.Length);

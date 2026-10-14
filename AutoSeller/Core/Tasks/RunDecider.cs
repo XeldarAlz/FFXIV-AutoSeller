@@ -16,6 +16,8 @@ namespace AutoSeller.Core.Tasks;
 
 internal sealed class RunDecider(Plugin plugin, SellRunSession session)
 {
+    private const int NoSearch = 0;
+
     private SellAuthorization Authorization => session.Authorization;
 
     public string ItemName(uint itemId)
@@ -95,6 +97,38 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
     }
 
+    public SaleVerdict GuardReturn(ulong retainerId, in ListingSlot listing, in SaleWrite write, DateTime nowUtc)
+    {
+        var facts = plugin.GameItems.FactsOf(listing.ItemId);
+        var row = new GuardedRow(
+            write,
+            SlotReading.Of(listing),
+            SlotReading.Of(listing),
+            PricingRule.Manages(Authorization.Rules, listing.Key, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc)),
+            PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
+            facts.VendorPrice,
+            ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, true), row, NoSearch, default, session.Values, Guid.NewGuid());
+    }
+
+    public SaleVerdict GuardVendor(ulong retainerId, in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
+    {
+        var itemProtected = ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(stock.Slot.ItemId));
+        var current = stock with { Slot = stock.Slot with { Quantity = observed.Quantity, IsProtected = itemProtected } };
+        var vendorRule = VendorRules.Check(current, Authorization.Rules) is VendorReason.VendorList or VendorReason.Junk;
+        var row = new GuardedRow(
+            write,
+            SlotReading.Of(stock.Slot),
+            observed,
+            vendorRule,
+            0,
+            stock.Item.VendorPrice,
+            itemProtected,
+            vendorRule,
+            stock.Item.IsEquippable || stock.Slot.InGearSet);
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, true), row, NoSearch, default, session.Values, Guid.NewGuid());
+    }
+
     public SaleVerdict GuardLot(in LotAssignment assignment, in StockSlot stock, in SlotReading observed, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)
     {
         var held = stock.Slot with { Quantity = observed.Quantity };
@@ -153,11 +187,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         _ => $"would {intended}",
     };
 
-    private RunLiveFacts Live(DateTime nowUtc)
+    private RunLiveFacts Live(DateTime nowUtc, bool throughMenu = false)
     {
         var configuration = plugin.Configuration;
         var openRetainerId = plugin.Retainers.TryGetOpenRetainer(out var open) ? open.RetainerId : 0;
-        var windowChainReady = RetainerClicks.IsReady(RetainerClicks.SellWindowAddon)
+        var windowChainReady = (throughMenu ? MenuOverSellList() : RetainerClicks.IsReady(RetainerClicks.SellWindowAddon))
             && !RetainerClicks.IsReady(RetainerClicks.ResultWindowAddon)
             && !RetainerClicks.IsReady(RetainerClicks.PromptAddon);
         return new RunLiveFacts(
@@ -170,6 +204,13 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,
             session.Review.BlocksWrites,
             nowUtc);
+    }
+
+    private static bool MenuOverSellList()
+    {
+        return RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon)
+            && RetainerClicks.IsReady(RetainerClicks.SellListAddon)
+            && !RetainerClicks.IsReady(RetainerClicks.SellWindowAddon);
     }
 
     private uint ReferenceUnitPrice(ItemKey item, DateTime nowUtc)

@@ -7,6 +7,7 @@ using ECommons.DalamudServices;
 using ECommons.GameFunctions;
 using ECommons.Throttlers;
 using ECommons.UIHelpers.AddonMasterImplementations;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -27,6 +28,10 @@ internal static unsafe class RetainerClicks
     private const string QuitThrottleKey = "AutoSeller.Retainer.Quit";
     private const string ListingMenuThrottleKey = "AutoSeller.Retainer.ListingMenu";
     private const string AdjustPriceThrottleKey = "AutoSeller.Retainer.AdjustPrice";
+    private const string ReturnToRetainerThrottleKey = "AutoSeller.Retainer.ReturnToRetainer";
+    private const string ItemMenuThrottleKey = "AutoSeller.Retainer.ItemMenu";
+    private const string HaveRetainerSellThrottleKey = "AutoSeller.Retainer.HaveRetainerSell";
+    private const int ItemMenuUnknownArgument = 0;
     private const string CloseContextMenuThrottleKey = "AutoSeller.Retainer.CloseContextMenu";
     private const string OpenSellWindowThrottleKey = "AutoSeller.Retainer.OpenSellWindow";
     private const string CancelSellThrottleKey = "AutoSeller.Retainer.CancelSell";
@@ -58,8 +63,11 @@ internal static unsafe class RetainerClicks
     public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
     public static readonly string SaleHistoryAddon = ChainWindows.NameOf(ChainWindow.RetainerHistory);
 
+    private static readonly string[] inventoryAddons = ["InventoryRetainerLarge", "InventoryRetainer", "InventoryExpansion", "InventoryLarge", "Inventory"];
+
     private static uint reportedOwner;
     private static ushort reportedSellList;
+    private static string reportedInventory = string.Empty;
 
     public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
 
@@ -115,33 +123,27 @@ internal static unsafe class RetainerClicks
         return true;
     }
 
-    public static bool ChooseAdjustPrice(int entry)
+    public static bool ChooseAdjustPrice(int entry) => ChooseEntry(entry, RetainerMenuText.IsAdjustPrice, AdjustPriceThrottleKey, "Adjust Price");
+
+    public static bool ChooseReturnToRetainer(int entry) => ChooseEntry(entry, RetainerMenuText.IsReturnToRetainer, ReturnToRetainerThrottleKey, "Return to Retainer");
+
+    public static bool ChooseHaveRetainerSell(int entry) => ChooseEntry(entry, RetainerMenuText.IsHaveRetainerSell, HaveRetainerSellThrottleKey, "Have Retainer Sell Items");
+
+    public static bool OpenItemMenu(uint container, ushort slot)
     {
-        if (!NpcInteraction.TryGetReadyAddon(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(AdjustPriceThrottleKey, ClickThrottleMs))
+        if (IsReady(ContextMenuAddon) || !EzThrottler.Throttle(ItemMenuThrottleKey, ClickThrottleMs))
         {
             return false;
         }
 
-        ReportContextOwner();
-        var entries = new AddonMaster.ContextMenu(menu).Entries;
-        if (entry < 0 || entry >= entries.Length)
+        var agent = AgentInventoryContext.Instance();
+        if (agent == null || !TryFindInventoryWindow(out var owner))
         {
             return false;
         }
 
-        var text = entries[entry].Text;
-        if (!RetainerMenuText.IsAdjustPrice(text))
-        {
-            RunLog.Warning($"Retainer: context menu entry {entry} reads '{text}', not Adjust Price; nothing chosen.");
-            return false;
-        }
-
-        if (!entries[entry].Select())
-        {
-            return false;
-        }
-
-        RunLog.Info($"Retainer: choosing context menu entry {entry}, '{text}'.");
+        RunLog.Info($"Retainer: opening the item menu of container {container} slot {slot} for addon {owner}.");
+        agent->OpenForItemSlot((InventoryType)container, slot, ItemMenuUnknownArgument, owner);
         return true;
     }
 
@@ -189,6 +191,65 @@ internal static unsafe class RetainerClicks
         {
             EzThrottler.Reset(closeThrottleKeys[index]);
         }
+    }
+
+    private static bool ChooseEntry(int entry, Func<string, bool> matches, string throttleKey, string what)
+    {
+        if (!NpcInteraction.TryGetReadyAddon(ContextMenuAddon, out var menu) || !EzThrottler.Throttle(throttleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        ReportContextOwner();
+        var entries = new AddonMaster.ContextMenu(menu).Entries;
+        if (entry < 0 || entry >= entries.Length)
+        {
+            return false;
+        }
+
+        var text = entries[entry].Text;
+        if (!matches(text))
+        {
+            RunLog.Warning($"Retainer: context menu entry {entry} reads '{text}', not {what}; nothing chosen.");
+            return false;
+        }
+
+        if (!entries[entry].Select())
+        {
+            return false;
+        }
+
+        RunLog.Info($"Retainer: choosing context menu entry {entry}, '{text}'.");
+        return true;
+    }
+
+    private static bool TryFindInventoryWindow(out uint addonId)
+    {
+        for (var index = 0; index < inventoryAddons.Length; index++)
+        {
+            if (!NpcInteraction.TryGetReadyAddon(inventoryAddons[index], out var inventory))
+            {
+                continue;
+            }
+
+            addonId = inventory->Id;
+            if (!string.Equals(reportedInventory, inventoryAddons[index], StringComparison.Ordinal))
+            {
+                reportedInventory = inventoryAddons[index];
+                RunLog.Info($"Retainer: item menus open for the {inventoryAddons[index]} window (addon {addonId}).");
+            }
+
+            return true;
+        }
+
+        addonId = 0;
+        if (reportedInventory.Length > 0)
+        {
+            reportedInventory = string.Empty;
+            RunLog.Info("Retainer: no inventory window is open to open an item menu for.");
+        }
+
+        return false;
     }
 
     private static void ReportContextOwner()

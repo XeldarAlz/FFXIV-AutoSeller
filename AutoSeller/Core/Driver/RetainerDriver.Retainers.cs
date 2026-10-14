@@ -142,6 +142,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> WorkRetainer(int index, RunRetainer retainer)
     {
+        returns.Clear();
         var stop = await ReadSaleHistory(retainer);
         if (stop.Halted || CancelToken.IsCancellationRequested)
         {
@@ -162,12 +163,27 @@ internal sealed partial class RetainerDriver
         }
 
         stop = await WorkListings(index, retainer, market);
-        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
+        if (KeepsWorking(stop))
         {
             stop = await WorkLots(index, retainer, market);
         }
 
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkReturns(index, retainer);
+        }
+
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkVendoring(index, retainer);
+        }
+
         return stop;
+    }
+
+    private bool KeepsWorking(in Stop stop)
+    {
+        return !stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested;
     }
 
     private async Task<Stop> OpenSellList(RunRetainer retainer)

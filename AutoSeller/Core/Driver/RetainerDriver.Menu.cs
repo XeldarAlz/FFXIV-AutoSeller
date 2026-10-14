@@ -1,0 +1,262 @@
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Driver.Model;
+using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Inventory;
+using AutoSeller.Core.Localization;
+using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Shared;
+using AutoSeller.Core.Tasks.Model;
+using System.Threading.Tasks;
+
+namespace AutoSeller.Core.Driver;
+
+internal sealed partial class RetainerDriver
+{
+    private readonly List<PendingReturn> returns = [];
+
+    private async Task<Stop> QueueReturn(RunDecision outcome, SaleWrite write, ListingSlot listing)
+    {
+        var cancelled = await CancelSellWindow();
+        if (!cancelled.Halted)
+        {
+            returns.Add(new PendingReturn(outcome, write, listing));
+            Diag($"Driver: slot {listing.Slot} with item {listing.ItemId} {QualityLabel.Of(listing.IsHq)} x{listing.Quantity} at {listing.UnitPrice} gil is returned to the retainer once its lots are listed.");
+        }
+
+        return cancelled;
+    }
+
+    private async Task<Stop> WorkReturns(int retainerIndex, RunRetainer retainer)
+    {
+        for (var index = 0; index < returns.Count; index++)
+        {
+            if (CancelToken.IsCancellationRequested || StopsAtBoundary())
+            {
+                return Stop.None;
+            }
+
+            var pending = returns[index];
+            session.WorkOn(retainerIndex, pending.Outcome.Row);
+            session.Show(RunState.Returning, Loc.T(L.Run.StatusReturning, retainer.Name, decider.ItemName(pending.Listing.ItemId)));
+            var stop = await ReturnListing(retainer, pending);
+            if (stop.Halted)
+            {
+                return stop;
+            }
+        }
+
+        return Stop.None;
+    }
+
+    private async Task<Stop> ReturnListing(RunRetainer retainer, PendingReturn pending)
+    {
+        var listing = pending.Listing;
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read before returning a listing");
+        }
+
+        if (!StillListed(market, listing))
+        {
+            Record(pending.Outcome with { Skip = RunSkip.SlotChanged }, retainer);
+            return Stop.None;
+        }
+
+        var row = SellListRows.RowFor(RetainerReads.SellList(), market.Slots.AsSpan(), listing, decider.ItemName(listing.ItemId));
+        if (row == SellListRows.NoRow)
+        {
+            Record(pending.Outcome with { Skip = RunSkip.RowNotFound }, retainer);
+            return Stop.None;
+        }
+
+        var menu = await Step(ChainStep.Opens(ChainWindow.ContextMenu, ContextMenuOpenMs, SellListBackdrop), () => RetainerClicks.OpenListingMenu(row));
+        if (!menu.Succeeded)
+        {
+            return await SkipMenuRow(menu, pending.Outcome, retainer);
+        }
+
+        var entries = RetainerReads.ContextMenuEntries();
+        var entry = RetainerMenuText.FindReturnToRetainer(entries);
+        if (entry == PromptText.NoMatch)
+        {
+            Warn($"Driver: no Return to Retainer entry among [{string.Join(" | ", entries)}] for sell list row {row}");
+            return await SkipMenuRow(StepResult.Missed(ChainWindow.ContextMenu), pending.Outcome with { Skip = RunSkip.WindowMismatch }, retainer);
+        }
+
+        session.Enter(RunState.Guarding);
+        var verdict = decider.GuardReturn(retainer.RetainerId, listing, pending.Write, DateTime.UtcNow);
+        return await ConcludeThroughMenu(pending.Outcome with { Guard = verdict.Rejection }, pending.Write, retainer, () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning);
+    }
+
+    private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
+    {
+        var authorization = session.Authorization;
+        if (!authorization.Rules.Vendor.Enabled)
+        {
+            return Stop.None;
+        }
+
+        var remaining = authorization.Caps.MaxVendoredValue - session.Values.VendoredValue;
+        var due = VendorRules.Due(session.PlanInputs.Stock, authorization.Rules, remaining, session.Handled);
+        if (due.IsEmpty)
+        {
+            return Stop.None;
+        }
+
+        Diag($"Driver: {due.Length} stack(s) to vendor through {retainer.Name}, within {remaining} gil left of the run's vendor cap.");
+        for (var index = 0; index < due.Length; index++)
+        {
+            if (CancelToken.IsCancellationRequested || StopsAtBoundary())
+            {
+                return Stop.None;
+            }
+
+            var verdict = due[index];
+            session.WorkOn(retainerIndex, PlanRowKey.ForVendor(verdict.Slot));
+            session.Show(RunState.Vendoring, Loc.T(L.Run.StatusVendoring, retainer.Name, decider.ItemName(verdict.Slot.ItemId)));
+            var stop = await VendorStack(retainer, verdict);
+            if (stop.Halted)
+            {
+                return stop;
+            }
+        }
+
+        return Stop.None;
+    }
+
+    private async Task<Stop> VendorStack(RunRetainer retainer, VendorVerdict verdict)
+    {
+        var slot = verdict.Slot;
+        if (!RunPlanner.TryFindStock(session.PlanInputs.Stock.AsSpan(), PlanRowKey.ForVendor(slot), out var stock))
+        {
+            Record(RunDecision.VendorSkipped(retainer.RetainerId, verdict, RunSkip.SlotChanged), retainer);
+            return Stop.None;
+        }
+
+        var planned = RunDecision.ForVendor(retainer.RetainerId, verdict, stock.Item.VendorPrice);
+        if (!TryReadVendorSlot(slot, out _))
+        {
+            Record(planned with { Skip = RunSkip.SlotChanged }, retainer);
+            return Stop.None;
+        }
+
+        var menu = await Step(ChainStep.Opens(ChainWindow.ContextMenu, ContextMenuOpenMs, SellListBackdrop), () => RetainerClicks.OpenItemMenu(slot.Container, slot.Slot));
+        if (!menu.Succeeded)
+        {
+            return await SkipMenuRow(menu, planned, retainer);
+        }
+
+        var entries = RetainerReads.ContextMenuEntries();
+        var entry = RetainerMenuText.FindHaveRetainerSell(entries);
+        if (entry == PromptText.NoMatch)
+        {
+            Warn($"Driver: no Have Retainer Sell Items entry among [{string.Join(" | ", entries)}] for container {slot.Container} slot {slot.Slot}");
+            return await SkipMenuRow(StepResult.Missed(ChainWindow.ContextMenu), planned with { Skip = RunSkip.WindowMismatch }, retainer);
+        }
+
+        session.Enter(RunState.Guarding);
+        var write = SaleWrite.ForVendor(retainer.RetainerId, slot, stock.Item.VendorPrice);
+        var observed = TryReadVendorSlot(slot, out var reading) ? reading : default;
+        var guard = decider.GuardVendor(retainer.RetainerId, stock, observed, write, DateTime.UtcNow);
+        return await ConcludeThroughMenu(planned with { Guard = guard.Rejection }, write, retainer, () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring);
+    }
+
+    private bool TryReadVendorSlot(in SlotFacts slot, out SlotReading observed)
+    {
+        var read = BagReader.TryReadSlot(slot.Container, slot.Slot, out var held, out var quantity);
+        observed = new SlotReading(held.ItemId, held.IsHq, quantity, 0);
+        if (read && RunPlanner.StillHolds(slot, held, quantity))
+        {
+            return true;
+        }
+
+        Diag($"Driver: container {slot.Container} slot {slot.Slot} now holds item {held.ItemId} {QualityLabel.Of(held.IsHq)} x{quantity} (read {read}); vendoring expects item {slot.ItemId} x{slot.Quantity}.");
+        return false;
+    }
+
+    private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, Func<bool> choose, RunState pressing)
+    {
+        if (!outcome.Clear)
+        {
+            Record(outcome, retainer);
+            var closed = await UnwindAboveSellList();
+            return closed.Halted ? closed : StopForGuard(outcome.Guard);
+        }
+
+        if (session.Authorization.DryRun)
+        {
+            Record(outcome with { Write = RunWrite.DryRun }, retainer);
+            return await UnwindAboveSellList();
+        }
+
+        var written = await ChooseAndConfirm(write, retainer, choose, pressing);
+        var settlement = written.Settlement;
+        Record(outcome with { Skip = written.Skip, Write = settlement.Write, Rejection = settlement.Rejection }, retainer);
+        var unwound = RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon) ? await UnwindAboveSellList() : Stop.None;
+        if (settlement.Write == RunWrite.Unknown && !unwound.Halted)
+        {
+            await ReadForTheAnswer(retainer);
+        }
+
+        return written.Stop.Halted ? written.Stop : unwound;
+    }
+
+    private async Task<Written> ChooseAndConfirm(SaleWrite write, RunRetainer retainer, Func<bool> choose, RunState pressing)
+    {
+        var begun = BeginWrite(write, retainer);
+        if (begun.Intent is not { } intent)
+        {
+            return begun.Refused;
+        }
+
+        if (session.StopRequested)
+        {
+            Diag($"Driver: Stop came before the menu entry was chosen; write {intent.WriteId} is cancelled.");
+            return NotConfirmed(intent, retainer);
+        }
+
+        session.Enter(pressing);
+        var stopped = false;
+        var pressed = await ClickOnce(() =>
+        {
+            stopped = session.StopRequested;
+            return stopped || choose();
+        });
+        if (stopped || !pressed)
+        {
+            Warn($"Driver: the menu entry for write {intent.WriteId} was not chosen ({(stopped ? "Stop came first" : "it could not be pressed")}); it is cancelled.");
+            return NotConfirmed(intent, retainer);
+        }
+
+        return await FinishWrite(intent, retainer, Environment.TickCount64);
+    }
+
+    private async Task<Stop> SkipMenuRow(StepResult step, RunDecision outcome, RunRetainer retainer)
+    {
+        if (step.Halted || step.End == StepEnd.Cancelled)
+        {
+            return step.Stop;
+        }
+
+        Record(outcome.Skip == RunSkip.None ? outcome with { Skip = RunSkip.WindowDidNotOpen } : outcome, retainer);
+        return await UnwindAboveSellList();
+    }
+
+    private static bool StillListed(RetainerSnapshot market, in ListingSlot listing)
+    {
+        var slots = market.Slots;
+        for (var index = 0; index < slots.Length; index++)
+        {
+            if (slots[index] == listing)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private readonly record struct PendingReturn(RunDecision Outcome, SaleWrite Write, ListingSlot Listing);
+}
