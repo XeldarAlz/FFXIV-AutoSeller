@@ -39,6 +39,8 @@ internal sealed class ItemSearch
         this.wanted = wanted;
     }
 
+    public static LocString PendingText(ItemCatalog catalog) => catalog.LoadFailed ? L.Rules.ItemDataFailed : L.Rules.ItemDataLoading;
+
     public int Draw(ItemCatalog catalog, string hint, float width)
     {
         var wasFocused = focused;
@@ -113,7 +115,7 @@ internal sealed class ItemSearch
         {
             using (Fonts.PushCaption())
             {
-                TextDraw.Hint(Loc.T(catalog.LoadFailed ? L.Rules.ItemDataFailed : L.Rules.ItemDataLoading));
+                TextDraw.Hint(Loc.T(PendingText(catalog)));
             }
 
             return NoPick;

@@ -3,6 +3,7 @@ using AutoSeller.Core.Localization;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Windows.Components;
+using AutoSeller.Windows.Sections;
 using AutoSeller.Windows.Sections.Config;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -26,6 +27,7 @@ internal sealed partial class RulesPage
     private string[] categoryPickerLabels = [];
     private byte[] categoryPickerIds = [];
     private int categoryPickerCount = -1;
+    private bool categoryPickerLoadFailed;
     private LanguageInfo? categoryPickerLanguage;
     private CategoryRule? removeCategoryRule;
 
@@ -200,17 +202,19 @@ internal sealed partial class RulesPage
     private void EnsureCategoryPicker(ItemCatalog catalog)
     {
         var categories = catalog.Categories;
-        if (categoryPickerCount == categories.Length && ReferenceEquals(categoryPickerLanguage, Loc.Current))
+        var loadFailed = catalog.LoadFailed;
+        if (categoryPickerCount == categories.Length && categoryPickerLoadFailed == loadFailed && ReferenceEquals(categoryPickerLanguage, Loc.Current))
         {
             return;
         }
 
         categoryPickerCount = categories.Length;
+        categoryPickerLoadFailed = loadFailed;
         categoryPickerLanguage = Loc.Current;
         categoryFallbacks.Clear();
         categoryPickerLabels = new string[categories.Length + 1];
         categoryPickerIds = new byte[categories.Length + 1];
-        categoryPickerLabels[PickerPlaceholder] = Loc.T(catalog.IsReady ? L.Rules.CategoryAdd : L.Rules.ItemDataLoading);
+        categoryPickerLabels[PickerPlaceholder] = Loc.T(catalog.IsReady ? L.Rules.CategoryAdd : ItemSearch.PendingText(catalog));
         for (var index = 0; index < categories.Length; index++)
         {
             categoryPickerLabels[index + 1] = categories[index].Name;
