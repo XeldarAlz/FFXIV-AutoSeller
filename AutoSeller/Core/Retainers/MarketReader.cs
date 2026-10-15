@@ -35,6 +35,7 @@ internal sealed unsafe class MarketReader
     private readonly CharacterStore characters;
     private readonly Func<ulong, ImmutableArray<SnapshotDiffWrite>> diffWrites;
     private readonly Action<SnapshotDiff, byte> diffed;
+    private readonly SnapshotDiffBases diffBases = new();
     private readonly StringBuilder line = new();
     private RawReadSummary reportedSummary;
     private MarketReadNotice lastNotice;
@@ -94,13 +95,16 @@ internal sealed unsafe class MarketReader
         }
 
         lastNotice = default;
-        data.TryGetSnapshot(retainer.RetainerId, out var previous);
+        data.TryGetSnapshot(retainer.RetainerId, out var stored);
         var writes = diffWrites(retainer.RetainerId);
         data.RecordSnapshot(snapshot, writes.AsSpan());
-        var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
-        RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");
+        var countMatches = capture.CountMatches;
+        var previous = diffBases.Advance(snapshot, stored, countMatches);
+        var counted = countMatches ? "matching" : $"not matching ({CountCheck})";
+        var inferred = countMatches ? string.Empty : ", but no sale is inferred from it and the last matching read stays the base of the next diff";
+        RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot{inferred}.");
         var diff = previous is null ? null : SnapshotDiff.Compute(previous, snapshot, writes.AsSpan());
-        if (diff is not null)
+        if (diff is not null && countMatches)
         {
             diffed(diff, snapshot.Town);
         }
