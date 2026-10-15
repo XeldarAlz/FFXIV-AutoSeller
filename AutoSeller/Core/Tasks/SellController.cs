@@ -16,6 +16,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 
     public bool Running => session is not null;
 
+    public bool HoldsRetainerWindows => (session is not null && !Paused) || Settling;
+
     public PlanInput? RunInput => session?.Input;
 
     public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
@@ -99,6 +101,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         StartBlock.AutoRetainerNotHeld => Loc.T(L.Run.BlockAutoRetainerNotHeld),
         StartBlock.ProtectListUnreadable => Loc.T(L.Run.BlockProtectListUnreadable),
         StartBlock.NothingNeedsAVisit => Loc.T(L.Run.BlockNothingNeeded),
+        StartBlock.SellListNotOpen => Loc.T(L.Run.BlockSellListNotOpen),
+        StartBlock.RetainerNotEnabled => Loc.T(L.Run.BlockRetainerNotEnabled),
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 

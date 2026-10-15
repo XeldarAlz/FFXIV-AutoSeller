@@ -368,6 +368,8 @@
   "run.block.noRetainers": "No hay ningún empleado activado. Abre una campana de llamada una vez para que Auto Seller pueda leer tus empleados.",
   "run.block.authorization": "No se pudo autorizar la ronda. La consola tiene los detalles.",
   "run.block.nothingNeeded": "Ningún empleado activado necesita una visita: ninguno tiene un anuncio rebajado, un lote por anunciar o un anuncio por retirar. Desactiva «Solo los empleados que lo necesitan» en la página Vender para visitarlos a todos.",
+  "run.block.sellListNotOpen": "Abre primero la lista de venta de un empleado.",
+  "run.block.retainerNotEnabled": "Este empleado no está activado en la página Vender.",
   "run.needs.bellNotReached": "no se pudo llegar a ninguna campana de llamada; colócate junto a una o en tu habitación de la posada y pulsa Iniciar de nuevo",
   "run.needs.windowsStuck": "una ventana de empleado no se abrió o cerró a tiempo",
   "run.needs.unexpectedWindow": "una ventana que el plugin no abrió está en medio",

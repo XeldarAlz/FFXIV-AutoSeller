@@ -231,8 +231,10 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             case RunReaction.EndRun:
                 session.Fail(FailureOf(halt), halt == DriverHalt.Fault);
                 return;
-            case RunReaction.PauseRun when session.Mode == RunMode.Postprocess:
-                Diag($"Run: {halt}; the retainer windows are closed and the retainer goes back to AutoRetainer.");
+            case RunReaction.PauseRun when !session.Mode.TravelsToBell():
+                Diag(session.Mode == RunMode.Postprocess
+                    ? $"Run: {halt}; the retainer windows are closed and the retainer goes back to AutoRetainer."
+                    : $"Run: {halt}; the windows above the sell list are closed and the job ends.");
                 session.Conclude(RunState.Stopped);
                 return;
             case RunReaction.PauseRun:

@@ -60,13 +60,9 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         {
             await SettleWindows();
         }
-        else if (engaged && stop.Halted && session.Mode == RunMode.Postprocess)
-        {
-            await UnwindToMenu(stop);
-        }
         else if (engaged && stop.Halted)
         {
-            await UnwindToBell(stop);
+            await UnwindAfterHalt(stop);
         }
 
         plugin.Marketbuddy.Release();
@@ -89,6 +85,11 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         if (session.Mode == RunMode.Postprocess)
         {
             return await WorkHandedOverRetainer();
+        }
+
+        if (session.Mode == RunMode.OpenSellList)
+        {
+            return await WorkOpenSellList();
         }
 
         var stop = await OpenRetainerList();
@@ -178,12 +179,36 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
+            if (session.Mode == RunMode.OpenSellList)
+            {
+                Diag("Driver: stopped at the open sell list; closing the sell window, the search results and any menu, and leaving the sell list open");
+                await RetainerWindows.CloseOwned(RetainerWindows.AboveSellList, CleanupBoundMs, unloaded);
+                return;
+            }
+
             Diag("Driver: stopped at the retainer; closing the sell window, the search results, the sale history and the sell list");
             await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
         }
         catch (Exception exception)
         {
             RunLog.Warning(exception, "Driver: closing the retainer windows failed");
+        }
+    }
+
+    private async Task UnwindAfterHalt(Stop stop)
+    {
+        switch (session.Mode)
+        {
+            case RunMode.Postprocess:
+                await UnwindToMenu(stop);
+                return;
+            case RunMode.OpenSellList:
+                Diag($"Driver: halted ({stop.Reason}); closing the windows above the sell list and leaving it open");
+                await RetainerWindows.CloseOwned(RetainerWindows.AboveSellList, CleanupBoundMs, unloaded);
+                return;
+            default:
+                await UnwindToBell(stop);
+                return;
         }
     }
 

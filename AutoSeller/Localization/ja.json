@@ -368,6 +368,8 @@
   "run.block.noRetainers": "有効なリテイナーがありません。Auto Seller がリテイナーを読み取れるよう、一度呼び鈴を開いてください。",
   "run.block.authorization": "実行を承認できませんでした。詳細はコンソールにあります。",
   "run.block.nothingNeeded": "訪問が必要な有効なリテイナーがありません。下回られた出品、出品するロット、取り下げる出品のどれもありません。すべて訪問するには、販売ページで「必要なリテイナーだけ」をオフにしてください。",
+  "run.block.sellListNotOpen": "先にリテイナーの出品リストを開いてください。",
+  "run.block.retainerNotEnabled": "このリテイナーは販売ページで有効になっていません。",
   "run.needs.bellNotReached": "どの呼び鈴にもたどり着けませんでした。呼び鈴の前か宿屋の部屋に立って、もう一度開始を押してください",
   "run.needs.windowsStuck": "リテイナーのウィンドウが時間内に開閉しませんでした",
   "run.needs.unexpectedWindow": "プラグインが開いていないウィンドウが邪魔をしています",

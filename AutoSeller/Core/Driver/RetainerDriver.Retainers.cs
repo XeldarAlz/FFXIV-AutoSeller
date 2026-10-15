@@ -112,6 +112,78 @@ internal sealed partial class RetainerDriver
         }
     }
 
+    private async Task<Stop> WorkOpenSellList()
+    {
+        engaged = true;
+        const int index = 0;
+        var retainer = session.Retainers[index];
+        session.WorkOn(index, default);
+        var visit = await VisitOpenSellList(index, retainer);
+        if (CancelToken.IsCancellationRequested)
+        {
+            return Stop.None;
+        }
+
+        switch (DriverHalts.ReactionTo(visit.Stop.Reason))
+        {
+            case RunReaction.Continue:
+                if (visit.Finished)
+                {
+                    session.Visits.MarkVisited(index);
+                }
+
+                return Stop.None;
+            case RunReaction.EndRetainer:
+                session.Visits.MarkSkipped(index, visit.Stop.Reason);
+                Warn($"Driver: {retainer.Name} skipped ({visit.Stop.Reason}): {visit.Stop.Detail}");
+                return await UnwindAboveSellList();
+            default:
+                return visit.Stop;
+        }
+    }
+
+    private async Task<Visit> VisitOpenSellList(int index, RunRetainer retainer)
+    {
+        if (!RetainerClicks.IsReady(RetainerClicks.SellListAddon) || !OpenRetainerIs(retainer.RetainerId))
+        {
+            return new Visit(new Stop(DriverHalt.SellListDidNotOpen, $"the sell list of {retainer.Name} is no longer open; the windows are {UnexpectedAddons.View().Visible}"), false);
+        }
+
+        RetainerReads.ReportSellListKind();
+        var list = RetainerReads.ShownSellListKind();
+        Diag($"Driver: working the open {list} sell list of {retainer.Name}; it stays open at the end.");
+        if (list == SellListKind.RetainerInventory)
+        {
+            RefreshRetainerPages(retainer);
+        }
+
+        session.Show(RunState.ReadingMarket, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Visit(new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read"), false);
+        }
+
+        returns.Clear();
+        var stop = await WorkListings(index, retainer, market);
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkLots(index, retainer, market, list);
+        }
+
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkReturns(index, retainer);
+        }
+
+        if (KeepsWorking(stop) && list == SellListKind.Inventory)
+        {
+            stop = await WorkVendoring(index, retainer);
+        }
+
+        return new Visit(stop, !stop.Halted && !session.PausedAtBoundary);
+    }
+
     private async Task<Visit> VisitHandedOverRetainer(int index)
     {
         var retainer = session.Retainers[index];

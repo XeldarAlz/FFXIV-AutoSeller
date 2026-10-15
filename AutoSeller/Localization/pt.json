@@ -368,6 +368,8 @@
   "run.block.noRetainers": "Nenhum ajudante está ativado. Abra um sino de chamada uma vez para que o Auto Seller possa ler seus ajudantes.",
   "run.block.authorization": "Não foi possível autorizar a rodada. O console tem os detalhes.",
   "run.block.nothingNeeded": "Nenhum ajudante ativado precisa de visita: nenhum tem um anúncio superado, um lote para anunciar ou um anúncio para retirar. Desligue \"Só os ajudantes que precisam\" na página Vender para visitar todos.",
+  "run.block.sellListNotOpen": "Abra primeiro a lista de venda de um ajudante.",
+  "run.block.retainerNotEnabled": "Este ajudante não está ativado na página Vender.",
   "run.needs.bellNotReached": "nenhum sino de chamada pôde ser alcançado; fique junto a um ou no seu quarto da estalagem e pressione Iniciar de novo",
   "run.needs.windowsStuck": "uma janela de ajudante não abriu ou fechou a tempo",
   "run.needs.unexpectedWindow": "uma janela que o plugin não abriu está no caminho",
