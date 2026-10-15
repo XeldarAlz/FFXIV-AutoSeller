@@ -40,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string StartSubcommand = "start";
     private const string StopSubcommand = "stop";
+    private const string HelpSubcommand = "help";
     private const string NavmeshIpcProviderMarker = "Navmesh.IPCProvider";
 
     [PluginService]
@@ -301,6 +302,10 @@ public sealed class Plugin : IDalamudPlugin
         else if (trimmed.Equals("pause", StringComparison.OrdinalIgnoreCase) || trimmed.Equals("resume", StringComparison.OrdinalIgnoreCase))
         {
             Controller.TogglePause();
+        }
+        else if (trimmed.Equals(HelpSubcommand, StringComparison.OrdinalIgnoreCase))
+        {
+            Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.T(L.Plugin.CommandHelp)}");
         }
         else if (trimmed.Equals("target", StringComparison.OrdinalIgnoreCase))
         {

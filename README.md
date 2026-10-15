@@ -99,6 +99,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell start` | Open the Sell page and start a run of the current plan |
 | `/asell stop` | Stop the run |
 | `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
+| `/asell help` | List these commands in the chat |
 | `/asell target` | Log the targeted NPC's BaseId (debug helper) |
 | `/asell look <item id>` | Compare market prices for one item once and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices). With the default send path it needs that item's sell window open at a retainer; with `proxy` it needs a summoning bell or an open market board |
 | `/asell mbstatus` | Write the market checks, the search state, the age of the Universalis reference data and, with a retainer's sell list open, that retainer's listings to the Console (debug helper) |
