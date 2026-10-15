@@ -255,7 +255,7 @@
   "listings.competitorHelp": "Der niedrigste Preis eines anderen Anbieters auf deiner Welt in den neuesten Universalis-Daten.",
   "listings.tip.seen": "An einer Glocke gesehen {0}",
   "listings.tip.repriced": "Zuletzt von einem Lauf neu bepreist {0}",
-  "listings.tip.data": "Universalis-Daten von {0}",
+  "listings.tip.data": "Universalis-Daten: {0}",
   "listings.tip.floor": "Untergrenze: {0}",
   "listings.empty": "Noch keine Angebote. Besuche mit jedem Charakter einmal eine Glocke.",
   "listings.noMatches": "Kein Angebot passt zu diesen Filtern.",

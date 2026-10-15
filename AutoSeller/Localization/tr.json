@@ -255,7 +255,7 @@
   "listings.competitorHelp": "En son Universalis verilerinde dünyanızdaki başka bir satıcının en düşük fiyatı.",
   "listings.tip.seen": "Bir çanda görüldü {0}",
   "listings.tip.repriced": "Bir tur tarafından son yeniden fiyatlama {0}",
-  "listings.tip.data": "Universalis verisi {0}",
+  "listings.tip.data": "Universalis verisi: {0}",
   "listings.tip.floor": "Taban: {0}",
   "listings.empty": "Henüz ilan yok. Her karakterle bir kez bir çanı ziyaret edin.",
   "listings.noMatches": "Bu filtrelere uyan ilan yok.",

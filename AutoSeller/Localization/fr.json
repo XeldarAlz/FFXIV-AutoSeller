@@ -255,7 +255,7 @@
   "listings.competitorHelp": "Le prix le plus bas d'un autre vendeur sur votre monde dans les dernières données Universalis.",
   "listings.tip.seen": "Vu à une sonnette {0}",
   "listings.tip.repriced": "Dernier réajustement par une tournée {0}",
-  "listings.tip.data": "Données Universalis de {0}",
+  "listings.tip.data": "Données Universalis : {0}",
   "listings.tip.floor": "Plancher : {0}",
   "listings.empty": "Pas encore d'annonces. Visitez une sonnette une fois avec chaque personnage.",
   "listings.noMatches": "Aucune annonce ne correspond à ces filtres.",
