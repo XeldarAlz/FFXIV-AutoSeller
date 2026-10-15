@@ -18,8 +18,6 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, reads its sale history, compares prices and records on the Sell page, in History and in the Console what it would reprice, list, return, vendor or move from the saddlebag, without typing a price, returning a listing, selling to a vendor or moving a stack, and Assist shows its suggested price on its card without typing it.
-
 ## What it does
 
 Keeping your retainers' listings at a price that sells means visiting a bell, comparing prices and retyping them, retainer by retainer, every time someone undercuts you. Auto Seller reads your bags and your retainers' listings, plans every change across all of them and shows you that plan before anything is clicked. One Start then goes to a summoning bell, reprices what was undercut, lists what your rules allow, vendors what your rules call junk, checks every change and records your sales.
@@ -112,8 +110,11 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 - **No entrusting.** Gil and items are never entrusted to or withdrawn from retainers; AutoRetainer's entrust plans and gil withdrawal already do that.
 - **Sales inform, they do not steer.** The Sales page shows hints such as "sold in under an hour, consider raising"; prices do not change on their own because of them.
 - **Equipped gear is never a source.**
-- **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer and no Discord or toast notification yet.
+- **Selling only.** Desynthesis, Grand Company turn-ins, coffers and venture rewards are left to the plugins that already do them, such as AutoRetainer, Deliveroo and Auto GC Supply.
+- **No direct market writes.** Some repricers write prices straight into the game's memory. Auto Seller never does: every price goes through the sell window, so it can be checked before Confirm and read back after.
+- **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer, and no chat, toast or Discord alert when a listing is undercut yet.
 - **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
+- **Not yet confirmed in game.** Some of what a run reads follows the game data and other tools rather than a live session so far: the layout and prices of the Sale History window, the values in sale notices, which gil a vendor sale lands in, how soon a retainer's listings fill in after its sell list opens, and the AutoRetainer post-process over real ventures. Each one logs what it read to the Console. Keep the dry run on for your first runs.
 
 ## Languages
 
