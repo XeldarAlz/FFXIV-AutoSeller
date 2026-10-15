@@ -13,6 +13,7 @@ internal static partial class L
         public static readonly LocString TileWeek = new("sales.tile.week", "7 days");
         public static readonly LocString TileMonth = new("sales.tile.month", "30 days");
         public static readonly LocPlural TileUnits = new("sales.tile.units", "{0} item sold", "{0} items sold");
+        public static readonly LocPlural TileListings = new("sales.tile.listings", "{0} listing sold", "{0} listings sold");
         public static readonly LocString TileHelp = new("sales.tile.help", "Gil after the seller fee of each retainer's city, from the sales of every character.");
         public static readonly LocString ChartTitle = new("sales.chart.title", "Gil per day, last 30 days");
         public static readonly LocString ChartPeak = new("sales.chart.peak", "Best day {0}");

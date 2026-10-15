@@ -260,6 +260,8 @@
   "sales.tile.month": "30 Tage",
   "sales.tile.units.one": "{0} Gegenstand verkauft",
   "sales.tile.units.other": "{0} Gegenstände verkauft",
+  "sales.tile.listings.one": "{0} Angebot verkauft",
+  "sales.tile.listings.other": "{0} Angebote verkauft",
   "sales.tile.help": "Gil nach der Verkaufsgebühr der Stadt jedes Gehilfen, aus den Verkäufen aller Charaktere.",
   "sales.chart.title": "Gil pro Tag, letzte 30 Tage",
   "sales.chart.peak": "Bester Tag {0}",

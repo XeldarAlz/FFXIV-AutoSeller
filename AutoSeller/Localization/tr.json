@@ -260,6 +260,8 @@
   "sales.tile.month": "30 gün",
   "sales.tile.units.one": "{0} eşya satıldı",
   "sales.tile.units.other": "{0} eşya satıldı",
+  "sales.tile.listings.one": "{0} ilan satıldı",
+  "sales.tile.listings.other": "{0} ilan satıldı",
   "sales.tile.help": "Her yardımcının şehrindeki satış ücreti düşüldükten sonraki gil, tüm karakterlerin satışlarından.",
   "sales.chart.title": "Günlük gil, son 30 gün",
   "sales.chart.peak": "En iyi gün {0}",

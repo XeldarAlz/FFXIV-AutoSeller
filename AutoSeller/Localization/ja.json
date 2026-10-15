@@ -260,6 +260,8 @@
   "sales.tile.month": "30日間",
   "sales.tile.units.one": "販売数 {0}",
   "sales.tile.units.other": "販売数 {0}",
+  "sales.tile.listings.one": "売れた出品 {0}",
+  "sales.tile.listings.other": "売れた出品 {0}",
   "sales.tile.help": "各リテイナーの都市の販売手数料を引いた後のギルです。全キャラクターの販売を含みます。",
   "sales.chart.title": "1日あたりのギル（直近30日）",
   "sales.chart.peak": "最高の日 {0}",

@@ -260,6 +260,8 @@
   "sales.tile.month": "30 días",
   "sales.tile.units.one": "{0} objeto vendido",
   "sales.tile.units.other": "{0} objetos vendidos",
+  "sales.tile.listings.one": "{0} anuncio vendido",
+  "sales.tile.listings.other": "{0} anuncios vendidos",
   "sales.tile.help": "Guiles tras la comisión de venta de la ciudad de cada empleado, de las ventas de todos los personajes.",
   "sales.chart.title": "Guiles por día, últimos 30 días",
   "sales.chart.peak": "Mejor día {0}",

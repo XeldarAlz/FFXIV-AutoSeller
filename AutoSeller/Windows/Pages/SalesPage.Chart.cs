@@ -44,7 +44,7 @@ internal sealed partial class SalesPage
             dayTooltips[index] = string.Concat(
                 Loc.T(L.Sales.ChartTooltip, day.Day.ToString(DayFormat, Loc.Culture), Formatting.Gil(day.Totals.NetGil)),
                 "\n",
-                Units(day.Totals));
+                SoldCaption(day.Totals));
         }
 
         chartTitle = Loc.T(L.Sales.ChartTitle);

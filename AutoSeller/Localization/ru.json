@@ -260,6 +260,8 @@
   "sales.tile.month": "30 дней",
   "sales.tile.units.one": "Продано: {0}",
   "sales.tile.units.other": "Продано: {0}",
+  "sales.tile.listings.one": "Продано лотов: {0}",
+  "sales.tile.listings.other": "Продано лотов: {0}",
   "sales.tile.help": "Гил после налога с продаж города каждого помощника, по продажам всех персонажей.",
   "sales.chart.title": "Гил в день за последние 30 дней",
   "sales.chart.peak": "Лучший день: {0}",

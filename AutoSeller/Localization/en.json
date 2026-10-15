@@ -260,6 +260,8 @@
   "sales.tile.month": "30 days",
   "sales.tile.units.one": "{0} item sold",
   "sales.tile.units.other": "{0} items sold",
+  "sales.tile.listings.one": "{0} listing sold",
+  "sales.tile.listings.other": "{0} listings sold",
   "sales.tile.help": "Gil after the seller fee of each retainer's city, from the sales of every character.",
   "sales.chart.title": "Gil per day, last 30 days",
   "sales.chart.peak": "Best day {0}",

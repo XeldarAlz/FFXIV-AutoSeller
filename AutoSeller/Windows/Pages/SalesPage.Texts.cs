@@ -67,9 +67,9 @@ internal sealed partial class SalesPage
         today = Formatting.Gil(stats.Today.NetGil);
         week = Formatting.Gil(stats.Week.NetGil);
         month = Formatting.Gil(stats.Month.NetGil);
-        todayUnits = Units(stats.Today);
-        weekUnits = Units(stats.Week);
-        monthUnits = Units(stats.Month);
+        todayUnits = SoldCaption(stats.Today);
+        weekUnits = SoldCaption(stats.Week);
+        monthUnits = SoldCaption(stats.Month);
         BuildChart(stats.Days);
         BuildHints(plugin.GameItems, SalesHints.Compute(sales.AsSpan(), HintListings(listings.Characters), nowUtc));
         var table = listings.Table;
@@ -79,9 +79,9 @@ internal sealed partial class SalesPage
         recentRows = RecentRows(plugin.GameItems, table, sales, nowUtc);
     }
 
-    private static string Units(in SalesTotals totals)
+    private static string SoldCaption(in SalesTotals totals)
     {
-        return Loc.Plural(L.Sales.TileUnits, (int)Math.Min(totals.Units, int.MaxValue));
+        return string.Concat(Loc.Plural(L.Sales.TileUnits, (int)Math.Min(totals.Units, int.MaxValue)), TextDraw.Separator, Loc.Plural(L.Sales.TileListings, totals.Listings));
     }
 
     private static SalesHintListing[] HintListings(ImmutableArray<CharacterRecord> characters)

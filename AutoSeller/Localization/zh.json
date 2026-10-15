@@ -260,6 +260,8 @@
   "sales.tile.month": "30 天",
   "sales.tile.units.one": "售出 {0} 件",
   "sales.tile.units.other": "售出 {0} 件",
+  "sales.tile.listings.one": "售出 {0} 个挂单",
+  "sales.tile.listings.other": "售出 {0} 个挂单",
   "sales.tile.help": "扣除各雇员所在城市出售手续费后的金币，包括所有角色的销售。",
   "sales.chart.title": "每日金币，最近 30 天",
   "sales.chart.peak": "最佳一天 {0}",

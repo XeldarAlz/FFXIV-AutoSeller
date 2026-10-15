@@ -260,6 +260,8 @@
   "sales.tile.month": "30 jours",
   "sales.tile.units.one": "{0} objet vendu",
   "sales.tile.units.other": "{0} objets vendus",
+  "sales.tile.listings.one": "{0} annonce vendue",
+  "sales.tile.listings.other": "{0} annonces vendues",
   "sales.tile.help": "Gils après la taxe de vente de la cité de chaque servant, sur les ventes de tous les personnages.",
   "sales.chart.title": "Gils par jour, 30 derniers jours",
   "sales.chart.peak": "Meilleur jour {0}",

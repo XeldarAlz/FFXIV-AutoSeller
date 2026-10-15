@@ -260,6 +260,8 @@
   "sales.tile.month": "30 dias",
   "sales.tile.units.one": "{0} item vendido",
   "sales.tile.units.other": "{0} itens vendidos",
+  "sales.tile.listings.one": "{0} anúncio vendido",
+  "sales.tile.listings.other": "{0} anúncios vendidos",
   "sales.tile.help": "Gil depois da taxa de venda da cidade de cada ajudante, das vendas de todos os personagens.",
   "sales.chart.title": "Gil por dia, últimos 30 dias",
   "sales.chart.peak": "Melhor dia {0}",
