@@ -14,6 +14,7 @@ internal sealed class PostprocessHandshake
     public const long ReturnBoundMs = 45_000;
     public const long SellNowTakeUpMs = 5_000;
 
+    private readonly HashSet<string> offeredSinceSellNow = new(StringComparer.Ordinal);
     private long sellNowArmedAtMs;
     private bool sellNowWalkSeen;
     private long startedAtMs;
@@ -45,6 +46,18 @@ internal sealed class PostprocessHandshake
         StoodDown = false;
         sellNowArmedAtMs = nowMs;
         sellNowWalkSeen = false;
+        offeredSinceSellNow.Clear();
+    }
+
+    public bool SellNowOfferRepeated(string retainerName)
+    {
+        if (!SellNowArmed || offeredSinceSellNow.Add(retainerName))
+        {
+            return false;
+        }
+
+        SellNowArmed = false;
+        return true;
     }
 
     public bool SellNowWalkEnded(bool autoRetainerBusy, long nowMs)
