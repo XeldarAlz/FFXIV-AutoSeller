@@ -450,6 +450,18 @@ public sealed class ListingRequestMachineTests
         Assert.False(machine.OnEndRequest(10));
     }
 
+    [Fact]
+    public void ACancelledSearchStillPacesTheNextSearch()
+    {
+        var machine = Sent();
+        machine.Cancel();
+
+        machine.Begin(OtherItem, NoJitter);
+
+        Assert.Equal(ListingRequestStep.None, machine.Poll(ListingRequestMachine.MinimumIntervalMs, Item, 0));
+        Assert.Equal(ListingRequestStep.Send, machine.Poll(ListingRequestMachine.DefaultIntervalMs, Item, 0));
+    }
+
     private static ListingRequestMachine Sent()
     {
         var machine = new ListingRequestMachine();
