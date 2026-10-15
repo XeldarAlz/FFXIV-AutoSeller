@@ -14,7 +14,7 @@ internal enum LedgerAnswer : byte
 
 internal sealed class SellLedger
 {
-    private readonly List<WriteRecord> confirmedSinceRead = [];
+    private readonly List<WriteRecord> notedSinceRead = [];
     private JournalReview? review;
 
     public SellLedger(string directoryPath)
@@ -108,19 +108,24 @@ internal sealed class SellLedger
 
     public void NoteConfirmed(WriteIntent intent)
     {
-        confirmedSinceRead.Add(DiffWrites.Confirmed(intent));
+        notedSinceRead.Add(DiffWrites.Confirmed(intent));
     }
 
-    public ImmutableArray<SnapshotDiffWrite> ConfirmedWritesFor(ulong retainerId)
+    public void NoteUnresolved(WriteIntent intent)
+    {
+        notedSinceRead.Add(DiffWrites.Unresolved(intent));
+    }
+
+    public ImmutableArray<SnapshotDiffWrite> DiffWritesFor(ulong retainerId)
     {
         var current = Review;
-        return DiffWrites.For(retainerId, current, CollectionsMarshal.AsSpan(confirmedSinceRead));
+        return DiffWrites.For(retainerId, current, CollectionsMarshal.AsSpan(notedSinceRead));
     }
 
     private JournalReview Load()
     {
         Revision++;
-        confirmedSinceRead.Clear();
+        notedSinceRead.Clear();
         var read = Journal.Read();
         if (read.Failed)
         {

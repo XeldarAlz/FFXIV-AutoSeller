@@ -33,17 +33,17 @@ internal sealed unsafe class MarketReader
     private readonly RawMarketSlot[] reportedSlots = new RawMarketSlot[RetainerSnapshot.SlotCount];
     private readonly RetainerReader retainers;
     private readonly CharacterStore characters;
-    private readonly Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites;
+    private readonly Func<ulong, ImmutableArray<SnapshotDiffWrite>> diffWrites;
     private readonly Action<SnapshotDiff, byte> diffed;
     private readonly StringBuilder line = new();
     private RawReadSummary reportedSummary;
     private MarketReadNotice lastNotice;
 
-    public MarketReader(RetainerReader retainers, CharacterStore characters, Func<ulong, ImmutableArray<SnapshotDiffWrite>> confirmedWrites, Action<SnapshotDiff, byte> diffed, bool available)
+    public MarketReader(RetainerReader retainers, CharacterStore characters, Func<ulong, ImmutableArray<SnapshotDiffWrite>> diffWrites, Action<SnapshotDiff, byte> diffed, bool available)
     {
         this.retainers = retainers;
         this.characters = characters;
-        this.confirmedWrites = confirmedWrites;
+        this.diffWrites = diffWrites;
         this.diffed = diffed;
         Available = available;
     }
@@ -95,7 +95,7 @@ internal sealed unsafe class MarketReader
 
         lastNotice = default;
         data.TryGetSnapshot(retainer.RetainerId, out var previous);
-        var writes = confirmedWrites(retainer.RetainerId);
+        var writes = diffWrites(retainer.RetainerId);
         data.RecordSnapshot(snapshot, writes.AsSpan());
         var counted = capture.CountMatches ? "matching" : $"not matching ({CountCheck})";
         RunLog.Info($"Retainer market: retainer {retainer.RetainerId} read with {snapshot.Slots.Length} listing(s), {counted} the {retainer.MarketItemCount} the retainer announces, and {snapshot.Gil} gil; kept as its last snapshot.");

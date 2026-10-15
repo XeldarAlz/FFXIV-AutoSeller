@@ -3,6 +3,7 @@ using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Sales.Model;
 using AutoSeller.Tests.Ledger;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
@@ -36,6 +37,54 @@ public sealed class DiffWritesTests
         Assert.Equal(
             [
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Listed, byte.MaxValue, Ore, false, LotQuantity, 0, ListedPrice, Now),
+                new SnapshotDiffWrite(SnapshotDiffWriteKind.Repriced, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, UndercutPrice, Now),
+                new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, 0, Now),
+            ],
+            writes.AsSpan().ToArray());
+    }
+
+    [Fact]
+    public void AnUnresolvedReturnCountsAsAReturnOfItsWholeListing()
+    {
+        var writer = new JournalWriter(new MemoryJournal()).Authorize();
+        writer.Intent(ReturnWrite, Return()).Unknown(ReturnWrite);
+        writer.Intent(UnknownWrite).Unknown(UnknownWrite);
+
+        var writes = DiffWrites.For(FirstRetainer, JournalReview.Build(writer.Entries));
+
+        Assert.Equal(
+            [new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, 0, Now)],
+            writes.AsSpan().ToArray());
+    }
+
+    [Fact]
+    public void AListingGoneUnderAnUnresolvedReturnIsNotInferredAsSold()
+    {
+        var writer = new JournalWriter(new MemoryJournal()).Authorize();
+        writer.Intent(ReturnWrite, Return()).Unknown(ReturnWrite);
+        var listing = new ListingSlot((byte)MarketSlot, Ore, false, LotQuantity, ListedPrice);
+        var previous = MarketAt(Now.AddMinutes(-5), listing);
+        var current = MarketAt(Now.AddMinutes(5));
+
+        var unresolved = SnapshotDiff.Compute(previous, current, DiffWrites.For(FirstRetainer, JournalReview.Build(writer.Entries)).AsSpan());
+        var unexplained = SnapshotDiff.Compute(previous, current, []);
+
+        Assert.Equal(SnapshotDiffChangeKind.ReturnedByUs, Assert.Single(unresolved.Changes).Kind);
+        Assert.Empty(InferredSales.From(unresolved, 5));
+        Assert.Single(InferredSales.From(unexplained, 5));
+    }
+
+    [Fact]
+    public void AWriteNotedSinceTheReviewCountsWhetherConfirmedOrUnresolved()
+    {
+        var confirmed = WriteIntent.Record(Reprice(), 2, RunId, Now, RepriceWrite);
+        var unresolved = WriteIntent.Record(Return(), 3, RunId, Now, ReturnWrite);
+        WriteRecord[] noted = [DiffWrites.Confirmed(confirmed), DiffWrites.Unresolved(unresolved)];
+
+        var writes = DiffWrites.For(FirstRetainer, JournalReview.Empty, noted);
+
+        Assert.Equal(
+            [
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Repriced, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, UndercutPrice, Now),
                 new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)MarketSlot, Ore, false, LotQuantity, ListedPrice, 0, Now),
             ],
@@ -78,5 +127,18 @@ public sealed class DiffWritesTests
 
         Assert.Equal(List(), SaleWrite.ForLot(assignment, decision));
         Assert.Throws<ArgumentOutOfRangeException>(() => SaleWrite.ForLot(assignment, decision with { Action = SellAction.Keep }));
+    }
+
+    private static RetainerSnapshot MarketAt(DateTime readAtUtc, params ListingSlot[] listings)
+    {
+        return new RetainerSnapshot
+        {
+            RetainerId = FirstRetainer,
+            CharacterContentId = Character,
+            ReadAtUtc = readAtUtc,
+            Town = 1,
+            Gil = 0,
+            Slots = [.. listings],
+        };
     }
 }

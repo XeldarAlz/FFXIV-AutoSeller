@@ -269,6 +269,11 @@ internal sealed partial class RetainerDriver
             Warn(line);
         }
 
+        if (settlement.Write == RunWrite.Unknown)
+        {
+            plugin.Ledger.NoteUnresolved(intent);
+        }
+
         return journaled ? Stop.None : new Stop(DriverHalt.JournalWriteFailed, $"the journal refused the outcome of write {writeId}: {session.Journal.LastError}");
     }
 

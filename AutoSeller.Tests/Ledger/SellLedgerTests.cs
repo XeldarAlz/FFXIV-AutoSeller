@@ -174,11 +174,11 @@ public sealed class SellLedgerTests
         new JournalWriter(ledger.Journal).Authorize().Intent(FirstWrite).Confirmed(FirstWrite).Intent(SecondWrite, List()).Rejected(SecondWrite);
         ledger.Invalidate();
 
-        var write = Assert.Single(ledger.ConfirmedWritesFor(FirstRetainer));
+        var write = Assert.Single(ledger.DiffWritesFor(FirstRetainer));
 
         Assert.Equal(SnapshotDiffWriteKind.Repriced, write.Kind);
         Assert.Equal((ListedPrice, UndercutPrice), (write.OldUnitPrice, write.NewUnitPrice));
-        Assert.Empty(ledger.ConfirmedWritesFor(SecondRetainer));
+        Assert.Empty(ledger.DiffWritesFor(SecondRetainer));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class SellLedgerTests
         using var directory = new TemporaryDirectory();
         var ledger = new SellLedger(directory.Path);
         var writer = new JournalWriter(ledger.Journal).Authorize();
-        Assert.Empty(ledger.ConfirmedWritesFor(FirstRetainer));
+        Assert.Empty(ledger.DiffWritesFor(FirstRetainer));
         var revision = ledger.Revision;
         var intent = WriteIntent.Record(Reprice(), ledger.Journal.NextSequence, RunId, Now, FirstWrite);
         writer.Append(intent);
@@ -195,11 +195,31 @@ public sealed class SellLedgerTests
 
         ledger.NoteConfirmed(intent);
 
-        var write = Assert.Single(ledger.ConfirmedWritesFor(FirstRetainer));
+        var write = Assert.Single(ledger.DiffWritesFor(FirstRetainer));
         Assert.Equal(revision, ledger.Revision);
         Assert.Equal(SnapshotDiffWriteKind.Repriced, write.Kind);
         Assert.Equal((ListedPrice, UndercutPrice), (write.OldUnitPrice, write.NewUnitPrice));
-        Assert.Empty(ledger.ConfirmedWritesFor(SecondRetainer));
+        Assert.Empty(ledger.DiffWritesFor(SecondRetainer));
+    }
+
+    [Fact]
+    public void AReturnLeftUnresolvedDuringARunExplainsItsGoneListing()
+    {
+        using var directory = new TemporaryDirectory();
+        var ledger = new SellLedger(directory.Path);
+        var writer = new JournalWriter(ledger.Journal).Authorize();
+        Assert.Empty(ledger.DiffWritesFor(FirstRetainer));
+        var intent = WriteIntent.Record(Return(), ledger.Journal.NextSequence, RunId, Now, FirstWrite);
+        writer.Append(intent);
+        writer.Unknown(FirstWrite);
+
+        ledger.NoteUnresolved(intent);
+        var noted = Assert.Single(ledger.DiffWritesFor(FirstRetainer));
+        ledger.Invalidate();
+        var reread = Assert.Single(ledger.DiffWritesFor(FirstRetainer));
+
+        Assert.Equal(SnapshotDiffWriteKind.Returned, noted.Kind);
+        Assert.Equal(noted, reread);
     }
 
     [Fact]
@@ -215,7 +235,7 @@ public sealed class SellLedgerTests
 
         ledger.Invalidate();
 
-        Assert.Single(ledger.ConfirmedWritesFor(FirstRetainer));
+        Assert.Single(ledger.DiffWritesFor(FirstRetainer));
     }
 
     [Fact]

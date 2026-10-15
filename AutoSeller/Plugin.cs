@@ -119,7 +119,7 @@ public sealed class Plugin : IDalamudPlugin
             Ledger = new SellLedger(PluginInterface.ConfigDirectory.FullName);
             PrepareLedger();
             Sales = new SalesLedger(PluginInterface.ConfigDirectory.FullName);
-            RetainerMarket = new MarketReader(Retainers, Characters, Ledger.ConfirmedWritesFor, RecordInferredSales, Retainers.Available);
+            RetainerMarket = new MarketReader(Retainers, Characters, Ledger.DiffWritesFor, RecordInferredSales, Retainers.Available);
             References = new ReferenceService(typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0");
             completed.Push(References.Dispose);
             saleNotices = new SaleNoticeWatcher(Characters, Sales);
