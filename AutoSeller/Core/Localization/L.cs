@@ -154,7 +154,7 @@ internal static partial class L
         public static readonly LocString OutcomeNeedsPlayer = new("history.outcome.needsPlayer", "Needs you");
         public static readonly LocString OutcomeFailed = new("history.outcome.failed", "Failed");
         public static readonly LocString DryRun = new("history.dryRun", "Dry run");
-        public static readonly LocString Retainers = new("history.retainers", "{0} of {1} retainers");
+        public static readonly LocString Retainers = new("history.retainers", "Retainers: {0} of {1}");
         public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
         public static readonly LocString ToList = new("history.toList", "{0} to list");
         public static readonly LocString Repriced = new("history.repriced", "{0} repriced");

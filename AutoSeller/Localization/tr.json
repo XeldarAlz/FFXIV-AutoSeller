@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Size ihtiyaç var",
   "history.outcome.failed": "Başarısız",
   "history.dryRun": "Deneme",
-  "history.retainers": "{0}/{1} yardımcı",
+  "history.retainers": "Yardımcılar: {0}/{1}",
   "history.toReprice": "{0} yeniden fiyatlanacak",
   "history.toList": "{0} ilan verilecek",
   "history.repriced": "{0} yeniden fiyatlandı",

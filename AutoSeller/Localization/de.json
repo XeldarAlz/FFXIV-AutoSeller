@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Braucht dich",
   "history.outcome.failed": "Fehlgeschlagen",
   "history.dryRun": "Testlauf",
-  "history.retainers": "{0} von {1} Gehilfen",
+  "history.retainers": "Gehilfen: {0} von {1}",
   "history.toReprice": "{0} neu zu bepreisen",
   "history.toList": "{0} einzustellen",
   "history.repriced": "{0} neu bepreist",

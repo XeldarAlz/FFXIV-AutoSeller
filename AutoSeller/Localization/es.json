@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Te necesita",
   "history.outcome.failed": "Fallida",
   "history.dryRun": "Prueba",
-  "history.retainers": "{0} de {1} empleados",
+  "history.retainers": "Empleados: {0} de {1}",
   "history.toReprice": "{0} por reajustar",
   "history.toList": "{0} por anunciar",
   "history.repriced": "{0} reajustados",

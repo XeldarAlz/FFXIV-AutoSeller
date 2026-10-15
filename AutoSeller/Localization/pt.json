@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Precisa de você",
   "history.outcome.failed": "Falhou",
   "history.dryRun": "Teste",
-  "history.retainers": "{0} de {1} ajudantes",
+  "history.retainers": "Ajudantes: {0} de {1}",
   "history.toReprice": "{0} para reajustar",
   "history.toList": "{0} para anunciar",
   "history.repriced": "{0} reajustados",

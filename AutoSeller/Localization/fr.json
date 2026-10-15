@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Vous êtes attendu",
   "history.outcome.failed": "Échouée",
   "history.dryRun": "Essai",
-  "history.retainers": "{0} servants sur {1}",
+  "history.retainers": "Servants : {0} sur {1}",
   "history.toReprice": "{0} à réajuster",
   "history.toList": "{0} à mettre en vente",
   "history.repriced": "{0} réajustés",

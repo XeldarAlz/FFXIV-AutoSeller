@@ -415,7 +415,7 @@
   "history.outcome.needsPlayer": "Needs you",
   "history.outcome.failed": "Failed",
   "history.dryRun": "Dry run",
-  "history.retainers": "{0} of {1} retainers",
+  "history.retainers": "Retainers: {0} of {1}",
   "history.toReprice": "{0} to reprice",
   "history.toList": "{0} to list",
   "history.repriced": "{0} repriced",
