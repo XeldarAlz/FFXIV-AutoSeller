@@ -102,12 +102,58 @@ internal sealed unsafe class BagReader
 
     public static long HeldFor(in SaleWrite write)
     {
-        if (write.Kind != WriteKind.List || !TryReadSlot(write.Container, write.Slot, out var held, out var quantity))
+        var item = new ItemKey(write.ItemId, write.IsHq);
+        switch (write.Kind)
+        {
+            case WriteKind.List or WriteKind.Vendor:
+                if (!TryReadSlot(write.Container, write.Slot, out var held, out var quantity))
+                {
+                    return WriteIntent.Unread;
+                }
+
+                return held == item ? quantity : 0;
+            case WriteKind.Return:
+                return RetainerHeld(item);
+            default:
+                return WriteIntent.Unread;
+        }
+    }
+
+    public static long RetainerHeld(ItemKey item)
+    {
+        var manager = InventoryManager.Instance();
+        if (manager == null)
         {
             return WriteIntent.Unread;
         }
 
-        return held == new ItemKey(write.ItemId, write.IsHq) ? quantity : 0;
+        var containers = SourceContainers.RetainerInventory;
+        long held = 0;
+        for (var containerIndex = 0; containerIndex < containers.Length; containerIndex++)
+        {
+            var container = manager->GetInventoryContainer((InventoryType)containers[containerIndex].Container);
+            if (container == null || !container->IsLoaded)
+            {
+                return WriteIntent.Unread;
+            }
+
+            for (var slotIndex = 0; slotIndex < container->Size; slotIndex++)
+            {
+                var slot = container->GetInventorySlot(slotIndex);
+                if (slot != null && slot->ItemId == item.ItemId && slot->Quantity > 0 && ((slot->Flags & InventoryItem.ItemFlags.HighQuality) != 0) == item.IsHq)
+                {
+                    held += slot->Quantity;
+                }
+            }
+        }
+
+        return held;
+    }
+
+    public static long PlayerGil()
+    {
+        var manager = InventoryManager.Instance();
+        return manager == null ? WriteIntent.Unread : manager->GetGil();
     }
 
     public static bool TryReadSlot(uint container, ushort slot, out ItemKey item, out uint quantity)

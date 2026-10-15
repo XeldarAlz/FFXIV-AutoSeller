@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
@@ -60,6 +61,11 @@ internal readonly record struct SaleWrite(
 
         var row = assignment.Lot.Row;
         return new SaleWrite(WriteKind.List, assignment.RetainerId, row.Container, row.Slot, row.ItemId, row.IsHq, assignment.Lot.Quantity, 0, decision.Price, decision.Evidence);
+    }
+
+    public static SaleWrite ForVendor(ulong retainerId, in SlotFacts slot, uint vendorPrice)
+    {
+        return new SaleWrite(WriteKind.Vendor, retainerId, slot.Container, slot.Slot, slot.ItemId, slot.IsHq, slot.Quantity, 0, vendorPrice, default);
     }
 
     public bool TryGetValue(out long value)

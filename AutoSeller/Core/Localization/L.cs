@@ -20,6 +20,7 @@ internal static partial class L
     {
         public static readonly LocString NavSell = new("shell.nav.sell", "Sell");
         public static readonly LocString NavListings = new("shell.nav.listings", "Listings");
+        public static readonly LocString NavSales = new("shell.nav.sales", "Sales");
         public static readonly LocString NavRules = new("shell.nav.rules", "Rules");
         public static readonly LocString NavSettings = new("shell.nav.settings", "Settings");
         public static readonly LocString NavHistory = new("shell.nav.history", "History");
@@ -78,6 +79,9 @@ internal static partial class L
         public static readonly LocString StatusReadingMarket = new("run.status.readingMarket", "{0}: reading the listings");
         public static readonly LocString StatusListing = new("run.status.listing", "{0}: checking {1} ({2} of {3})");
         public static readonly LocString StatusLot = new("run.status.lot", "{0}: pricing {1} for a new listing ({2} of {3})");
+        public static readonly LocString StatusSaleHistory = new("run.status.saleHistory", "{0}: reading the sale history");
+        public static readonly LocString StatusReturning = new("run.status.returning", "{0}: returning {1} to the retainer");
+        public static readonly LocString StatusVendoring = new("run.status.vendoring", "{0}: having the retainer sell {1} to a vendor");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
         public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");
@@ -106,6 +110,7 @@ internal static partial class L
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
         public static readonly LocString BlockAuthorization = new("run.block.authorization", "The run could not be authorized. The Console has the details.");
+        public static readonly LocString BlockNothingNeeded = new("run.block.nothingNeeded", "No enabled retainer needs a visit: none has an undercut listing, a lot to list or a listing to return. Turn off Only retainers that need it on the Sell page to visit them all.");
         public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room and press Start again");
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
         public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
@@ -147,6 +152,10 @@ internal static partial class L
         public static readonly LocString Repriced = new("history.repriced", "{0} repriced");
         public static readonly LocString Listed = new("history.listed", "{0} listed");
         public static readonly LocString Worth = new("history.worth", "worth {0}");
+        public static readonly LocString ToReturn = new("history.toReturn", "{0} to return");
+        public static readonly LocString Returned = new("history.returned", "{0} returned");
+        public static readonly LocString ToVendor = new("history.toVendor", "{0} to vendor for {1}");
+        public static readonly LocString Vendored = new("history.vendored", "{0} vendored for {1}");
         public static readonly LocString Kept = new("history.kept", "{0} kept");
         public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
         public static readonly LocString Tooltip = new("history.tooltip", "Started {0}, ended {1}");

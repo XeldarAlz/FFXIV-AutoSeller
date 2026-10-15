@@ -23,6 +23,20 @@ internal static class RunLabels
             Loc.T(L.History.Worth, Formatting.Gil(listedValue)));
     }
 
+    public static string ReturnsAndVendor(bool dryRun, int returned, int vendored, long vendoredValue)
+    {
+        if (returned == 0 && vendored == 0)
+        {
+            return string.Empty;
+        }
+
+        var returns = returned > 0 ? Loc.T(dryRun ? L.History.ToReturn : L.History.Returned, returned) : string.Empty;
+        var vendor = vendored > 0 ? Loc.T(dryRun ? L.History.ToVendor : L.History.Vendored, vendored, Formatting.Gil(vendoredValue)) : string.Empty;
+        return returns.Length > 0 && vendor.Length > 0
+            ? string.Concat(TextDraw.Separator, returns, TextDraw.Separator, vendor)
+            : string.Concat(TextDraw.Separator, returns, vendor);
+    }
+
     public static Vector4 OutcomeColor(RunState outcome) => outcome switch
     {
         RunState.Completed => Styling.AccentMint,

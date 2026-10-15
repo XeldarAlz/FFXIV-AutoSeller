@@ -136,7 +136,7 @@ internal sealed partial class PlanTable
 
     private static string SuggestedOf(in Decision decision, uint currentPrice)
     {
-        if (PlanRow.WritesAPrice(decision.Action))
+        if (PlanRow.WritesAPrice(decision.Action) || decision.Action == SellAction.Vendor)
         {
             return PlanLabels.Gil(decision.Price);
         }
@@ -230,9 +230,12 @@ internal sealed partial class PlanTable
 
     private static GroupText BuildGroup(SellPlan plan, in PlanGroup group)
     {
-        if (group.RetainerId == PlanRow.Unplaced)
+        switch (group.Kind)
         {
-            return new GroupText { Title = Loc.T(L.Plan.GroupUnplaced), Caption = Loc.Plural(L.Plan.GroupRows, group.Count) };
+            case PlanGroupKind.Unplaced:
+                return new GroupText { Title = Loc.T(L.Plan.GroupUnplaced), Caption = Loc.Plural(L.Plan.GroupRows, group.Count) };
+            case PlanGroupKind.Vendor:
+                return new GroupText { Title = Loc.T(L.Plan.GroupVendor), Caption = Loc.Plural(L.Plan.GroupRows, group.Count) };
         }
 
         plan.TryGetRetainer(group.RetainerId, out var retainer);

@@ -13,7 +13,7 @@ internal sealed class UndercutScan(ReferenceSnapshot? homeReferences, DateTime n
     private readonly List<WorldListing> world = [];
     private readonly HashSet<ItemKey> seen = [];
 
-    public void Add(RetainerSnapshot snapshot, RepriceHistory reprices)
+    public void Add(RetainerSnapshot snapshot, RepriceHistory reprices, ReadOnlySpan<ListingAge> ages)
     {
         if (homeReferences is null)
         {
@@ -25,11 +25,11 @@ internal sealed class UndercutScan(ReferenceSnapshot? homeReferences, DateTime n
         {
             var listing = slots[index];
             var history = reprices.EntryFor(new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key));
-            ours.Add(new WatchedListing(snapshot.RetainerId, listing.Slot, listing.Key, listing.UnitPrice, default, history.LastRepriceUtc));
-            var lowest = MarketEstimate.WorldOf(homeReferences, listing.Key);
-            if (seen.Add(listing.Key) && MarketEstimate.IsKnown(lowest, listing.Key, nowUtc))
+            var listedAt = ListingAges.ListedSince(ages, snapshot.RetainerId, listing, snapshot.ReadAtUtc);
+            ours.Add(new WatchedListing(snapshot.RetainerId, listing.Slot, listing.Key, listing.UnitPrice, listedAt, history.LastRepriceUtc));
+            if (seen.Add(listing.Key) && MarketEstimate.TryWorldLowest(homeReferences, listing.Key, nowUtc, out var lowest))
             {
-                world.Add(new WorldListing(listing.Key, lowest.LowestListing, lowest.UpdatedAtUtc));
+                world.Add(lowest);
             }
         }
     }

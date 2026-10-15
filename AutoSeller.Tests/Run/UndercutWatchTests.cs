@@ -7,7 +7,6 @@ public sealed class UndercutWatchTests
 {
     private const ulong FirstRetainer = 101;
     private const ulong SecondRetainer = 102;
-    private const ulong ThirdRetainer = 103;
 
     private static readonly ItemKey normalOre = new(5_111, false);
     private static readonly ItemKey highOre = new(5_111, true);
@@ -169,27 +168,7 @@ public sealed class UndercutWatchTests
     }
 
     [Fact]
-    public void OnlyEnabledRetainersWithAMarkNeedAVisitInTheirOrder()
-    {
-        WatchedListing[] ours =
-        [
-            Ours(ThirdRetainer, 0, normalOre, 1_000),
-            Ours(FirstRetainer, 0, cloth, 50),
-            Ours(FirstRetainer, 1, normalOre, 1_100),
-            Ours(SecondRetainer, 0, highOre, 1_000),
-        ];
-        WorldListing[] world = [World(normalOre, 900), World(cloth, 60), World(highOre, 1_200)];
-        var marks = UndercutWatch.Mark(ours, world, noOtherListings, checkedAt);
-
-        var visits = UndercutWatch.RetainersToVisit([FirstRetainer, SecondRetainer, ThirdRetainer], marks.AsSpan());
-        var enabledWithoutThird = UndercutWatch.RetainersToVisit([SecondRetainer, FirstRetainer], marks.AsSpan());
-
-        Assert.Equal<ulong>([FirstRetainer, ThirdRetainer], visits);
-        Assert.Equal<ulong>([FirstRetainer], enabledWithoutThird);
-    }
-
-    [Fact]
-    public void AnAltListingBelowOursSendsNoRunTickAfterTick()
+    public void AnAltListingBelowOursMarksNothingTickAfterTick()
     {
         WatchedListing[] ours = [Ours(FirstRetainer, 0, normalOre, 1_000)];
         OwnListingPrice[] altListings = [new(normalOre, 900)];
@@ -198,16 +177,9 @@ public sealed class UndercutWatchTests
         {
             var checkedThen = checkedAt.AddMinutes(30 * tick);
             WorldListing[] world = [World(normalOre, 900) with { UploadedAtUtc = checkedThen.AddMinutes(-1) }];
-            var marks = UndercutWatch.Mark(ours, world, altListings, checkedThen);
 
-            Assert.Empty(UndercutWatch.RetainersToVisit([FirstRetainer], marks.AsSpan()));
+            Assert.Empty(UndercutWatch.Mark(ours, world, altListings, checkedThen));
         }
-    }
-
-    [Fact]
-    public void NoMarksMeansNoRetainerNeedsAVisit()
-    {
-        Assert.Empty(UndercutWatch.RetainersToVisit([FirstRetainer, SecondRetainer], []));
     }
 
     private static WatchedListing Ours(ulong retainerId, byte slot, ItemKey item, uint unitPrice)

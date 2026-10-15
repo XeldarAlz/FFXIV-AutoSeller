@@ -9,6 +9,11 @@ internal static partial class L
         public static readonly LocString PricesAge = new("plan.pricesAge", "Prices {0}");
         public static readonly LocString PricesNone = new("plan.pricesNone", "No prices yet");
         public static readonly LocString PricesFetching = new("plan.pricesFetching", "Fetching prices…");
+        public static readonly LocPlural WatchUndercut = new("plan.watchUndercut", "{0} undercut", "{0} undercut");
+        public static readonly LocString WatchHelp = new("plan.watchHelp", "The undercut watch checks your listings against Universalis every {0} minutes, with no game request.");
+        public static readonly LocString OnlyNeededHelp = new("plan.onlyNeededHelp", "Click to choose for the next run. On, the run visits only the retainers with an undercut listing, a lot to list or a listing to return. Settings, Assist and watch, hold the default.");
+        public static readonly LocString OnlyNeededCount = new("plan.onlyNeededCount", "{0} of {1}");
+        public static readonly LocString WatchOffHelp = new("plan.watchOffHelp", "The undercut watch is off, so listings are checked against Universalis only when the plan refreshes. Turn it on under Settings, Assist and watch.");
         public static readonly LocString RefreshHelp = new("plan.refreshHelp", "Read your bags again and fetch fresh Universalis prices for every item in the plan.");
         public static readonly LocString RefreshStarted = new("plan.refreshStarted", "Fetching fresh prices");
         public static readonly LocString RefreshCooling = new("plan.refreshCooling", "Refresh again in {0} s");
@@ -43,6 +48,7 @@ internal static partial class L
         public static readonly LocString ColumnSuggestedHelp = new("plan.column.suggestedHelp", "The price the run would set. Before the run it is an estimate from Universalis; the run compares prices at the board before it decides.");
         public static readonly LocString ColumnReferenceHelp = new("plan.column.referenceHelp", "The average price of recent sales of this quality on your world, or on your data center when your world has none.");
         public static readonly LocString GroupUnplaced = new("plan.group.unplaced", "Not placed");
+        public static readonly LocString GroupVendor = new("plan.group.vendor", "To the vendor, through a retainer");
         public static readonly LocPlural GroupRows = new("plan.group.rows", "{0} row", "{0} rows");
         public static readonly LocString GroupChanges = new("plan.group.changes", "{0} to change");
         public static readonly LocString GroupNothing = new("plan.group.nothing", "Nothing to do here");
@@ -69,6 +75,10 @@ internal static partial class L
         public static readonly LocString DoneRefused = new("plan.done.refused", "Refused");
         public static readonly LocString DoneRepriced = new("plan.done.repriced", "Repriced");
         public static readonly LocString DoneListed = new("plan.done.listed", "Listed");
+        public static readonly LocString DoneReturn = new("plan.done.return", "Would return");
+        public static readonly LocString DoneReturned = new("plan.done.returned", "Returned");
+        public static readonly LocString DoneVendor = new("plan.done.vendor", "Would vendor");
+        public static readonly LocString DoneVendored = new("plan.done.vendored", "Vendored");
         public static readonly LocString DoneRejected = new("plan.done.rejected", "Not changed");
         public static readonly LocString DoneUnknown = new("plan.done.unknown", "Unconfirmed");
         public static readonly LocString DoneCancelled = new("plan.done.cancelled", "Cancelled");
@@ -96,6 +106,7 @@ internal static partial class L
         public static readonly LocString ReasonUnknownCompetition = new("plan.reason.unknownCompetition", "No usable market data yet, kept");
         public static readonly LocString ReasonNoPriceData = new("plan.reason.noPriceData", "No price data");
         public static readonly LocString ReasonJunk = new("plan.reason.junk", "Junk by your vendor rule");
+        public static readonly LocString ReasonVendorList = new("plan.reason.vendorList", "On your vendor list");
         public static readonly LocString ReasonNotEligible = new("plan.reason.notEligible", "No rule of yours covers it");
         public static readonly LocString ReasonNoFreeSlot = new("plan.reason.noFreeSlot", "No free listing slot");
         public static readonly LocString ReasonExcluded = new("plan.reason.excluded", "Left out by you");

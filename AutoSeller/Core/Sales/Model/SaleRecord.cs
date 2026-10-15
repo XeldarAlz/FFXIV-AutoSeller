@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 
@@ -34,13 +35,30 @@ internal readonly record struct SaleRecord(
 
     public SnapshotDiffCorroboration GilCorroboration { get; init; }
 
+    [JsonIgnore]
     public ItemKey Key => new(ItemId, IsHq);
 
+    [JsonIgnore]
     public SaleConfidence Confidence => Source == SaleSource.Diff ? SaleConfidence.Inferred : SaleConfidence.Confirmed;
 
+    [JsonIgnore]
+    public bool IsUncertain => Confidence == SaleConfidence.Inferred && GilCorroboration == SnapshotDiffCorroboration.Uncorroborated;
+
+    [JsonIgnore]
     public long GrossGil => Gil.SaturatingMultiply(UnitPrice, Quantity);
 
+    [JsonIgnore]
     public bool HasListingTime => ListedAtUtc != default;
 
+    [JsonIgnore]
     public bool HasUnitPrice => UnitPrice != UnknownUnitPrice;
+
+    [JsonIgnore]
+    public bool IsWellFormed => CharacterContentId != 0
+        && ItemId != 0
+        && Quantity > 0
+        && NetGil >= 0
+        && SoldAtUtc != default
+        && SoldAfterUtc <= SoldAtUtc
+        && Source <= SaleSource.Diff;
 }

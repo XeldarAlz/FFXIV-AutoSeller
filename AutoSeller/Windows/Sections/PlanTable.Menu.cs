@@ -108,8 +108,12 @@ internal sealed partial class PlanTable
             }
         }
 
-        ImGui.Separator();
-        DrawPriceEditor(builder, row);
+        if (row.CanSetPrice)
+        {
+            ImGui.Separator();
+            DrawPriceEditor(builder, row);
+        }
+
         if (row.Has(PlanRowEdits.PriceSet) && ImGui.Selectable(Loc.T(L.Plan.MenuClearPrice)))
         {
             builder.ClearPrice(row);

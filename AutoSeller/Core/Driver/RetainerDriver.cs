@@ -167,8 +167,8 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
-            Diag("Driver: stopped at the retainer; closing the sell window, the search results and the sell list");
-            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+            Diag("Driver: stopped at the retainer; closing the sell window, the search results, the sale history and the sell list");
+            await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
         }
         catch (Exception exception)
         {
@@ -195,8 +195,8 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
-            Diag($"Driver: halted ({stop.Reason}); closing the sell windows, leaving the retainer and closing the retainer list");
-            await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, CleanupBoundMs, unloaded);
+            Diag($"Driver: halted ({stop.Reason}); closing the sell windows and the sale history, leaving the retainer and closing the retainer list");
+            await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
             await LeaveRetainerMenu();
             if (await RetainerWindows.RepeatUntil(RetainerClicks.CloseRetainerList, static () => !RetainerClicks.IsReady(RetainerClicks.RetainerListAddon), RetainerListCloseMs, unloaded))
             {
@@ -221,7 +221,7 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         Settled = true;
         var visits = session.Visits;
         var tally = session.Tally;
-        var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.Repriced} repriced, {tally.Listed} listed, {tally.Kept} kept, {tally.Skipped} skipped{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";
+        var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.Repriced} repriced, {tally.Listed} listed, {tally.Returned} returned, {tally.Vendored} vendored for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";
         if (stop.Halted)
         {
             Warn($"{summary}; halted ({stop.Reason}): {stop.Detail}");

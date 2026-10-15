@@ -79,6 +79,17 @@ public sealed class ChainWindowTests
     }
 
     [Fact]
+    public void AStopWhileTheSaleHistoryIsOpenClosesItBeforeTheRetainerMenu()
+    {
+        var visible = ChainWindow.SelectString | ChainWindow.RetainerHistory;
+
+        var next = ChainUnwind.NextToClose(visible & ChainUnwind.Owned);
+
+        Assert.Equal(ChainWindow.RetainerHistory, next);
+        Assert.True(ChainUnwind.AtRetainerMenu(visible & ~next));
+    }
+
+    [Fact]
     public void TheUnwindOwnsOnlyTheSellWindows()
     {
         var owned = ChainWindow.InputNumeric | ChainWindow.ItemSearchResult | ChainWindow.ContextMenu | ChainWindow.RetainerSell | ChainWindow.RetainerHistory | ChainWindow.RetainerSellList;

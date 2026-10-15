@@ -27,4 +27,30 @@ public sealed class WatchIntervalTests
         Assert.Contains(WatchInterval.DefaultMinutes, WatchInterval.ChoiceMinutes);
         Assert.Equal(WatchInterval.OffMinutes, WatchInterval.ChoiceMinutes[0]);
     }
+
+    [Fact]
+    public void AWatchThatNeverCheckedIsDueAtOnce()
+    {
+        Assert.True(WatchInterval.IsDue(WatchInterval.NeverChecked, 0, 15));
+        Assert.True(WatchInterval.IsDue(WatchInterval.NeverChecked, long.MaxValue, 60));
+    }
+
+    [Theory]
+    [InlineData(15, 899_999L, false)]
+    [InlineData(15, 900_000L, true)]
+    [InlineData(60, 3_599_999L, false)]
+    [InlineData(60, 3_600_000L, true)]
+    public void TheNextCheckWaitsTheWholeInterval(int minutes, long elapsedMs, bool due)
+    {
+        const long lastCheckedMs = 5_000;
+
+        Assert.Equal(due, WatchInterval.IsDue(lastCheckedMs, lastCheckedMs + elapsedMs, minutes));
+    }
+
+    [Fact]
+    public void AWatchThatIsOffIsNeverDue()
+    {
+        Assert.False(WatchInterval.IsDue(WatchInterval.NeverChecked, 0, WatchInterval.OffMinutes));
+        Assert.False(WatchInterval.IsDue(0, long.MaxValue, WatchInterval.OffMinutes));
+    }
 }

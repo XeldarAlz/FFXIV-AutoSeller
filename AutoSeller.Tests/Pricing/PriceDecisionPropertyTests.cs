@@ -599,6 +599,7 @@ public sealed class PriceDecisionPropertyTests
     private static bool IsBelowFloorKeepReason(DecisionReason reason)
     {
         return reason is DecisionReason.BelowFloorKept
+            or DecisionReason.PlayerPriceBelowFloor
             or DecisionReason.Cooldown
             or DecisionReason.UnknownCompetition
             or DecisionReason.NoPriceData;

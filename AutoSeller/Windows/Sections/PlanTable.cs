@@ -159,7 +159,7 @@ internal sealed partial class PlanTable
             var title = TextDraw.Truncate(text.Title, columns.Right - columns.Left);
             var size = TextDraw.Measure(title);
             titleWidth = size.X;
-            TextDraw.At(title, new Vector2(origin.X, midY - size.Y * 0.5f), group.RetainerId == PlanRow.Unplaced ? Styling.TextDim : Styling.TextStrong);
+            TextDraw.At(title, new Vector2(origin.X, midY - size.Y * 0.5f), group.Kind == PlanGroupKind.Unplaced ? Styling.TextDim : Styling.TextStrong);
         }
 
         using (Fonts.PushCaption())

@@ -83,11 +83,11 @@ internal static class LedgerCards
         var write = intent.Write;
         var retainer = RetainerName(plugin, write.RetainerId);
         var latest = ReadAgainWhenOpen(plugin, write.RetainerId, intent.AtUtc);
-        var hint = ReconcileHints.From(intent, latest, BagReader.HeldFor(write));
+        var hint = ReconcileHints.From(intent, latest, HeldNow(plugin, write), GilNow(write));
         var key = HashCode.Combine(plugin.Ledger.Revision, unresolved.WriteId, hint, Environment.TickCount64 / TimeUnits.MillisecondsPerMinute);
         if (!titleText.TryGet(key, out var title))
         {
-            title = titleText.Set(key, Loc.T(write.Kind == WriteKind.List ? L.Journal.ListTitle : L.Journal.RepriceTitle, Formatting.Gil(write.NewPrice)));
+            title = titleText.Set(key, Title(write));
         }
 
         if (!factsText.TryGet(key, out var facts))
@@ -130,6 +130,21 @@ internal static class LedgerCards
         return latest;
     }
 
+    private static long HeldNow(Plugin plugin, in SaleWrite write)
+    {
+        if (write.Kind == WriteKind.Return && (!plugin.Retainers.TryGetOpenRetainer(out var open) || open.RetainerId != write.RetainerId))
+        {
+            return WriteIntent.Unread;
+        }
+
+        return BagReader.HeldFor(write);
+    }
+
+    private static long GilNow(in SaleWrite write)
+    {
+        return write.Kind == WriteKind.Vendor && VendorGil.Source == VendorGilSource.Character ? BagReader.PlayerGil() : WriteIntent.Unread;
+    }
+
     private static void Answer(Plugin plugin, in UnresolvedWrite unresolved, bool applied, ReconcileHint hint)
     {
         var agreesWithRead = (applied && hint == ReconcileHint.Applied) || (!applied && hint == ReconcileHint.NotApplied);
@@ -152,10 +167,21 @@ internal static class LedgerCards
         var item = write.IsHq ? string.Concat(name, " ", Loc.T(L.Rules.HighQuality)) : name;
         var quantity = PlanLabels.Count(write.Quantity);
         var when = Formatting.RelativeTime(intent.AtUtc);
-        return write.Kind == WriteKind.List
-            ? Loc.T(L.Journal.ListFacts, item, quantity, retainer, when)
-            : Loc.T(L.Journal.RepriceFacts, item, quantity, retainer, Formatting.Gil(write.OldPrice), Formatting.Gil(write.NewPrice), when);
+        return write.Kind switch
+        {
+            WriteKind.List or WriteKind.Return => Loc.T(L.Journal.ListFacts, item, quantity, retainer, when),
+            WriteKind.Vendor => Loc.T(L.Journal.VendorFacts, item, quantity, retainer, when),
+            _ => Loc.T(L.Journal.RepriceFacts, item, quantity, retainer, Formatting.Gil(write.OldPrice), Formatting.Gil(write.NewPrice), when),
+        };
     }
+
+    private static string Title(in SaleWrite write) => write.Kind switch
+    {
+        WriteKind.List => Loc.T(L.Journal.ListTitle, Formatting.Gil(write.NewPrice)),
+        WriteKind.Return => Loc.T(L.Journal.ReturnTitle),
+        WriteKind.Vendor => Loc.T(L.Journal.VendorTitle, Formatting.Gil(write.TryGetValue(out var value) ? value : 0)),
+        _ => Loc.T(L.Journal.RepriceTitle, Formatting.Gil(write.NewPrice)),
+    };
 
     private static string Hint(ReconcileHint hint, string retainer) => hint switch
     {

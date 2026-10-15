@@ -79,6 +79,16 @@ internal static class SellListRows
         return found;
     }
 
+    public static int ShownRowFor(ReadOnlySpan<SellListRow> rows, ReadOnlySpan<ListingSlot> listings, in ListingSlot listing, string itemName)
+    {
+        return rows.IsEmpty ? NoRow : RowFor(rows, listings, listing, itemName);
+    }
+
+    public static bool ShowsAt(ReadOnlySpan<SellListRow> rows, int row, in ListingSlot listing, string itemName)
+    {
+        return row >= 0 && row < rows.Length && Shows(rows[row], listing, itemName);
+    }
+
     public static bool Shows(in SellListRow row, in ListingSlot listing, string itemName)
     {
         return row.IsHq == listing.IsHq

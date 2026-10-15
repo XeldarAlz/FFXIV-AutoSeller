@@ -1,3 +1,4 @@
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Sales.Model;
 using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Sales.SaleFixtures;
@@ -61,6 +62,21 @@ public sealed class LowestPriceStreakTests
         var lowestSince = Fold(PriceSetAt, Check(0.5, OurPrice));
 
         Assert.Equal(lowestSince, LowestPriceStreak.Advance(lowestSince, OurPrice, PriceSetAt, new LowestPriceCheck(PriceSetAt.AddDays(-1), 150)));
+    }
+
+    [Fact]
+    public void AWatchedListingIsJudgedFromTheLaterOfItsListingAndItsLastReprice()
+    {
+        var repricedAt = PriceSetAt.AddDays(2);
+        var watched = new WatchedListing(FirstRetainerId, 0, new ItemKey(DarksteelOre, false), OurPrice, PriceSetAt, repricedAt);
+        var beforeTheReprice = LowestPriceCheck.Of(new WorldListing(watched.Item, OurPrice, PriceSetAt.AddDays(1)));
+        var afterTheReprice = LowestPriceCheck.Of(new WorldListing(watched.Item, OurPrice, PriceSetAt.AddDays(3)));
+
+        Assert.Equal(repricedAt, watched.PricedAtUtc);
+        Assert.Equal(PriceSetAt.AddDays(4), (watched with { ListedAtUtc = PriceSetAt.AddDays(4) }).PricedAtUtc);
+        Assert.Equal(new LowestPriceCheck(PriceSetAt.AddDays(3), OurPrice), afterTheReprice);
+        Assert.Equal(default, LowestPriceStreak.Advance(default, watched.UnitPrice, watched.PricedAtUtc, beforeTheReprice));
+        Assert.Equal(PriceSetAt.AddDays(3), LowestPriceStreak.Advance(default, watched.UnitPrice, watched.PricedAtUtc, afterTheReprice));
     }
 
     [Fact]

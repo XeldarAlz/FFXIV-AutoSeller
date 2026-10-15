@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Sales.Model;
 using ECommons.DalamudServices;
 using Lumina.Excel.Sheets;
 
@@ -9,13 +10,19 @@ namespace AutoSeller.Core.Items;
 
 internal readonly record struct GameItem(ItemFacts Facts, string Name, ushort IconId, bool CanBeHq);
 
-internal sealed class GameItems
+internal sealed class GameItems : ISaleItemNames
 {
     private readonly ConcurrentDictionary<uint, GameItem> cache = new();
 
     public GameItem Get(uint itemId)
     {
         return cache.GetOrAdd(itemId, static id => Read(id));
+    }
+
+    public bool TryGetName(uint itemId, out string name)
+    {
+        name = Get(itemId).Name;
+        return name.Length > 0;
     }
 
     public ItemFacts FactsOf(uint itemId)

@@ -322,7 +322,8 @@ internal sealed partial class SellController
         Record(active, tally, endedAtUtc);
         RunLog.Info(
             $"Run {authorization.RunId} ended {active.State}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
-            $"{tally.Repriced} {(authorization.DryRun ? "would reprice" : "repriced")}, {tally.Listed} {(authorization.DryRun ? "would list" : "listed")} worth {tally.ListedValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
+            $"{tally.Repriced} {(authorization.DryRun ? "would reprice" : "repriced")}, {tally.Listed} {(authorization.DryRun ? "would list" : "listed")} worth {tally.ListedValue} gil, " +
+            $"{tally.Returned} {(authorization.DryRun ? "would return" : "returned")}, {tally.Vendored} {(authorization.DryRun ? "would vendor" : "vendored")} for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
     }
 
     private static void Announce(SellRunSession active, in RunTally tally)
@@ -372,6 +373,9 @@ internal sealed partial class SellController
             tally.ListedValue,
             tally.Kept,
             tally.Skipped,
-            [.. active.Decisions]));
+            [.. active.Decisions],
+            tally.Returned,
+            tally.Vendored,
+            tally.VendoredValue));
     }
 }

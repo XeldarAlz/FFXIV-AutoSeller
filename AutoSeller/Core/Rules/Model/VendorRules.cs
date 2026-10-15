@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
+using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Rules.Model;
@@ -28,6 +30,7 @@ internal enum VendorReason : byte
     NoReferenceValue,
     NotJunk,
     RunCapReached,
+    Excluded,
 }
 
 internal readonly record struct VendorVerdict(SlotFacts Slot, VendorReason Reason, long VendorValue)
@@ -37,7 +40,7 @@ internal readonly record struct VendorVerdict(SlotFacts Slot, VendorReason Reaso
 
 internal static class VendorRules
 {
-    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, RuleBook rules, long vendoredValueCap)
+    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, RuleBook rules, long vendoredValueCap, PlanEdits edits)
     {
         var verdicts = new VendorVerdict[stock.Length];
         long vendoredValue = 0;
@@ -45,6 +48,11 @@ internal static class VendorRules
         {
             var entry = stock[index];
             var verdict = new VendorVerdict(entry.Slot, Check(entry, rules), VendorValue(entry));
+            if (verdict.IsVendored && edits.IsExcluded(PlanRowKey.ForVendor(entry.Slot)))
+            {
+                verdict = verdict with { Reason = VendorReason.Excluded };
+            }
+
             if (verdict.IsVendored)
             {
                 var total = Gil.SaturatingAdd(vendoredValue, verdict.VendorValue);
@@ -62,6 +70,36 @@ internal static class VendorRules
         }
 
         return ImmutableCollectionsMarshal.AsImmutableArray(verdicts);
+    }
+
+    public static ImmutableArray<VendorVerdict> Due(ImmutableArray<StockSlot> stock, RuleBook rules, long remainingValueCap, IReadOnlySet<PlanRowKey> handled, PlanEdits edits)
+    {
+        var open = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
+        for (var index = 0; index < stock.Length; index++)
+        {
+            if (!handled.Contains(PlanRowKey.ForVendor(stock[index].Slot)))
+            {
+                open.Add(stock[index]);
+            }
+        }
+
+        var verdicts = Plan(open.ToImmutable(), rules, Math.Max(0, remainingValueCap), edits);
+        var due = ImmutableArray.CreateBuilder<VendorVerdict>();
+        for (var index = 0; index < verdicts.Length; index++)
+        {
+            if (verdicts[index].IsVendored)
+            {
+                due.Add(verdicts[index]);
+            }
+        }
+
+        return due.ToImmutable();
+    }
+
+    public static Decision DecisionFor(in VendorVerdict verdict, uint vendorPrice)
+    {
+        var reason = verdict.Reason == VendorReason.VendorList ? DecisionReason.VendorList : DecisionReason.Junk;
+        return new Decision(SellAction.Vendor, vendorPrice, 0, reason, default);
     }
 
     public static VendorReason Check(in StockSlot stock, RuleBook rules)

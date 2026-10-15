@@ -16,7 +16,12 @@ public sealed class SellPlannerTests
     private const uint FarAboveReference = 5_000;
     private const uint BoardProposal = 650;
 
+    private const uint Junk = 7_777;
+    private const uint JunkQuantity = 10;
+    private const uint JunkVendorPrice = 5;
+
     private static readonly ListingSlot listedAtReference = OreListing(0, ListedPrice);
+    private static readonly StockSlot junkSlot = new(new SlotFacts(0, Junk, JunkQuantity, BagContainer, 9, 0, SlotSource.Bags, false, false, false), new ItemFacts(Junk, 999, JunkVendorPrice, 0, 0, false, false, false, false), 0);
     private static readonly PlanRowKey listingKey = PlanRowKey.ForListing(Alpha, listedAtReference);
 
     [Fact]
@@ -171,6 +176,20 @@ public sealed class SellPlannerTests
         Assert.False(Row(Build(afterTheData), listingKey).IsUndercut);
         Assert.False(Row(ours, listingKey).IsUndercut);
         Assert.False(Row(ours, PlanRowKey.ForListing(Alpha, lowest)).IsUndercut);
+    }
+
+    [Fact]
+    public void AListingIsUndercutOnlyByDataNewerThanItsListingTime()
+    {
+        var seenAfterTheData = MarketOf(Alpha, Now.AddMinutes(-10), 10_000, listedAtReference);
+        var listedBeforeTheData = new ListingAge(Alpha, listedAtReference, Now.AddHours(-3));
+        var unknownAge = Input([OreRule()], [seenAfterTheData, MarketAt(Beta)]);
+        var knownAge = unknownAge with { ListingAges = [listedBeforeTheData] };
+
+        Assert.False(Row(Build(unknownAge), listingKey).IsUndercut);
+        Assert.Empty(Build(unknownAge).RetainersToVisit(true));
+        Assert.True(Row(Build(knownAge), listingKey).IsUndercut);
+        Assert.Equal<ulong>([Alpha], Build(knownAge).RetainersToVisit(true));
     }
 
     [Fact]
@@ -376,6 +395,133 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void AListingHeldBelowItsFloorForThreeDaysIsPlannedForReturnWhenThatIsOn()
+    {
+        var floorAboveTheBoard = new ItemRule { ItemId = Ore, Floor = WorldLowest + 100 };
+        var below = new RepriceKey(Alpha, listedAtReference.Slot, listedAtReference.Key);
+        var input = Input([floorAboveTheBoard], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]) with
+        {
+            Pricing = new PricingSettings { BelowFloorListing = BelowFloorListing.ReturnAfterDelay },
+            Streaks = [new ListingStreak(below, default, Now - PricingSettings.BelowFloorReturnDelay)],
+        };
+
+        var returned = Row(Build(input), listingKey);
+        var kept = Row(Build(input with { Streaks = [new ListingStreak(below, default, Now.AddDays(-1))] }), listingKey);
+
+        Assert.Equal(SellAction.Return, returned.Decision.Action);
+        Assert.Equal(DecisionReason.BelowFloorReturned, returned.Decision.Reason);
+        Assert.Equal(SellAction.Keep, kept.Decision.Action);
+        Assert.Equal(DecisionReason.BelowFloorKept, kept.Decision.Reason);
+    }
+
+    [Fact]
+    public void OnlyTheRetainersWithAnUndercutListingNeedAVisit()
+    {
+        var plan = Build(Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta, OreListing(1, WorldLowest - 10))]));
+
+        Assert.Equal<ulong>([Alpha], plan.RetainersToVisit(true));
+        Assert.Equal<ulong>([Alpha, Beta], plan.RetainersToVisit(false));
+    }
+
+    [Fact]
+    public void ARetainerWithALotToListOrAListingToReturnNeedsAVisit()
+    {
+        var cheap = OreListing(0, WorldLowest - 10);
+        var floorAboveTheBoard = new ItemRule { ItemId = Ore, Floor = WorldLowest + 100 };
+        var returning = Input([floorAboveTheBoard], [MarketAt(Alpha, cheap), MarketAt(Beta)]) with
+        {
+            Pricing = new PricingSettings { BelowFloorListing = BelowFloorListing.ReturnAfterDelay },
+            Streaks = [new ListingStreak(new RepriceKey(Alpha, cheap.Slot, cheap.Key), default, Now - PricingSettings.BelowFloorReturnDelay)],
+        };
+
+        var lots = Build(Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags)));
+        var returns = Build(returning);
+
+        Assert.Equal(SellAction.List, Row(lots, LotKey()).Decision.Action);
+        Assert.Equal<ulong>([Beta], lots.RetainersToVisit(true));
+        Assert.Equal(SellAction.Return, Row(returns, PlanRowKey.ForListing(Alpha, cheap)).Decision.Action);
+        Assert.False(Row(returns, PlanRowKey.ForListing(Alpha, cheap)).IsUndercut);
+        Assert.Equal<ulong>([Alpha], returns.RetainersToVisit(true));
+    }
+
+    [Fact]
+    public void AnExcludedRowGivesItsRetainerNoNeedOfAVisit()
+    {
+        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]);
+        PlanEdits.None.TryApply(PlanEdit.Exclude(listingKey, Now), new PlanEditTarget(listingKey, 0, 0), out var excluded);
+
+        Assert.Equal<ulong>([Alpha], Build(input).RetainersToVisit(true));
+        Assert.Empty(Build(input with { Edits = excluded }).RetainersToVisit(true));
+    }
+
+    [Fact]
+    public void ADisabledRetainerIsNotVisitedEvenWhenUndercut()
+    {
+        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]) with
+        {
+            Retainers = [new PlanRetainer(Alpha, AlphaName, false), new PlanRetainer(Beta, BetaName, true)],
+        };
+
+        Assert.Empty(Build(input).RetainersToVisit(true));
+    }
+
+    [Fact]
+    public void TotalsCountTheVendorGilOfWhatTheVendorRulesSellWithinTheCap()
+    {
+        var input = VendoringInput();
+
+        Assert.Equal(50, Build(input).Totals.VendorGil);
+        Assert.Equal(0, Build(input with { VendoredValueCap = 49 }).Totals.VendorGil);
+        Assert.Equal(0, Build(input with { Rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) }).Totals.VendorGil);
+    }
+
+    [Fact]
+    public void EachStackTheVendorRulesSellHasARowOfItsOwnGroup()
+    {
+        var plan = Build(VendoringInput());
+
+        var row = Row(plan, PlanRowKey.ForVendor(junkSlot.Slot));
+        var group = plan.Groups[^1];
+        Assert.Equal(RunRowKind.Vendor, row.Kind);
+        Assert.Equal(SellAction.Vendor, row.Decision.Action);
+        Assert.Equal(DecisionReason.VendorList, row.Decision.Reason);
+        Assert.Equal(JunkVendorPrice, row.Decision.Price);
+        Assert.Equal(JunkQuantity, row.Quantity);
+        Assert.False(row.Searches);
+        Assert.False(row.CanMove);
+        Assert.False(row.CanSetPrice);
+        Assert.Equal(PlanGroupKind.Vendor, group.Kind);
+        Assert.Equal(1, group.Count);
+        Assert.Equal(row, plan.Rows[group.Start]);
+        Assert.Contains(row.EditTarget, plan.EditTargets);
+    }
+
+    [Fact]
+    public void AnExcludedVendorRowStaysInThePlanAndSellsNothing()
+    {
+        var key = PlanRowKey.ForVendor(junkSlot.Slot);
+        PlanEdits.None.TryApply(PlanEdit.Exclude(key, Now), new PlanEditTarget(key, 0, 0), out var excluded);
+
+        var plan = Build(VendoringInput() with { Edits = excluded });
+
+        var row = Row(plan, key);
+        Assert.Equal(SellAction.Skip, row.Decision.Action);
+        Assert.Equal(DecisionReason.Excluded, row.Decision.Reason);
+        Assert.True(row.Has(PlanRowEdits.Excluded));
+        Assert.Equal(0, plan.Totals.VendorGil);
+        Assert.Contains(row.EditTarget, plan.EditTargets);
+    }
+
+    [Fact]
+    public void NoVendorRowsWhenVendoringIsOff()
+    {
+        var plan = Build(VendoringInput() with { Rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) });
+
+        Assert.False(plan.TryFind(PlanRowKey.ForVendor(junkSlot.Slot), out _));
+        Assert.DoesNotContain(plan.Groups, group => group.Kind == PlanGroupKind.Vendor);
+    }
+
+    [Fact]
     public void ACancelledPlanThrows()
     {
         using var cancellation = new CancellationTokenSource();
@@ -393,5 +539,11 @@ public sealed class SellPlannerTests
     {
         Assert.Equal(PlanEditRefusal.None, edits.TryApply(edit, row.EditTarget, out var updated));
         return updated;
+    }
+
+    private static PlanInput VendoringInput()
+    {
+        var vendoring = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, new VendorSettings(true, ItemIdSet.From([Junk]), VendorSettings.DefaultJunkThreshold), SellSources.Default, []);
+        return Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags), junkSlot) with { Rules = vendoring };
     }
 }

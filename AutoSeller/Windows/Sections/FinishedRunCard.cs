@@ -92,7 +92,8 @@ internal sealed class FinishedRunCard
         outcome = RunLabels.OutcomeLabel(run.State);
         detail = string.Concat(
             Loc.T(L.History.Retainers, run.Visited, run.Retainers.Length), TextDraw.Separator,
-            RunLabels.Changes(run.DryRun, tally.Repriced, tally.Listed, tally.ListedValue), TextDraw.Separator,
+            RunLabels.Changes(run.DryRun, tally.Repriced, tally.Listed, tally.ListedValue),
+            RunLabels.ReturnsAndVendor(run.DryRun, tally.Returned, tally.Vendored, tally.VendoredValue), TextDraw.Separator,
             Loc.T(L.History.Kept, tally.Kept), TextDraw.Separator,
             Loc.T(L.History.Skipped, tally.Skipped), TextDraw.Separator,
             Formatting.Elapsed(run.EndedAtUtc - run.StartedAtUtc));

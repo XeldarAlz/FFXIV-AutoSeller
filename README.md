@@ -18,7 +18,7 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, compares prices and records on the Sell page, in History and in the Console what it would reprice or list, without typing a price. Vendoring, returns, the sales ledger and Assist are still being built.
+> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, reads its sale history, compares prices and records on the Sell page, in History and in the Console what it would reprice, list, return or vendor, without typing a price, returning a listing or selling to a vendor. Assist is still being built.
 
 ## What it does
 
@@ -28,15 +28,15 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 
 ## Features
 
-- **Sell page**: one plan across all your retainers' slots: what is repriced, what is listed where, at what price and why ("Undercut by 1 seller", "Already lowest", "Bait listing ignored", "Below floor, kept", "Price war, paused"). Retainer tiles show listings in use, gil and the last visit, totals show what the run will change, and a drop over the step limit waits for your approval. Before Start you can leave a row out, move a lot to another retainer or set its price.
+- **Sell page**: one plan across all your retainers' slots: what is repriced, what is listed where, what is sold to a vendor, at what price and why ("Undercut by 1 seller", "Already lowest", "Bait listing ignored", "Below floor, kept", "Price war, paused"). Retainer tiles show listings in use, gil and the last visit, totals show what the run will change, and a drop over the step limit waits for your approval. Before Start you can leave a row out, move a lot to another retainer or set its price, and choose whether the run visits only the retainers that need it.
 - **Guarded pricing**: Undercut or Match mode against listings of the same quality only. Your own retainers and your alts are never undercut, bait listings are ignored, the reference price comes from real sales, the floor never goes below vendor value, and a maximum drop per reprice, a cooldown and price-war detection keep a race to the bottom in check.
 - **Rules**: a sell list with a floor, ceiling, fixed price, lot size, bag keep count, listings to keep up and preferred retainer per item, plus category rules with a minimum value and vendor rules that stay off until you turn them on. Items on the never-sell list, in a gear set, equipped or protected in AutoRetainer are never sold, and the Rules page shows which matched items in your bags are blocked and why. Rules can be exported and imported as JSON, without any retainer names or ids.
 - **Sources**: your bags and crystals, and when you opt in, a retainer's own inventory, the saddlebag and the armoury chest (never items in a gear set).
 - **Three ways to run**: Start, which goes to a nearby summoning bell or the bell in your inn room; an AutoRetainer post-process after each venture; or Assist, which fills the suggested price when you open a sell window by hand and leaves Confirm to you.
 - **In-game buttons**: "Run all retainers" on the retainer list and "Reprice this retainer" on a retainer's sell list, so a run can start without opening the window. With AutoRetainer, a Sell now button on its retainer list sends every retainer through Auto Seller.
-- **Undercut watch**: your listings are checked against Universalis on a timer, with no game request, and a run can visit only the retainers that need it.
+- **Undercut watch**: your listings are checked against Universalis on a timer, with no game request, and a run can visit only the retainers that need it: those with an undercut listing, a lot to list or a listing to return.
 - **Listings**: every listing of every character and retainer from their last visit, with its price, the lowest competitor, how long it has been listed, its last reprice and its state.
-- **Sales**: a ledger built from sale notices, the retainer sale history and listing changes, with daily, 7-day and 30-day totals, a daily chart, views per item, retainer and character, and hints when an item sells fast or sits unsold.
+- **Sales**: a ledger built from sale notices, the retainer sale history and listing changes, with daily, 7-day and 30-day totals, a daily chart, views per item, retainer and character, each sale marked confirmed or inferred (or uncertain when the retainer's gil did not grow), hints when an item sells fast or sits unsold, and a CSV export without character, retainer or buyer names.
 - **Run controls**: Pause, Resume and Stop in the dock at the bottom of the window or as commands, auto-pause while you are in a duty, and hold new moves while you type in chat.
 - **Humanizer**: short random delays before the character moves off or casts a teleport.
 - **GM alert**: ends a run when a GM is near, with an optional toast, chat line, beeps, custom commands, or closing the game.
@@ -46,7 +46,7 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 
 1. Write your rules, check the plan on the Sell page and press **Start** (or type `/asell start`). The run keeps to the rules, floors, caps and edits you saw at that moment.
 2. It walks to a nearby summoning bell, or travels to the inn of your Grand Company's city and uses the bell in your room. AutoRetainer, when installed, is held back for the run and restored afterwards; while AutoRetainer is busy, Start stays off.
-3. For each enabled retainer it reads the listings and the sale history, compares prices, reprices what is due, lists the planned lots and, when your rules allow it, vendors junk.
+3. For each enabled retainer it reads the sale history and the listings, compares prices, reprices what is due, lists the planned lots, returns a listing that stayed below its floor for three days when you chose that, and, when your rules allow it, has the retainer sell junk to a vendor.
 4. Every price is checked in the sell window before Confirm and read back from the retainer's listings after it. A write it cannot confirm stops the run and asks you to check.
 5. It closes the retainer windows and records the run in History and the sales in the ledger.
 
@@ -91,6 +91,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/seller` | Alias for `/asell` |
 | `/asell config` | Open the Settings page |
 | `/asell stats` | Open the History page (`/asell history` works too) |
+| `/asell sales` | Open the Sales page |
 | `/asell deps` | Open the Plugins page (`/asell dependencies` works too) |
 | `/asell log` | Open the Console page |
 | `/asell changelog` | Open the Changelog page |
@@ -102,6 +103,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell look <item id>` | Compare market prices for one item once and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices). With the default send path it needs that item's sell window open at a retainer; with `proxy` it needs a summoning bell or an open market board |
 | `/asell mbstatus` | Write the market checks, the search state, the age of the Universalis reference data and, with a retainer's sell list open, that retainer's listings to the Console (debug helper) |
 | `/asell sendpath compare\|proxy` | Send market searches through the sell window's Compare prices button (`compare`, the default) or the item search proxy (`proxy`); without an argument it says which one is in use (debug helper) |
+| `/asell historypath window\|packet` | Read a retainer's sale history from its Sale History window (`window`, the default) or from the data the game receives for it (`packet`); without an argument it says which one is in use (debug helper) |
 
 ## Known limits
 

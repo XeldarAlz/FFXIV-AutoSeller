@@ -142,7 +142,14 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> WorkRetainer(int index, RunRetainer retainer)
     {
-        var stop = await OpenSellList(retainer);
+        returns.Clear();
+        var stop = await ReadSaleHistory(retainer);
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return stop;
+        }
+
+        stop = await OpenSellList(retainer);
         if (stop.Halted)
         {
             return stop;
@@ -156,12 +163,27 @@ internal sealed partial class RetainerDriver
         }
 
         stop = await WorkListings(index, retainer, market);
-        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
+        if (KeepsWorking(stop))
         {
             stop = await WorkLots(index, retainer, market);
         }
 
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkReturns(index, retainer);
+        }
+
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkVendoring(index, retainer);
+        }
+
         return stop;
+    }
+
+    private bool KeepsWorking(in Stop stop)
+    {
+        return !stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested;
     }
 
     private async Task<Stop> OpenSellList(RunRetainer retainer)
@@ -317,7 +339,7 @@ internal sealed partial class RetainerDriver
             return Stop.None;
         }
 
-        await RetainerWindows.CloseOwned(RetainerWindows.SettledAfterStop, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
+        await RetainerWindows.CloseOwned(ChainUnwind.Owned, BackToListBoundMs, () => CancelToken.IsCancellationRequested);
         if (!await WaitUntilTimed(static () => RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) || TalkedBackToList(), MenuReturnMs, "driver-back-to-list", StepPollFrames))
         {
             return CancelToken.IsCancellationRequested ? Stop.None : new Stop(DriverHalt.WindowsDidNotClose, "neither the retainer menu nor the retainer list came back");

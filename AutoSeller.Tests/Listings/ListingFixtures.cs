@@ -4,6 +4,7 @@ using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Sales.Model;
 using static AutoSeller.Tests.EndToEnd.RunWorld;
 using static AutoSeller.Tests.Planning.PlanFixtures;
 
@@ -51,6 +52,21 @@ internal static class ListingFixtures
             References = References(OreReferences(OreReference, WorldLowest)),
             HomeWorldId = HomeWorld,
             NowUtc = Now,
+        };
+    }
+
+    public static ListingInputs WithSales(ListingInputs inputs, params SaleRecord[] sales)
+    {
+        return new ListingInputs
+        {
+            Characters = inputs.Characters,
+            Rules = inputs.Rules,
+            Pricing = inputs.Pricing,
+            Items = inputs.Items,
+            References = inputs.References,
+            HomeWorldId = inputs.HomeWorldId,
+            NowUtc = inputs.NowUtc,
+            Sales = [.. sales],
         };
     }
 

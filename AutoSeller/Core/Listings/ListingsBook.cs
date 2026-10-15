@@ -9,6 +9,7 @@ using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Pricing;
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Sales;
 using ECommons.DalamudServices;
 
 namespace AutoSeller.Core.Listings;
@@ -24,6 +25,10 @@ internal sealed class ListingsView
     public required ushort[] IconIds { get; init; }
 
     public required int Revision { get; init; }
+
+    public ImmutableArray<CharacterRecord> Characters { get; init; } = [];
+
+    public ImmutableArray<RetainerSnapshot> Snapshots { get; init; } = [];
 }
 
 internal sealed class ListingsBook
@@ -37,6 +42,7 @@ internal sealed class ListingsBook
     private readonly CharacterStore characters;
     private readonly GameItems items;
     private readonly ReferenceService references;
+    private readonly SalesLedger sales;
     private Task<ImmutableArray<CharacterRecord>>? loading;
     private ImmutableArray<CharacterRecord> saved = [];
     private long loadedAtMs = long.MinValue;
@@ -45,13 +51,14 @@ internal sealed class ListingsBook
     private BookKey key;
     private ListingsView view = ListingsView.Empty;
 
-    public ListingsBook(string configDirectory, Configuration configuration, CharacterStore characters, GameItems items, ReferenceService references)
+    public ListingsBook(string configDirectory, Configuration configuration, CharacterStore characters, GameItems items, ReferenceService references, SalesLedger sales)
     {
         directoryPath = Path.Combine(configDirectory, CharacterRecord.FolderName);
         this.configuration = configuration;
         this.characters = characters;
         this.items = items;
         this.references = references;
+        this.sales = sales;
     }
 
     public ListingsView View => view;
@@ -62,6 +69,7 @@ internal sealed class ListingsBook
     {
         var now = Environment.TickCount64;
         Collect();
+        sales.Keep();
         var currentId = characters.Current?.ContentId ?? 0;
         if (loading is null && (now - loadedAtMs >= ReloadMs || currentId != readWithout))
         {
@@ -79,6 +87,7 @@ internal sealed class ListingsBook
             configuration.Revision,
             references.Latest?.Generation ?? 0,
             Svc.PlayerState.HomeWorld.RowId,
+            sales.Revision,
             now / RebuildMs);
         if (next == key || loads == 0)
         {
@@ -123,15 +132,17 @@ internal sealed class ListingsBook
         }
 
         var all = records.ToImmutable();
+        var snapshots = SnapshotsOf(all);
         var table = ListingTable.Build(new ListingInputs
         {
             Characters = all,
             Rules = configuration.BuildRuleBook(),
             Pricing = configuration.BuildPricingSettings(),
-            Items = items.FactsOfListed(SnapshotsOf(all)),
+            Items = items.FactsOfListed(snapshots),
             References = references.Latest,
             HomeWorldId = Svc.PlayerState.HomeWorld.RowId,
             NowUtc = nowUtc,
+            Sales = sales.Merged,
         });
         var rows = table.Rows;
         var names = new string[rows.Length];
@@ -143,7 +154,7 @@ internal sealed class ListingsBook
             icons[index] = item.IconId;
         }
 
-        view = new ListingsView { Table = table, ItemNames = names, IconIds = icons, Revision = view.Revision + 1 };
+        view = new ListingsView { Table = table, ItemNames = names, IconIds = icons, Revision = view.Revision + 1, Characters = all, Snapshots = [.. snapshots] };
         RunLog.Debug($"Listings: {rows.Length} listing(s) over {table.Characters.Length} character(s).");
     }
 
@@ -193,5 +204,5 @@ internal sealed class ListingsBook
         return records.ToImmutable();
     }
 
-    private readonly record struct BookKey(int Loads, ulong ContentId, int CharacterRevision, int SettingsRevision, long ReferenceGeneration, uint HomeWorldId, long Step);
+    private readonly record struct BookKey(int Loads, ulong ContentId, int CharacterRevision, int SettingsRevision, long ReferenceGeneration, uint HomeWorldId, int SalesRevision, long Step);
 }

@@ -44,6 +44,12 @@ internal sealed record PlanInput
 
     public required ImmutableArray<KeyValuePair<RepriceKey, RepriceEntry>> Reprices { get; init; }
 
+    public ImmutableArray<ListingStreak> Streaks { get; init; } = [];
+
+    public ImmutableArray<ListingAge> ListingAges { get; init; } = [];
+
+    public long VendoredValueCap { get; init; } = RunCaps.DefaultMaxVendoredValue;
+
     public required OwnSellers OwnSellers { get; init; }
 
     public required ReferenceSnapshot? References { get; init; }
@@ -76,9 +82,35 @@ internal sealed record PlanInput
         return enabled.ToImmutable();
     }
 
+    public ImmutableArray<WatchMark> UndercutMarks()
+    {
+        var scan = new UndercutScan(ReferenceSnapshot.ForHomeWorld(References, HomeWorldId), NowUtc);
+        var reprices = RepriceHistory.Restore(Reprices.AsSpan());
+        for (var index = 0; index < Markets.Length; index++)
+        {
+            scan.Add(Markets[index], reprices, ListingAges.IsDefault ? [] : ListingAges.AsSpan());
+        }
+
+        return scan.Mark();
+    }
+
     public RetainerSnapshot? MarketOf(ulong retainerId)
     {
         return RunPlanner.MarketOf(Markets.AsSpan(), retainerId);
+    }
+
+    public TimeSpan BelowFloorFor(RepriceKey key)
+    {
+        var streaks = Streaks.IsDefault ? [] : Streaks.AsSpan();
+        for (var index = 0; index < streaks.Length; index++)
+        {
+            if (streaks[index].Key == key)
+            {
+                return streaks[index].BelowFloorFor(NowUtc);
+            }
+        }
+
+        return TimeSpan.Zero;
     }
 
     public ReferencePrice ReferenceFor(ItemKey item)

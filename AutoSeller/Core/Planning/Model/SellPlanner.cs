@@ -30,6 +30,7 @@ internal static class SellPlanner
 
         cancellationToken.ThrowIfCancellationRequested();
         work.AddUnplaced();
+        work.AddVendoring();
         return work.ToPlan();
     }
 
@@ -65,7 +66,7 @@ internal static class SellPlanner
 
             reprices = RepriceHistory.Restore(input.Reprices.AsSpan());
             homeReferences = ReferenceSnapshot.ForHomeWorld(input.References, input.HomeWorldId);
-            undercuts = UndercutsOf(input.Markets.AsSpan());
+            undercuts = input.UndercutMarks();
             CollectOwnPrices();
         }
 
@@ -87,7 +88,7 @@ internal static class SellPlanner
                     AddLot(assigned[index].Lot, retainer.RetainerId, AllocationReason.Assigned, assigned[index].Move);
                 }
 
-                groups.Add(new PlanGroup(retainer.RetainerId, start, rows.Count - start, ChangesIn(start)));
+                groups.Add(new PlanGroup(retainer.RetainerId, start, rows.Count - start, ChangesIn(start), PlanGroupKind.Retainer));
             }
 
             retainers.Add(Summarize(retainer, market));
@@ -104,7 +105,26 @@ internal static class SellPlanner
 
             if (rows.Count > start)
             {
-                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0));
+                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0, PlanGroupKind.Unplaced));
+            }
+        }
+
+        public void AddVendoring()
+        {
+            var verdicts = VendorRules.Plan(stock, input.Rules, input.VendoredValueCap, input.Edits);
+            var start = rows.Count;
+            for (var index = 0; index < verdicts.Length; index++)
+            {
+                var verdict = verdicts[index];
+                if (verdict.IsVendored || verdict.Reason == VendorReason.Excluded)
+                {
+                    AddVendorRow(verdict, stock[index].Item.VendorPrice);
+                }
+            }
+
+            if (rows.Count > start)
+            {
+                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0, PlanGroupKind.Vendor));
             }
         }
 
@@ -148,7 +168,8 @@ internal static class SellPlanner
             var key = PlanRowKey.ForListing(retainerId, listing);
             var facts = listingFacts.GetValueOrDefault(listing.ItemId);
             var reference = input.ReferenceFor(listing.Key);
-            var history = reprices.EntryFor(new RepriceKey(retainerId, listing.Slot, listing.Key));
+            var repriceKey = new RepriceKey(retainerId, listing.Slot, listing.Key);
+            var history = reprices.EntryFor(repriceKey);
             var settings = input.Pricing;
             var excluded = input.Edits.IsExcluded(key);
             var duty = ListingDuties.Of(input.Rules, listing, facts.ItemUiCategory, reference.AverageSalePrice, history, settings.RepriceCooldown, false, excluded, input.NowUtc);
@@ -169,6 +190,7 @@ internal static class SellPlanner
                     OwnSellers = input.OwnSellers,
                     History = history,
                     Override = PriceOverrides.ForListing(approved.AsSpan(), input.Edits, retainerId, listing),
+                    BelowFloorDuration = input.BelowFloorFor(repriceKey),
                     NowUtc = input.NowUtc,
                 }),
             };
@@ -215,15 +237,17 @@ internal static class SellPlanner
             }
         }
 
-        private ImmutableArray<WatchMark> UndercutsOf(ReadOnlySpan<RetainerSnapshot> markets)
+        private void AddVendorRow(in VendorVerdict verdict, uint vendorPrice)
         {
-            var scan = new UndercutScan(homeReferences, input.NowUtc);
-            for (var index = 0; index < markets.Length; index++)
-            {
-                scan.Add(markets[index], reprices);
-            }
-
-            return scan.Mark();
+            var slot = verdict.Slot;
+            var item = new ItemKey(slot.ItemId, slot.IsHq);
+            var key = PlanRowKey.ForVendor(slot);
+            var reference = input.ReferenceFor(item);
+            var excluded = verdict.Reason == VendorReason.Excluded;
+            var decision = excluded ? new Decision(SellAction.Skip, 0, 0, DecisionReason.Excluded, default) : VendorRules.DecisionFor(verdict, vendorPrice);
+            var row = new PlanRow(key, PlanRow.Unplaced, RunRowKind.Vendor, slot.Source, slot.Quantity, 0, decision, Usable(reference, item), ListingDuty.Due, AllocationReason.Assigned, MoveOutcome.None, 0, excluded ? PlanRowEdits.Excluded : PlanRowEdits.None, TimeSpan.Zero, 0, default);
+            rows.Add(row);
+            editTargets.Add(row.EditTarget);
         }
 
         private CompetitorSnapshot Estimate(ItemKey item)
@@ -326,11 +350,13 @@ internal static class SellPlanner
             var listingsToChange = 0;
             var newListings = 0;
             long listedValue = 0;
+            long vendorGil = 0;
             var awaitingApproval = 0;
             for (var index = 0; index < rows.Length; index++)
             {
                 var row = rows[index];
                 listedValue = Gil.SaturatingAdd(listedValue, row.WrittenValue);
+                vendorGil = Gil.SaturatingAdd(vendorGil, row.VendorValue);
                 if (row.NeedsApproval)
                 {
                     awaitingApproval++;
@@ -351,7 +377,7 @@ internal static class SellPlanner
                 }
             }
 
-            return new PlanTotals(listingsToChange, newListings, listedValue, 0, awaitingApproval, estimate.Searches, estimate.Duration);
+            return new PlanTotals(listingsToChange, newListings, listedValue, vendorGil, awaitingApproval, estimate.Searches, estimate.Duration);
         }
     }
 }

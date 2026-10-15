@@ -16,6 +16,8 @@ namespace AutoSeller.Core.Tasks;
 
 internal sealed class RunDecider(Plugin plugin, SellRunSession session)
 {
+    private const int NoSearch = 0;
+
     private SellAuthorization Authorization => session.Authorization;
 
     public string ItemName(uint itemId)
@@ -44,6 +46,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             OwnSellers = plugin.OwnSellers.Current(),
             History = HistoryOf(retainerId, listing),
             Override = Authorization.OverrideForListing(retainerId, listing),
+            BelowFloorDuration = plugin.Characters.Current?.StreakFor(new RepriceKey(retainerId, listing.Slot, listing.Key)).BelowFloorFor(nowUtc) ?? TimeSpan.Zero,
             NowUtc = nowUtc,
         });
     }
@@ -74,6 +77,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         return RunGuard.CheckBoundary(Authorization, Live(nowUtc));
     }
 
+    public void TrackListing(ulong retainerId, in ListingSlot listing, in Decision decision, DateTime nowUtc)
+    {
+        plugin.Characters.Current?.TrackDecision(new RepriceKey(retainerId, listing.Slot, listing.Key), decision, nowUtc);
+    }
+
     public SaleVerdict GuardListing(ulong retainerId, in ListingSlot listing, in SellWindowShown shown, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)
     {
         var facts = plugin.GameItems.FactsOf(listing.ItemId);
@@ -87,6 +95,38 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             facts.VendorPrice,
             ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
         return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
+    }
+
+    public SaleVerdict GuardReturn(in ListingSlot listing, in SaleWrite write, DateTime nowUtc)
+    {
+        var facts = plugin.GameItems.FactsOf(listing.ItemId);
+        var row = new GuardedRow(
+            write,
+            SlotReading.Of(listing),
+            SlotReading.Of(listing),
+            PricingRule.Manages(Authorization.Rules, listing.Key, facts.ItemUiCategory, ReferenceUnitPrice(listing.Key, nowUtc)),
+            PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
+            facts.VendorPrice,
+            ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, true), row, NoSearch, default, session.Values, Guid.NewGuid());
+    }
+
+    public SaleVerdict GuardVendor(in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
+    {
+        var itemProtected = ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(stock.Slot.ItemId));
+        var current = stock with { Slot = stock.Slot with { Quantity = observed.Quantity, IsProtected = itemProtected } };
+        var vendorRule = VendorRules.Check(current, Authorization.Rules) is VendorReason.VendorList or VendorReason.Junk;
+        var row = new GuardedRow(
+            write,
+            SlotReading.Of(stock.Slot),
+            observed,
+            vendorRule,
+            0,
+            stock.Item.VendorPrice,
+            itemProtected,
+            vendorRule,
+            stock.Item.IsEquippable || stock.Slot.InGearSet);
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, true), row, NoSearch, default, session.Values, Guid.NewGuid());
     }
 
     public SaleVerdict GuardLot(in LotAssignment assignment, in StockSlot stock, in SlotReading observed, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)
@@ -108,7 +148,12 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
     {
         var mode = Authorization.DryRun ? "Dry run" : "Run";
         var item = $"{ItemName(row.Row.ItemId)} {QualityLabel.Of(row.Row.IsHq)} x{row.Quantity}";
-        var where = row.Kind == RunRowKind.Listing ? $"listing in slot {row.Row.Slot} at {row.CurrentPrice} gil" : $"new lot from container {row.Row.Container} slot {row.Row.Slot}";
+        var where = row.Kind switch
+        {
+            RunRowKind.Listing => $"listing in slot {row.Row.Slot} at {row.CurrentPrice} gil",
+            RunRowKind.Vendor => $"stack in container {row.Row.Container} slot {row.Row.Slot}",
+            _ => $"new lot from container {row.Row.Container} slot {row.Row.Slot}",
+        };
         if (row.Skip != RunSkip.None)
         {
             return $"{mode}, {retainerName}: {item}, {where}: skipped ({row.Skip}{(row.Write == RunWrite.None ? string.Empty : $", write {row.Write}")}).";
@@ -120,6 +165,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         {
             SellAction.RepriceDown or SellAction.RepriceUp => Outcome(row, $"repriced to {decision.Price} gil", $"reprice to {decision.Price} gil"),
             SellAction.List => Outcome(row, $"listed at {decision.Price} gil", $"list at {decision.Price} gil"),
+            SellAction.Return => Outcome(row, "returned it to the retainer", "return it to the retainer"),
+            SellAction.Vendor => Outcome(row, $"vendored it for {decision.Price} gil each", $"vendor it for {decision.Price} gil each"),
             SellAction.Keep => decision.ProposedPrice > 0 && decision.ProposedPrice != decision.Price ? $"keeps it (proposed {decision.ProposedPrice} gil)" : "keeps it",
             _ => $"leaves it ({decision.Action})",
         };
@@ -140,11 +187,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         _ => $"would {intended}",
     };
 
-    private RunLiveFacts Live(DateTime nowUtc)
+    private RunLiveFacts Live(DateTime nowUtc, bool throughMenu = false)
     {
         var configuration = plugin.Configuration;
         var openRetainerId = plugin.Retainers.TryGetOpenRetainer(out var open) ? open.RetainerId : 0;
-        var windowChainReady = RetainerClicks.IsReady(RetainerClicks.SellWindowAddon)
+        var windowChainReady = (throughMenu ? MenuOverSellList() : RetainerClicks.IsReady(RetainerClicks.SellWindowAddon))
             && !RetainerClicks.IsReady(RetainerClicks.ResultWindowAddon)
             && !RetainerClicks.IsReady(RetainerClicks.PromptAddon);
         return new RunLiveFacts(
@@ -157,6 +204,13 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,
             session.Review.BlocksWrites,
             nowUtc);
+    }
+
+    private static bool MenuOverSellList()
+    {
+        return RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon)
+            && RetainerClicks.IsReady(RetainerClicks.SellListAddon)
+            && !RetainerClicks.IsReady(RetainerClicks.SellWindowAddon);
     }
 
     private uint ReferenceUnitPrice(ItemKey item, DateTime nowUtc)

@@ -17,15 +17,11 @@ internal sealed class RunJournal : IRunJournal
     private const string ArchiveExtension = ".jsonl";
     private const string ArchiveStampFormat = "yyyyMMdd-HHmmss";
     private const string BackupSuffix = ".bak";
-    private const byte LineFeed = (byte)'\n';
-    private const int TailScanChunk = 4_096;
 
     public static readonly JsonSerializerOptions SerializerOptions = new()
     {
         Converters = { new JsonStringEnumConverter() },
     };
-
-    private static ReadOnlySpan<byte> LinePadding => " \t\r"u8;
 
     public RunJournal(string directoryPath)
     {
@@ -56,18 +52,9 @@ internal sealed class RunJournal : IRunJournal
             return false;
         }
 
-        try
+        if (!DurableFile.TryAppendLines(DirectoryPath, FilePath, line.WrittenSpan, out var error))
         {
-            Directory.CreateDirectory(DirectoryPath);
-            using var stream = DurableFile.OpenForAppend(FilePath);
-            DropTornTail(stream);
-            stream.Seek(0, SeekOrigin.End);
-            stream.Write(line.WrittenSpan);
-            stream.Flush(true);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            LastError = exception.Message;
+            LastError = error;
             return false;
         }
 
@@ -161,7 +148,7 @@ internal sealed class RunJournal : IRunJournal
             }
 
             var archive = line.Event is not null && finished.Contains(line.Event.RunId);
-            AppendLine(archive ? archived : kept, content.AsSpan(line.Start, line.Length));
+            DurableFile.AppendLine(archive ? archived : kept, content.AsSpan(line.Start, line.Length));
             if (archive)
             {
                 archivedLines++;
@@ -234,59 +221,19 @@ internal sealed class RunJournal : IRunJournal
             return false;
         }
 
-        line.GetSpan(1)[0] = LineFeed;
+        line.GetSpan(1)[0] = DurableFile.LineFeed;
         line.Advance(1);
         return true;
     }
 
-    private static void DropTornTail(FileStream stream)
-    {
-        var length = stream.Length;
-        Span<byte> chunk = stackalloc byte[TailScanChunk];
-        var end = length;
-        while (end > 0)
-        {
-            var start = Math.Max(0, end - TailScanChunk);
-            var size = (int)(end - start);
-            stream.Seek(start, SeekOrigin.Begin);
-            stream.ReadExactly(chunk[..size]);
-            var lastFeed = chunk[..size].LastIndexOf(LineFeed);
-            if (lastFeed >= 0)
-            {
-                var keep = start + lastFeed + 1;
-                if (keep != length)
-                {
-                    stream.SetLength(keep);
-                }
-
-                return;
-            }
-
-            end = start;
-        }
-
-        if (length > 0)
-        {
-            stream.SetLength(0);
-        }
-    }
-
     private static List<JournalLine> ParseLines(byte[] content)
     {
-        var lines = new List<JournalLine>();
-        var start = 0;
-        while (start < content.Length)
+        var fileLines = DurableFile.SplitLines(content);
+        var lines = new List<JournalLine>(fileLines.Count);
+        for (var index = 0; index < fileLines.Count; index++)
         {
-            var feed = content.AsSpan(start).IndexOf(LineFeed);
-            var terminated = feed >= 0;
-            var length = terminated ? feed : content.Length - start;
-            var text = content.AsSpan(start, length).Trim(LinePadding);
-            if (!text.IsEmpty)
-            {
-                lines.Add(new JournalLine(start, length, terminated, Deserialize(text)));
-            }
-
-            start += terminated ? length + 1 : length;
+            var line = fileLines[index];
+            lines.Add(new JournalLine(line.Start, line.Length, line.Terminated, Deserialize(DurableFile.TextOf(content, line))));
         }
 
         return lines;
@@ -337,13 +284,6 @@ internal sealed class RunJournal : IRunJournal
         }
 
         return finished;
-    }
-
-    private static void AppendLine(ArrayBufferWriter<byte> destination, ReadOnlySpan<byte> line)
-    {
-        destination.Write(line);
-        destination.GetSpan(1)[0] = LineFeed;
-        destination.Advance(1);
     }
 
     private string UniquePath(DateTime nowUtc, string marker)

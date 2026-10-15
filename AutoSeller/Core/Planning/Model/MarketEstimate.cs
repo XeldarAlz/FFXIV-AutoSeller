@@ -30,6 +30,19 @@ internal static class MarketEstimate
         return reference.World(item.IsHq);
     }
 
+    public static bool TryWorldLowest(ReferenceSnapshot? homeReferences, ItemKey item, DateTime nowUtc, out WorldListing lowest)
+    {
+        var world = WorldOf(homeReferences, item);
+        if (!IsKnown(world, item, nowUtc))
+        {
+            lowest = default;
+            return false;
+        }
+
+        lowest = new WorldListing(item, world.LowestListing, world.UpdatedAtUtc);
+        return true;
+    }
+
     public static bool IsKnown(in ReferencePrice world, ItemKey item, DateTime nowUtc)
     {
         return world.Source == ReferenceSource.UniversalisWorld

@@ -1,4 +1,5 @@
 using AutoSeller.Core.Retainers.Model;
+using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Execution.Model;
 
@@ -12,9 +13,14 @@ internal enum ReconcileHint : byte
 
 internal static class ReconcileHints
 {
-    public static ReconcileHint From(WriteIntent intent, RetainerSnapshot? latest, long heldNow)
+    public static ReconcileHint From(WriteIntent intent, RetainerSnapshot? latest, long heldNow, long gilNow)
     {
         var write = intent.Write;
+        if (write.Kind == WriteKind.Vendor)
+        {
+            return Agree(Changed(intent.ItemCountBefore, heldNow, -(long)write.Quantity), Changed(intent.GilBefore, gilNow, write.TryGetValue(out var value) ? value : null));
+        }
+
         if (latest is null || latest.RetainerId != write.RetainerId || latest.ReadAtUtc <= intent.AtUtc)
         {
             return ReconcileHint.NoFreshRead;
@@ -24,7 +30,8 @@ internal static class ReconcileHints
         return write.Kind switch
         {
             WriteKind.Reprice => Repriced(write, market),
-            WriteKind.List => Combine(Listed(write, intent.ListingsBefore, market), Held(intent.ItemCountBefore, heldNow, write.Quantity)),
+            WriteKind.List => Combine(Listed(write, intent.ListingsBefore, market), Changed(intent.ItemCountBefore, heldNow, -(long)write.Quantity)),
+            WriteKind.Return => Combine(Returned(write, intent.ListingsBefore, market), Changed(intent.ItemCountBefore, heldNow, write.Quantity)),
             _ => ReconcileHint.Unclear,
         };
     }
@@ -71,20 +78,45 @@ internal static class ReconcileHints
         return listedNow == listingsBefore ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
     }
 
-    private static ReconcileHint? Held(long heldBefore, long heldNow, uint quantity)
+    private static ReconcileHint? Returned(in SaleWrite write, long listingsBefore, ReadOnlySpan<ListingSlot> market)
     {
-        if (heldBefore < 0 || heldNow < 0)
+        if (listingsBefore < 0)
         {
             return null;
         }
 
-        var dropped = heldBefore - heldNow;
-        if (dropped == quantity)
+        var listedNow = SaleReadBack.CountListings(market, write, write.OldPrice);
+        if (listedNow == listingsBefore - 1)
         {
             return ReconcileHint.Applied;
         }
 
-        return dropped == 0 ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
+        return listedNow == listingsBefore ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
+    }
+
+    private static ReconcileHint? Changed(long before, long now, long? expected)
+    {
+        if (before < 0 || now < 0 || expected is not { } change || !Gil.TrySubtract(now, before, out var delta))
+        {
+            return null;
+        }
+
+        if (delta == change)
+        {
+            return ReconcileHint.Applied;
+        }
+
+        return delta == 0 ? ReconcileHint.NotApplied : ReconcileHint.Unclear;
+    }
+
+    private static ReconcileHint Agree(ReconcileHint? first, ReconcileHint? second)
+    {
+        if (first is null || second is null)
+        {
+            return first ?? second ?? ReconcileHint.Unclear;
+        }
+
+        return first == second ? first.Value : ReconcileHint.Unclear;
     }
 
     private static ReconcileHint Combine(ReconcileHint? listings, ReconcileHint? held) => held switch

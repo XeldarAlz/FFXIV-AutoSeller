@@ -1,8 +1,15 @@
+using AutoSeller.Core.Pricing.Model;
+
 namespace AutoSeller.Core.Sales.Model;
 
 internal readonly record struct LowestPriceCheck(DateTime DataUpdatedAtUtc, uint WorldLowestUnitPrice)
 {
     public const uint NoListings = 0;
+
+    public static LowestPriceCheck Of(in WorldListing lowest)
+    {
+        return new LowestPriceCheck(lowest.UploadedAtUtc, lowest.UnitPrice);
+    }
 }
 
 internal static class LowestPriceStreak

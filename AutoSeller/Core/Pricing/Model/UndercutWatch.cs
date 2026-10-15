@@ -66,20 +66,6 @@ internal static class UndercutWatch
         return false;
     }
 
-    public static ImmutableArray<ulong> RetainersToVisit(ReadOnlySpan<ulong> enabledRetainerIds, ReadOnlySpan<WatchMark> marks)
-    {
-        var needed = ImmutableArray.CreateBuilder<ulong>();
-        for (var retainerIndex = 0; retainerIndex < enabledRetainerIds.Length; retainerIndex++)
-        {
-            if (HasMark(enabledRetainerIds[retainerIndex], marks))
-            {
-                needed.Add(enabledRetainerIds[retainerIndex]);
-            }
-        }
-
-        return needed.ToImmutable();
-    }
-
     private static int LowestNewerCompetitor(
         in WatchedListing listing,
         ReadOnlySpan<WorldListing> world,
@@ -141,18 +127,5 @@ internal static class UndercutWatch
         }
 
         return candidate.UploadedAtUtc > best.UploadedAtUtc;
-    }
-
-    private static bool HasMark(ulong retainerId, ReadOnlySpan<WatchMark> marks)
-    {
-        for (var markIndex = 0; markIndex < marks.Length; markIndex++)
-        {
-            if (marks[markIndex].RetainerId == retainerId)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

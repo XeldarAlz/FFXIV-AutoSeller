@@ -67,6 +67,29 @@ public sealed class SellListRowsTests
     }
 
     [Fact]
+    public void AShownRowIsNeverGuessedFromTheListingsPosition()
+    {
+        SellListRow[] rows = [Row(OreName, first), Row(OreName, second)];
+
+        Assert.Equal(SellListRows.NoRow, SellListRows.ShownRowFor([], listings, second, OreName));
+        Assert.Equal(1, SellListRows.ShownRowFor(rows, listings, second, OreName));
+        Assert.Equal(SellListRows.NoRow, SellListRows.ShownRowFor([Row(OtherName, first), Row(OtherName, second)], listings, second, OreName));
+    }
+
+    [Fact]
+    public void ARowStillShowsItsListingOnlyWhenReadAgainUnchanged()
+    {
+        SellListRow[] rows = [Row(OreName, first), Row(OreName, second)];
+        SellListRow[] moved = [Row(OreName, second), Row(OreName, first)];
+
+        Assert.True(SellListRows.ShowsAt(rows, 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt(moved, 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt([], 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt(rows, SellListRows.NoRow, second, OreName));
+        Assert.False(SellListRows.ShowsAt(rows, 2, second, OreName));
+    }
+
+    [Fact]
     public void AListingNotInTheSnapshotHasNoRow()
     {
         Assert.Equal(SellListRows.NoRow, SellListRows.RowFor([], listings, OreListing(slot: 9), OreName));

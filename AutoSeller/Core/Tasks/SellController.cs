@@ -8,6 +8,7 @@ namespace AutoSeller.Core.Tasks;
 internal sealed partial class SellController(Plugin plugin, RunHistory history)
 {
     private readonly FaultResumeBudget faultBudget = new();
+    private bool? onlyRetainersThatNeedIt;
 
     public PauseReason PauseReason { get; private set; } = PauseReason.None;
 
@@ -16,6 +17,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
     public bool Running => session is not null;
 
     public PlanInput? RunInput => session?.Input;
+
+    public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
 
     public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 
@@ -69,6 +72,12 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         Pause(PauseReason.Manual);
     }
 
+    public void SetOnlyRetainersThatNeedIt(bool only)
+    {
+        onlyRetainersThatNeedIt = only == plugin.Configuration.OnlyRetainersThatNeedIt ? null : only;
+        RunLog.Info($"Run option: the next run visits {(only ? "only the retainers that need it" : "every enabled retainer")}.");
+    }
+
     public void StopForAlert() => Stop();
 
     public void Shutdown() => Interrupt();
@@ -89,6 +98,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         StartBlock.Trading => Loc.T(L.Run.BlockTrading),
         StartBlock.AutoRetainerNotHeld => Loc.T(L.Run.BlockAutoRetainerNotHeld),
         StartBlock.ProtectListUnreadable => Loc.T(L.Run.BlockProtectListUnreadable),
+        StartBlock.NothingNeedsAVisit => Loc.T(L.Run.BlockNothingNeeded),
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Rules.Model;
 using static AutoSeller.Tests.Rules.RuleFixtures;
 
@@ -100,7 +101,7 @@ public sealed class VendorRulesTests
             Stock(Bag(Shard, 40, 3), Material(Shard, vendorPrice: 1), 5),
         };
 
-        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap);
+        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap, PlanEdits.None);
 
         Assert.Equal(VendorReason.Junk, verdicts[0].Reason);
         Assert.Equal(60, verdicts[0].VendorValue);
@@ -123,7 +124,7 @@ public sealed class VendorRulesTests
             Stock(Bag(Shard, 40, 1), Material(Shard, vendorPrice: 1), 5),
         };
 
-        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap);
+        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap, PlanEdits.None);
 
         Assert.True(verdicts[0].IsVendored);
         Assert.Equal(vendored, verdicts[1].IsVendored);
@@ -140,7 +141,7 @@ public sealed class VendorRulesTests
             Stock(Bag(Junk, 50, 1), Material(Junk, vendorPrice: 2), 5),
         };
 
-        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap);
+        var verdicts = VendorRules.Plan(ImmutableArray.Create(stock), Book(vendor: On()), runCap, PlanEdits.None);
 
         Assert.Equal(VendorReason.HighQuality, verdicts[0].Reason);
         Assert.Equal(VendorReason.Junk, verdicts[1].Reason);
@@ -153,6 +154,52 @@ public sealed class VendorRulesTests
 
         Assert.Equal(long.MaxValue, VendorRules.VendorValue(stock));
         Assert.Equal(VendorReason.NotJunk, VendorRules.Check(stock with { ReferenceUnitPrice = uint.MaxValue }, Book(vendor: On())));
+    }
+
+    [Fact]
+    public void ARunVendorsWhatIsDueInsideWhatIsLeftOfItsCapAndNotWhatItHandled()
+    {
+        var first = Stock(Bag(Junk, 30, 0), Material(Junk, vendorPrice: 2), 5);
+        var second = Stock(Bag(Junk, 30, 1), Material(Junk, vendorPrice: 2), 5);
+        var kept = Stock(Bag(Ore, 30, 2), Material(Ore, vendorPrice: 2), 500);
+        var stock = ImmutableArray.Create(first, second, kept);
+
+        var due = VendorRules.Due(stock, Book(vendor: On()), 100, new HashSet<PlanRowKey>(), PlanEdits.None);
+        var afterTheFirst = VendorRules.Due(stock, Book(vendor: On()), 100, new HashSet<PlanRowKey> { PlanRowKey.ForVendor(first.Slot) }, PlanEdits.None);
+        var capSpent = VendorRules.Due(stock, Book(vendor: On()), -5, new HashSet<PlanRowKey>(), PlanEdits.None);
+
+        Assert.Equal([first.Slot], Slots(due));
+        Assert.Equal([second.Slot], Slots(afterTheFirst));
+        Assert.Empty(capSpent);
+    }
+
+    [Fact]
+    public void AStackExcludedFromThePlanIsNotVendoredAndLeavesItsShareOfTheCap()
+    {
+        var first = Stock(Bag(Junk, 30, 0), Material(Junk, vendorPrice: 2), 5);
+        var second = Stock(Bag(Junk, 30, 1), Material(Junk, vendorPrice: 2), 5);
+        var stock = ImmutableArray.Create(first, second);
+        var key = PlanRowKey.ForVendor(first.Slot);
+        PlanEdits.None.TryApply(PlanEdit.Exclude(key, Now), new PlanEditTarget(key, 0, 0), out var excluded);
+
+        var planned = VendorRules.Plan(stock, Book(vendor: On()), 60, excluded);
+        var due = VendorRules.Due(stock, Book(vendor: On()), 60, new HashSet<PlanRowKey>(), excluded);
+
+        Assert.Equal(VendorReason.Excluded, planned[0].Reason);
+        Assert.False(planned[0].IsVendored);
+        Assert.Equal(VendorReason.Junk, planned[1].Reason);
+        Assert.Equal([second.Slot], Slots(due));
+    }
+
+    private static SlotFacts[] Slots(ImmutableArray<VendorVerdict> verdicts)
+    {
+        var slots = new SlotFacts[verdicts.Length];
+        for (var index = 0; index < slots.Length; index++)
+        {
+            slots[index] = verdicts[index].Slot;
+        }
+
+        return slots;
     }
 
     private static VendorSettings On()

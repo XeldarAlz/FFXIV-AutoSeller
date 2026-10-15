@@ -7,7 +7,7 @@ internal static class DiffWrites
 {
     private const byte UnknownMarketSlot = byte.MaxValue;
 
-    public static ImmutableArray<SnapshotDiffWrite> For(ulong retainerId, JournalReview review, ReadOnlySpan<WriteRecord> confirmedSinceReview = default)
+    public static ImmutableArray<SnapshotDiffWrite> For(ulong retainerId, JournalReview review, ReadOnlySpan<WriteRecord> notedSinceReview = default)
     {
         var writes = ImmutableArray.CreateBuilder<SnapshotDiffWrite>();
         var runs = review.Runs;
@@ -16,7 +16,7 @@ internal static class DiffWrites
             Collect(retainerId, runs[runIndex].Writes.AsSpan(), writes);
         }
 
-        Collect(retainerId, confirmedSinceReview, writes);
+        Collect(retainerId, notedSinceReview, writes);
         return writes.ToImmutable();
     }
 
@@ -25,17 +25,37 @@ internal static class DiffWrites
         return new WriteRecord(intent.WriteId, intent.Sequence, intent, WriteStatus.Confirmed, intent.Write.Quantity, intent.Write.NewPrice);
     }
 
+    public static WriteRecord Unresolved(WriteIntent intent)
+    {
+        return new WriteRecord(intent.WriteId, intent.Sequence, intent, WriteStatus.Unknown, 0, 0);
+    }
+
     private static void Collect(ulong retainerId, ReadOnlySpan<WriteRecord> records, ImmutableArray<SnapshotDiffWrite>.Builder writes)
     {
         for (var index = 0; index < records.Length; index++)
         {
             var record = records[index];
-            if (record.Status != WriteStatus.Confirmed || record.Intent is not { } intent || intent.Write.RetainerId != retainerId)
+            if (record.Intent is not { } intent || intent.Write.RetainerId != retainerId)
             {
                 continue;
             }
 
             var write = intent.Write;
+            if (record.Status == WriteStatus.Unknown)
+            {
+                if (write.Kind == WriteKind.Return)
+                {
+                    writes.Add(Returned(write, write.Quantity, intent.AtUtc));
+                }
+
+                continue;
+            }
+
+            if (record.Status != WriteStatus.Confirmed)
+            {
+                continue;
+            }
+
             switch (write.Kind)
             {
                 case WriteKind.List:
@@ -45,9 +65,14 @@ internal static class DiffWrites
                     writes.Add(new SnapshotDiffWrite(SnapshotDiffWriteKind.Repriced, (byte)write.Slot, write.ItemId, write.IsHq, record.ConfirmedQuantity, write.OldPrice, record.ConfirmedPrice, intent.AtUtc));
                     break;
                 case WriteKind.Return:
-                    writes.Add(new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)write.Slot, write.ItemId, write.IsHq, record.ConfirmedQuantity, write.OldPrice, 0, intent.AtUtc));
+                    writes.Add(Returned(write, record.ConfirmedQuantity, intent.AtUtc));
                     break;
             }
         }
+    }
+
+    private static SnapshotDiffWrite Returned(in SaleWrite write, uint quantity, DateTime atUtc)
+    {
+        return new SnapshotDiffWrite(SnapshotDiffWriteKind.Returned, (byte)write.Slot, write.ItemId, write.IsHq, quantity, write.OldPrice, 0, atUtc);
     }
 }
