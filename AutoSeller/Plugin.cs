@@ -153,6 +153,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(appWindow.Dispose);
             WindowSystem.AddWindow(appWindow);
             completed.Push(WindowSystem.RemoveAllWindows);
+            WindowSystem.AddWindow(new RetainerListButton(this));
+            WindowSystem.AddWindow(new SellListButton(this));
 
             primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
             aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
