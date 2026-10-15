@@ -939,6 +939,7 @@
   "journal.hintNoRead": "在传唤铃打开 {0} 的出售列表，读取后会给出建议答案。",
   "journal.wentThrough": "已生效",
   "journal.didNotGoThrough": "未生效",
-  "journal.answerFailed": "无法将回答写入日志；详情见控制台。",
+  "journal.answerFailed": "无法将回答写入日志；详情见控制台。将日志移到一旁即可重新开始；旧文件会保留在旁边。",
+  "journal.damagedQuestion": "日志中还有不可信的记录。如果回答后此问题仍未解决，请将日志移到一旁重新开始；旧文件会保留在旁边。",
   "journal.unknownRetainer": "某个雇员"
 }

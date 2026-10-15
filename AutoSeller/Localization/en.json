@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Open the sell list of {0} at a summoning bell and it is read to suggest the answer.",
   "journal.wentThrough": "It went through",
   "journal.didNotGoThrough": "It did not",
-  "journal.answerFailed": "The answer could not be written to the journal; the Console has the details.",
+  "journal.answerFailed": "The answer could not be written to the journal; the Console has the details. Set the journal aside to start a fresh one; the old file is kept beside it.",
+  "journal.damagedQuestion": "The journal also holds lines that cannot be trusted. If your answer does not settle this question, set the journal aside to start a fresh one; the old file is kept beside it.",
   "journal.unknownRetainer": "a retainer"
 }

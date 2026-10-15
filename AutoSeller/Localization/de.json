@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Öffne die Verkaufsliste von {0} an einer Rufglocke, dann wird sie ausgelesen, um die Antwort vorzuschlagen.",
   "journal.wentThrough": "Es ging durch",
   "journal.didNotGoThrough": "Nein",
-  "journal.answerFailed": "Die Antwort konnte nicht ins Journal geschrieben werden; die Konsole enthält die Details.",
+  "journal.answerFailed": "Die Antwort konnte nicht ins Journal geschrieben werden; die Konsole enthält die Details. Lege das Journal beiseite, um ein neues zu beginnen; die alte Datei bleibt daneben erhalten.",
+  "journal.damagedQuestion": "Das Journal enthält außerdem Zeilen, denen nicht zu trauen ist. Wenn deine Antwort diese Frage nicht klärt, lege das Journal beiseite, um ein neues zu beginnen; die alte Datei bleibt daneben erhalten.",
   "journal.unknownRetainer": "einem Gehilfen"
 }

@@ -30,7 +30,8 @@ internal static partial class L
         public static readonly LocString HintNoRead = new("journal.hintNoRead", "Open the sell list of {0} at a summoning bell and it is read to suggest the answer.");
         public static readonly LocString WentThrough = new("journal.wentThrough", "It went through");
         public static readonly LocString DidNotGoThrough = new("journal.didNotGoThrough", "It did not");
-        public static readonly LocString AnswerFailed = new("journal.answerFailed", "The answer could not be written to the journal; the Console has the details.");
+        public static readonly LocString AnswerFailed = new("journal.answerFailed", "The answer could not be written to the journal; the Console has the details. Set the journal aside to start a fresh one; the old file is kept beside it.");
+        public static readonly LocString DamagedQuestion = new("journal.damagedQuestion", "The journal also holds lines that cannot be trusted. If your answer does not settle this question, set the journal aside to start a fresh one; the old file is kept beside it.");
         public static readonly LocString UnknownRetainer = new("journal.unknownRetainer", "a retainer");
     }
 }

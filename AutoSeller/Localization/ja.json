@@ -939,6 +939,7 @@
   "journal.hintNoRead": "呼び鈴で {0} の出品リストを開くと、読み取って回答を提案します。",
   "journal.wentThrough": "反映された",
   "journal.didNotGoThrough": "反映されていない",
-  "journal.answerFailed": "回答を記録ファイルに書き込めませんでした。詳細はコンソールにあります。",
+  "journal.answerFailed": "回答を記録ファイルに書き込めませんでした。詳細はコンソールにあります。記録ファイルを退避すると新しく始められます。古いファイルは隣に残ります。",
+  "journal.damagedQuestion": "記録ファイルには信頼できない行もあります。回答してもこの質問が解決しない場合は、記録ファイルを退避して新しく始めてください。古いファイルは隣に残ります。",
   "journal.unknownRetainer": "リテイナー"
 }

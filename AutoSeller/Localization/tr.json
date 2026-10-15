@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Bir çağırma çanında {0} satış listesini açın; yanıtı önermek için okunur.",
   "journal.wentThrough": "Gerçekleşti",
   "journal.didNotGoThrough": "Gerçekleşmedi",
-  "journal.answerFailed": "Yanıt günlüğe yazılamadı; ayrıntılar konsolda.",
+  "journal.answerFailed": "Yanıt günlüğe yazılamadı; ayrıntılar konsolda. Yenisini başlatmak için günlüğü kenara alın; eski dosya yanında saklanır.",
+  "journal.damagedQuestion": "Günlükte ayrıca güvenilmeyen satırlar var. Yanıtınız bu soruyu çözmezse yenisini başlatmak için günlüğü kenara alın; eski dosya yanında saklanır.",
   "journal.unknownRetainer": "bir yardımcı"
 }

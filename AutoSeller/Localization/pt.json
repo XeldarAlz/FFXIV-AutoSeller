@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Abra a lista de venda de {0} em um sino e ela será lida para sugerir a resposta.",
   "journal.wentThrough": "Foi feito",
   "journal.didNotGoThrough": "Não foi feito",
-  "journal.answerFailed": "Não foi possível gravar a resposta no diário; o console tem os detalhes.",
+  "journal.answerFailed": "Não foi possível gravar a resposta no diário; o console tem os detalhes. Separe o diário para começar um novo; o arquivo antigo fica ao lado.",
+  "journal.damagedQuestion": "O diário também tem linhas não confiáveis. Se a sua resposta não resolver esta pergunta, separe o diário para começar um novo; o arquivo antigo fica ao lado.",
   "journal.unknownRetainer": "um ajudante"
 }

@@ -19,7 +19,8 @@ internal static class LedgerCards
 
     private static CachedText titleText;
     private static CachedText factsText;
-    private static bool writeFailed;
+    private static bool answerFailed;
+    private static bool setAsideFailed;
 
     public static bool Shows(Plugin plugin)
     {
@@ -38,7 +39,7 @@ internal static class LedgerCards
         var review = ledger.Review;
         if (FirstUnresolved(review, out var unresolved))
         {
-            DrawUnresolved(plugin, unresolved);
+            DrawUnresolved(plugin, unresolved, review.IsDamaged);
             return;
         }
 
@@ -66,18 +67,39 @@ internal static class LedgerCards
 
     private static void DrawDamaged(Plugin plugin, bool unreadable)
     {
-        var warning = writeFailed ? Loc.T(L.Journal.SetAsideFailed) : null;
+        var warning = setAsideFailed ? Loc.T(L.Journal.SetAsideFailed) : null;
         var card = ActionCard.Begin(Loc.T(L.Journal.DamagedTitle), Loc.T(unreadable ? L.Journal.UnreadableBody : L.Journal.DamagedBody), null, warning, Styling.AccentRose, unreadable ? 0 : 1);
         if (!unreadable && ActionCard.Button(ref card, "##asell_journal_aside", Loc.T(L.Journal.SetAside), Styling.AccentRose, PillButton.Emphasis.Tinted, true))
         {
-            writeFailed = !plugin.Ledger.SetAside(DateTime.UtcNow, out var path);
-            RunLog.Info(writeFailed ? $"Journal: setting the journal aside failed: {plugin.Ledger.Journal.LastError}." : $"Journal: the journal was set aside as {path}.");
+            SetAside(plugin);
         }
 
         ActionCard.End(card);
     }
 
-    private static void DrawUnresolved(Plugin plugin, in UnresolvedWrite unresolved)
+    private static void SetAside(Plugin plugin)
+    {
+        setAsideFailed = !plugin.Ledger.SetAside(DateTime.UtcNow, out var path);
+        answerFailed = false;
+        RunLog.Info(setAsideFailed ? $"Journal: setting the journal aside failed: {plugin.Ledger.Journal.LastError}." : $"Journal: the journal was set aside as {path}.");
+    }
+
+    private static string? QuestionWarning(bool damaged)
+    {
+        if (setAsideFailed)
+        {
+            return Loc.T(L.Journal.SetAsideFailed);
+        }
+
+        if (answerFailed)
+        {
+            return Loc.T(L.Journal.AnswerFailed);
+        }
+
+        return damaged ? Loc.T(L.Journal.DamagedQuestion) : null;
+    }
+
+    private static void DrawUnresolved(Plugin plugin, in UnresolvedWrite unresolved, bool damaged)
     {
         var intent = unresolved.Intent!;
         var write = intent.Write;
@@ -95,8 +117,8 @@ internal static class LedgerCards
             facts = factsText.Set(key, string.Concat(Facts(plugin, intent, retainer), "\n", Hint(write.Kind, hint, retainer)));
         }
 
-        var warning = writeFailed ? Loc.T(L.Journal.AnswerFailed) : null;
-        var card = ActionCard.Begin(title, Loc.T(write.Kind == WriteKind.Move ? L.Journal.MoveBody : L.Journal.Body), facts, warning, Styling.AccentRose, 2, FontAwesomeIcon.QuestionCircle);
+        var stuck = answerFailed || damaged;
+        var card = ActionCard.Begin(title, Loc.T(write.Kind == WriteKind.Move ? L.Journal.MoveBody : L.Journal.Body), facts, QuestionWarning(damaged), Styling.AccentRose, stuck ? 3 : 2, FontAwesomeIcon.QuestionCircle);
         if (ActionCard.Button(ref card, "##asell_journal_applied", Loc.T(L.Journal.WentThrough), Styling.AccentMint, hint == ReconcileHint.Applied ? PillButton.Emphasis.Filled : PillButton.Emphasis.Tinted, true))
         {
             Answer(plugin, unresolved, true, hint);
@@ -105,6 +127,11 @@ internal static class LedgerCards
         if (ActionCard.Button(ref card, "##asell_journal_not_applied", Loc.T(L.Journal.DidNotGoThrough), Styling.AccentRose, hint == ReconcileHint.NotApplied ? PillButton.Emphasis.Filled : PillButton.Emphasis.Tinted, true))
         {
             Answer(plugin, unresolved, false, hint);
+        }
+
+        if (stuck && ActionCard.Button(ref card, "##asell_journal_question_aside", Loc.T(L.Journal.SetAside), Styling.AccentRose, PillButton.Emphasis.Tinted, true))
+        {
+            SetAside(plugin);
         }
 
         ActionCard.End(card);
@@ -150,7 +177,8 @@ internal static class LedgerCards
         var agreesWithRead = (applied && hint == ReconcileHint.Applied) || (!applied && hint == ReconcileHint.NotApplied);
         var source = agreesWithRead ? ReconcileSource.FreshRead : ReconcileSource.Player;
         var answer = plugin.Ledger.Reconcile(unresolved.WriteId, applied, source, DateTime.UtcNow);
-        writeFailed = answer == LedgerAnswer.WriteFailed;
+        answerFailed = answer == LedgerAnswer.WriteFailed;
+        setAsideFailed = false;
         var write = unresolved.Intent!.Write;
         if (answer == LedgerAnswer.Applied && applied && write.Kind == WriteKind.Reprice)
         {

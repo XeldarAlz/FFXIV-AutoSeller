@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Ouvrez la liste de vente de {0} à une sonnette et elle sera lue pour suggérer la réponse.",
   "journal.wentThrough": "C'est passé",
   "journal.didNotGoThrough": "Ce n'est pas passé",
-  "journal.answerFailed": "La réponse n'a pas pu être écrite dans le journal ; la console contient les détails.",
+  "journal.answerFailed": "La réponse n'a pas pu être écrite dans le journal ; la console contient les détails. Mettez le journal de côté pour en commencer un nouveau ; l'ancien fichier est gardé à côté.",
+  "journal.damagedQuestion": "Le journal contient aussi des lignes peu fiables. Si votre réponse ne règle pas cette question, mettez le journal de côté pour en commencer un nouveau ; l'ancien fichier est gardé à côté.",
   "journal.unknownRetainer": "un servant"
 }

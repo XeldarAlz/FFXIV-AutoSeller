@@ -939,6 +939,7 @@
   "journal.hintNoRead": "Abre la lista de venta de {0} en una campana y se leerá para sugerir la respuesta.",
   "journal.wentThrough": "Se hizo",
   "journal.didNotGoThrough": "No se hizo",
-  "journal.answerFailed": "No se pudo escribir la respuesta en el diario; la consola tiene los detalles.",
+  "journal.answerFailed": "No se pudo escribir la respuesta en el diario; la consola tiene los detalles. Aparta el diario para empezar uno nuevo; el archivo antiguo se guarda a su lado.",
+  "journal.damagedQuestion": "El diario también tiene líneas poco fiables. Si tu respuesta no resuelve esta pregunta, aparta el diario para empezar uno nuevo; el archivo antiguo se guarda a su lado.",
   "journal.unknownRetainer": "un empleado"
 }
