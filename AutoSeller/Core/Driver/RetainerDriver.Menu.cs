@@ -101,7 +101,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
     {
         var authorization = session.Authorization;
-        if (!authorization.Rules.Vendor.VendorsAnything || !ItemMenusOpen("vendoring"))
+        if (!authorization.Rules.Vendors || !ItemMenusOpen("vendoring"))
         {
             return Stop.None;
         }

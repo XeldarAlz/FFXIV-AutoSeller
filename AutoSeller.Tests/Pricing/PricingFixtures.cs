@@ -45,7 +45,6 @@ internal static class PricingFixtures
             isHq,
             price,
             1,
-            false,
             false);
     }
 

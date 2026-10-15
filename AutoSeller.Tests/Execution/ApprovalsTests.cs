@@ -161,8 +161,8 @@ public sealed class ApprovalsTests
     {
         CompetitorListing[] listings =
         [
-            new(1, StrangerRetainer, StrangerContentId, Ore, false, lowestPrice, 1, false, false),
-            new(2, StrangerRetainer + 1, StrangerContentId + 1, Ore, false, lowestPrice + 20, 1, false, false),
+            new(1, StrangerRetainer, StrangerContentId, Ore, false, lowestPrice, 1, false),
+            new(2, StrangerRetainer + 1, StrangerContentId + 1, Ore, false, lowestPrice + 20, 1, false),
         ];
         return new CompetitorSnapshot
         {

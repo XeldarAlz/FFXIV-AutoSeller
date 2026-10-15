@@ -98,7 +98,6 @@ public sealed class BaitFilterTests
             Competitor(100) with { RetainerId = OwnRetainer },
             Competitor(100) with { SellerContentId = AltCharacter },
             Competitor(100) with { IsMannequin = true },
-            Competitor(100) with { IsSellingAsSet = true },
             Competitor(100, isHq: true),
             Competitor(100) with { ItemId = OtherItemId },
             Competitor(1_000),

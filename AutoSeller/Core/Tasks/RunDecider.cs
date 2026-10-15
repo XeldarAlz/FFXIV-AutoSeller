@@ -229,7 +229,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             Svc.PlayerState.CurrentWorld.RowId,
             openRetainerId,
             windowChainReady,
-            configuration.BuildRuleBook(),
+            configuration.BuildRuleBook().WithWork(Authorization.Rules.Work),
             configuration.BuildPricingSettings(),
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,
             configuration.BuildRunCaps(),

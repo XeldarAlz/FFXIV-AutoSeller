@@ -22,7 +22,7 @@ public sealed class CompetitorSnapshotBuilderTests
         Assert.Equal(2, snapshot.ExpectedCount);
         Assert.True(snapshot.IsComplete);
         Assert.False(snapshot.IsCapped);
-        Assert.Equal(new CompetitorListing(1, CompetitorRetainer, Seller, Ore, false, 900, 5, false, false), snapshot.Listings[0]);
+        Assert.Equal(new CompetitorListing(1, CompetitorRetainer, Seller, Ore, false, 900, 5, false), snapshot.Listings[0]);
         Assert.Equal(history, snapshot.History.AsSpan().ToArray());
     }
 
@@ -129,22 +129,20 @@ public sealed class CompetitorSnapshotBuilderTests
     }
 
     [Fact]
-    public void OwnMannequinAndSetRowsStayWithTheirMarks()
+    public void OwnAndMannequinRowsStayWithTheirMarks()
     {
         const ulong ownRetainer = 900;
         ObservedListing[] rows =
         [
             Row(1, 900, ownRetainer),
             Row(2, 950) with { IsMannequin = true },
-            Row(3, 980) with { IsSellingAsSet = true },
         ];
 
         var snapshot = Built(rows);
 
-        Assert.Equal(3, snapshot.Listings.Length);
+        Assert.Equal(2, snapshot.Listings.Length);
         Assert.Equal(ownRetainer, snapshot.Listings[0].RetainerId);
         Assert.True(snapshot.Listings[1].IsMannequin);
-        Assert.True(snapshot.Listings[2].IsSellingAsSet);
     }
 
     [Fact]

@@ -11,8 +11,8 @@ public sealed class MarketModelTests
         ObservedListing[] captured = [Captured(1), Captured(2), Captured(3)];
         OfferedListing[] offered = [Offered(3), Offered(1), Offered(2)];
 
-        Assert.Equal(CrossCheckResult.Match, ListingCrossCheck.Compare(captured, offered));
-        Assert.Equal(CrossCheckResult.Match, ListingCrossCheck.Compare([], []));
+        Assert.Equal(CrossCheck.Match, ListingCrossCheck.Compare(captured, offered));
+        Assert.Equal(CrossCheck.Match, ListingCrossCheck.Compare([], []));
     }
 
     [Fact]
@@ -20,11 +20,11 @@ public sealed class MarketModelTests
     {
         ObservedListing[] captured = [Captured(1), Captured(2)];
 
-        Assert.Equal(CrossCheckResult.CountMismatch, ListingCrossCheck.Compare(captured, [Offered(1)]));
-        Assert.Equal(CrossCheckResult.MissingListing, ListingCrossCheck.Compare(captured, [Offered(1), Offered(9)]));
-        Assert.Equal(CrossCheckResult.FieldMismatch, ListingCrossCheck.Compare(captured, [Offered(1), Offered(2) with { UnitPrice = 999 }]));
-        Assert.Equal(CrossCheckResult.FieldMismatch, ListingCrossCheck.Compare(captured, [Offered(1), Offered(2) with { OnMannequin = true }]));
-        Assert.Equal(CrossCheckResult.DuplicateListing, ListingCrossCheck.Compare([Captured(1), Captured(1)], [Offered(1), Offered(1)]));
+        Assert.Equal(CrossCheck.Of(CrossCheckResult.CountMismatch), ListingCrossCheck.Compare(captured, [Offered(1)]));
+        Assert.Equal(new CrossCheck(CrossCheckResult.MissingListing, 1, -1, ListingField.ListingId), ListingCrossCheck.Compare(captured, [Offered(1), Offered(9)]));
+        Assert.Equal(new CrossCheck(CrossCheckResult.FieldMismatch, 1, 1, ListingField.UnitPrice), ListingCrossCheck.Compare(captured, [Offered(1), Offered(2) with { UnitPrice = 999 }]));
+        Assert.Equal(new CrossCheck(CrossCheckResult.FieldMismatch, 1, 1, ListingField.Mannequin), ListingCrossCheck.Compare(captured, [Offered(1), Offered(2) with { OnMannequin = true }]));
+        Assert.Equal(new CrossCheck(CrossCheckResult.DuplicateListing, 1, -1, ListingField.ListingId), ListingCrossCheck.Compare([Captured(1), Captured(1)], [Offered(1), Offered(1)]));
     }
 
     [Fact]
@@ -33,7 +33,17 @@ public sealed class MarketModelTests
         ObservedListing[] captured = [Captured(1) with { ItemId = Ore + MarketItemId.HighQualityOffset, IsHq = true }];
         OfferedListing[] offered = [Offered(1) with { IsHq = true }];
 
-        Assert.Equal(CrossCheckResult.Match, ListingCrossCheck.Compare(captured, offered));
+        Assert.Equal(CrossCheck.Match, ListingCrossCheck.Compare(captured, offered));
+    }
+
+    [Fact]
+    public void ARefusedCopyNamesBothListings()
+    {
+        var captured = Captured(2) with { IsMannequin = true };
+        var offered = Offered(2);
+
+        Assert.Equal($"listing 2, retainer {CompetitorRetainer}, item {Ore}, 5 x 1000 + tax 50, mannequin", captured.ToString());
+        Assert.Equal($"listing 2, retainer {CompetitorRetainer}, item {Ore}, 5 x 1000 + tax 50", offered.ToString());
     }
 
     [Fact]

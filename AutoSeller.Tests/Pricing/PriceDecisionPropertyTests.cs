@@ -427,14 +427,13 @@ public sealed class PriceDecisionPropertyTests
     private static CompetitorListing Uncompetitive(Random random, bool isHq)
     {
         var listing = Competitor((uint)random.Next(1, MaximumBasePrice * 3), isHq);
-        return random.Next(7) switch
+        return random.Next(6) switch
         {
             0 => listing with { RetainerId = OwnRetainer },
             1 => listing with { RetainerId = AltRetainer },
             2 => listing with { SellerContentId = OwnCharacter },
             3 => listing with { SellerContentId = AltCharacter },
             4 => listing with { IsMannequin = true },
-            5 => listing with { IsSellingAsSet = true },
             _ => listing with { IsHq = !isHq },
         };
     }

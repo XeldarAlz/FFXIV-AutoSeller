@@ -337,7 +337,6 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
             listing.Quantity,
             listing.UnitPrice,
             listing.TotalTax,
-            listing.IsMannequin,
             listing.IsSellingAsSet);
     }
 
@@ -553,10 +552,14 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
             captureBuffer[index] = Observe(listings[index]);
         }
 
-        var check = ListingCrossCheck.Compare(captureBuffer.AsSpan(0, count), machine.Offered);
-        if (check != CrossCheckResult.Match)
+        var captured = captureBuffer.AsSpan(0, count);
+        var check = ListingCrossCheck.Compare(captured, machine.Offered);
+        if (check.Result != CrossCheckResult.Match)
         {
-            RunLog.Info($"Market: copy of item {machine.ItemId} refused ({check}): proxy {count}, pages {machine.Offered.Length}, announced {machine.ExpectedCount}.");
+            var difference = check.Result == CrossCheckResult.FieldMismatch
+                ? $" First difference {check.Field}: proxy [{captured[check.CapturedIndex]}], page [{machine.Offered[check.OfferedIndex]}]."
+                : string.Empty;
+            RunLog.Info($"Market: copy of item {machine.ItemId} refused ({check.Result}): proxy {count}, pages {machine.Offered.Length}, announced {machine.ExpectedCount}.{difference}");
             machine.OnCaptureFailed(now);
             return;
         }

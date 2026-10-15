@@ -53,12 +53,12 @@ internal static partial class L
         public static readonly LocString ItemsWorthHelp = new("sell.items.worthHelp", "What your items would fetch at today's prices: on the market board just under the cheapest seller, or at the NPC price for items that can only go to a vendor. Market prices come from Universalis and change all the time.");
         public static readonly LocString ItemsChosen = new("sell.items.chosen", "Ticked to sell");
         public static readonly LocPlural ItemsChosenCount = new("sell.items.chosenCount", "{0} item", "{0} items");
-        public static readonly LocString ItemsIntro = new("sell.items.intro", "Tick Market board or NPC on what you want sold, then press Start. The box shows the best price, just under the cheapest seller; type your own to change it.");
+        public static readonly LocString ItemsIntro = new("sell.items.intro", "Tick Market board or NPC on what you want sold, then press Sell. A ticked item lists all of it unless you set an amount, at the best price (just under the cheapest seller) unless you type your own, on any retainer unless you pick one.");
         public static readonly LocString ItemsSearchHint = new("sell.items.searchHint", "Find an item");
         public static readonly LocString ItemsEmpty = new("sell.items.empty", "Nothing you carry can be sold. Turn on the saddlebag or the armoury chest above to see what they hold.");
         public static readonly LocString ItemsNoMatch = new("sell.items.noMatch", "No item matches your search.");
         public static readonly LocString ItemsMarket = new("sell.items.market", "Market board");
-        public static readonly LocString ItemsMarketHelp = new("sell.items.marketHelp", "List it on the market board at the price in the box and keep it the cheapest. Click again to stop selling it.");
+        public static readonly LocString ItemsMarketHelp = new("sell.items.marketHelp", "List it on the market board and keep it the cheapest; its options open below. Click again to stop selling it.");
         public static readonly LocString ItemsVendor = new("sell.items.vendor", "NPC");
         public static readonly LocString ItemsVendorHelp = new("sell.items.vendorHelp", "Sell it to a vendor through your retainer at the NPC price. Click again to stop.");
         public static readonly LocString ItemsCannotList = new("sell.items.cannotList", "It cannot go on the market board: it is untradable, collectable, spiritbound, in a gear set, protected by AutoRetainer or on your never-sell list.");
@@ -69,12 +69,20 @@ internal static partial class L
         public static readonly LocString ItemsPriceHelp = new("sell.items.priceHelp", "Best price {0}, just under the cheapest seller. Type your own price, or clear the box to go back to the best price. A run never lists below {1}.");
         public static readonly LocString ItemsPriceHelpNoBest = new("sell.items.priceHelpNoBest", "No market price yet. Type your own price, or wait for prices to load. A run never lists below {0}.");
         public static readonly LocString ItemsBelowFloor = new("sell.items.belowFloor", "Below the lowest allowed price of {0}, so it stays in your bags");
+        public static readonly LocString ItemsJunkOn = new("sell.items.junkOn", "Vendor junk is on: every normal quality stack worth under {0} on the market board is also sold to the NPC, ticked here or not.");
+        public static readonly LocString ItemsJunkTurnOff = new("sell.items.junkTurnOff", "Turn off");
+        public static readonly LocString ItemsEach = new("sell.items.each", "{0} each");
+        public static readonly LocString ItemsAmount = new("sell.items.amount", "Sell");
+        public static readonly LocString ItemsAmountOf = new("sell.items.amountOf", "of {0}");
+        public static readonly LocString ItemsAmountHelp = new("sell.items.amountHelp", "How many to sell. Leave it empty to sell all of them; the rest stays in your bags.");
+        public static readonly LocString ItemsPriceLabel = new("sell.items.priceLabel", "Price");
+        public static readonly LocString ItemsRetainer = new("sell.items.retainer", "Retainer");
+        public static readonly LocString ItemsRetainerHelp = new("sell.items.retainerHelp", "The retainer that lists it first while it has a free slot. With Any retainer the run chooses.");
+        public static readonly LocString ItemsAnyRetainer = new("sell.items.anyRetainer", "Any retainer");
     }
 
     internal static class Dock
     {
-        public static readonly LocString Start = new("dock.start", "START");
-        public static readonly LocString StartSub = new("dock.startSub", "reprice and list");
         public static readonly LocString Stop = new("dock.stop", "STOP");
         public static readonly LocString PauseCaps = new("dock.pause", "PAUSE");
         public static readonly LocString ResumeCaps = new("dock.resume", "RESUME");
@@ -84,6 +92,12 @@ internal static partial class L
         public static readonly LocString ReasonJournal = new("dock.reason.journal", "answer the card on the Sell page first");
         public static readonly LocString StateRunning = new("dock.state.running", "running");
         public static readonly LocString StatePaused = new("dock.state.paused", "paused");
+        public static readonly LocString Sell = new("dock.sell", "SELL");
+        public static readonly LocString SellSub = new("dock.sellSub", "list and sell what you ticked");
+        public static readonly LocString Undercut = new("dock.undercut", "UNDERCUT");
+        public static readonly LocString UndercutSub = new("dock.undercutSub", "reprice your listings");
+        public static readonly LocString ReasonNothingTicked = new("dock.reason.nothingTicked", "tick an item under Your items first");
+        public static readonly LocString ReasonNothingToUndercut = new("dock.reason.nothingToUndercut", "turn on Undercut all my listings in Settings, Pricing");
     }
 
     internal static class Run
@@ -260,7 +274,7 @@ internal static partial class L
             new("changelog.r1000.1", "Sell page: one plan across all your retainers' listings that shows what is repriced, listed, returned or vendored, at what price and why, before anything is clicked"),
             new("changelog.r1000.2", "Rules: a sell list with a floor, ceiling, fixed price, lot size, keep count, listings to keep up and preferred retainer per item, category rules, a never-sell list, and vendor rules that stay off until you turn them on"),
             new("changelog.r1000.3", "Guarded pricing: Undercut or Match against same-quality listings only, never against your own retainers or your alts, with bait listings ignored, a floor from real sales and the vendor price, a step limit, a cooldown and price-war detection"),
-            new("changelog.r1000.4", "Start walks to a summoning bell or the bell in your inn room and works through every enabled retainer, or only the ones that need it, holding AutoRetainer back for the run"),
+            new("changelog.r1000.4", "Sell and Undercut walk to a summoning bell, your inn room or a bell you pick, and visit only the retainers that need it, holding AutoRetainer back for the run"),
             new("changelog.r1000.5", "Every price is typed in the game's sell window, checked before Confirm and read back after, with a journal entry before each write; anything unclear stops the run and asks you"),
             new("changelog.r1000.6", "AutoRetainer: runs after each venture on the retainer it hands over and always hands it back, with a Sell now button, its protect list and your alts"),
             new("changelog.r1000.7", "Assist fills in the suggested price when you open a sell window yourself and leaves Confirm to you; buttons on the retainer list and the sell list start a run right there"),
@@ -269,8 +283,10 @@ internal static partial class L
             new("changelog.r1000.10", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
             new("changelog.r1000.11", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
             new("changelog.r1000.12", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
-            new("changelog.r1000.13", "Your items on the Sell page: everything you carry with its best price and what it could all sell for; tick Market board or NPC, type your own price if you like, and press Start"),
+            new("changelog.r1000.13", "Your items on the Sell page: everything you carry with its best price and what it could all sell for; tick Market board or NPC, set how many, the price and the retainer if you like, and press Sell"),
             new("changelog.r1000.14", "Every listing your retainers have up is undercut out of the box, never below its floor; turn it off in Settings, Pricing"),
+            new("changelog.r1000.15", "Pick the bell runs use in Settings, General: the nearest one, your inn room, or the one you stand at"),
+            new("changelog.r1000.16", "Opening a retainer's sell list yourself reads its listings into the plan, no run needed"),
         ];
     }
 

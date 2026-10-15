@@ -173,10 +173,25 @@ public sealed class SellAuthorizationTests
     }
 
     [Fact]
+    public void TheRunWorkIsReadBackFromTheJournal()
+    {
+        var rules = RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, [], true, RunWork.Reprice);
+        var authorization = Authorization(rules: rules);
+
+        var line = JsonSerializer.Serialize<JournalEvent>(authorization.ToJournalEvent(1, Now), RunJournal.SerializerOptions);
+        var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(line, RunJournal.SerializerOptions));
+        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
+
+        Assert.Equal(RunWork.Reprice, restored!.Rules.Work);
+        Assert.Equal(authorization.RulesHash, restored.RulesHash);
+        Assert.Equal(RunWork.All, Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(line.Replace(",\"Work\":\"Reprice\"", string.Empty, StringComparison.Ordinal), RunJournal.SerializerOptions)).Rules.Work);
+    }
+
+    [Fact]
     public void AJournalEntryFromBeforeUndercuttingAllListingsReadsItAsOff()
     {
         var line = JsonSerializer.Serialize<JournalEvent>(Authorization().ToJournalEvent(1, Now), RunJournal.SerializerOptions);
-        var older = line.Replace(",\"UndercutAllListings\":false", string.Empty, StringComparison.Ordinal);
+        var older = line.Replace(",\"UndercutAllListings\":false", string.Empty, StringComparison.Ordinal).Replace(",\"Work\":\"All\"", string.Empty, StringComparison.Ordinal);
 
         var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(older, RunJournal.SerializerOptions));
 

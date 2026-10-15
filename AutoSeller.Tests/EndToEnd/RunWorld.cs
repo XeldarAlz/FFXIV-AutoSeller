@@ -62,11 +62,11 @@ internal static class RunWorld
 
     public static ObservedListing Seller(ulong listingId, uint unitPrice, bool isHq = false)
     {
-        return new ObservedListing(listingId, StrangerRetainer + listingId, StrangerCharacter + listingId, Ore, isHq, LotQuantity, unitPrice, unitPrice / 20, false, false);
+        return new ObservedListing(listingId, StrangerRetainer + listingId, StrangerCharacter + listingId, Ore, isHq, LotQuantity, unitPrice, unitPrice / 20, false);
     }
 
     public static ObservedListing Ours(ulong listingId, ulong retainerId, uint unitPrice)
     {
-        return new ObservedListing(listingId, retainerId, Character, Ore, false, LotQuantity, unitPrice, unitPrice / 20, false, false);
+        return new ObservedListing(listingId, retainerId, Character, Ore, false, LotQuantity, unitPrice, unitPrice / 20, false);
     }
 }

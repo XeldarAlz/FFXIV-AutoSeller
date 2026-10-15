@@ -25,8 +25,14 @@ internal sealed class BagItemsView
     private const float IconSize = 30f;
     private const float CellGap = 10f;
     private const float PriceFieldWidth = 112f;
+    private const float AmountFieldWidth = 72f;
+    private const float RetainerPickerWidth = 150f;
+    private const float OptionsHeight = 40f;
+    private const float FieldCaptionGap = 6f;
+    private const float BannerPadY = 8f;
     private const float SearchWidth = 240f;
     private const float ChosenTint = 0.10f;
+    private const string JunkOffId = "##asell_bag_junk_off";
     private const string SearchId = "##asell_bag_search";
     private const string SaddlebagChipId = "##asell_bag_saddlebag";
     private const string ArmouryChipId = "##asell_bag_armoury";
@@ -34,6 +40,9 @@ internal sealed class BagItemsView
     private static readonly SellSources[] sourceOrder = [SellSources.Bags, SellSources.Crystals, SellSources.Saddlebag, SellSources.Armoury, SellSources.RetainerPages];
 
     private readonly Dictionary<uint, GilField.Buffer> priceBuffers = [];
+    private readonly Dictionary<uint, GilField.Buffer> amountBuffers = [];
+    private string[] retainerLabels = [];
+    private ulong[] retainerIds = [];
     private ImmutableArray<BagItem> items = [];
     private RowText[] texts = [];
     private int[] shown = [];
@@ -54,7 +63,12 @@ internal sealed class BagItemsView
         public string FloorNote = string.Empty;
         public string PriceHint = string.Empty;
         public string PriceTooltip = string.Empty;
+        public string PriceText = string.Empty;
+        public string AmountHint = string.Empty;
+        public string AmountOf = string.Empty;
         public string PriceId = string.Empty;
+        public string AmountId = string.Empty;
+        public string RetainerId = string.Empty;
         public string MarketId = string.Empty;
         public string VendorId = string.Empty;
         public ushort IconId;
@@ -65,6 +79,7 @@ internal sealed class BagItemsView
     public void Draw(Plugin plugin, SellPlan plan)
     {
         Refresh(plugin.GameItems, plan);
+        DrawJunkWarning(plugin.Configuration);
         DrawTiles();
         Styling.VSpace(SectionGap);
         DrawToolbar(plugin.Configuration);
@@ -87,6 +102,41 @@ internal sealed class BagItemsView
             var position = shown[index];
             DrawRow(configuration, items[position], texts[position]);
         }
+    }
+
+    private static void DrawJunkWarning(Configuration configuration)
+    {
+        if (!configuration.VendoringEnabled)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var padX = PadX * scale;
+        var padY = BannerPadY * scale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var label = Loc.T(L.Sell.ItemsJunkTurnOff);
+        var buttonWidth = PillButton.Width(label);
+        var text = Loc.T(L.Sell.ItemsJunkOn, Formatting.Gil(configuration.JunkThreshold));
+        var textWidth = MathF.Max(1f, width - buttonWidth - padX * 3f);
+        var textSize = TextDraw.MeasureWrapped(text, textWidth);
+        var buttonHeight = Layout.ActionPillHeight * scale;
+        var height = MathF.Max(textSize.Y, buttonHeight) + padY * 2f;
+        var origin = ImGui.GetCursorScreenPos();
+        var end = origin + new Vector2(width, height);
+        Paint.Glass(ImGui.GetWindowDrawList(), origin, end, Styling.CardRounding * scale, Styling.AccentAmber, 0.12f);
+        TextDraw.Wrapped(text, new Vector2(origin.X + padX, origin.Y + (height - textSize.Y) * 0.5f), textWidth, Styling.AccentAmberSoft);
+        ImGui.SetCursorScreenPos(new Vector2(end.X - padX - buttonWidth, origin.Y + (height - buttonHeight) * 0.5f));
+        if (PillButton.Draw(JunkOffId, label, Styling.AccentAmber, PillButton.Emphasis.Filled, null, true, Layout.ActionPillHeight))
+        {
+            configuration.VendoringEnabled = false;
+            configuration.RulesChanged();
+            RunLog.Info("Your items: Vendor junk turned off.");
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+        Styling.VSpace(SectionGap);
     }
 
     private void DrawTiles()
@@ -144,7 +194,10 @@ internal sealed class BagItemsView
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
-        var size = new Vector2(width, RowHeight * scale);
+        var channel = RuleListEdits.ChannelOf(configuration.SellList, configuration.VendorList, item.ItemId);
+        var marketOn = channel == SellChannel.MarketBoard;
+        var rowHeight = RowHeight * scale;
+        var size = new Vector2(width, rowHeight + (marketOn ? OptionsHeight * scale : 0f));
         if (!ImGui.IsRectVisible(size))
         {
             ImGui.Dummy(size);
@@ -155,14 +208,13 @@ internal sealed class BagItemsView
         var origin = ImGui.GetCursorScreenPos();
         var end = origin + size;
         var drawList = ImGui.GetWindowDrawList();
-        var channel = RuleListEdits.ChannelOf(configuration.SellList, configuration.VendorList, item.ItemId);
         var accent = channel == SellChannel.Vendor ? Styling.AccentCoffee : Styling.AccentMint;
         Paint.Glass(drawList, origin, end, Styling.CardRounding * scale, accent, channel == SellChannel.None ? 0.02f : ChosenTint);
 
         var padX = PadX * scale;
         var gap = CellGap * scale;
         var buttonHeight = Layout.ActionPillHeight;
-        var buttonY = origin.Y + (size.Y - buttonHeight * scale) * 0.5f;
+        var buttonY = origin.Y + (rowHeight - buttonHeight * scale) * 0.5f;
         var vendorLabel = Loc.T(L.Sell.ItemsVendor);
         var marketLabel = Loc.T(L.Sell.ItemsMarket);
         var vendorOn = channel == SellChannel.Vendor;
@@ -172,7 +224,6 @@ internal sealed class BagItemsView
             Choose(configuration, item.ItemId, text.CanBeHq, vendorOn ? SellChannel.None : SellChannel.Vendor);
         }
 
-        var marketOn = channel == SellChannel.MarketBoard;
         x -= gap + PillButton.Width(marketLabel, FontAwesomeIcon.Store);
         if (ChannelButton(text.MarketId, marketLabel, FontAwesomeIcon.Store, Styling.AccentMint, marketOn, item.CanList || marketOn, L.Sell.ItemsMarketHelp, L.Sell.ItemsCannotList, new Vector2(x, buttonY)))
         {
@@ -181,20 +232,76 @@ internal sealed class BagItemsView
 
         if (item.CanList)
         {
-            x -= gap + PriceFieldWidth * scale;
-            ImGui.SetCursorScreenPos(new Vector2(x, origin.Y + (size.Y - ImGui.GetFrameHeight()) * 0.5f));
-            var custom = RuleListEdits.FixedPriceOf(configuration.SellList, item.ItemId);
-            if (GilField.Draw(text.PriceId, BufferFor(item.ItemId), custom, MarketLimits.MaximumUnitPrice, text.PriceHint, PriceFieldWidth, out var price, text.PriceTooltip, true)
-                && RuleListEdits.SetFixedPrice(configuration.SellList, configuration.VendorList, item.ItemId, text.CanBeHq, (uint)price))
+            var priceSize = TextDraw.Measure(text.PriceText);
+            x -= gap + priceSize.X;
+            TextDraw.At(text.PriceText, new Vector2(x, origin.Y + (rowHeight - priceSize.Y) * 0.5f), item.Price.BelowFloor ? Styling.AccentAmberSoft : Styling.TextSecondary);
+            if (Hit.HoveringRect(new Vector2(x, origin.Y), new Vector2(x + priceSize.X, origin.Y + rowHeight)))
             {
-                configuration.RulesChanged();
+                Tooltip.Show(text.PriceTooltip);
             }
         }
 
-        DrawIdentity(drawList, text, origin, size.Y, x - gap - origin.X);
+        DrawIdentity(drawList, text, origin, rowHeight, x - gap - origin.X);
+        if (marketOn)
+        {
+            DrawOptions(configuration, item, text, new Vector2(origin.X, origin.Y + rowHeight));
+        }
+
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(size);
         Styling.VSpace(RowGap);
+    }
+
+    private void DrawOptions(Configuration configuration, in BagItem item, RowText text, Vector2 origin)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var midY = origin.Y + OptionsHeight * scale * 0.5f;
+        var fieldY = midY - ImGui.GetFrameHeight() * 0.5f;
+        var gap = CellGap * scale;
+        var x = origin.X + PadX * scale * 2f + IconSize * scale;
+
+        x = FieldCaption(Loc.T(L.Sell.ItemsAmount), x, midY);
+        ImGui.SetCursorScreenPos(new Vector2(x, fieldY));
+        var amount = RuleListEdits.AmountOf(configuration.SellList, item.ItemId, item.Quantity);
+        if (GilField.Draw(text.AmountId, BufferFor(amountBuffers, item.ItemId), amount, item.Quantity, text.AmountHint, AmountFieldWidth, out var newAmount, Loc.T(L.Sell.ItemsAmountHelp), true)
+            && RuleListEdits.SetAmount(configuration.SellList, item.ItemId, item.Quantity, (uint)newAmount))
+        {
+            configuration.RulesChanged();
+        }
+
+        x = FieldCaption(text.AmountOf, x + AmountFieldWidth * scale + FieldCaptionGap * scale, midY) + gap;
+        x = FieldCaption(Loc.T(L.Sell.ItemsPriceLabel), x, midY);
+        ImGui.SetCursorScreenPos(new Vector2(x, fieldY));
+        var custom = RuleListEdits.FixedPriceOf(configuration.SellList, item.ItemId);
+        if (GilField.Draw(text.PriceId, BufferFor(priceBuffers, item.ItemId), custom, MarketLimits.MaximumUnitPrice, text.PriceHint, PriceFieldWidth, out var price, text.PriceTooltip, true)
+            && RuleListEdits.SetFixedPrice(configuration.SellList, configuration.VendorList, item.ItemId, text.CanBeHq, (uint)price))
+        {
+            configuration.RulesChanged();
+        }
+
+        x = FieldCaption(Loc.T(L.Sell.ItemsRetainer), x + PriceFieldWidth * scale + gap * 2f, midY);
+        ImGui.SetCursorScreenPos(new Vector2(x, fieldY));
+        var selected = Math.Max(0, Array.IndexOf(retainerIds, RuleListEdits.RetainerOf(configuration.SellList, item.ItemId)));
+        if (Dropdown.Draw(text.RetainerId, retainerLabels, ref selected, RetainerPickerWidth)
+            && RuleListEdits.SetRetainer(configuration.SellList, item.ItemId, retainerIds[selected]))
+        {
+            configuration.RulesChanged();
+        }
+
+        if (Hit.HoveringRect(new Vector2(x, fieldY), new Vector2(x + RetainerPickerWidth * scale, fieldY + ImGui.GetFrameHeight())))
+        {
+            Tooltip.Show(Loc.T(L.Sell.ItemsRetainerHelp));
+        }
+    }
+
+    private static float FieldCaption(string caption, float x, float midY)
+    {
+        using (Fonts.PushCaption())
+        {
+            var size = TextDraw.Measure(caption);
+            TextDraw.At(caption, new Vector2(x, midY - size.Y * 0.5f), Styling.TextMuted);
+            return x + size.X + FieldCaptionGap * ImGuiHelpers.GlobalScale;
+        }
     }
 
     private static bool ChannelButton(string id, string label, FontAwesomeIcon icon, Vector4 accent, bool on, bool enabled, LocString help, LocString blocked, Vector2 at)
@@ -247,12 +354,12 @@ internal sealed class BagItemsView
         RunLog.Info($"Your items: item {itemId} is now sold {(channel == SellChannel.None ? "nowhere" : channel == SellChannel.Vendor ? "to a vendor" : "on the market board")}.");
     }
 
-    private GilField.Buffer BufferFor(uint itemId)
+    private static GilField.Buffer BufferFor(Dictionary<uint, GilField.Buffer> buffers, uint itemId)
     {
-        if (!priceBuffers.TryGetValue(itemId, out var buffer))
+        if (!buffers.TryGetValue(itemId, out var buffer))
         {
             buffer = new GilField.Buffer();
-            priceBuffers.Add(itemId, buffer);
+            buffers.Add(itemId, buffer);
         }
 
         return buffer;
@@ -269,6 +376,7 @@ internal sealed class BagItemsView
             var input = plan.Input;
             items = BagItems.From(input.Stock.AsSpan(), input.Rules, input.Pricing, input.References, input.HomeWorldId, input.NowUtc);
             BuildTexts(gameItems);
+            BuildRetainerChoices(plan);
         }
 
         if (!rebuilt && string.Equals(search, builtSearch, StringComparison.Ordinal))
@@ -293,11 +401,16 @@ internal sealed class BagItemsView
                 Name = game.Name,
                 Caption = string.Concat(QuantityText(item), TextDraw.Separator, SourcesText(item.Sources)),
                 FloorNote = item.CanList && item.Price.BelowFloor ? Loc.T(L.Sell.ItemsBelowFloor, Formatting.Gil(item.Price.Floor)) : string.Empty,
+                PriceText = item.Price.Known ? Loc.T(L.Sell.ItemsEach, Formatting.Gil(item.Price.Listed)) : Loc.T(L.Sell.ItemsNoPrice),
+                AmountHint = item.Quantity.ToString("N0", Loc.Culture),
+                AmountOf = Loc.T(L.Sell.ItemsAmountOf, item.Quantity.ToString("N0", Loc.Culture)),
                 PriceHint = item.Price.Best > 0 ? item.Price.Best.ToString("N0", Loc.Culture) : Loc.T(L.Sell.ItemsNoPrice),
                 PriceTooltip = item.Price.Best > 0
                     ? Loc.T(L.Sell.ItemsPriceHelp, Formatting.Gil(item.Price.Best), Formatting.Gil(item.Price.Floor))
                     : Loc.T(L.Sell.ItemsPriceHelpNoBest, Formatting.Gil(item.Price.Floor)),
                 PriceId = string.Concat("##asell_bag_price_", id),
+                AmountId = string.Concat("##asell_bag_amount_", id),
+                RetainerId = string.Concat("##asell_bag_retainer_", id),
                 MarketId = string.Concat("##asell_bag_market_", id),
                 VendorId = string.Concat("##asell_bag_vendor_", id),
                 IconId = game.IconId,
@@ -310,6 +423,19 @@ internal sealed class BagItemsView
         worth = Formatting.Gil(totals.Estimate);
         chosenWorth = Formatting.Gil(totals.ChosenEstimate);
         chosenCount = Loc.Plural(L.Sell.ItemsChosenCount, totals.Chosen);
+    }
+
+    private void BuildRetainerChoices(SellPlan plan)
+    {
+        var retainers = plan.Retainers;
+        retainerLabels = new string[retainers.Length + 1];
+        retainerIds = new ulong[retainers.Length + 1];
+        retainerLabels[0] = Loc.T(L.Sell.ItemsAnyRetainer);
+        for (var index = 0; index < retainers.Length; index++)
+        {
+            retainerLabels[index + 1] = retainers[index].Name;
+            retainerIds[index + 1] = retainers[index].RetainerId;
+        }
     }
 
     private void Filter()

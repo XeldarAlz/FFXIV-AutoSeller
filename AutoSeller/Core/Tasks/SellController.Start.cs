@@ -7,6 +7,7 @@ using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning.Model;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks.Model;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
@@ -16,14 +17,14 @@ namespace AutoSeller.Core.Tasks;
 
 internal sealed partial class SellController
 {
-    public StartBlock Start()
+    public StartBlock Start(RunWork work = RunWork.All)
     {
         if (!ReadyForANewRun())
         {
             return StartBlock.AlreadyRunning;
         }
 
-        var block = CheckStart(RunMode.Standalone, plugin.Characters.Current?.EnabledRetainerIds().Length > 0);
+        var block = CheckStart(RunMode.Standalone, plugin.Characters.Current?.EnabledRetainerIds().Length > 0, work);
         if (block is not (StartBlock.None or StartBlock.Settling))
         {
             return Refuse(RunMode.Standalone, block, block.ToString());
@@ -40,7 +41,7 @@ internal sealed partial class SellController
             return Refuse(RunMode.Standalone, StartBlock.AutoRetainerNotHeld, "AutoRetainer could not be held back");
         }
 
-        block = Authorize(runId, RunMode.Standalone, 0);
+        block = Authorize(runId, RunMode.Standalone, 0, work);
         if (block != StartBlock.None)
         {
             plugin.Suppression.Release(runId);
@@ -78,7 +79,7 @@ internal sealed partial class SellController
             return Refuse(RunMode.OpenSellList, StartBlock.AutoRetainerNotHeld, "AutoRetainer could not be held back");
         }
 
-        block = Authorize(runId, RunMode.OpenSellList, open.RetainerId);
+        block = Authorize(runId, RunMode.OpenSellList, open.RetainerId, RunWork.All);
         if (block != StartBlock.None)
         {
             plugin.Suppression.Release(runId);
@@ -100,13 +101,13 @@ internal sealed partial class SellController
             return Refuse(RunMode.Postprocess, block, block.ToString());
         }
 
-        return Authorize(Guid.NewGuid(), RunMode.Postprocess, retainerId);
+        return Authorize(Guid.NewGuid(), RunMode.Postprocess, retainerId, RunWork.All);
     }
 
-    public StartBlock CheckStart(RunMode mode, bool hasEnabledRetainers)
+    public StartBlock CheckStart(RunMode mode, bool hasEnabledRetainers, RunWork work = RunWork.All)
     {
         var configuration = plugin.Configuration;
-        var rules = configuration.BuildRuleBook();
+        var rules = configuration.BuildRuleBook().WithWork(work);
         var ledger = plugin.Ledger;
         if (ledger.ReadError is not null)
         {
@@ -152,19 +153,20 @@ internal sealed partial class SellController
         return false;
     }
 
-    private StartBlock Authorize(Guid runId, RunMode mode, ulong onlyRetainerId)
+    private StartBlock Authorize(Guid runId, RunMode mode, ulong onlyRetainerId, RunWork work)
     {
         var configuration = plugin.Configuration;
         var ledger = plugin.Ledger;
         var nowUtc = DateTime.UtcNow;
-        if (plugin.Plan.Capture(nowUtc, true) is not { } input)
+        if (plugin.Plan.Capture(nowUtc, true) is not { } captured)
         {
             return Refuse(mode, StartBlock.NotLoggedIn, "the bags and the character data could not be read");
         }
 
+        var input = captured with { Rules = captured.Rules.WithWork(work) };
         var markets = input.Markets.AsSpan();
         var edits = input.Edits;
-        var onlyNeeded = mode == RunMode.Standalone && OnlyRetainersThatNeedIt;
+        var onlyNeeded = mode == RunMode.Standalone && (work != RunWork.All || OnlyRetainersThatNeedIt);
         ImmutableArray<ulong> retainerIds = mode != RunMode.Standalone ? [onlyRetainerId]
             : onlyNeeded ? SellPlanner.Build(input, CancellationToken.None).RetainersToVisit(true)
             : input.EnabledRetainerIds();
@@ -220,7 +222,7 @@ internal sealed partial class SellController
         PauseReason = PauseReason.None;
         faultBudget.Reset();
         RunLog.Info(
-            $"Run {authorization.RunId} authorized ({mode}): {active.Retainers.Length} retainer(s) to visit of {active.PlanInputs.Retainers.Length} enabled, {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
+            $"Run {authorization.RunId} authorized ({mode}, {work}): {active.Retainers.Length} retainer(s) to visit of {active.PlanInputs.Retainers.Length} enabled, {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
             $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, policy {authorization.PolicyVersion}" +
             $"{(mode == RunMode.Postprocess ? $", {values.Reprices} reprice(s), {values.NewListings} listing(s) and {values.VendoredValue} gil vendored earlier in this bell visit" : string.Empty)}.");
         if (mode.StartedByPlayer())

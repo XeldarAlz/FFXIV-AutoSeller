@@ -138,8 +138,7 @@ internal static class CompetitorSnapshotBuilder
             listing.IsHq,
             listing.UnitPrice,
             listing.Quantity,
-            listing.IsMannequin,
-            listing.IsSellingAsSet);
+            listing.IsMannequin);
     }
 
     private static void SortCheapestFirst(Span<CompetitorListing> listings)

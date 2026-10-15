@@ -9,6 +9,15 @@ namespace AutoSeller.Tests.Rules;
 public sealed class EligibilityTests
 {
     [Fact]
+    public void ARunThatOnlyRepricesListsNothing()
+    {
+        var rules = BookSelling(SellRule()).WithWork(RunWork.Reprice);
+
+        Assert.Equal(EligibilityReason.NoMatchingRule, Eligibility.Check(Bag(Ore, 10), Material(), 100, rules, ListingCounts.Empty).Reason);
+        Assert.True(Eligibility.Check(Bag(Ore, 10), Material(), 100, rules.WithWork(RunWork.Sell), ListingCounts.Empty).IsEligible);
+    }
+
+    [Fact]
     public void MatchedTradeableItemPassesEveryCheck()
     {
         var rule = SellRule();

@@ -10,6 +10,7 @@ internal enum ListingField : byte
     UnitPrice = 5,
     TotalTax = 6,
     Quality = 7,
+    Mannequin = 8,
 }
 
 internal readonly record struct ListingFields(ulong ListingId, ulong RetainerId, uint ItemId, uint Quantity, uint UnitPrice, uint TotalTax, bool IsHq)
@@ -60,4 +61,7 @@ internal readonly record struct ListingFields(ulong ListingId, ulong RetainerId,
 
         return IsHq != other.IsHq ? ListingField.Quality : ListingField.None;
     }
+
+    public static string Describe(ulong listingId, ulong retainerId, uint itemId, bool isHq, uint quantity, uint unitPrice, uint totalTax, bool onMannequin)
+        => $"listing {listingId}, retainer {retainerId}, item {itemId}{(isHq ? " HQ" : string.Empty)}, {quantity} x {unitPrice} + tax {totalTax}{(onMannequin ? ", mannequin" : string.Empty)}";
 }

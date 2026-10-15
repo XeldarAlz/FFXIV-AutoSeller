@@ -106,6 +106,11 @@ internal static class VendorRules
 
     public static VendorReason Check(in StockSlot stock, RuleBook rules)
     {
+        if ((rules.Work & RunWork.Vendor) == 0)
+        {
+            return VendorReason.VendoringOff;
+        }
+
         if (Refusal(stock, rules) is { } refusal)
         {
             return refusal;

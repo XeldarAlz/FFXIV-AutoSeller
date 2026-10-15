@@ -10,8 +10,7 @@ internal readonly record struct CompetitorListing(
     bool IsHq,
     uint UnitPrice,
     uint Quantity,
-    bool IsMannequin,
-    bool IsSellingAsSet)
+    bool IsMannequin)
 {
     public ItemKey Key => new(ItemId, IsHq);
 }

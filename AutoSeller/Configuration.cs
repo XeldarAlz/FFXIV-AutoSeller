@@ -9,7 +9,9 @@ namespace AutoSeller;
 public sealed partial class Configuration : IPluginConfiguration
 {
     // 1: the first version of these settings. A later layout change bumps it and adds its step to Migrate.
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
+
+    private const int SaleHistoryWindowOffVersion = 3;
 
     [JsonIgnore]
     private bool savePending;
@@ -53,6 +55,11 @@ public sealed partial class Configuration : IPluginConfiguration
         if (Version >= CurrentVersion)
         {
             return changed;
+        }
+
+        if (Version < SaleHistoryWindowOffVersion)
+        {
+            ReadSaleHistory = false;
         }
 
         Version = CurrentVersion;

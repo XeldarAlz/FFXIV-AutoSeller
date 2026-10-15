@@ -19,6 +19,17 @@ public sealed class VendorRulesTests
     }
 
     [Fact]
+    public void ARunThatOnlyRepricesVendorsNothing()
+    {
+        var settings = On() with { VendorList = ItemIdSet.From([Junk]) };
+        var rules = Book(vendor: settings);
+
+        Assert.Equal(VendorReason.VendoringOff, VendorRules.Check(Cheap(), rules.WithWork(RunWork.Reprice)));
+        Assert.False(rules.WithWork(RunWork.Reprice).Vendors);
+        Assert.Equal(VendorReason.VendorList, VendorRules.Check(Cheap(), rules.WithWork(RunWork.Sell)));
+    }
+
+    [Fact]
     public void AVendorListItemIsVendoredWithJunkVendoringOff()
     {
         var settings = VendorSettings.Off with { VendorList = ItemIdSet.From([Junk]) };

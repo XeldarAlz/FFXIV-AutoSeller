@@ -9,5 +9,8 @@ internal readonly record struct ObservedListing(
     uint Quantity,
     uint UnitPrice,
     uint TotalTax,
-    bool IsMannequin,
-    bool IsSellingAsSet);
+    bool IsMannequin)
+{
+    public override string ToString()
+        => ListingFields.Describe(ListingId, RetainerId, ItemId, IsHq, Quantity, UnitPrice, TotalTax, IsMannequin);
+}

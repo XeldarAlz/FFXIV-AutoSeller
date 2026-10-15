@@ -213,6 +213,17 @@ internal static unsafe class NpcInteraction
     public static string SelectYesnoText()
         => TryGetReadyAddon(SelectYesnoAddon, out var addon) ? new AddonMaster.SelectYesno(addon).Text : string.Empty;
 
+    public static bool AnswerYes(string throttleKey = SelectYesnoThrottleKey)
+    {
+        if (!TryGetReadyAddon(SelectYesnoAddon, out var addon) || !EzThrottler.Throttle(throttleKey, AddonInteractThrottleMs))
+        {
+            return false;
+        }
+
+        new AddonMaster.SelectYesno(addon).Yes();
+        return true;
+    }
+
     public static bool AnswerNo(string throttleKey = SelectYesnoThrottleKey)
     {
         if (!TryGetReadyAddon(SelectYesnoAddon, out var addon) || !EzThrottler.Throttle(throttleKey, AddonInteractThrottleMs))

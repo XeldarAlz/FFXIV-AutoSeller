@@ -31,6 +31,10 @@ public sealed partial class Configuration
         SaveDebounced();
     }
 
+    internal bool HasSellWork() => SellList.Count > 0 || CategoryRules.Count > 0 || VendorList.Count > 0 || VendoringEnabled;
+
+    internal bool HasUndercutWork() => UndercutAllListings || SellList.Count > 0 || CategoryRules.Count > 0;
+
     internal bool HasRules() => UndercutAllListings || SellList.Count > 0 || CategoryRules.Count > 0 || VendorList.Count > 0 || VendoringEnabled;
 
     internal RuleBook BuildRuleBook() => RuleBookBuilder.Build(new RuleChoices(

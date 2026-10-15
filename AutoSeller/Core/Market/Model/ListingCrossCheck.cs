@@ -9,13 +9,20 @@ internal enum CrossCheckResult : byte
     FieldMismatch = 4,
 }
 
+internal readonly record struct CrossCheck(CrossCheckResult Result, int CapturedIndex, int OfferedIndex, ListingField Field)
+{
+    public static readonly CrossCheck Match = new(CrossCheckResult.Match, -1, -1, ListingField.None);
+
+    public static CrossCheck Of(CrossCheckResult result) => new(result, -1, -1, ListingField.None);
+}
+
 internal static class ListingCrossCheck
 {
-    public static CrossCheckResult Compare(ReadOnlySpan<ObservedListing> captured, ReadOnlySpan<OfferedListing> offered)
+    public static CrossCheck Compare(ReadOnlySpan<ObservedListing> captured, ReadOnlySpan<OfferedListing> offered)
     {
         if (captured.Length != offered.Length)
         {
-            return CrossCheckResult.CountMismatch;
+            return CrossCheck.Of(CrossCheckResult.CountMismatch);
         }
 
         for (var index = 0; index < captured.Length; index++)
@@ -23,22 +30,23 @@ internal static class ListingCrossCheck
             var listing = captured[index];
             if (AppearsBefore(captured, index, listing.ListingId))
             {
-                return CrossCheckResult.DuplicateListing;
+                return new CrossCheck(CrossCheckResult.DuplicateListing, index, -1, ListingField.ListingId);
             }
 
             var offeredIndex = IndexOf(offered, listing.ListingId);
             if (offeredIndex < 0)
             {
-                return CrossCheckResult.MissingListing;
+                return new CrossCheck(CrossCheckResult.MissingListing, index, -1, ListingField.ListingId);
             }
 
-            if (!SameFields(listing, offered[offeredIndex]))
+            var field = FirstDifference(listing, offered[offeredIndex]);
+            if (field != ListingField.None)
             {
-                return CrossCheckResult.FieldMismatch;
+                return new CrossCheck(CrossCheckResult.FieldMismatch, index, offeredIndex, field);
             }
         }
 
-        return CrossCheckResult.Match;
+        return CrossCheck.Match;
     }
 
     private static bool AppearsBefore(ReadOnlySpan<ObservedListing> captured, int end, ulong listingId)
@@ -67,14 +75,38 @@ internal static class ListingCrossCheck
         return -1;
     }
 
-    private static bool SameFields(in ObservedListing captured, in OfferedListing offered)
+    private static ListingField FirstDifference(in ObservedListing captured, in OfferedListing offered)
     {
-        return captured.RetainerId == offered.RetainerId
-            && MarketItemId.Normalize(captured.ItemId) == MarketItemId.Normalize(offered.ItemId)
-            && captured.IsHq == offered.IsHq
-            && captured.Quantity == offered.Quantity
-            && captured.UnitPrice == offered.UnitPrice
-            && captured.TotalTax == offered.TotalTax
-            && captured.IsMannequin == offered.OnMannequin;
+        if (captured.RetainerId != offered.RetainerId)
+        {
+            return ListingField.RetainerId;
+        }
+
+        if (MarketItemId.Normalize(captured.ItemId) != MarketItemId.Normalize(offered.ItemId))
+        {
+            return ListingField.ItemId;
+        }
+
+        if (captured.Quantity != offered.Quantity)
+        {
+            return ListingField.Quantity;
+        }
+
+        if (captured.UnitPrice != offered.UnitPrice)
+        {
+            return ListingField.UnitPrice;
+        }
+
+        if (captured.TotalTax != offered.TotalTax)
+        {
+            return ListingField.TotalTax;
+        }
+
+        if (captured.IsHq != offered.IsHq)
+        {
+            return ListingField.Quality;
+        }
+
+        return captured.IsMannequin != offered.OnMannequin ? ListingField.Mannequin : ListingField.None;
     }
 }

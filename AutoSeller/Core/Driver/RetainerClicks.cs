@@ -46,6 +46,7 @@ internal static unsafe class RetainerClicks
     private const string CloseSellListThrottleKey = "AutoSeller.Retainer.CloseSellList";
     private const string CloseRetainerListThrottleKey = "AutoSeller.Retainer.CloseRetainerList";
     private const string DeclinePromptThrottleKey = "AutoSeller.Retainer.DeclinePrompt";
+    private const string ConfirmBuybackThrottleKey = "AutoSeller.Retainer.ConfirmBuyback";
     private const string CloseWindowThrottleKey = "AutoSeller.Retainer.CloseWindow";
 
     private static readonly string[] closeThrottleKeys =
@@ -246,6 +247,8 @@ internal static unsafe class RetainerClicks
     public static bool CloseAddon(string addonName) => Close(addonName, CloseWindowThrottleKey);
 
     public static bool DeclinePrompt() => NpcInteraction.AnswerNo(DeclinePromptThrottleKey);
+
+    public static bool ConfirmBuybackEnds() => NpcInteraction.AnswerYes(ConfirmBuybackThrottleKey);
 
     public static void ResetCloseThrottles()
     {

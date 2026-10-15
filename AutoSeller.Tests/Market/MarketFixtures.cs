@@ -14,12 +14,12 @@ internal static class MarketFixtures
 
     public static ObservedListing Listing(uint quantity = 5, uint unitPrice = 1_000, uint totalTax = 50)
     {
-        return new ObservedListing(77, CompetitorRetainer, Seller, Ore, false, quantity, unitPrice, totalTax, false, false);
+        return new ObservedListing(77, CompetitorRetainer, Seller, Ore, false, quantity, unitPrice, totalTax, false);
     }
 
     public static ObservedListing Row(ulong listingId, uint unitPrice, ulong retainerId = CompetitorRetainer)
     {
-        return new ObservedListing(listingId, retainerId, Seller, Ore, false, 5, unitPrice, 50, false, false);
+        return new ObservedListing(listingId, retainerId, Seller, Ore, false, 5, unitPrice, 50, false);
     }
 
     public static ObservedListing[] Rows(int count)

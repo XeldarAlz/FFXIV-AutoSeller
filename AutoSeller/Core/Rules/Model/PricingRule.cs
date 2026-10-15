@@ -19,7 +19,7 @@ internal static class PricingRule
 
     public static bool Manages(RuleBook rules, ItemKey item, byte itemUiCategory, uint referenceUnitPrice)
     {
-        if (rules.NeverSell.Contains(item.ItemId))
+        if (!rules.Reprices || rules.NeverSell.Contains(item.ItemId))
         {
             return false;
         }

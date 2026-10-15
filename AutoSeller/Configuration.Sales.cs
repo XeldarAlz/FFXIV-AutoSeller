@@ -5,7 +5,7 @@ namespace AutoSeller;
 
 public sealed partial class Configuration
 {
-    public bool ReadSaleHistory { get; set; } = true;
+    public bool ReadSaleHistory { get; set; } = false;
 
     public SaleHistorySource SaleHistorySource { get; set; } = SaleHistorySource.Window;
 

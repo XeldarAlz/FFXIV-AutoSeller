@@ -168,6 +168,11 @@ internal sealed class SellPlan
             }
         }
 
+        if (needed.Count == 0 && !enabled.IsEmpty && HasVendoring())
+        {
+            needed.Add(enabled[0]);
+        }
+
         return needed.ToImmutable();
     }
 
@@ -183,6 +188,20 @@ internal sealed class SellPlan
         }
 
         retainer = default;
+        return false;
+    }
+
+    private bool HasVendoring()
+    {
+        for (var index = 0; index < Rows.Length; index++)
+        {
+            var row = Rows[index];
+            if (row.Kind == RunRowKind.Vendor && !row.Has(PlanRowEdits.Excluded) && row.Decision.Action == SellAction.Vendor)
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 

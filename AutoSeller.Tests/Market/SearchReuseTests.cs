@@ -290,7 +290,7 @@ public sealed class SearchReuseTests
 
     private static CompetitorListing Competitor(ulong listingId, uint unitPrice, ulong retainerId = CompetitorRetainer)
     {
-        return new CompetitorListing(listingId, retainerId, Seller, Ore, false, unitPrice, 5, false, false);
+        return new CompetitorListing(listingId, retainerId, Seller, Ore, false, unitPrice, 5, false);
     }
 
     private static CompetitorSnapshot Snapshot(DateTime capturedAtUtc, params CompetitorListing[] listings)

@@ -17,7 +17,7 @@ internal static class MarketEstimate
             return Unknown(item.ItemId, worldId, nowUtc);
         }
 
-        return Snapshot(item.ItemId, worldId, nowUtc, new CompetitorListing(0, 0, 0, item.ItemId, item.IsHq, world.LowestListing, EstimatedQuantity, false, false));
+        return Snapshot(item.ItemId, worldId, nowUtc, new CompetitorListing(0, 0, 0, item.ItemId, item.IsHq, world.LowestListing, EstimatedQuantity, false));
     }
 
     public static ReferencePrice WorldOf(ReferenceSnapshot? homeReferences, ItemKey item)

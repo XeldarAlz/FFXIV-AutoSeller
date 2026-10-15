@@ -1,7 +1,9 @@
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using System.Numerics;
 
@@ -32,7 +34,7 @@ internal static class ActionDock
         }
         else
         {
-            DrawStart(plugin, innerWidth, buttonHeight);
+            DrawStart(plugin, innerWidth);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -58,12 +60,29 @@ internal static class ActionDock
         }
     }
 
-    private static void DrawStart(Plugin plugin, float innerWidth, float height)
+    private static void DrawStart(Plugin plugin, float innerWidth)
     {
-        var readiness = RunReadiness.Evaluate(plugin.Configuration.HasRules(), plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy);
-        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth))
+        var configuration = plugin.Configuration;
+        var journalBlocks = plugin.Ledger.BlocksWrites;
+        var autoRetainerBusy = plugin.AutoRetainer.Status.Busy;
+        var gap = ButtonGap * ImGuiHelpers.GlobalScale;
+        var half = (innerWidth - gap) * 0.5f;
+        var sell = RunReadiness.Evaluate(configuration.HasSellWork(), journalBlocks, autoRetainerBusy);
+        if (HeroButton.Draw(FontAwesomeIcon.Store, Loc.T(L.Dock.Sell), Loc.T(L.Dock.SellSub), Styling.AccentGlow, sell == Readiness.Ready, ReasonFor(sell, L.Dock.ReasonNothingTicked), half))
         {
-            plugin.Controller.Start();
+            plugin.Controller.Start(RunWork.Sell);
         }
+
+        ImGui.SameLine(0f, gap);
+        var undercut = RunReadiness.Evaluate(configuration.HasUndercutWork(), journalBlocks, autoRetainerBusy);
+        if (HeroButton.Draw(FontAwesomeIcon.Tags, Loc.T(L.Dock.Undercut), Loc.T(L.Dock.UndercutSub), Styling.AccentMint, undercut == Readiness.Ready, ReasonFor(undercut, L.Dock.ReasonNothingToUndercut), half))
+        {
+            plugin.Controller.Start(RunWork.Reprice);
+        }
+    }
+
+    private static string ReasonFor(Readiness readiness, LocString nothingToDo)
+    {
+        return readiness == Readiness.NoRules ? Loc.T(nothingToDo) : RunReadiness.Reason(readiness);
     }
 }

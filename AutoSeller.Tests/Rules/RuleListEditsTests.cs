@@ -113,6 +113,42 @@ public sealed class RuleListEditsTests
     }
 
     [Fact]
+    public void TickingAnItemListsEverythingHeld()
+    {
+        var sellList = new List<ItemRule>();
+
+        Assert.True(RuleListEdits.Choose(sellList, [], Ore, true, SellChannel.MarketBoard));
+
+        Assert.Equal(ItemRule.MaximumListingsToKeepUp, Assert.Single(sellList).ListingsToKeepUp);
+    }
+
+    [Fact]
+    public void AnAmountKeepsTheRestInTheBags()
+    {
+        var sellList = new List<ItemRule> { SellRule() };
+
+        Assert.True(RuleListEdits.SetAmount(sellList, Ore, 26, 10));
+        Assert.Equal(16u, sellList[0].KeepCount);
+        Assert.Equal(10u, RuleListEdits.AmountOf(sellList, Ore, 26));
+        Assert.True(RuleListEdits.SetAmount(sellList, Ore, 26, 0));
+        Assert.Equal(0u, sellList[0].KeepCount);
+        Assert.Equal(0u, RuleListEdits.AmountOf(sellList, Ore, 26));
+        Assert.False(RuleListEdits.SetAmount(sellList, Ore, 26, 40));
+    }
+
+    [Fact]
+    public void APickedRetainerGoesOnEveryEntryOfTheItem()
+    {
+        var sellList = new List<ItemRule> { SellRule(qualities: QualityFilter.Normal), SellRule(qualities: QualityFilter.High), SellRule(Potion) };
+
+        Assert.True(RuleListEdits.SetRetainer(sellList, Ore, SecondRetainer));
+
+        Assert.Equal(SecondRetainer, RuleListEdits.RetainerOf(sellList, Ore));
+        Assert.Equal([SecondRetainer, SecondRetainer, 0UL], [sellList[0].PreferredRetainerId, sellList[1].PreferredRetainerId, sellList[2].PreferredRetainerId]);
+        Assert.False(RuleListEdits.SetRetainer(sellList, Ore, SecondRetainer));
+    }
+
+    [Fact]
     public void IdListAddsAnItemOnce()
     {
         var ids = new List<uint>();

@@ -43,7 +43,7 @@ internal static partial class L
         public static readonly LocPlural GroupRows = new("plan.group.rows", "{0} row", "{0} rows");
         public static readonly LocString GroupChanges = new("plan.group.changes", "{0} to change");
         public static readonly LocString GroupNothing = new("plan.group.nothing", "Nothing to do here");
-        public static readonly LocString GroupNotVisited = new("plan.group.notVisited", "Open this retainer's sell list at a bell, or press Start, to read its listings");
+        public static readonly LocString GroupNotVisited = new("plan.group.notVisited", "Open this retainer's sell list at a bell, or press Undercut, to read its listings");
 
         public static readonly LocString SourceBags = new("plan.source.bags", "Bags");
         public static readonly LocString SourceCrystals = new("plan.source.crystals", "Crystals");
@@ -167,7 +167,7 @@ internal static partial class L
 
         public static readonly LocString EmptyLoggedOut = new("plan.empty.loggedOut", "Log in to see the plan.");
         public static readonly LocString EmptyNoRetainers = new("plan.empty.noRetainers", "Open a summoning bell once so Auto Seller can read your retainers.");
-        public static readonly LocString EmptyFirstVisit = new("plan.empty.firstVisit", "Open each retainer's sell list at a bell, or press Start, to read your listings.");
+        public static readonly LocString EmptyFirstVisit = new("plan.empty.firstVisit", "Open each retainer's sell list at a bell, or press Undercut, to read your listings.");
         public static readonly LocString EmptyPlanning = new("plan.empty.planning", "Planning…");
 
         public static readonly LocString RunRetainer = new("plan.run.retainer", "Retainer {0} of {1}");

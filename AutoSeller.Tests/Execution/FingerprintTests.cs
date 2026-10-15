@@ -44,6 +44,7 @@ public sealed class FingerprintTests
             ("sources", new Inputs { Sources = SellSources.Bags }),
             ("inventory retainers", new Inputs { InventoryRetainers = [FirstRetainer, SecondRetainer] }),
             ("undercut all listings", new Inputs { UndercutAllListings = true }),
+            ("run work", new Inputs { Work = RunWork.Sell }),
         };
 
         for (var index = 0; index < variants.Length; index++)
@@ -211,7 +212,7 @@ public sealed class FingerprintTests
         }
 
         var vendor = new VendorSettings(inputs.VendoringEnabled, ItemIdSet.From(inputs.VendorList), inputs.JunkThreshold);
-        return RuleBook.Create(rules, categoryRules, ItemIdSet.From(inputs.NeverSell), vendor, inputs.Sources, inputs.InventoryRetainers, inputs.UndercutAllListings);
+        return RuleBook.Create(rules, categoryRules, ItemIdSet.From(inputs.NeverSell), vendor, inputs.Sources, inputs.InventoryRetainers, inputs.UndercutAllListings, inputs.Work);
     }
 
     private sealed class Inputs
@@ -243,5 +244,7 @@ public sealed class FingerprintTests
         public ulong[] InventoryRetainers { get; init; } = [SecondRetainer];
 
         public bool UndercutAllListings { get; init; }
+
+        public RunWork Work { get; init; } = RunWork.All;
     }
 }

@@ -82,7 +82,7 @@ internal static class RuleListEdits
         switch (channel)
         {
             case SellChannel.MarketBoard:
-                AddSellRule(sellList, itemId, canBeHq, out _);
+                AddPickedRule(sellList, itemId, canBeHq);
                 break;
             case SellChannel.Vendor:
                 vendorList.Add(itemId);
@@ -103,7 +103,7 @@ internal static class RuleListEdits
         if (price > 0)
         {
             changed = vendorList.Remove(itemId);
-            changed |= AddSellRule(sellList, itemId, canBeHq, out _) == SellListAdd.Added;
+            changed |= AddPickedRule(sellList, itemId, canBeHq);
         }
 
         for (var index = 0; index < sellList.Count; index++)
@@ -115,6 +115,69 @@ internal static class RuleListEdits
             }
 
             rule.FixedPrice = price;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    public static uint AmountOf(List<ItemRule> sellList, uint itemId, uint held)
+    {
+        for (var index = 0; index < sellList.Count; index++)
+        {
+            if (sellList[index].ItemId == itemId && sellList[index].KeepCount > 0)
+            {
+                return held > sellList[index].KeepCount ? held - sellList[index].KeepCount : 0;
+            }
+        }
+
+        return 0;
+    }
+
+    public static bool SetAmount(List<ItemRule> sellList, uint itemId, uint held, uint amount)
+    {
+        var keepCount = amount == 0 || amount >= held ? 0 : held - amount;
+        var changed = false;
+        for (var index = 0; index < sellList.Count; index++)
+        {
+            var rule = sellList[index];
+            if (rule.ItemId != itemId || rule.KeepCount == keepCount)
+            {
+                continue;
+            }
+
+            rule.KeepCount = keepCount;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    public static ulong RetainerOf(List<ItemRule> sellList, uint itemId)
+    {
+        for (var index = 0; index < sellList.Count; index++)
+        {
+            if (sellList[index].ItemId == itemId)
+            {
+                return sellList[index].PreferredRetainerId;
+            }
+        }
+
+        return 0;
+    }
+
+    public static bool SetRetainer(List<ItemRule> sellList, uint itemId, ulong retainerId)
+    {
+        var changed = false;
+        for (var index = 0; index < sellList.Count; index++)
+        {
+            var rule = sellList[index];
+            if (rule.ItemId != itemId || rule.PreferredRetainerId == retainerId)
+            {
+                continue;
+            }
+
+            rule.PreferredRetainerId = retainerId;
             changed = true;
         }
 
@@ -158,6 +221,17 @@ internal static class RuleListEdits
         }
 
         return retainerIds.Remove(retainerId);
+    }
+
+    private static bool AddPickedRule(List<ItemRule> sellList, uint itemId, bool canBeHq)
+    {
+        if (AddSellRule(sellList, itemId, canBeHq, out var added) != SellListAdd.Added)
+        {
+            return false;
+        }
+
+        added!.ListingsToKeepUp = ItemRule.MaximumListingsToKeepUp;
+        return true;
     }
 
     private static void RemoveSellRules(List<ItemRule> sellList, uint itemId)

@@ -17,6 +17,7 @@ internal sealed partial class RetainerDriver
     private const int SellListOpenMs = 10_000;
     private const int MenuReturnMs = 10_000;
     private const int BackToListBoundMs = 15_000;
+    private const int BuybackPromptWaitMs = 2_000;
     private const int OpenRetainerWaitMs = 3_000;
 
     private async Task<Stop> OpenRetainerList()
@@ -394,6 +395,12 @@ internal sealed partial class RetainerDriver
             return Failed(closed, DriverHalt.WindowsDidNotClose, "the retainer menu did not close");
         }
 
+        var confirmed = await ConfirmBuybackEnds();
+        if (confirmed.Halted)
+        {
+            return confirmed;
+        }
+
         var list = await Watch(ChainStep.Opens(ChainWindow.RetainerList, MenuReturnMs, ChainWindow.Talk), RetainerClicks.ProgressTalk);
         if (!list.Succeeded)
         {
@@ -434,7 +441,7 @@ internal sealed partial class RetainerDriver
             () =>
             {
                 RetainerClicks.ProgressTalk();
-                return RetainerClicks.Quit(entry, quitText);
+                return BuybackPromptShown() ? RetainerClicks.ConfirmBuybackEnds() : RetainerClicks.Quit(entry, quitText);
             },
             static () => !RetainerClicks.IsReady(RetainerClicks.SelectStringAddon) && !RetainerClicks.IsReady(RetainerClicks.TalkAddon) && RetainerClicks.IsReady(RetainerClicks.RetainerListAddon),
             BackToListBoundMs,
@@ -443,6 +450,25 @@ internal sealed partial class RetainerDriver
         {
             Warn($"Driver: retainer {open.RetainerId} did not leave within {BackToListBoundMs} ms");
         }
+    }
+
+    private async Task<Stop> ConfirmBuybackEnds()
+    {
+        await WaitUntilTimed(static () => BuybackPromptShown() || RetainerClicks.IsReady(RetainerClicks.RetainerListAddon), BuybackPromptWaitMs, "driver-buyback-prompt", StepPollFrames);
+        if (!BuybackPromptShown())
+        {
+            return Stop.None;
+        }
+
+        Diag("Driver: the retainer asks to confirm that item buyback ends once it leaves; answering Yes.");
+        var answered = await Step(ChainStep.Answers(RetainerMenuText.BuybackPromptRow, MenuReturnMs, ChainWindow.RetainerList | ChainWindow.Talk), RetainerClicks.ConfirmBuybackEnds, RetainerClicks.ProgressTalk);
+        return answered.Succeeded ? Stop.None : Failed(answered, DriverHalt.WindowsDidNotClose, "the buyback question did not close");
+    }
+
+    private static bool BuybackPromptShown()
+    {
+        var view = UnexpectedAddons.View();
+        return ChainWindows.Contains(view.Visible, ChainWindow.SelectYesno) && view.PromptRow == RetainerMenuText.BuybackPromptRow;
     }
 
     private async Task<Stop> BackToRetainerList()

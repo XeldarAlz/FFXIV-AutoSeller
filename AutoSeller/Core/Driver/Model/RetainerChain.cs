@@ -19,6 +19,9 @@ internal readonly record struct ChainStep(ChainWindow Window, ChainExpectation E
 
     public static ChainStep Prompt(uint promptRow, int timeoutMs, ChainWindow tolerated = ChainWindow.None)
         => new(ChainWindow.SelectYesno, ChainExpectation.Opens, timeoutMs, tolerated, promptRow);
+
+    public static ChainStep Answers(uint promptRow, int timeoutMs, ChainWindow tolerated = ChainWindow.None)
+        => new(ChainWindow.SelectYesno, ChainExpectation.Closes, timeoutMs, tolerated, promptRow);
 }
 
 internal readonly record struct ChainView(ChainWindow Visible, uint PromptRow);

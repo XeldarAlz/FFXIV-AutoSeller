@@ -78,6 +78,29 @@ public sealed class PricingRuleTests
     }
 
     [Fact]
+    public void ARunThatSellsOnlyRepricesNothing()
+    {
+        var rules = Book([SellRule()], undercutAllListings: true).WithWork(RunWork.Sell);
+
+        Assert.False(PricingRule.Manages(rules, normalOre, MaterialCategory, 0));
+        Assert.True(PricingRule.Manages(rules.WithWork(RunWork.Reprice), normalOre, MaterialCategory, 0));
+    }
+
+    [Fact]
+    public void EachRunWorkNeedsRulesOfItsOwn()
+    {
+        var undercutOnly = Book(undercutAllListings: true);
+        var vendorOnly = Book(vendor: VendorSettings.Off with { VendorList = ItemIdSet.From([Ore]) });
+
+        Assert.True(undercutOnly.WithWork(RunWork.Reprice).HasRules);
+        Assert.False(undercutOnly.WithWork(RunWork.Sell).HasRules);
+        Assert.True(vendorOnly.WithWork(RunWork.Sell).HasRules);
+        Assert.False(vendorOnly.WithWork(RunWork.Reprice).HasRules);
+        Assert.True(BookSelling(SellRule()).WithWork(RunWork.Sell).HasRules);
+        Assert.Same(undercutOnly, undercutOnly.WithWork(RunWork.All));
+    }
+
+    [Fact]
     public void APausedEntryManagesNothing()
     {
         Assert.False(PricingRule.Manages(BookSelling(SellRule(paused: true)), normalOre, MaterialCategory, CategoryMinimum));

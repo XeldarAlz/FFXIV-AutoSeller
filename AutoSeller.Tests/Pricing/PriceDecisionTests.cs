@@ -741,13 +741,12 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
-    public void OwnAltMannequinAndSetListingsAreNeverUndercut()
+    public void OwnAltAndMannequinListingsAreNeverUndercut()
     {
         var snapshot = Snapshot(
             Competitor(600) with { RetainerId = OwnRetainer },
             Competitor(600) with { SellerContentId = AltCharacter },
             Competitor(600) with { IsMannequin = true },
-            Competitor(600) with { IsSellingAsSet = true },
             Competitor(1_000));
 
         AssertDecision(Decide(NewLot(snapshot, FreshReference)), SellAction.List, 999, 999, DecisionReason.Undercut);

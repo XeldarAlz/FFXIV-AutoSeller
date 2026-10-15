@@ -1,6 +1,7 @@
 using AutoSeller.Core.Driver.Model;
 using Dalamud.Game;
 using ECommons.DalamudServices;
+using ECommons.ExcelServices.Sheets;
 using AddonRow = Lumina.Excel.Sheets.Addon;
 
 namespace AutoSeller.Core.Driver;
@@ -17,6 +18,13 @@ internal static class RetainerMenuText
     public const uint ReturnToRetainerAlternateRow = 6_954;
     public const uint HaveRetainerSellRow = 5_480;
     public const uint RemoveFromSaddlebagRow = 888;
+    public const string RetainerCallSheet = "custom/000/CmnDefRetainerCall_00010";
+    public const uint BuybackCallRow = 215;
+    public const string RetainerBellSheet = "custom/005/CmnDefRetainerBell_00544";
+    public const uint BuybackBellRow = 52;
+    public const uint BuybackPromptRow = CustomTextRow | BuybackCallRow;
+
+    private const uint CustomTextRow = 0x8000_0000;
 
     private static readonly LanguageCachedText<PromptText> sellFromInventory = new(language => Read(language, SellFromInventoryRow));
     private static readonly LanguageCachedText<PromptText> sellFromRetainer = new(language => Read(language, SellFromRetainerRow));
@@ -30,6 +38,8 @@ internal static class RetainerMenuText
     private static readonly LanguageCachedText<PromptText> removeFromSaddlebag = new(language => Read(language, RemoveFromSaddlebagRow));
     private static readonly LanguageCachedText<PromptText> gilLimit = new(language => Read(language, RetainerChain.GilLimitPromptRow));
     private static readonly LanguageCachedText<PromptText> gilLimitAlternate = new(language => Read(language, RetainerChain.GilLimitPromptAlternateRow));
+    private static readonly LanguageCachedText<PromptText> buybackCall = new(language => ReadCustom(language, RetainerCallSheet, BuybackCallRow));
+    private static readonly LanguageCachedText<PromptText> buybackBell = new(language => ReadCustom(language, RetainerBellSheet, BuybackBellRow));
 
     public static PromptText SellFromInventory() => sellFromInventory.Get();
 
@@ -87,7 +97,27 @@ internal static class RetainerMenuText
             return RetainerChain.GilLimitPromptRow;
         }
 
-        return gilLimitAlternate.Get().Matches(shown) ? RetainerChain.GilLimitPromptAlternateRow : ChainStep.NoPrompt;
+        if (gilLimitAlternate.Get().Matches(shown))
+        {
+            return RetainerChain.GilLimitPromptAlternateRow;
+        }
+
+        return buybackCall.Get().Matches(shown) || buybackBell.Get().Matches(shown) ? BuybackPromptRow : ChainStep.NoPrompt;
+    }
+
+    private static PromptText ReadCustom(ClientLanguage language, string sheet, uint row)
+    {
+        try
+        {
+            var text = Svc.Data.GetExcelSheet<QuestDialogueText>(language, sheet).GetRowOrDefault(row)?.Value.ExtractText() ?? string.Empty;
+            RunLog.Info($"Retainer menu: {sheet} row {row} reads '{text}' ({language}).");
+            return PromptText.From(text);
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, $"Retainer menu: {sheet} row {row} could not be read ({language})");
+            return default;
+        }
     }
 
     private static PromptText Read(ClientLanguage language, uint row)

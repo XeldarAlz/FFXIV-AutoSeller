@@ -15,7 +15,8 @@ internal sealed class RuleBook
         VendorSettings vendor,
         SellSources sources,
         ImmutableArray<ulong> inventoryRetainerIds,
-        bool undercutAllListings)
+        bool undercutAllListings,
+        RunWork work)
     {
         SellList = sellList;
         CategoryRules = categoryRules;
@@ -24,6 +25,7 @@ internal sealed class RuleBook
         Sources = sources;
         InventoryRetainerIds = inventoryRetainerIds;
         UndercutAllListings = undercutAllListings;
+        Work = work;
     }
 
     public ImmutableArray<ItemRuleSnapshot> SellList { get; }
@@ -40,7 +42,17 @@ internal sealed class RuleBook
 
     public bool UndercutAllListings { get; }
 
-    public bool HasRules => UndercutAllListings || !SellList.IsEmpty || !CategoryRules.IsEmpty || Vendor.VendorsAnything;
+    public RunWork Work { get; }
+
+    public bool Reprices => (Work & RunWork.Reprice) != 0;
+
+    public bool Lists => (Work & RunWork.List) != 0;
+
+    public bool Vendors => (Work & RunWork.Vendor) != 0 && Vendor.VendorsAnything;
+
+    public bool HasRules => (Reprices && (UndercutAllListings || !SellList.IsEmpty || !CategoryRules.IsEmpty))
+        || (Lists && (!SellList.IsEmpty || !CategoryRules.IsEmpty))
+        || Vendors;
 
     public static RuleBook Create(
         IEnumerable<ItemRule> sellList,
@@ -49,9 +61,10 @@ internal sealed class RuleBook
         in VendorSettings vendor,
         SellSources sources,
         IEnumerable<ulong> inventoryRetainerIds,
-        bool undercutAllListings = false)
+        bool undercutAllListings = false,
+        RunWork work = RunWork.All)
     {
-        return Restore(SnapshotsOf(sellList), EnabledCategoryRules(categoryRules), neverSell, vendor, sources, [.. inventoryRetainerIds], undercutAllListings);
+        return Restore(SnapshotsOf(sellList), EnabledCategoryRules(categoryRules), neverSell, vendor, sources, [.. inventoryRetainerIds], undercutAllListings, work);
     }
 
     public static RuleBook Restore(
@@ -61,9 +74,15 @@ internal sealed class RuleBook
         in VendorSettings vendor,
         SellSources sources,
         ImmutableArray<ulong> inventoryRetainerIds,
-        bool undercutAllListings = false)
+        bool undercutAllListings = false,
+        RunWork work = RunWork.All)
     {
-        return new RuleBook(SortedByItem(sellList.AsSpan()), categoryRules, neverSell, vendor, sources, SortedIds.Of(inventoryRetainerIds.AsSpan()), undercutAllListings);
+        return new RuleBook(SortedByItem(sellList.AsSpan()), categoryRules, neverSell, vendor, sources, SortedIds.Of(inventoryRetainerIds.AsSpan()), undercutAllListings, work);
+    }
+
+    public RuleBook WithWork(RunWork work)
+    {
+        return work == Work ? this : new RuleBook(SellList, CategoryRules, NeverSell, Vendor, Sources, InventoryRetainerIds, UndercutAllListings, work);
     }
 
     public bool Allows(in SlotFacts slot)

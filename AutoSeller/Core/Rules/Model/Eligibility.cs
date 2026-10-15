@@ -46,6 +46,11 @@ internal static class Eligibility
 {
     public static EligibilityResult Check(in SlotFacts slot, in ItemFacts item, uint referenceUnitPrice, RuleBook rules, ListingCounts listed)
     {
+        if (!rules.Lists)
+        {
+            return EligibilityResult.Failed(EligibilityReason.NoMatchingRule);
+        }
+
         var reason = CheckHolding(slot, item, rules);
         if (reason != EligibilityReason.Eligible)
         {

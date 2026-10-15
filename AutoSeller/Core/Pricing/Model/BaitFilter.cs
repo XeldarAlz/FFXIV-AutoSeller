@@ -59,7 +59,6 @@ internal static class BaitFilter
     {
         return listing.Key == item
             && !listing.IsMannequin
-            && !listing.IsSellingAsSet
             && !ownSellers.Owns(listing);
     }
 

@@ -100,8 +100,7 @@ internal sealed class MarketLookTask : AutoCommon
             var listing = listings[index];
             var own = sellers.Owns(listing) ? ", own" : string.Empty;
             var mannequin = listing.IsMannequin ? ", mannequin" : string.Empty;
-            var set = listing.IsSellingAsSet ? ", set" : string.Empty;
-            RunLog.Info($"Look listing #{index + 1}: {QualityLabel.Of(listing.IsHq)} {listing.Quantity} x {listing.UnitPrice} gil, retainer {listing.RetainerId}, listing {listing.ListingId}{own}{mannequin}{set}.");
+            RunLog.Info($"Look listing #{index + 1}: {QualityLabel.Of(listing.IsHq)} {listing.Quantity} x {listing.UnitPrice} gil, retainer {listing.RetainerId}, listing {listing.ListingId}{own}{mannequin}.");
         }
 
         var history = snapshot.History;

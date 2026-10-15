@@ -23,6 +23,8 @@ internal sealed record AuthorizedRules
 
     public bool UndercutAllListings { get; init; }
 
+    public RunWork Work { get; init; } = RunWork.All;
+
     public static AuthorizedRules From(RuleBook rules)
     {
         return new AuthorizedRules
@@ -36,6 +38,7 @@ internal sealed record AuthorizedRules
             Sources = rules.Sources,
             InventoryRetainerIds = rules.InventoryRetainerIds,
             UndercutAllListings = rules.UndercutAllListings,
+            Work = rules.Work,
         };
     }
 
@@ -47,6 +50,6 @@ internal sealed record AuthorizedRules
     public RuleBook ToRuleBook()
     {
         var vendor = new VendorSettings(VendoringEnabled, ItemIdSet.From(VendorList), JunkThreshold);
-        return RuleBook.Restore(SellList, CategoryRules, ItemIdSet.From(NeverSell), vendor, Sources, InventoryRetainerIds, UndercutAllListings);
+        return RuleBook.Restore(SellList, CategoryRules, ItemIdSet.From(NeverSell), vendor, Sources, InventoryRetainerIds, UndercutAllListings, Work);
     }
 }

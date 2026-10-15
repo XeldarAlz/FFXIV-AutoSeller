@@ -36,6 +36,7 @@ internal static class Fingerprint
         hash = MixIds(hash, vendor.VendorList.Ids.AsSpan());
         hash = Mix(hash, (ulong)rules.Sources);
         hash = Mix(hash, rules.UndercutAllListings ? 1UL : 0UL);
+        hash = Mix(hash, (ulong)rules.Work);
         return MixIds(hash, rules.InventoryRetainerIds.AsSpan());
     }
 
