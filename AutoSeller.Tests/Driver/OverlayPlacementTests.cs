@@ -77,10 +77,4 @@ public sealed class OverlayPlacementTests
 
         Assert.Equal(300 - Gap - 32, button.Y);
     }
-
-    [Fact]
-    public void AnOffsetMovesTheRectangleIntoTheViewport()
-    {
-        Assert.Equal(new ScreenRect(110, 220, 5, 6), new ScreenRect(10, 20, 5, 6).Offset(100, 200));
-    }
 }

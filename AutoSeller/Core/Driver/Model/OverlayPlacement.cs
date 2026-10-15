@@ -10,11 +10,6 @@ internal readonly record struct ScreenRect(float X, float Y, float Width, float 
     {
         return new ScreenRect(x, y, width * scale, height * scale);
     }
-
-    public ScreenRect Offset(float x, float y)
-    {
-        return this with { X = X + x, Y = Y + y };
-    }
 }
 
 internal static class OverlayPlacement

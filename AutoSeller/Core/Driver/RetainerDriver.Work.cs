@@ -20,7 +20,6 @@ internal sealed partial class RetainerDriver
     private const int ContextMenuOpenMs = 3_000;
     private const int SellWindowOpenMs = 5_000;
     private const int ArmouryBoardOpenMs = 5_000;
-    private const bool ArmouryBoardFirst = true;
 
     private bool armouryBoardOpened;
 
@@ -312,7 +311,7 @@ internal sealed partial class RetainerDriver
 
     private async Task OpenArmouryBoard()
     {
-        if (!ArmouryBoardFirst || RetainerClicks.IsReady(RetainerClicks.ArmouryBoardAddon))
+        if (RetainerClicks.IsReady(RetainerClicks.ArmouryBoardAddon))
         {
             return;
         }
