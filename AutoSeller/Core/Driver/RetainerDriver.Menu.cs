@@ -64,9 +64,11 @@ internal sealed partial class RetainerDriver
             return Stop.None;
         }
 
-        var row = SellListRows.RowFor(RetainerReads.SellList(), market.Slots.AsSpan(), listing, decider.ItemName(listing.ItemId));
+        var name = decider.ItemName(listing.ItemId);
+        var row = SellListRows.ShownRowFor(RetainerReads.SellList(), market.Slots.AsSpan(), listing, name);
         if (row == SellListRows.NoRow)
         {
+            Warn($"Driver: no readable sell list row shows slot {listing.Slot} with item {listing.ItemId} {QualityLabel.Of(listing.IsHq)} x{listing.Quantity} at {listing.UnitPrice} gil; it is not returned.");
             Record(pending.Outcome with { Skip = RunSkip.RowNotFound }, retainer);
             return Stop.None;
         }
@@ -91,7 +93,7 @@ internal sealed partial class RetainerDriver
             pending.Outcome with { Guard = verdict.Rejection },
             pending.Write,
             retainer,
-            new MenuChoice(static () => RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon), () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning));
+            new MenuChoice(() => RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon) && SellListRows.ShowsAt(RetainerReads.SellList(), row, listing, name), () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning));
     }
 
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
