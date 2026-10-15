@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.External;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
@@ -131,7 +132,8 @@ internal sealed partial class SellController
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
             rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
             hasEnabledRetainers,
-            Settling));
+            Settling,
+            ExternalPlugins.AllRequiredInstalled()));
     }
 
     private bool ReadyForANewRun()

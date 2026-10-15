@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "没有已启用的雇员需要访问：没有被压价的挂单、待上架的批次或待撤回的挂单。要访问全部雇员，请在出售页面关闭“只处理需要的雇员”。",
   "run.block.sellListNotOpen": "请先打开一个雇员的出售列表。",
   "run.block.retainerNotEnabled": "此雇员未在出售页面启用。",
+  "run.block.setup": "请先在插件页面安装 vnavmesh；运行要靠它走到传唤铃。",
   "run.needs.bellNotReached": "无法到达任何传唤铃；请站在传唤铃旁或旅馆房间里，然后再次点击开始",
   "run.needs.windowsStuck": "雇员窗口未能及时打开或关闭",
   "run.needs.unexpectedWindow": "有一个不是插件打开的窗口挡住了",

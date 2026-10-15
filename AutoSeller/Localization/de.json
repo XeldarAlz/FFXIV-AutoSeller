@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "Kein aktivierter Gehilfe braucht einen Besuch: Keiner hat ein unterbotenes Angebot, ein Los zum Einstellen oder ein Angebot zum Zurücknehmen. Schalte auf der Seite Verkaufen „Nur Gehilfen, die es brauchen“ aus, um alle zu besuchen.",
   "run.block.sellListNotOpen": "Öffne zuerst die Verkaufsliste eines Gehilfen.",
   "run.block.retainerNotEnabled": "Dieser Gehilfe ist auf der Seite Verkaufen nicht aktiviert.",
+  "run.block.setup": "Installiere zuerst vnavmesh über die Seite Plugins; ein Lauf geht damit zur Rufglocke.",
   "run.needs.bellNotReached": "keine Rufglocke war erreichbar; stelle dich an eine oder in dein Gasthauszimmer und drücke erneut Start",
   "run.needs.windowsStuck": "ein Gehilfenfenster hat sich nicht rechtzeitig geöffnet oder geschlossen",
   "run.needs.unexpectedWindow": "ein Fenster, das das Plugin nicht geöffnet hat, ist im Weg",

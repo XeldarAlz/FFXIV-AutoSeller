@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "訪問が必要な有効なリテイナーがありません。下回られた出品、出品するロット、取り下げる出品のどれもありません。すべて訪問するには、販売ページで「必要なリテイナーだけ」をオフにしてください。",
   "run.block.sellListNotOpen": "先にリテイナーの販売リストを開いてください。",
   "run.block.retainerNotEnabled": "このリテイナーは販売ページで有効になっていません。",
+  "run.block.setup": "まずプラグインページからvnavmeshをインストールしてください。実行ではこれを使って呼び鈴まで歩きます。",
   "run.needs.bellNotReached": "どの呼び鈴にもたどり着けませんでした。呼び鈴の前か宿屋の部屋に立って、もう一度開始を押してください",
   "run.needs.windowsStuck": "リテイナーのウィンドウが時間内に開閉しませんでした",
   "run.needs.unexpectedWindow": "プラグインが開いていないウィンドウが邪魔をしています",

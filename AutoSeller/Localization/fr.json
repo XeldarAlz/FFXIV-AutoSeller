@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "Aucun servant activé n'a besoin d'une visite : aucun n'a d'annonce sous-enchérie, de lot à mettre en vente ni d'annonce à retirer. Désactivez « Seulement les servants qui en ont besoin » sur la page Vendre pour tous les visiter.",
   "run.block.sellListNotOpen": "Ouvrez d'abord la liste de vente d'un servant.",
   "run.block.retainerNotEnabled": "Ce servant n'est pas activé sur la page Vendre.",
+  "run.block.setup": "Installez d'abord vnavmesh depuis la page Plugins ; une tournée s'en sert pour marcher jusqu'à la sonnette d'appel.",
   "run.needs.bellNotReached": "aucune sonnette d'appel n'a pu être atteinte ; placez-vous près de l'une d'elles ou dans votre chambre d'auberge et appuyez à nouveau sur Démarrer",
   "run.needs.windowsStuck": "une fenêtre de servant ne s'est pas ouverte ou fermée à temps",
   "run.needs.unexpectedWindow": "une fenêtre que le plugin n'a pas ouverte gêne",

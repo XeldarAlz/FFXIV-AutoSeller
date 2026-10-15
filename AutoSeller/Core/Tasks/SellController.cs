@@ -112,6 +112,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         StartBlock.NothingNeedsAVisit => Loc.T(L.Run.BlockNothingNeeded),
         StartBlock.SellListNotOpen => Loc.T(L.Run.BlockSellListNotOpen),
         StartBlock.RetainerNotEnabled => Loc.T(L.Run.BlockRetainerNotEnabled),
+        StartBlock.SetupNeeded => Loc.T(L.Run.BlockSetup),
         _ => Loc.T(L.Run.BlockAuthorization),
     };
 

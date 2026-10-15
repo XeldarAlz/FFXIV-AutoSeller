@@ -22,7 +22,8 @@ public sealed class StartBlockRuleTests
         CompatibilityGatesOpen: true,
         HasRules: true,
         HasEnabledRetainers: true,
-        Settling: false);
+        Settling: false,
+        RequiredPluginsInstalled: true);
 
     [Fact]
     public void ReadyWhenNothingBlocks()
@@ -33,7 +34,7 @@ public sealed class StartBlockRuleTests
     [Fact]
     public void TheFirstBlockInOrderIsReported()
     {
-        var facts = new StartFacts(RunMode.Standalone, false, false, true, true, true, true, busy, false, true, false, false, false, true);
+        var facts = new StartFacts(RunMode.Standalone, false, false, true, true, true, true, busy, false, true, false, false, false, true, false);
 
         Assert.Equal(StartBlock.NotLoggedIn, StartBlockRule.Evaluate(facts));
         facts = facts with { LoggedIn = true };
@@ -47,6 +48,8 @@ public sealed class StartBlockRuleTests
         facts = facts with { InCutscene = false };
         Assert.Equal(StartBlock.Trading, StartBlockRule.Evaluate(facts));
         facts = facts with { Trading = false };
+        Assert.Equal(StartBlock.SetupNeeded, StartBlockRule.Evaluate(facts));
+        facts = facts with { RequiredPluginsInstalled = true };
         Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts));
         facts = facts with { AutoRetainer = idle };
         Assert.Equal(StartBlock.ProtectListUnreadable, StartBlockRule.Evaluate(facts));
@@ -62,6 +65,16 @@ public sealed class StartBlockRuleTests
         Assert.Equal(StartBlock.Settling, StartBlockRule.Evaluate(facts));
         facts = facts with { Settling = false };
         Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(facts));
+    }
+
+    [Fact]
+    public void OnlyARunThatWalksToTheBellNeedsTheRequiredPlugins()
+    {
+        var missing = ready with { RequiredPluginsInstalled = false };
+
+        Assert.Equal(StartBlock.SetupNeeded, StartBlockRule.Evaluate(missing));
+        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(missing with { Mode = RunMode.Postprocess }));
+        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(missing with { Mode = RunMode.OpenSellList }));
     }
 
     [Fact]

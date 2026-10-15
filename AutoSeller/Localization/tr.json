@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "Etkin hiçbir yardımcının ziyarete ihtiyacı yok: hiçbirinde altına inilmiş ilan, ilana konacak parti ya da geri çekilecek ilan yok. Hepsini ziyaret etmek için Satış sayfasında \"Yalnızca gereken yardımcılar\" seçeneğini kapatın.",
   "run.block.sellListNotOpen": "Önce bir yardımcının satış listesini açın.",
   "run.block.retainerNotEnabled": "Bu yardımcı Satış sayfasında etkin değil.",
+  "run.block.setup": "Önce Eklentiler sayfasından vnavmesh'i yükleyin; tur çağırma çanına onunla yürür.",
   "run.needs.bellNotReached": "hiçbir çağırma çanına ulaşılamadı; bir çanın yanında ya da han odanızda durup Başlat'a yeniden basın",
   "run.needs.windowsStuck": "bir yardımcı penceresi zamanında açılmadı ya da kapanmadı",
   "run.needs.unexpectedWindow": "eklentinin açmadığı bir pencere yolu kapatıyor",

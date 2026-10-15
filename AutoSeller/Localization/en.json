@@ -379,6 +379,7 @@
   "run.block.nothingNeeded": "No enabled retainer needs a visit: none has an undercut listing, a lot to list or a listing to return. Turn off Only retainers that need it on the Sell page to visit them all.",
   "run.block.sellListNotOpen": "Open a retainer's sell list first.",
   "run.block.retainerNotEnabled": "This retainer is not enabled on the Sell page.",
+  "run.block.setup": "Install vnavmesh from the Plugins page first; a run walks to the summoning bell with it.",
   "run.needs.bellNotReached": "no summoning bell could be reached; stand at one or in your inn room and press Start again",
   "run.needs.windowsStuck": "a retainer window did not open or close in time",
   "run.needs.unexpectedWindow": "a window the plugin did not open is in the way",
