@@ -114,7 +114,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 - **No direct market writes.** Some repricers write prices straight into the game's memory. Auto Seller never does: every price goes through the sell window, so it can be checked before Confirm and read back after.
 - **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer, and no chat, toast or Discord alert when a listing is undercut yet.
 - **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
-- **Not yet confirmed in game.** Some of what a run reads follows the game data and other tools rather than a live session so far: the layout and prices of the Sale History window, the values in sale notices, which gil a vendor sale lands in, how soon a retainer's listings fill in after its sell list opens, and the AutoRetainer post-process over real ventures. Each one logs what it read to the Console. Keep the dry run on for your first runs.
+- **Not yet run in game.** No part of 1.0.0.0 has run on a live client yet. The writes (typing the price and quantity in the sell window, the Adjust Price, Return to Retainer and Have Retainer Sell Items menus, saddlebag moves and Marketbuddy's lock), the reads (the Sale History window's layout and prices, sale notice values, gear set membership, which gil a vendor sale lands in, how soon listings fill in) and the AutoRetainer post-process over real ventures follow the game data and other tools so far. Each step logs what it did to the Console. Keep the dry run on for your first runs.
 
 ## Languages
 
