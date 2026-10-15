@@ -22,6 +22,6 @@ internal static partial class L
         public static readonly LocString WatchEvery30 = new("assist.watch.every30", "Every 30 minutes");
         public static readonly LocString WatchEvery60 = new("assist.watch.every60", "Every 60 minutes");
         public static readonly LocString OnlyNeeded = new("assist.onlyNeeded", "Only retainers that need it");
-        public static readonly LocString OnlyNeededHelp = new("assist.onlyNeededHelp", "Runs visit only the retainers with a listing the watch marked as undercut. You can still change it before each run.");
+        public static readonly LocString OnlyNeededHelp = new("assist.onlyNeededHelp", "The default of the Sell page's run option: a run visits only the retainers with an undercut listing, a lot to list or a listing to return.");
     }
 }

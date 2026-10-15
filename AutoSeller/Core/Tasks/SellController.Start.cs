@@ -7,6 +7,7 @@ using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Tasks.Model;
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.DalamudServices;
+using System.Threading;
 
 namespace AutoSeller.Core.Tasks;
 
@@ -118,16 +119,18 @@ internal sealed partial class SellController
         var markets = input.Markets.AsSpan();
         var edits = input.Edits;
         var dryRun = configuration.DryRun;
-        var onlyUndercut = mode == RunMode.Standalone && configuration.OnlyRetainersThatNeedIt;
-        ImmutableArray<ulong> retainerIds = mode == RunMode.Standalone ? input.RetainersToVisit(onlyUndercut) : [onlyRetainerId];
-        if (onlyUndercut && retainerIds.IsEmpty)
+        var onlyNeeded = mode == RunMode.Standalone && OnlyRetainersThatNeedIt;
+        ImmutableArray<ulong> retainerIds = mode != RunMode.Standalone ? [onlyRetainerId]
+            : onlyNeeded ? SellPlanner.Build(input, CancellationToken.None).RetainersToVisit(true)
+            : input.EnabledRetainerIds();
+        if (onlyNeeded && retainerIds.IsEmpty)
         {
-            return Refuse(mode, StartBlock.NothingUndercut, "only the retainers that need it are visited, and no enabled retainer has an undercut listing");
+            return Refuse(mode, StartBlock.NothingNeedsAVisit, "only the retainers that need it are visited, and no enabled retainer has an undercut listing, a lot to list or a listing to return");
         }
 
-        if (onlyUndercut)
+        if (onlyNeeded)
         {
-            RunLog.Info($"Run: only the {retainerIds.Length} retainer(s) with an undercut listing are visited.");
+            RunLog.Info($"Run: only the {retainerIds.Length} retainer(s) with an undercut listing, a lot to list or a listing to return are visited.");
         }
 
         var approvals = Approvals.Collect(edits, markets, retainerIds.AsSpan(), input.PlayerApprovals.AsSpan());

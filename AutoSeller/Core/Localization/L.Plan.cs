@@ -10,8 +10,9 @@ internal static partial class L
         public static readonly LocString PricesNone = new("plan.pricesNone", "No prices yet");
         public static readonly LocString PricesFetching = new("plan.pricesFetching", "Fetching prices…");
         public static readonly LocPlural WatchUndercut = new("plan.watchUndercut", "{0} undercut", "{0} undercut");
-        public static readonly LocPlural WatchVisits = new("plan.watchVisits", "Next run: {0} undercut retainer", "Next run: {0} undercut retainers");
-        public static readonly LocString WatchHelp = new("plan.watchHelp", "The undercut watch checks your listings against Universalis every {0} minutes, with no game request. Under Settings, Assist and watch, a run can visit only the retainers with an undercut listing.");
+        public static readonly LocString WatchHelp = new("plan.watchHelp", "The undercut watch checks your listings against Universalis every {0} minutes, with no game request.");
+        public static readonly LocString OnlyNeededHelp = new("plan.onlyNeededHelp", "Click to choose for the next run. On, the run visits only the retainers with an undercut listing, a lot to list or a listing to return. Settings, Assist and watch, hold the default.");
+        public static readonly LocString OnlyNeededCount = new("plan.onlyNeededCount", "{0} of {1}");
         public static readonly LocString WatchOffHelp = new("plan.watchOffHelp", "The undercut watch is off, so listings are checked against Universalis only when the plan refreshes. Turn it on under Settings, Assist and watch.");
         public static readonly LocString RefreshHelp = new("plan.refreshHelp", "Read your bags again and fetch fresh Universalis prices for every item in the plan.");
         public static readonly LocString RefreshStarted = new("plan.refreshStarted", "Fetching fresh prices");

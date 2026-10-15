@@ -187,9 +187,9 @@ public sealed class SellPlannerTests
         var knownAge = unknownAge with { ListingAges = [listedBeforeTheData] };
 
         Assert.False(Row(Build(unknownAge), listingKey).IsUndercut);
-        Assert.Empty(unknownAge.RetainersToVisit(true));
+        Assert.Empty(Build(unknownAge).RetainersToVisit(true));
         Assert.True(Row(Build(knownAge), listingKey).IsUndercut);
-        Assert.Equal<ulong>([Alpha], knownAge.RetainersToVisit(true));
+        Assert.Equal<ulong>([Alpha], Build(knownAge).RetainersToVisit(true));
     }
 
     [Fact]
@@ -417,10 +417,41 @@ public sealed class SellPlannerTests
     [Fact]
     public void OnlyTheRetainersWithAnUndercutListingNeedAVisit()
     {
-        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta, OreListing(1, WorldLowest - 10))]);
+        var plan = Build(Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta, OreListing(1, WorldLowest - 10))]));
 
-        Assert.Equal<ulong>([Alpha], input.RetainersToVisit(true));
-        Assert.Equal<ulong>([Alpha, Beta], input.RetainersToVisit(false));
+        Assert.Equal<ulong>([Alpha], plan.RetainersToVisit(true));
+        Assert.Equal<ulong>([Alpha, Beta], plan.RetainersToVisit(false));
+    }
+
+    [Fact]
+    public void ARetainerWithALotToListOrAListingToReturnNeedsAVisit()
+    {
+        var cheap = OreListing(0, WorldLowest - 10);
+        var floorAboveTheBoard = new ItemRule { ItemId = Ore, Floor = WorldLowest + 100 };
+        var returning = Input([floorAboveTheBoard], [MarketAt(Alpha, cheap), MarketAt(Beta)]) with
+        {
+            Pricing = new PricingSettings { BelowFloorListing = BelowFloorListing.ReturnAfterDelay },
+            Streaks = [new ListingStreak(new RepriceKey(Alpha, cheap.Slot, cheap.Key), default, Now - PricingSettings.BelowFloorReturnDelay)],
+        };
+
+        var lots = Build(Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags)));
+        var returns = Build(returning);
+
+        Assert.Equal(SellAction.List, Row(lots, LotKey()).Decision.Action);
+        Assert.Equal<ulong>([Beta], lots.RetainersToVisit(true));
+        Assert.Equal(SellAction.Return, Row(returns, PlanRowKey.ForListing(Alpha, cheap)).Decision.Action);
+        Assert.False(Row(returns, PlanRowKey.ForListing(Alpha, cheap)).IsUndercut);
+        Assert.Equal<ulong>([Alpha], returns.RetainersToVisit(true));
+    }
+
+    [Fact]
+    public void AnExcludedRowGivesItsRetainerNoNeedOfAVisit()
+    {
+        var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]);
+        PlanEdits.None.TryApply(PlanEdit.Exclude(listingKey, Now), new PlanEditTarget(listingKey, 0, 0), out var excluded);
+
+        Assert.Equal<ulong>([Alpha], Build(input).RetainersToVisit(true));
+        Assert.Empty(Build(input with { Edits = excluded }).RetainersToVisit(true));
     }
 
     [Fact]
@@ -431,7 +462,7 @@ public sealed class SellPlannerTests
             Retainers = [new PlanRetainer(Alpha, AlphaName, false), new PlanRetainer(Beta, BetaName, true)],
         };
 
-        Assert.Empty(input.RetainersToVisit(true));
+        Assert.Empty(Build(input).RetainersToVisit(true));
     }
 
     [Fact]

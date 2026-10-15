@@ -82,12 +82,6 @@ internal sealed record PlanInput
         return enabled.ToImmutable();
     }
 
-    public ImmutableArray<ulong> RetainersToVisit(bool onlyUndercut)
-    {
-        var enabled = EnabledRetainerIds();
-        return onlyUndercut ? UndercutWatch.RetainersToVisit(enabled.AsSpan(), UndercutMarks().AsSpan()) : enabled;
-    }
-
     public ImmutableArray<WatchMark> UndercutMarks()
     {
         var scan = new UndercutScan(ReferenceSnapshot.ForHomeWorld(References, HomeWorldId), NowUtc);

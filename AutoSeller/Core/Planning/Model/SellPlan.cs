@@ -151,6 +151,26 @@ internal sealed class SellPlan
         return false;
     }
 
+    public ImmutableArray<ulong> RetainersToVisit(bool onlyThoseThatNeedIt)
+    {
+        var enabled = Input.EnabledRetainerIds();
+        if (!onlyThoseThatNeedIt)
+        {
+            return enabled;
+        }
+
+        var needed = ImmutableArray.CreateBuilder<ulong>(enabled.Length);
+        for (var index = 0; index < enabled.Length; index++)
+        {
+            if (NeedsAVisit(enabled[index]))
+            {
+                needed.Add(enabled[index]);
+            }
+        }
+
+        return needed.ToImmutable();
+    }
+
     public bool TryGetRetainer(ulong retainerId, out PlanRetainerSummary retainer)
     {
         for (var index = 0; index < Retainers.Length; index++)
@@ -163,6 +183,20 @@ internal sealed class SellPlan
         }
 
         retainer = default;
+        return false;
+    }
+
+    private bool NeedsAVisit(ulong retainerId)
+    {
+        for (var index = 0; index < Rows.Length; index++)
+        {
+            var row = Rows[index];
+            if (row.RetainerId == retainerId && !row.Has(PlanRowEdits.Excluded) && (row.IsUndercut || row.Decision.Action is SellAction.List or SellAction.Return))
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 }

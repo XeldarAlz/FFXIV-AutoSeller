@@ -23,6 +23,7 @@ internal sealed class SellHeader
     private const float RefreshSize = 26f;
     private const long AgeRefreshMs = 30_000;
     private const string RefreshId = "##asell_plan_refresh";
+    private const string OnlyNeededId = "##asell_plan_only_needed";
 
     private TransientNotice notice;
     private HeaderKey key;
@@ -33,9 +34,13 @@ internal sealed class SellHeader
     private string prices = string.Empty;
     private string watch = string.Empty;
     private string watchHelp = string.Empty;
+    private string onlyNeededLabel = string.Empty;
+    private string? onlyNeededCount;
+    private string onlyNeededHelp = string.Empty;
     private bool undercut;
+    private bool onlyNeeded;
 
-    private readonly record struct HeaderKey(long Generation, LanguageInfo? Language, long Step, long ReferenceGeneration, bool Fetching, string CharacterName, uint HomeWorldId, bool OnlyUndercut, int WatchMinutes);
+    private readonly record struct HeaderKey(long Generation, LanguageInfo? Language, long Step, long ReferenceGeneration, bool Fetching, string CharacterName, uint HomeWorldId, bool OnlyNeeded, int WatchMinutes);
 
     public void Draw(Plugin plugin, SellPlan plan)
     {
@@ -53,6 +58,7 @@ internal sealed class SellHeader
         right -= DrawChip(drawList, prices, plugin.References.Fetching ? Styling.AccentBlueSoft : Styling.TextDim, right, midY) + ChipGap * scale;
         var watchWidth = DrawChip(drawList, watch, undercut ? Styling.AccentRose : Styling.TextDim, right, midY, watchHelp);
         right -= watchWidth > 0f ? watchWidth + ChipGap * scale : 0f;
+        right -= DrawOnlyNeeded(plugin, right, midY) + ChipGap * scale;
         right -= DrawChip(drawList, listings, Styling.TextDim, right, midY) + ChipGap * scale;
         right -= DrawChip(drawList, retainers, Styling.TextDim, right, midY) + ChipGap * scale;
 
@@ -114,6 +120,22 @@ internal sealed class SellHeader
         }
     }
 
+    private float DrawOnlyNeeded(Plugin plugin, float right, float midY)
+    {
+        var height = ChipHeight * ImGuiHelpers.GlobalScale;
+        using (Fonts.PushCaption())
+        {
+            var width = FilterChip.Width(onlyNeededLabel, onlyNeededCount);
+            ImGui.SetCursorScreenPos(new Vector2(right - width, midY - height * 0.5f));
+            if (FilterChip.Draw(OnlyNeededId, onlyNeededLabel, onlyNeededCount, Styling.AccentGlow, onlyNeeded, height, null, onlyNeededHelp))
+            {
+                plugin.Controller.SetOnlyRetainersThatNeedIt(!onlyNeeded);
+            }
+
+            return width;
+        }
+    }
+
     private static float DrawChip(ImDrawListPtr drawList, string label, Vector4 color, float right, float midY, string? tooltip = null)
     {
         if (label.Length == 0)
@@ -146,7 +168,7 @@ internal sealed class SellHeader
         var homeWorldId = plan.Input.HomeWorldId;
         var references = plugin.References;
         var configuration = plugin.Configuration;
-        var next = new HeaderKey(plan.Generation, Loc.Current, Environment.TickCount64 / AgeRefreshMs, references.Latest?.Generation ?? 0, references.Fetching, characterName, homeWorldId, configuration.OnlyRetainersThatNeedIt, configuration.UndercutWatchMinutes);
+        var next = new HeaderKey(plan.Generation, Loc.Current, Environment.TickCount64 / AgeRefreshMs, references.Latest?.Generation ?? 0, references.Fetching, characterName, homeWorldId, plugin.Controller.OnlyRetainersThatNeedIt, configuration.UndercutWatchMinutes);
         if (next == key)
         {
             return;
@@ -161,10 +183,10 @@ internal sealed class SellHeader
         prices = references.Fetching ? Loc.T(L.Plan.PricesFetching)
             : current is null ? Loc.T(L.Plan.PricesNone)
             : Loc.T(L.Plan.PricesAge, Formatting.RelativeTime(current.FetchedAtUtc));
-        RefreshWatch(plan, configuration);
+        RefreshWatch(plan, configuration, next.OnlyNeeded);
     }
 
-    private void RefreshWatch(SellPlan plan, Configuration configuration)
+    private void RefreshWatch(SellPlan plan, Configuration configuration, bool onlyThoseThatNeedIt)
     {
         var undercutListings = 0;
         var rows = plan.Rows;
@@ -177,9 +199,11 @@ internal sealed class SellHeader
         }
 
         undercut = undercutListings > 0;
-        watch = configuration.OnlyRetainersThatNeedIt ? Loc.Plural(L.Plan.WatchVisits, plan.Input.RetainersToVisit(true).Length)
-            : undercut ? Loc.Plural(L.Plan.WatchUndercut, undercutListings)
-            : string.Empty;
+        watch = undercut ? Loc.Plural(L.Plan.WatchUndercut, undercutListings) : string.Empty;
         watchHelp = configuration.UndercutWatchMinutes > WatchInterval.OffMinutes ? Loc.T(L.Plan.WatchHelp, configuration.UndercutWatchMinutes) : Loc.T(L.Plan.WatchOffHelp);
+        onlyNeeded = onlyThoseThatNeedIt;
+        onlyNeededLabel = Loc.T(L.Assist.OnlyNeeded);
+        onlyNeededCount = onlyThoseThatNeedIt ? Loc.T(L.Plan.OnlyNeededCount, PlanLabels.Count(plan.RetainersToVisit(true).Length), PlanLabels.Count(plan.Input.EnabledRetainerIds().Length)) : null;
+        onlyNeededHelp = Loc.T(L.Plan.OnlyNeededHelp);
     }
 }
