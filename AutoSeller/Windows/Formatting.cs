@@ -6,20 +6,20 @@ namespace AutoSeller.Windows;
 // durations identically. Previously each window carried its own copy and they could drift.
 internal static class Formatting
 {
+    private const long SecondsPerMinute = 60;
     private const long MinutesPerHour = 60;
     private const long HoursPerDay = 24;
 
-    public static string Exp(long exp)
+    public static string Elapsed(TimeSpan span)
     {
-        if (exp >= 1_000_000) return $"{exp / 1_000_000.0:0.0}M";
-        if (exp >= 1_000) return $"{exp / 1_000.0:0.0}K";
-        return exp.ToString();
-    }
+        var seconds = Math.Max(0L, (long)span.TotalSeconds);
+        var minutes = seconds / SecondsPerMinute;
+        if (minutes < MinutesPerHour)
+        {
+            return Loc.T(L.Common.DurationMinutesSeconds, minutes, seconds % SecondsPerMinute);
+        }
 
-    public static string Elapsed(TimeSpan t)
-    {
-        if (t.TotalHours >= 1) return $"{(int)t.TotalHours}h {t.Minutes:D2}m";
-        return $"{t.Minutes}m {t.Seconds:D2}s";
+        return Hours(minutes);
     }
 
     public static string Gil(long amount) => Loc.Gil(amount);
@@ -32,10 +32,7 @@ internal static class Formatting
             return Loc.T(L.Common.DurationMinutes, minutes);
         }
 
-        var hours = minutes / MinutesPerHour;
-        return hours < HoursPerDay
-            ? Loc.T(L.Common.DurationHours, hours, minutes % MinutesPerHour)
-            : Loc.T(L.Common.DurationDays, hours / HoursPerDay, hours % HoursPerDay);
+        return Hours(minutes);
     }
 
     public static string RelativeTime(DateTime utc) => RelativeTime(utc, DateTime.UtcNow);
@@ -61,10 +58,11 @@ internal static class Formatting
         return span.TotalDays < 7 ? Loc.T(L.History.DaysAgo, (int)span.TotalDays) : utc.ToLocalTime().ToString("M", Loc.Culture);
     }
 
-    public static string Time(float secs)
+    private static string Hours(long minutes)
     {
-        if (secs <= 0) return "--:--";
-        var s = (int)secs;
-        return $"{s / 60}:{s % 60:D2}";
+        var hours = minutes / MinutesPerHour;
+        return hours < HoursPerDay
+            ? Loc.T(L.Common.DurationHours, hours, minutes % MinutesPerHour)
+            : Loc.T(L.Common.DurationDays, hours / HoursPerDay, hours % HoursPerDay);
     }
 }

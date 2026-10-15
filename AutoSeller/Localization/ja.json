@@ -7,6 +7,7 @@
   "common.noMatches": "「{0}」に一致するものはありません。",
   "common.gil": "{0} ギル",
   "common.duration.minutes": "{0}分",
+  "common.duration.minutesSeconds": "{0}分{1}秒",
   "common.duration.hours": "{0}時間{1}分",
   "common.duration.days": "{0}日{1}時間",
   "shell.nav.sell": "販売",

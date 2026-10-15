@@ -7,6 +7,7 @@
   "common.noMatches": "“{0}” ile eşleşen bir şey yok.",
   "common.gil": "{0} gil",
   "common.duration.minutes": "{0} dk",
+  "common.duration.minutesSeconds": "{0} dk {1} sn",
   "common.duration.hours": "{0} sa {1} dk",
   "common.duration.days": "{0} g {1} sa",
   "shell.nav.sell": "Satış",

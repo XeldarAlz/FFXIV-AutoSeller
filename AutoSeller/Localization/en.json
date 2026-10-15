@@ -7,6 +7,7 @@
   "common.noMatches": "Nothing matches “{0}”.",
   "common.gil": "{0} gil",
   "common.duration.minutes": "{0} min",
+  "common.duration.minutesSeconds": "{0} min {1} s",
   "common.duration.hours": "{0} h {1} min",
   "common.duration.days": "{0} d {1} h",
   "shell.nav.sell": "Sell",

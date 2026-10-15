@@ -7,6 +7,7 @@
   "common.noMatches": "没有匹配“{0}”的项。",
   "common.gil": "{0} 金币",
   "common.duration.minutes": "{0}分钟",
+  "common.duration.minutesSeconds": "{0}分{1}秒",
   "common.duration.hours": "{0}小时{1}分钟",
   "common.duration.days": "{0}天{1}小时",
   "shell.nav.sell": "出售",

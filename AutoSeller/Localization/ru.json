@@ -7,6 +7,7 @@
   "common.noMatches": "Ничего не подходит под «{0}».",
   "common.gil": "{0} гил",
   "common.duration.minutes": "{0} мин",
+  "common.duration.minutesSeconds": "{0} мин {1} с",
   "common.duration.hours": "{0} ч {1} мин",
   "common.duration.days": "{0} д {1} ч",
   "shell.nav.sell": "Продажа",
