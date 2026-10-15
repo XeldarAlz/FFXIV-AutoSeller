@@ -163,7 +163,7 @@ internal sealed partial class RetainerDriver
         }
         finally
         {
-            CloseArmouryBoard();
+            await CloseArmouryBoard();
         }
     }
 
@@ -326,7 +326,7 @@ internal sealed partial class RetainerDriver
         Diag($"Driver: the armoury chest {(armouryBoardOpened ? "is open" : $"did not open within {ArmouryBoardOpenMs} ms")} for an armoury lot.");
     }
 
-    private void CloseArmouryBoard()
+    private async Task CloseArmouryBoard()
     {
         if (!armouryBoardOpened)
         {
@@ -334,7 +334,7 @@ internal sealed partial class RetainerDriver
         }
 
         armouryBoardOpened = false;
-        RetainerClicks.CloseAddon(RetainerClicks.ArmouryBoardAddon);
+        await RetainerWindows.Close(RetainerClicks.ArmouryBoardAddon, SideWindowCloseMs, unloaded);
     }
 
     private bool RefreshRetainerPages(RunRetainer retainer)

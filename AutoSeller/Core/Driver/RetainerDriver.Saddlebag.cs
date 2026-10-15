@@ -12,6 +12,7 @@ namespace AutoSeller.Core.Driver;
 internal sealed partial class RetainerDriver
 {
     private const int SaddlebagOpenMs = 5_000;
+    private const int SideWindowCloseMs = 5_000;
 
     private readonly List<ItemKey> movedItems = [];
     private int movesPlanned;
@@ -47,12 +48,11 @@ internal sealed partial class RetainerDriver
         finally
         {
             RetainerWindows.CloseOwnedNow(ChainWindow.ContextMenu);
+            RestockMovedItems();
             if (!alreadyOpen)
             {
-                RetainerClicks.CloseAddon(RetainerClicks.SaddlebagAddon);
+                await RetainerWindows.Close(RetainerClicks.SaddlebagAddon, SideWindowCloseMs, unloaded);
             }
-
-            RestockMovedItems();
         }
     }
 

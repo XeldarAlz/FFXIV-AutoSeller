@@ -49,6 +49,17 @@ internal static class RetainerWindows
         return open;
     }
 
+    public static async Task<bool> Close(string addonName, int boundMs, Func<bool> stopped)
+    {
+        var closed = await RepeatUntil(() => RetainerClicks.CloseAddon(addonName), () => !RetainerClicks.IsReady(addonName), boundMs, stopped);
+        if (!closed)
+        {
+            RunLog.Warning($"Retainer windows: {addonName} still open after {boundMs} ms.");
+        }
+
+        return closed;
+    }
+
     public static async Task<bool> RepeatUntil(Func<bool> click, Func<bool> done, int timeoutMs, Func<bool> stopped)
     {
         var deadline = Environment.TickCount64 + timeoutMs;
