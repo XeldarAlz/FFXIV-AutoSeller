@@ -2,8 +2,6 @@ using AutoSeller.Core.Localization;
 
 namespace AutoSeller.Windows;
 
-// Shared display formatters so the running panel, live popout, and history window render numbers and
-// durations identically. Previously each window carried its own copy and they could drift.
 internal static class Formatting
 {
     private const long SecondsPerMinute = 60;
