@@ -169,6 +169,7 @@ internal static class PlanLabels
         RunSkip.NoFreeSlot => Loc.T(L.Plan.ReasonNoFreeSlot),
         RunSkip.QuantityOutOfBounds => Loc.T(L.Plan.SkipQuantity),
         RunSkip.ReadBackUnavailable => Loc.T(L.Plan.SkipReadBackUnavailable),
+        RunSkip.InSaddlebag => Loc.T(L.Plan.SkipInSaddlebag),
         _ => string.Empty,
     };
 

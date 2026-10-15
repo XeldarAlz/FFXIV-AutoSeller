@@ -82,6 +82,8 @@ internal static partial class L
         public static readonly LocString StatusSaleHistory = new("run.status.saleHistory", "{0}: reading the sale history");
         public static readonly LocString StatusReturning = new("run.status.returning", "{0}: returning {1} to the retainer");
         public static readonly LocString StatusVendoring = new("run.status.vendoring", "{0}: having the retainer sell {1} to a vendor");
+        public static readonly LocPlural StatusSaddlebag = new("run.status.saddlebag", "Moving {0} stack from the saddlebag to your bags", "Moving {0} stacks from the saddlebag to your bags");
+        public static readonly LocString StatusRetainerPass = new("run.status.retainerPass", "{0}: selling from the retainer's own inventory");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
         public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");

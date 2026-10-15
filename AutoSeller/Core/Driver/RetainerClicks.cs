@@ -6,6 +6,7 @@ using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.GameFunctions;
 using ECommons.Throttlers;
+using ECommons.UIHelpers.AddonMasterCombinedImplementations;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -31,6 +32,11 @@ internal static unsafe class RetainerClicks
     private const string ReturnToRetainerThrottleKey = "AutoSeller.Retainer.ReturnToRetainer";
     private const string ItemMenuThrottleKey = "AutoSeller.Retainer.ItemMenu";
     private const string HaveRetainerSellThrottleKey = "AutoSeller.Retainer.HaveRetainerSell";
+    private const string RemoveFromSaddlebagThrottleKey = "AutoSeller.Saddlebag.Remove";
+    private const string OpenSaddlebagThrottleKey = "AutoSeller.Saddlebag.Open";
+    private const string OpenArmouryThrottleKey = "AutoSeller.Retainer.OpenArmoury";
+    public const string SaddlebagAddon = "InventoryBuddy";
+    public const string ArmouryBoardAddon = "ArmouryBoard";
     private const int ItemMenuUnknownArgument = 0;
     private const string CloseContextMenuThrottleKey = "AutoSeller.Retainer.CloseContextMenu";
     private const string OpenSellWindowThrottleKey = "AutoSeller.Retainer.OpenSellWindow";
@@ -64,11 +70,14 @@ internal static unsafe class RetainerClicks
     public static readonly string SaleHistoryAddon = ChainWindows.NameOf(ChainWindow.RetainerHistory);
 
     private static readonly string[] inventoryAddons = ["InventoryRetainerLarge", "InventoryRetainer", "InventoryExpansion", "InventoryLarge", "Inventory"];
+    private static readonly string[] saddlebagAddons = [SaddlebagAddon];
+    private static readonly string[] playerInventoryAddons = ["InventoryExpansion", "InventoryLarge", "Inventory"];
 
     private static uint reportedOwner;
     private static ushort reportedSellList;
     private static string reportedInventory = string.Empty;
     private static ItemMenuTarget reportedItemMenu;
+    private static bool reportedSaddlebagAgent;
 
     public static bool IsReady(string addonName) => NpcInteraction.IsAddonReady(addonName);
 
@@ -130,7 +139,69 @@ internal static unsafe class RetainerClicks
 
     public static bool ChooseHaveRetainerSell(int entry) => ChooseEntry(entry, RetainerMenuText.IsHaveRetainerSell, HaveRetainerSellThrottleKey, "Have Retainer Sell Items");
 
-    public static bool OpenItemMenu(uint container, ushort slot)
+    public static bool OpenItemMenu(uint container, ushort slot) => OpenItemMenu(container, slot, inventoryAddons);
+
+    public static bool OpenSaddlebagItemMenu(uint container, ushort slot) => OpenItemMenu(container, slot, saddlebagAddons);
+
+    public static bool ChooseRemoveFromSaddlebag(int entry) => ChooseEntry(entry, RetainerMenuText.IsRemoveFromSaddlebag, RemoveFromSaddlebagThrottleKey, "Remove from Saddlebag");
+
+    public static bool OpenSaddlebag()
+    {
+        if (IsReady(SaddlebagAddon) || !EzThrottler.Throttle(OpenSaddlebagThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        var module = AgentModule.Instance();
+        var agent = module == null ? null : module->GetAgentByInternalId(AgentId.InventoryBuddy);
+        var active = agent != null && agent->IsAgentActive();
+        if (active != reportedSaddlebagAgent || agent == null)
+        {
+            reportedSaddlebagAgent = active;
+            RunLog.Info($"Saddlebag: the saddlebag agent is present {agent != null}, active {active}.");
+        }
+
+        if (agent == null)
+        {
+            return false;
+        }
+
+        RunLog.Info("Saddlebag: opening the chocobo saddlebag.");
+        agent->Show();
+        return true;
+    }
+
+    public static bool OpenArmouryChest()
+    {
+        if (IsReady(ArmouryBoardAddon) || !EzThrottler.Throttle(OpenArmouryThrottleKey, ClickThrottleMs))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < playerInventoryAddons.Length; index++)
+        {
+            if (!NpcInteraction.TryGetReadyAddon(playerInventoryAddons[index], out var inventory))
+            {
+                continue;
+            }
+
+            RunLog.Info($"Retainer: opening the armoury chest from the {playerInventoryAddons[index]} window.");
+            ArmouryChestButtonOf(index, inventory).OpenArmoryChest();
+            return true;
+        }
+
+        RunLog.Info("Retainer: no inventory window is open to open the armoury chest from.");
+        return false;
+    }
+
+    private static AddonMasterCombined.ICombinedInventory ArmouryChestButtonOf(int addonIndex, AtkUnitBase* inventory) => addonIndex switch
+    {
+        0 => new AddonMaster.InventoryExpansion(inventory),
+        1 => new AddonMaster.InventoryLarge(inventory),
+        _ => new AddonMaster.Inventory(inventory),
+    };
+
+    private static bool OpenItemMenu(uint container, ushort slot, string[] owners)
     {
         if (IsReady(ContextMenuAddon) || !EzThrottler.Throttle(ItemMenuThrottleKey, ClickThrottleMs))
         {
@@ -138,7 +209,7 @@ internal static unsafe class RetainerClicks
         }
 
         var agent = AgentInventoryContext.Instance();
-        if (agent == null || !TryFindInventoryWindow(out var owner))
+        if (agent == null || !TryFindInventoryWindow(owners, out var owner))
         {
             return false;
         }
@@ -242,20 +313,20 @@ internal static unsafe class RetainerClicks
         return true;
     }
 
-    private static bool TryFindInventoryWindow(out uint addonId)
+    private static bool TryFindInventoryWindow(string[] owners, out uint addonId)
     {
-        for (var index = 0; index < inventoryAddons.Length; index++)
+        for (var index = 0; index < owners.Length; index++)
         {
-            if (!NpcInteraction.TryGetReadyAddon(inventoryAddons[index], out var inventory))
+            if (!NpcInteraction.TryGetReadyAddon(owners[index], out var inventory))
             {
                 continue;
             }
 
             addonId = inventory->Id;
-            if (!string.Equals(reportedInventory, inventoryAddons[index], StringComparison.Ordinal))
+            if (!string.Equals(reportedInventory, owners[index], StringComparison.Ordinal))
             {
-                reportedInventory = inventoryAddons[index];
-                RunLog.Info($"Retainer: item menus open for the {inventoryAddons[index]} window (addon {addonId}).");
+                reportedInventory = owners[index];
+                RunLog.Info($"Retainer: item menus open for the {owners[index]} window (addon {addonId}).");
             }
 
             return true;

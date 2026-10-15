@@ -16,7 +16,13 @@ internal enum DriverOutcome : byte
     Cancelled,
 }
 
-internal sealed partial class RetainerDriver(SellRunSession session, RunDecider decider, Plugin plugin) : AutoCommon
+internal enum DriverPhase : byte
+{
+    Retainers,
+    Saddlebag,
+}
+
+internal sealed partial class RetainerDriver(SellRunSession session, RunDecider decider, Plugin plugin, DriverPhase phase) : AutoCommon
 {
     public const int WatchdogMs = 4 * 60 * 60 * TimeUnits.MillisecondsPerSecond;
     public const int CleanupBoundMs = 30_000;
@@ -73,6 +79,11 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         if (boundary != DriverHalt.None)
         {
             return new Stop(boundary, "the run is no longer authorized at its start");
+        }
+
+        if (phase == DriverPhase.Saddlebag)
+        {
+            return await MoveFromSaddlebag();
         }
 
         if (session.Mode == RunMode.Postprocess)
@@ -219,6 +230,12 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             : session.PausedAtBoundary ? DriverOutcome.Paused
             : DriverOutcome.Completed;
         Settled = true;
+        if (phase == DriverPhase.Saddlebag)
+        {
+            ReportMoves(stop);
+            return;
+        }
+
         var visits = session.Visits;
         var tally = session.Tally;
         var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.Repriced} repriced, {tally.Listed} listed, {tally.Returned} returned, {tally.Vendored} vendored for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";

@@ -4,6 +4,7 @@ using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Tasks.Model;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -15,8 +16,10 @@ internal static unsafe class RetainerReads
     private const int AskingPriceValue = 5;
     private const int QuantityValue = 8;
 
+    private static readonly string[] retainerInventoryWindows = ["InventoryRetainerLarge", "InventoryRetainer", "RetainerGrid0", "RetainerGrid"];
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
+    private static string reportedInventoryWindows = string.Empty;
     private static QuantityBounds reportedBounds;
     private static SellWindowFields reportedFields;
 
@@ -35,6 +38,41 @@ internal static unsafe class RetainerReads
         }
 
         return names;
+    }
+
+    public static SellListKind ShownSellListKind()
+    {
+        for (var index = 0; index < retainerInventoryWindows.Length; index++)
+        {
+            if (NpcInteraction.IsAddonReady(retainerInventoryWindows[index]))
+            {
+                return SellListKind.RetainerInventory;
+            }
+        }
+
+        return SellListKind.Inventory;
+    }
+
+    public static void ReportSellListKind()
+    {
+        line.Clear().Append("Sell list: retainer inventory windows shown [");
+        for (var index = 0; index < retainerInventoryWindows.Length; index++)
+        {
+            if (NpcInteraction.IsAddonReady(retainerInventoryWindows[index]))
+            {
+                line.Append(' ').Append(retainerInventoryWindows[index]);
+            }
+        }
+
+        line.Append(" ], so it sells from the ").Append(ShownSellListKind()).Append(" list.");
+        var text = line.ToString();
+        if (string.Equals(text, reportedInventoryWindows, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        reportedInventoryWindows = text;
+        RunLog.Info(text);
     }
 
     public static string[] ContextMenuEntries()

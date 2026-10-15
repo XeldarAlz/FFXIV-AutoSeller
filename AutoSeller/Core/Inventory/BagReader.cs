@@ -159,6 +159,12 @@ internal sealed unsafe class BagReader
         return held;
     }
 
+    public static int FreeBagSlots()
+    {
+        var manager = InventoryManager.Instance();
+        return manager == null ? 0 : (int)manager->GetEmptySlotsInBag();
+    }
+
     public static long PlayerGil()
     {
         var manager = InventoryManager.Instance();

@@ -124,6 +124,7 @@ internal static partial class L
         public static readonly LocString SkipSlotChanged = new("plan.skip.slotChanged", "The bag slot changed");
         public static readonly LocString SkipQuantity = new("plan.skip.quantity", "The quantity is outside the window's limits");
         public static readonly LocString SkipReadBackUnavailable = new("plan.skip.readBackUnavailable", "The listings or the bag slot could not be read before the change, so nothing was typed");
+        public static readonly LocString SkipInSaddlebag = new("plan.skip.inSaddlebag", "Still in the saddlebag: a run moves it to your bags before the bell when they have room");
         public static readonly LocString SkipRefused = new("plan.skip.refused", "A safety check refused it; the Console has the details");
 
         public static readonly LocString BadgeExcluded = new("plan.badge.excluded", "Left out");

@@ -26,6 +26,7 @@ internal enum RunSkip : byte
     NoFreeSlot,
     QuantityOutOfBounds,
     ReadBackUnavailable,
+    InSaddlebag,
 }
 
 internal readonly record struct RunDecision(

@@ -87,13 +87,6 @@ internal sealed partial class PlanBuilder : IDisposable
 
         var rules = configuration.BuildRuleBook();
         var read = bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        var stock = ImmutableArray.CreateBuilder<StockSlot>(read.Slots.Length);
-        for (var index = 0; index < read.Slots.Length; index++)
-        {
-            var slot = read.Slots[index];
-            stock.Add(new StockSlot(slot, items.FactsOf(slot.ItemId), 0));
-        }
-
         var markets = data.SnapshotArray();
         ownSellers.ReadAlts(readAltsNow);
         return new PlanInput
@@ -102,7 +95,7 @@ internal sealed partial class PlanBuilder : IDisposable
             CharacterContentId = data.ContentId,
             HomeWorldId = Svc.PlayerState.HomeWorld.RowId,
             NowUtc = nowUtc,
-            Stock = stock.MoveToImmutable(),
+            Stock = StockOf(read.Slots.AsSpan()),
             FreeBagSlots = read.FreeBagSlots,
             Coverage = read.Coverage,
             Rules = rules,
@@ -119,6 +112,17 @@ internal sealed partial class PlanBuilder : IDisposable
             OwnSellers = ownSellers.Current(),
             References = references.Latest,
         };
+    }
+
+    public ImmutableArray<StockSlot> StockOf(ReadOnlySpan<SlotFacts> slots)
+    {
+        var stock = ImmutableArray.CreateBuilder<StockSlot>(slots.Length);
+        for (var index = 0; index < slots.Length; index++)
+        {
+            stock.Add(new StockSlot(slots[index], items.FactsOf(slots[index].ItemId), 0));
+        }
+
+        return stock.MoveToImmutable();
     }
 
     private void OnInventoryChanged(IReadOnlyCollection<InventoryEventArgs> events)

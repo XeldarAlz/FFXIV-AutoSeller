@@ -92,11 +92,11 @@ internal static class LedgerCards
 
         if (!factsText.TryGet(key, out var facts))
         {
-            facts = factsText.Set(key, string.Concat(Facts(plugin, intent, retainer), "\n", Hint(hint, retainer)));
+            facts = factsText.Set(key, string.Concat(Facts(plugin, intent, retainer), "\n", Hint(write.Kind, hint, retainer)));
         }
 
         var warning = writeFailed ? Loc.T(L.Journal.AnswerFailed) : null;
-        var card = ActionCard.Begin(title, Loc.T(L.Journal.Body), facts, warning, Styling.AccentRose, 2, FontAwesomeIcon.QuestionCircle);
+        var card = ActionCard.Begin(title, Loc.T(write.Kind == WriteKind.Move ? L.Journal.MoveBody : L.Journal.Body), facts, warning, Styling.AccentRose, 2, FontAwesomeIcon.QuestionCircle);
         if (ActionCard.Button(ref card, "##asell_journal_applied", Loc.T(L.Journal.WentThrough), Styling.AccentMint, hint == ReconcileHint.Applied ? PillButton.Emphasis.Filled : PillButton.Emphasis.Tinted, true))
         {
             Answer(plugin, unresolved, true, hint);
@@ -171,6 +171,7 @@ internal static class LedgerCards
         {
             WriteKind.List or WriteKind.Return => Loc.T(L.Journal.ListFacts, item, quantity, retainer, when),
             WriteKind.Vendor => Loc.T(L.Journal.VendorFacts, item, quantity, retainer, when),
+            WriteKind.Move => Loc.T(L.Journal.MoveFacts, item, quantity, retainer, when),
             _ => Loc.T(L.Journal.RepriceFacts, item, quantity, retainer, Formatting.Gil(write.OldPrice), Formatting.Gil(write.NewPrice), when),
         };
     }
@@ -180,15 +181,24 @@ internal static class LedgerCards
         WriteKind.List => Loc.T(L.Journal.ListTitle, Formatting.Gil(write.NewPrice)),
         WriteKind.Return => Loc.T(L.Journal.ReturnTitle),
         WriteKind.Vendor => Loc.T(L.Journal.VendorTitle, Formatting.Gil(write.TryGetValue(out var value) ? value : 0)),
+        WriteKind.Move => Loc.T(L.Journal.MoveTitle),
         _ => Loc.T(L.Journal.RepriceTitle, Formatting.Gil(write.NewPrice)),
     };
 
-    private static string Hint(ReconcileHint hint, string retainer) => hint switch
+    private static string Hint(WriteKind kind, ReconcileHint hint, string retainer) => kind == WriteKind.Move ? MoveHint(hint) : hint switch
     {
         ReconcileHint.Applied => Loc.T(L.Journal.HintApplied, retainer),
         ReconcileHint.NotApplied => Loc.T(L.Journal.HintNotApplied, retainer),
         ReconcileHint.Unclear => Loc.T(L.Journal.HintUnclear, retainer),
         _ => Loc.T(L.Journal.HintNoRead, retainer),
+    };
+
+    private static string MoveHint(ReconcileHint hint) => hint switch
+    {
+        ReconcileHint.Applied => Loc.T(L.Journal.MoveHintApplied),
+        ReconcileHint.NotApplied => Loc.T(L.Journal.MoveHintNotApplied),
+        ReconcileHint.Unclear => Loc.T(L.Journal.MoveHintUnclear),
+        _ => Loc.T(L.Journal.MoveHintNoRead),
     };
 
     private static string RetainerName(Plugin plugin, ulong retainerId)

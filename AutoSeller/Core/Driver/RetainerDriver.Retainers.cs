@@ -149,7 +149,8 @@ internal sealed partial class RetainerDriver
             return stop;
         }
 
-        stop = await OpenSellList(retainer);
+        var pagesRead = RefreshRetainerPages(retainer);
+        stop = await OpenSellList(retainer, SellListKind.Inventory);
         if (stop.Halted)
         {
             return stop;
@@ -165,7 +166,7 @@ internal sealed partial class RetainerDriver
         stop = await WorkListings(index, retainer, market);
         if (KeepsWorking(stop))
         {
-            stop = await WorkLots(index, retainer, market);
+            stop = await WorkLots(index, retainer, market, SellListKind.Inventory);
         }
 
         if (KeepsWorking(stop))
@@ -178,7 +179,44 @@ internal sealed partial class RetainerDriver
             stop = await WorkVendoring(index, retainer);
         }
 
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkRetainerInventory(index, retainer, pagesRead);
+        }
+
         return stop;
+    }
+
+    private async Task<Stop> WorkRetainerInventory(int index, RunRetainer retainer, bool pagesRead)
+    {
+        var pageLots = pagesRead ? BuildPlan().CountFor(retainer.RetainerId, SellListKind.RetainerInventory) : 0;
+        if (!RunPlanner.NeedsRetainerPass(session.PlanInputs.Rules.SellsFromRetainer(retainer.RetainerId), pagesRead, pageLots))
+        {
+            return Stop.None;
+        }
+
+        session.Show(RunState.RetainerInventoryPass, Loc.T(L.Run.StatusRetainerPass, retainer.Name));
+        Diag($"Driver: {retainer.Name} sells from its own inventory; {(pagesRead ? $"{pageLots} lot(s) are planned from it" : "its pages are read once its sell list is open")}.");
+        var stop = await CloseSellListToMenu(retainer);
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return stop;
+        }
+
+        stop = await OpenSellList(retainer, SellListKind.RetainerInventory);
+        if (stop.Halted)
+        {
+            return stop;
+        }
+
+        RefreshRetainerPages(retainer);
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read for its own inventory");
+        }
+
+        return await WorkLots(index, retainer, market, SellListKind.RetainerInventory);
     }
 
     private bool KeepsWorking(in Stop stop)
@@ -186,15 +224,15 @@ internal sealed partial class RetainerDriver
         return !stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested;
     }
 
-    private async Task<Stop> OpenSellList(RunRetainer retainer)
+    private async Task<Stop> OpenSellList(RunRetainer retainer, SellListKind list)
     {
         session.Enter(RunState.OpeningSellList);
         var entries = NpcInteraction.SelectStringEntries();
-        var sellText = RetainerMenuText.SellFromInventory();
+        var sellText = list == SellListKind.RetainerInventory ? RetainerMenuText.SellFromRetainer() : RetainerMenuText.SellFromInventory();
         ReportMenu(entries);
         if (!sellText.IsKnown)
         {
-            return new Stop(DriverHalt.MenuTextUnavailable, $"Addon row {RetainerMenuText.SellFromInventoryRow} could not be read");
+            return new Stop(DriverHalt.MenuTextUnavailable, $"Addon row {(list == SellListKind.RetainerInventory ? RetainerMenuText.SellFromRetainerRow : RetainerMenuText.SellFromInventoryRow)} could not be read");
         }
 
         var entry = sellText.FirstMatchIn(entries);
@@ -204,7 +242,8 @@ internal sealed partial class RetainerDriver
         }
 
         var opened = await Step(ChainStep.Opens(ChainWindow.RetainerSellList, SellListOpenMs, RetainerBackdrop), () => RetainerClicks.OpenSellList(entry, sellText));
-        return Failed(opened, DriverHalt.SellListDidNotOpen, $"the sell list of {retainer.Name} did not open");
+        RetainerReads.ReportSellListKind();
+        return Failed(opened, DriverHalt.SellListDidNotOpen, $"the {list} sell list of {retainer.Name} did not open");
     }
 
     private static void ReportMenu(ReadOnlySpan<string> entries)
