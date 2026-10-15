@@ -133,6 +133,7 @@ internal static partial class L
         public static readonly LocPlural ChatStartedLive = new("run.chat.startedLive", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
         public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
         public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
+        public static readonly LocString ChatKeepsMoving = new("run.chat.keepsMoving", "The character keeps moving on its own, so paths are dropped as soon as they start. Turn off the pathfinder's 'cancel path on movement input' setting, and check that no key or auto-run is held.");
     }
 
     internal static class History
@@ -350,5 +351,8 @@ internal static partial class L
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /asell.");
         public static readonly LocString ConfigReset = new("plugin.configReset", "Your settings could not be read, so Auto Seller started with default settings. The old file is kept as {0}.");
         public static readonly LocString ConfigResetUnsaved = new("plugin.configResetUnsaved", "Your settings could not be read, so Auto Seller started with default settings. The old file could not be kept; the log has the details.");
+        public static readonly LocString TargetTerritory = new("plugin.target.territory", "Territory: {0} ({1})");
+        public static readonly LocString TargetNone = new("plugin.target.none", "No target. Click an NPC or an object first, then run /asell target again.");
+        public static readonly LocString TargetFound = new("plugin.target.found", "Target: BaseId={0}  Name=\"{1}\"");
     }
 }

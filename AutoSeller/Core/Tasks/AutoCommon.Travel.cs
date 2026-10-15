@@ -1,4 +1,5 @@
 using AutoSeller.Core.Ipc;
+using AutoSeller.Core.Localization;
 using AutoSeller.Core.Travel;
 using clib.TaskSystem;
 using Dalamud.Game.ClientState.Conditions;
@@ -346,7 +347,7 @@ public abstract partial class AutoCommon
 
         outsideMovementWarned = true;
         Warn($"{scope}: the character keeps moving on its own, so every path is dropped as soon as it starts. If the pathfinder's 'Cancel current path on player movement input' setting is on, turn it off; a held movement key, auto-run or a drifting controller does the same.");
-        Svc.Chat.PrintError($"{AsellConstants.LogPrefix} The character keeps moving on its own, so paths are dropped as soon as they start. Turn off the pathfinder's 'cancel path on movement input' setting, and check that no key or auto-run is held.");
+        Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {Loc.T(L.Run.ChatKeepsMoving)}");
     }
 
     private async Task<bool> WaitForStillness(int budgetMs)

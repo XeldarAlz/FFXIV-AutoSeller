@@ -1,3 +1,4 @@
+using AutoSeller.Core.Localization;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
@@ -14,12 +15,12 @@ internal static unsafe class TargetDumper
             ?.GetRowOrDefault(territoryId)
             ?.PlaceName.Value.Name.ToString() ?? "?";
 
-        Svc.Chat.Print($"{AsellConstants.LogPrefix} Territory: {territoryId} ({territoryName})");
+        Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.T(L.Plugin.TargetTerritory, territoryId, territoryName)}");
 
         var target = TargetSystem.Instance()->Target;
         if (target == null)
         {
-            Svc.Chat.Print($"{AsellConstants.LogPrefix} No target. Click an NPC or an object first, then re-run /asell target.");
+            Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.T(L.Plugin.TargetNone)}");
             return;
         }
 
@@ -28,7 +29,7 @@ internal static unsafe class TargetDumper
         var residentName = Svc.Data.GetExcelSheet<ENpcResident>()
             ?.GetRowOrDefault(baseId)?.Singular.ToString() ?? name;
 
-        Svc.Chat.Print($"{AsellConstants.LogPrefix} Target: BaseId={baseId}  Name=\"{residentName}\"");
+        Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.T(L.Plugin.TargetFound, baseId, residentName)}");
         RunLog.Info($"territory={territoryId} BaseId={baseId} name='{residentName}'");
     }
 }
