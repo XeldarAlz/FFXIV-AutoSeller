@@ -571,7 +571,7 @@
   "safety.add": "Añadir",
   "safety.remove": "Quitar",
   "safety.test": "Prueba",
-  "safety.preview": "Vista previa",
+  "safety.preview": "Probar",
   "safety.tab": "Seguridad",
   "safety.tabSub": "Detecta a los GM cercanos y reacciona: detiene la ronda, te avisa o toma medidas más drásticas.",
   "safety.gm.alerts": "Alertas",
