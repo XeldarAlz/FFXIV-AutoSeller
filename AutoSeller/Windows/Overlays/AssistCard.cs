@@ -51,7 +51,12 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         var lineGap = LineGap * scale;
         var wrapWidth = width - padX * 2f;
         var heights = (Span<float>)stackalloc float[Lines];
-        var height = padY * 2f + TextDraw.SmallCapsSize(lines[0]).Y;
+        using (Fonts.PushCaption())
+        {
+            heights[0] = TextDraw.Measure(lines[0]).Y;
+        }
+
+        var height = padY * 2f + heights[0];
         for (var index = 1; index < lineCount; index++)
         {
             heights[index] = TextDraw.MeasureWrapped(lines[index], wrapWidth).Y;
@@ -63,8 +68,12 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         var drawList = ImGui.GetWindowDrawList();
         Paint.Surface(drawList, origin, origin + new Vector2(width, height), Styling.CardRounding * scale, Styling.Tint(Styling.WindowBg, accent, 0.08f), Styling.WithAlpha(accent, 0.5f));
         var y = origin.Y + padY;
-        TextDraw.SmallCaps(lines[0], new Vector2(origin.X + padX, y), accent);
-        y += TextDraw.SmallCapsSize(lines[0]).Y;
+        using (Fonts.PushCaption())
+        {
+            TextDraw.At(lines[0], new Vector2(origin.X + padX, y), accent);
+        }
+
+        y += heights[0];
         for (var index = 1; index < lineCount; index++)
         {
             y += lineGap;
@@ -98,7 +107,7 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         builtLanguage = Loc.Current;
         builtSkipKey = skipKey;
         lineCount = 0;
-        Add(string.Concat(Loc.T(L.Assist.CardTitle), TextDraw.Separator, view.ItemName), Styling.TextDim);
+        Add(TextDraw.Upper(string.Concat(Loc.T(L.Assist.CardTitle), TextDraw.Separator, view.ItemName)), Styling.TextDim);
         switch (view.Status)
         {
             case AssistStatus.Comparing:

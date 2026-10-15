@@ -14,11 +14,12 @@ internal abstract unsafe class AddonOverlay : Window
         | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoBackground
         | ImGuiWindowFlags.AlwaysAutoResize;
 
+    private const int PushedStyleVars = 2;
+
     private readonly string addonName;
     private ScreenRect addon;
     private Vector2 drawnSize;
     private IDisposable? font;
-    private IDisposable? chrome;
 
     protected AddonOverlay(string windowName, string addonName)
         : base(windowName, OverlayFlags, true)
@@ -31,6 +32,7 @@ internal abstract unsafe class AddonOverlay : Window
         AllowClickthrough = false;
         DisableWindowSounds = true;
         DisableFadeInFadeOut = true;
+        AllowBackgroundBlur = false;
         PositionCondition = ImGuiCond.Always;
     }
 
@@ -44,7 +46,8 @@ internal abstract unsafe class AddonOverlay : Window
     public sealed override void PreDraw()
     {
         font = Fonts.PushBody();
-        chrome = Styling.PushChrome(Vector2.Zero);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0f);
         var viewport = ImGuiHelpers.MainViewport.Size;
         var size = drawnSize == Vector2.Zero ? Estimate() : drawnSize;
         var placed = Place(addon, size, new ScreenRect(0, 0, viewport.X, viewport.Y));
@@ -59,8 +62,7 @@ internal abstract unsafe class AddonOverlay : Window
 
     public sealed override void PostDraw()
     {
-        chrome?.Dispose();
-        chrome = null;
+        ImGui.PopStyleVar(PushedStyleVars);
         font?.Dispose();
         font = null;
     }
