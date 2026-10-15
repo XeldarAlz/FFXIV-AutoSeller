@@ -81,6 +81,17 @@ public sealed class AssistTests
     }
 
     [Fact]
+    public void AnAdjustPriceWindowNoListingMatchesIsNeverTakenForANewLot()
+    {
+        AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName)];
+        var shown = Shown(OreName, 20, ShownPrice);
+
+        Assert.False(AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(0)).Found);
+        Assert.False(AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(SellListRows.NoRow)).Found);
+        Assert.Equal(AssistSubject.NewLot, AssistTargets.Find(shown, candidates, AssistOrigin.Unknown).Subject);
+    }
+
+    [Fact]
     public void ANewListingOfAStackIdenticalToAListingIsANewLot()
     {
         AssistCandidate[] candidates = [AssistCandidate.Listed(listed, OreName, 0), AssistCandidate.Held(Normal, OreName)];
