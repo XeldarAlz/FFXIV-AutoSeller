@@ -19,13 +19,15 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
     private const string HistoryPacketSignature = "";
     private const string HistoryPacketName = "the retainer sale history packet handler";
     private const int MaximumWindowValues = SaleHistoryWindowLayout.ValueCount + SaleHistoryWindowLayout.RowStride;
+    private const int MaximumReportedValues = 1024;
     private const int NothingReported = -1;
 
     private readonly Configuration configuration;
     private readonly int[] windowValues = new int[MaximumWindowValues];
-    private readonly AtkValueType[] windowTypes = new AtkValueType[MaximumWindowValues];
-    private readonly int[] reportedValues = new int[MaximumWindowValues];
-    private readonly AtkValueType[] reportedTypes = new AtkValueType[MaximumWindowValues];
+    private readonly long[] windowSignatures = new long[MaximumReportedValues];
+    private readonly AtkValueType[] windowTypes = new AtkValueType[MaximumReportedValues];
+    private readonly long[] reportedSignatures = new long[MaximumReportedValues];
+    private readonly AtkValueType[] reportedTypes = new AtkValueType[MaximumReportedValues];
     private readonly byte[] packet = new byte[SaleHistoryLayout.PacketLength];
     private readonly DiagnosticLog packetLog = new();
     private readonly StringBuilder line = new();
@@ -98,18 +100,24 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
 
         var total = (int)window->AtkValuesCount;
         var count = Math.Min(total, windowValues.Length);
-        var changed = count != reportedCount || total != reportedTotal;
         for (var index = 0; index < count; index++)
         {
+            windowValues[index] = AtkValueReads.Integer(window->AtkValues[index]);
+        }
+
+        var shown = Math.Min(total, MaximumReportedValues);
+        var changed = shown != reportedCount || total != reportedTotal;
+        for (var index = 0; index < shown; index++)
+        {
             ref readonly var value = ref window->AtkValues[index];
-            windowValues[index] = AtkValueReads.Integer(value);
+            windowSignatures[index] = AtkValueReads.Signature(value);
             windowTypes[index] = value.Type;
-            changed |= windowValues[index] != reportedValues[index] || windowTypes[index] != reportedTypes[index];
+            changed |= windowSignatures[index] != reportedSignatures[index] || windowTypes[index] != reportedTypes[index];
         }
 
         if (changed)
         {
-            ReportWindow(window, count, total);
+            ReportWindow(window, shown, total);
         }
 
         return SaleHistoryWindowParser.TryParse(windowValues.AsSpan(0, count), characterContentId, retainerId, sellerTaxPercent, nowUtc, out sales);
@@ -119,21 +127,20 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
     {
         reportedCount = count;
         reportedTotal = total;
-        windowValues.AsSpan(0, count).CopyTo(reportedValues);
+        windowSignatures.AsSpan(0, count).CopyTo(reportedSignatures);
         windowTypes.AsSpan(0, count).CopyTo(reportedTypes);
-        line.Clear().Append("Sale history: the window holds ").Append(total).Append(" value(s):");
+        line.Clear().Append("Sale history: the window holds ").Append(total).Append(" value(s)");
+        if (count < total)
+        {
+            line.Append(", the first ").Append(count).Append(" shown");
+        }
+
+        line.Append(':');
         for (var index = 0; index < count; index++)
         {
             ref readonly var value = ref window->AtkValues[index];
             line.Append(" [").Append(index).Append("] ").Append(value.Type);
-            if (AtkValueReads.IsText(value))
-            {
-                line.Append(" '").Append(AtkValueReads.Text(value)).Append('\'');
-            }
-            else
-            {
-                line.Append(' ').Append(windowValues[index]);
-            }
+            AtkValueReads.Append(line, value);
         }
 
         RunLog.Info(line.ToString());
