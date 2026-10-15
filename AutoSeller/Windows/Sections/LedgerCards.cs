@@ -83,7 +83,7 @@ internal static class LedgerCards
         var write = intent.Write;
         var retainer = RetainerName(plugin, write.RetainerId);
         var latest = ReadAgainWhenOpen(plugin, write.RetainerId, intent.AtUtc);
-        var hint = ReconcileHints.From(intent, latest, BagReader.HeldFor(write));
+        var hint = ReconcileHints.From(intent, latest, HeldNow(plugin, write), GilNow(write));
         var key = HashCode.Combine(plugin.Ledger.Revision, unresolved.WriteId, hint, Environment.TickCount64 / TimeUnits.MillisecondsPerMinute);
         if (!titleText.TryGet(key, out var title))
         {
@@ -128,6 +128,21 @@ internal static class LedgerCards
         }
 
         return latest;
+    }
+
+    private static long HeldNow(Plugin plugin, in SaleWrite write)
+    {
+        if (write.Kind == WriteKind.Return && (!plugin.Retainers.TryGetOpenRetainer(out var open) || open.RetainerId != write.RetainerId))
+        {
+            return WriteIntent.Unread;
+        }
+
+        return BagReader.HeldFor(write);
+    }
+
+    private static long GilNow(in SaleWrite write)
+    {
+        return write.Kind == WriteKind.Vendor && VendorGil.Source == VendorGilSource.Character ? BagReader.PlayerGil() : WriteIntent.Unread;
     }
 
     private static void Answer(Plugin plugin, in UnresolvedWrite unresolved, bool applied, ReconcileHint hint)

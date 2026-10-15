@@ -12,22 +12,22 @@ public sealed class ReconcileHintTests
     [Fact]
     public void ARepricedSlotAtTheNewPriceWentThrough()
     {
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
     public void ARepricedSlotStillAtTheOldPriceDidNot()
     {
-        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, ListedPrice)), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, ListedPrice)), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
     public void AnEmptiedOrChangedSlotCannotTell()
     {
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice + 7)), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice) with { Quantity = LotQuantity + 1 }), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(OtherSlot, UndercutPrice)), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice + 7)), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(MarketSlot, UndercutPrice) with { Quantity = LotQuantity + 1 }), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Reprice()), Later(Listed(OtherSlot, UndercutPrice)), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
@@ -35,15 +35,15 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1);
 
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
     public void AListingIntentWithoutItsCountCannotTell()
     {
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(List()), Later(Listed(0, ListedPrice)), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(List()), Later(Listed(0, ListedPrice)), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1, heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack - LotQuantity));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack - LotQuantity, WriteIntent.Unread));
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1, heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack - LotQuantity));
-        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack - LotQuantity, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack, WriteIntent.Unread));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1, heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack, WriteIntent.Unread));
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1, heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack - LotQuantity - 1));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack - LotQuantity - 1));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(0, ListedPrice), Listed(OtherSlot, ListedPrice)), BagStack - LotQuantity - 1, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(Listed(0, ListedPrice)), BagStack - LotQuantity - 1, WriteIntent.Unread));
     }
 
     [Fact]
@@ -85,9 +85,9 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(), BagStack - LotQuantity));
-        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(), BagStack));
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(), BagStack - LotQuantity, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(), BagStack, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(List(), listingsBefore: 1, heldBefore: BagStack);
 
-        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, BagStack - LotQuantity));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, BagStack - LotQuantity, WriteIntent.Unread));
     }
 
     [Fact]
@@ -103,15 +103,40 @@ public sealed class ReconcileHintTests
     {
         var intent = Intent(Reprice());
 
-        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, Market(Now, FirstRetainer, Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread));
-        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, Market(Now.AddMinutes(5), SecondRetainer, Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, Market(Now, FirstRetainer, Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, Market(Now.AddMinutes(5), SecondRetainer, Listed(MarketSlot, UndercutPrice)), WriteIntent.Unread, WriteIntent.Unread));
     }
 
     [Fact]
-    public void OtherWriteKindsCannotTell()
+    public void AReturnedListingIsToldByTheListingsAndTheRetainersStock()
     {
-        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Return()), Later(), WriteIntent.Unread));
+        var intent = Intent(Return(), listingsBefore: 2, heldBefore: 0);
+
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(OtherSlot, ListedPrice)), LotQuantity, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, Later(Listed(OtherSlot, ListedPrice)), WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(Listed(MarketSlot, ListedPrice), Listed(OtherSlot, ListedPrice)), 0, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, Later(Listed(OtherSlot, ListedPrice)), 0, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, LotQuantity, WriteIntent.Unread));
+    }
+
+    [Fact]
+    public void AReturnWithoutItsCountsCannotTell()
+    {
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(Intent(Return()), Later(), WriteIntent.Unread, WriteIntent.Unread));
+    }
+
+    [Fact]
+    public void AVendoredStackIsToldByTheBagsAndTheGilTogether()
+    {
+        var intent = Intent(Vendor(), heldBefore: JunkQuantity) with { GilBefore = 10_000 };
+        const long paid = 10_000 + JunkQuantity * VendorUnitPrice;
+
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, null, 0, paid));
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, null, 0, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, null, JunkQuantity, 10_000));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, null, 0, 10_000));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, null, WriteIntent.Unread, WriteIntent.Unread));
     }
 
     private static WriteIntent Intent(SaleWrite write, long listingsBefore = WriteIntent.Unread, long heldBefore = WriteIntent.Unread)
