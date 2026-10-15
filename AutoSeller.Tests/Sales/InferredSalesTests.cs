@@ -51,6 +51,7 @@ public sealed class InferredSalesTests
 
         Assert.Equal((SnapshotDiffCorroboration)expected, sale.GilCorroboration);
         Assert.Equal(SaleConfidence.Inferred, sale.Confidence);
+        Assert.Equal((SnapshotDiffCorroboration)expected == SnapshotDiffCorroboration.Uncorroborated, sale.IsUncertain);
     }
 
     [Fact]
@@ -63,6 +64,8 @@ public sealed class InferredSalesTests
         var merged = SaleMatcher.Merge(Of(inferred, History(Morning.AddMinutes(20), DarksteelOre, 10, 200)).AsSpan());
 
         var sale = Assert.Single(merged);
+        Assert.True(inferred.IsUncertain);
+        Assert.False(sale.IsUncertain);
         Assert.Equal(SaleConfidence.Confirmed, sale.Confidence);
         Assert.Equal(SnapshotDiffCorroboration.NoInferredSales, sale.GilCorroboration);
     }

@@ -42,6 +42,9 @@ internal readonly record struct SaleRecord(
     public SaleConfidence Confidence => Source == SaleSource.Diff ? SaleConfidence.Inferred : SaleConfidence.Confirmed;
 
     [JsonIgnore]
+    public bool IsUncertain => Confidence == SaleConfidence.Inferred && GilCorroboration == SnapshotDiffCorroboration.Uncorroborated;
+
+    [JsonIgnore]
     public long GrossGil => Gil.SaturatingMultiply(UnitPrice, Quantity);
 
     [JsonIgnore]

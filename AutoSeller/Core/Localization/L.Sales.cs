@@ -44,6 +44,11 @@ internal static partial class L
         public static readonly LocString SourceNotice = new("sales.source.notice", "Read from a sale notice in chat.");
         public static readonly LocString SourceHistory = new("sales.source.history", "Read from the retainer's sale history.");
         public static readonly LocString SourceDiff = new("sales.source.diff", "The listing was gone at the next visit and no run took it off, so it is counted as sold.");
+        public static readonly LocString Uncertain = new("sales.uncertain", "Uncertain");
+        public static readonly LocString GilCorroborated = new("sales.gil.corroborated", "The retainer's gil grew by at least the take of the sales inferred at that visit.");
+        public static readonly LocString GilPartial = new("sales.gil.partial", "The retainer's gil grew, but by less than the take of the sales inferred at that visit.");
+        public static readonly LocString GilUncorroborated = new("sales.gil.uncorroborated", "The retainer's gil did not grow between the two visits, so this sale may not have happened.");
+        public static readonly LocString GilAtCap = new("sales.gil.atCap", "The retainer's gil was at its cap, so its growth cannot confirm this sale.");
         public static readonly LocString UnknownRetainer = new("sales.unknownRetainer", "Unknown retainer");
         public static readonly LocString NoRows = new("sales.noRows", "Nothing sold in the last 30 days.");
         public static readonly LocString Export = new("sales.export", "Export CSV");

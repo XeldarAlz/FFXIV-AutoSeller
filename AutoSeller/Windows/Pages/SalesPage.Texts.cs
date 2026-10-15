@@ -5,6 +5,7 @@ using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Sales.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Windows.Components;
@@ -182,10 +183,16 @@ internal sealed partial class SalesPage
             var game = items.Get(sale.ItemId);
             var name = ItemName(game.Name, sale.ItemId);
             var confirmed = sale.Confidence == SaleConfidence.Confirmed;
+            var uncertain = sale.IsUncertain;
             var caption = string.Concat(RetainerName(table, sale.RetainerId), TextDraw.Separator, CharacterName(table, sale.CharacterContentId));
             tooltip.Clear().Append(name).Append('\n').Append(caption).Append('\n')
                 .Append(sale.SoldAtUtc.ToLocalTime().ToString(SaleTimeFormat, Loc.Culture)).Append("\n\n")
                 .Append(SourceText(sale.Source));
+            if (GilText(sale.GilCorroboration) is { } gil)
+            {
+                tooltip.Append('\n').Append(gil);
+            }
+
             rows[index] = new RowText
             {
                 Id = RowId(Tab.Recent, index),
@@ -194,8 +201,8 @@ internal sealed partial class SalesPage
                 Tooltip = tooltip.ToString(),
                 IconId = game.IconId,
                 HighQuality = sale.IsHq,
-                Badge = Loc.T(confirmed ? L.Sales.Confirmed : L.Sales.Inferred),
-                BadgeColor = confirmed ? Styling.AccentMint : Styling.AccentAmber,
+                Badge = Loc.T(confirmed ? L.Sales.Confirmed : uncertain ? L.Sales.Uncertain : L.Sales.Inferred),
+                BadgeColor = confirmed ? Styling.AccentMint : uncertain ? Styling.AccentRose : Styling.AccentAmber,
                 Cells =
                 [
                     PlanLabels.Count(sale.Quantity),
@@ -214,6 +221,15 @@ internal sealed partial class SalesPage
         SaleSource.Notice => Loc.T(L.Sales.SourceNotice),
         SaleSource.History => Loc.T(L.Sales.SourceHistory),
         _ => Loc.T(L.Sales.SourceDiff),
+    };
+
+    private static string? GilText(SnapshotDiffCorroboration corroboration) => corroboration switch
+    {
+        SnapshotDiffCorroboration.Corroborated => Loc.T(L.Sales.GilCorroborated),
+        SnapshotDiffCorroboration.Partial => Loc.T(L.Sales.GilPartial),
+        SnapshotDiffCorroboration.Uncorroborated => Loc.T(L.Sales.GilUncorroborated),
+        SnapshotDiffCorroboration.GilAtCap => Loc.T(L.Sales.GilAtCap),
+        _ => null,
     };
 
     private static string ItemName(string name, uint itemId)
