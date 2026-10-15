@@ -68,7 +68,7 @@ internal static partial class L
         public static readonly LocString PhasePreparing = new("run.phase.preparing", "Getting ready");
         public static readonly LocString PhaseStandingBy = new("run.phase.standingBy", "Standing by");
         public static readonly LocString PhasePaused = new("run.phase.paused", "Paused");
-        public static readonly LocString ChatTaskFailed = new("run.chat.taskFailed", "A task could not be started. The log has the details.");
+        public static readonly LocString ChatTaskFailed = new("run.chat.taskFailed", "A task could not be started. The Console has the details.");
         public static readonly LocString PhaseTravelling = new("run.phase.travelling", "Going to the bell");
         public static readonly LocString PhaseSelling = new("run.phase.selling", "At the retainers");
         public static readonly LocString PhaseFinishing = new("run.phase.finishing", "Finishing");
@@ -364,7 +364,7 @@ internal static partial class L
         public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Auto Seller window. /asell config | stats | sales | deps | log | changelog | about | start (start the run) | stop (stop the run) | pause (pause or resume the run) | help (list these commands in the chat) | target (log the targeted NPC's BaseId) | look <item id> (compare market prices once and log the price inputs) | mbstatus (log the market checks, the search state and the open retainer's market) | sendpath compare|proxy (send /asell look searches through the sell window or the item search proxy) | historypath window|packet (read sale histories from the Sale History window or from the data the game receives for it; packet reads the window until its handler is found in game).");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /asell.");
         public static readonly LocString ConfigReset = new("plugin.configReset", "Your settings could not be read, so Auto Seller started with default settings. The old file is kept as {0}.");
-        public static readonly LocString ConfigResetUnsaved = new("plugin.configResetUnsaved", "Your settings could not be read, so Auto Seller started with default settings. The old file could not be kept; the log has the details.");
+        public static readonly LocString ConfigResetUnsaved = new("plugin.configResetUnsaved", "Your settings could not be read, so Auto Seller started with default settings. The old file could not be kept; the Console has the details.");
         public static readonly LocString TargetTerritory = new("plugin.target.territory", "Territory: {0} ({1})");
         public static readonly LocString TargetNone = new("plugin.target.none", "No target. Click an NPC or an object first, then run /asell target again.");
         public static readonly LocString TargetFound = new("plugin.target.found", "Target: BaseId={0}  Name=\"{1}\"");

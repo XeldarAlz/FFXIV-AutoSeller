@@ -29,7 +29,7 @@ internal static partial class L
         public static readonly LocString ImportMalformed = new("rules.importMalformed", "The clipboard does not hold rules exported from Auto Seller.");
         public static readonly LocString ImportNewerVersion = new("rules.importNewerVersion", "These rules come from a newer version of Auto Seller. Update the plugin to import them.");
         public static readonly LocString ItemDataLoading = new("rules.itemDataLoading", "Reading item data…");
-        public static readonly LocString ItemDataFailed = new("rules.itemDataFailed", "The item data could not be read. The log has the details.");
+        public static readonly LocString ItemDataFailed = new("rules.itemDataFailed", "The item data could not be read. The Console has the details.");
         public static readonly LocString ItemFallback = new("rules.itemFallback", "Item #{0}");
         public static readonly LocString HighQuality = new("rules.highQuality", "HQ");
         public static readonly LocString Added = new("rules.added", "{0} added.");
