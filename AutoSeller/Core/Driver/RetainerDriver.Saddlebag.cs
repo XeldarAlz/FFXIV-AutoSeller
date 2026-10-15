@@ -66,6 +66,7 @@ internal sealed partial class RetainerDriver
             return Stop.None;
         }
 
+        engaged = true;
         try
         {
             return await MoveStacks(moves);
@@ -78,6 +79,8 @@ internal sealed partial class RetainerDriver
             {
                 await RetainerWindows.Close(RetainerClicks.SaddlebagAddon, SideWindowCloseMs, unloaded);
             }
+
+            engaged = false;
         }
     }
 
