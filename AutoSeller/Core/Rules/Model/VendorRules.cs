@@ -30,6 +30,7 @@ internal enum VendorReason : byte
     NoReferenceValue,
     NotJunk,
     RunCapReached,
+    Excluded,
 }
 
 internal readonly record struct VendorVerdict(SlotFacts Slot, VendorReason Reason, long VendorValue)
@@ -39,7 +40,7 @@ internal readonly record struct VendorVerdict(SlotFacts Slot, VendorReason Reaso
 
 internal static class VendorRules
 {
-    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, RuleBook rules, long vendoredValueCap)
+    public static ImmutableArray<VendorVerdict> Plan(ImmutableArray<StockSlot> stock, RuleBook rules, long vendoredValueCap, PlanEdits edits)
     {
         var verdicts = new VendorVerdict[stock.Length];
         long vendoredValue = 0;
@@ -47,6 +48,11 @@ internal static class VendorRules
         {
             var entry = stock[index];
             var verdict = new VendorVerdict(entry.Slot, Check(entry, rules), VendorValue(entry));
+            if (verdict.IsVendored && edits.IsExcluded(PlanRowKey.ForVendor(entry.Slot)))
+            {
+                verdict = verdict with { Reason = VendorReason.Excluded };
+            }
+
             if (verdict.IsVendored)
             {
                 var total = Gil.SaturatingAdd(vendoredValue, verdict.VendorValue);
@@ -66,7 +72,7 @@ internal static class VendorRules
         return ImmutableCollectionsMarshal.AsImmutableArray(verdicts);
     }
 
-    public static ImmutableArray<VendorVerdict> Due(ImmutableArray<StockSlot> stock, RuleBook rules, long remainingValueCap, IReadOnlySet<PlanRowKey> handled)
+    public static ImmutableArray<VendorVerdict> Due(ImmutableArray<StockSlot> stock, RuleBook rules, long remainingValueCap, IReadOnlySet<PlanRowKey> handled, PlanEdits edits)
     {
         var open = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
         for (var index = 0; index < stock.Length; index++)
@@ -77,7 +83,7 @@ internal static class VendorRules
             }
         }
 
-        var verdicts = Plan(open.ToImmutable(), rules, Math.Max(0, remainingValueCap));
+        var verdicts = Plan(open.ToImmutable(), rules, Math.Max(0, remainingValueCap), edits);
         var due = ImmutableArray.CreateBuilder<VendorVerdict>();
         for (var index = 0; index < verdicts.Length; index++)
         {
@@ -88,21 +94,6 @@ internal static class VendorRules
         }
 
         return due.ToImmutable();
-    }
-
-    public static long PlannedValue(ImmutableArray<StockSlot> stock, RuleBook rules, long valueCap)
-    {
-        var verdicts = Plan(stock, rules, valueCap);
-        long value = 0;
-        for (var index = 0; index < verdicts.Length; index++)
-        {
-            if (verdicts[index].IsVendored)
-            {
-                value = Gil.SaturatingAdd(value, verdicts[index].VendorValue);
-            }
-        }
-
-        return value;
     }
 
     public static Decision DecisionFor(in VendorVerdict verdict, uint vendorPrice)

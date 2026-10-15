@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "Le prix que la tournée fixerait. Avant la tournée, c'est une estimation d'après Universalis ; la tournée compare les prix au marché avant de décider.",
   "plan.column.referenceHelp": "Le prix moyen des ventes récentes de cette qualité sur votre monde, ou sur votre centre de données si votre monde n'en a aucune.",
   "plan.group.unplaced": "Non attribué",
+  "plan.group.vendor": "Au marchand, par un servant",
   "plan.group.rows.one": "{0} ligne",
   "plan.group.rows.other": "{0} lignes",
   "plan.group.changes": "{0} à modifier",

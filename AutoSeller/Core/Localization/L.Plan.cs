@@ -47,6 +47,7 @@ internal static partial class L
         public static readonly LocString ColumnSuggestedHelp = new("plan.column.suggestedHelp", "The price the run would set. Before the run it is an estimate from Universalis; the run compares prices at the board before it decides.");
         public static readonly LocString ColumnReferenceHelp = new("plan.column.referenceHelp", "The average price of recent sales of this quality on your world, or on your data center when your world has none.");
         public static readonly LocString GroupUnplaced = new("plan.group.unplaced", "Not placed");
+        public static readonly LocString GroupVendor = new("plan.group.vendor", "To the vendor, through a retainer");
         public static readonly LocPlural GroupRows = new("plan.group.rows", "{0} row", "{0} rows");
         public static readonly LocString GroupChanges = new("plan.group.changes", "{0} to change");
         public static readonly LocString GroupNothing = new("plan.group.nothing", "Nothing to do here");

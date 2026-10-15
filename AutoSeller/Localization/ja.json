@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "実行で設定される価格です。実行前は Universalis からの見積もりで、実行時はマーケットで価格を比較してから決定します。",
   "plan.column.referenceHelp": "あなたのワールドでのこの品質の最近の取引の平均価格です。ワールドに取引がない場合はデータセンターの平均です。",
   "plan.group.unplaced": "未割り当て",
+  "plan.group.vendor": "リテイナー経由でNPC売却",
   "plan.group.rows.one": "{0} 行",
   "plan.group.rows.other": "{0} 行",
   "plan.group.changes": "変更 {0}",

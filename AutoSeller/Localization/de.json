@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "Der Preis, den der Lauf setzen würde. Vor dem Lauf ist er eine Schätzung aus Universalis; der Lauf vergleicht die Preise am Markt, bevor er entscheidet.",
   "plan.column.referenceHelp": "Der Durchschnittspreis der letzten Verkäufe dieser Qualität auf deiner Welt, oder in deinem Datenzentrum, wenn deine Welt keine hat.",
   "plan.group.unplaced": "Nicht zugeteilt",
+  "plan.group.vendor": "An den Händler, über einen Gehilfen",
   "plan.group.rows.one": "{0} Zeile",
   "plan.group.rows.other": "{0} Zeilen",
   "plan.group.changes": "{0} zu ändern",

@@ -18,6 +18,13 @@ internal enum PlanRowEdits : byte
     Approved = 1 << 3,
 }
 
+internal enum PlanGroupKind : byte
+{
+    Retainer,
+    Unplaced,
+    Vendor,
+}
+
 internal readonly record struct PlanRow(
     PlanRowKey Key,
     ulong RetainerId,
@@ -54,7 +61,11 @@ internal readonly record struct PlanRow(
 
     public bool Searches => IsListing ? Duty == ListingDuty.Due : IsPlaced;
 
-    public bool CanMove => !IsListing && BoundRetainerId == 0;
+    public bool CanMove => Kind == RunRowKind.Lot && BoundRetainerId == 0;
+
+    public bool CanSetPrice => Kind != RunRowKind.Vendor;
+
+    public long VendorValue => Decision.Action == SellAction.Vendor ? Gil.SaturatingMultiply(Decision.Price, Quantity) : 0;
 
     public bool Writes => WritesAPrice(Decision.Action);
 
@@ -69,7 +80,7 @@ internal readonly record struct PlanRow(
     public static bool WritesAPrice(SellAction action) => action is SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List;
 }
 
-internal readonly record struct PlanGroup(ulong RetainerId, int Start, int Count, int Changes);
+internal readonly record struct PlanGroup(ulong RetainerId, int Start, int Count, int Changes, PlanGroupKind Kind);
 
 internal readonly record struct PlanRetainerSummary(
     ulong RetainerId,

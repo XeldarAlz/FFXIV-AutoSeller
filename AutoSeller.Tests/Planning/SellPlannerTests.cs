@@ -16,7 +16,12 @@ public sealed class SellPlannerTests
     private const uint FarAboveReference = 5_000;
     private const uint BoardProposal = 650;
 
+    private const uint Junk = 7_777;
+    private const uint JunkQuantity = 10;
+    private const uint JunkVendorPrice = 5;
+
     private static readonly ListingSlot listedAtReference = OreListing(0, ListedPrice);
+    private static readonly StockSlot junkSlot = new(new SlotFacts(0, Junk, JunkQuantity, BagContainer, 9, 0, SlotSource.Bags, false, false, false), new ItemFacts(Junk, 999, JunkVendorPrice, 0, 0, false, false, false, false), 0);
     private static readonly PlanRowKey listingKey = PlanRowKey.ForListing(Alpha, listedAtReference);
 
     [Fact]
@@ -432,15 +437,57 @@ public sealed class SellPlannerTests
     [Fact]
     public void TotalsCountTheVendorGilOfWhatTheVendorRulesSellWithinTheCap()
     {
-        const uint junk = 7_777;
-        var junkFacts = new ItemFacts(junk, 999, 5, 0, 0, false, false, false, false);
-        var junkSlot = new StockSlot(new SlotFacts(0, junk, 10, BagContainer, 9, 0, SlotSource.Bags, false, false, false), junkFacts, 0);
-        var vendoring = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, new VendorSettings(true, ItemIdSet.From([junk]), VendorSettings.DefaultJunkThreshold), SellSources.Default, []);
-        var input = Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags), junkSlot) with { Rules = vendoring };
+        var input = VendoringInput();
 
         Assert.Equal(50, Build(input).Totals.VendorGil);
         Assert.Equal(0, Build(input with { VendoredValueCap = 49 }).Totals.VendorGil);
         Assert.Equal(0, Build(input with { Rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) }).Totals.VendorGil);
+    }
+
+    [Fact]
+    public void EachStackTheVendorRulesSellHasARowOfItsOwnGroup()
+    {
+        var plan = Build(VendoringInput());
+
+        var row = Row(plan, PlanRowKey.ForVendor(junkSlot.Slot));
+        var group = plan.Groups[^1];
+        Assert.Equal(RunRowKind.Vendor, row.Kind);
+        Assert.Equal(SellAction.Vendor, row.Decision.Action);
+        Assert.Equal(DecisionReason.VendorList, row.Decision.Reason);
+        Assert.Equal(JunkVendorPrice, row.Decision.Price);
+        Assert.Equal(JunkQuantity, row.Quantity);
+        Assert.False(row.Searches);
+        Assert.False(row.CanMove);
+        Assert.False(row.CanSetPrice);
+        Assert.Equal(PlanGroupKind.Vendor, group.Kind);
+        Assert.Equal(1, group.Count);
+        Assert.Equal(row, plan.Rows[group.Start]);
+        Assert.Contains(row.EditTarget, plan.EditTargets);
+    }
+
+    [Fact]
+    public void AnExcludedVendorRowStaysInThePlanAndSellsNothing()
+    {
+        var key = PlanRowKey.ForVendor(junkSlot.Slot);
+        PlanEdits.None.TryApply(PlanEdit.Exclude(key, Now), new PlanEditTarget(key, 0, 0), out var excluded);
+
+        var plan = Build(VendoringInput() with { Edits = excluded });
+
+        var row = Row(plan, key);
+        Assert.Equal(SellAction.Skip, row.Decision.Action);
+        Assert.Equal(DecisionReason.Excluded, row.Decision.Reason);
+        Assert.True(row.Has(PlanRowEdits.Excluded));
+        Assert.Equal(0, plan.Totals.VendorGil);
+        Assert.Contains(row.EditTarget, plan.EditTargets);
+    }
+
+    [Fact]
+    public void NoVendorRowsWhenVendoringIsOff()
+    {
+        var plan = Build(VendoringInput() with { Rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) });
+
+        Assert.False(plan.TryFind(PlanRowKey.ForVendor(junkSlot.Slot), out _));
+        Assert.DoesNotContain(plan.Groups, group => group.Kind == PlanGroupKind.Vendor);
     }
 
     [Fact]
@@ -461,5 +508,11 @@ public sealed class SellPlannerTests
     {
         Assert.Equal(PlanEditRefusal.None, edits.TryApply(edit, row.EditTarget, out var updated));
         return updated;
+    }
+
+    private static PlanInput VendoringInput()
+    {
+        var vendoring = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, new VendorSettings(true, ItemIdSet.From([Junk]), VendorSettings.DefaultJunkThreshold), SellSources.Default, []);
+        return Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags), junkSlot) with { Rules = vendoring };
     }
 }

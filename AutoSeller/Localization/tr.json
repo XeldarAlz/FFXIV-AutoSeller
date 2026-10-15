@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "Turun koyacağı fiyat. Turdan önce Universalis'ten bir tahmindir; tur karar vermeden önce pazardaki fiyatları karşılaştırır.",
   "plan.column.referenceHelp": "Dünyanızda bu kalitedeki son satışların ortalama fiyatı; dünyanızda hiç yoksa veri merkezinizdeki.",
   "plan.group.unplaced": "Yerleştirilmedi",
+  "plan.group.vendor": "Bir yardımcı aracılığıyla tüccara",
   "plan.group.rows.one": "{0} satır",
   "plan.group.rows.other": "{0} satır",
   "plan.group.changes": "{0} değişecek",

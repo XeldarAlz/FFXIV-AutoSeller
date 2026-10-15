@@ -105,7 +105,7 @@ internal sealed partial class RetainerDriver
         }
 
         var remaining = authorization.Caps.MaxVendoredValue - session.Values.VendoredValue;
-        var due = VendorRules.Due(session.PlanInputs.Stock, authorization.Rules, remaining, session.Handled);
+        var due = VendorRules.Due(session.PlanInputs.Stock, authorization.Rules, remaining, session.Handled, authorization.PlanEdits);
         if (due.IsEmpty)
         {
             return Stop.None;

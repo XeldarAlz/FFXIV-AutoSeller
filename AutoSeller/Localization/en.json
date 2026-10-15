@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "The price the run would set. Before the run it is an estimate from Universalis; the run compares prices at the board before it decides.",
   "plan.column.referenceHelp": "The average price of recent sales of this quality on your world, or on your data center when your world has none.",
   "plan.group.unplaced": "Not placed",
+  "plan.group.vendor": "To the vendor, through a retainer",
   "plan.group.rows.one": "{0} row",
   "plan.group.rows.other": "{0} rows",
   "plan.group.changes": "{0} to change",

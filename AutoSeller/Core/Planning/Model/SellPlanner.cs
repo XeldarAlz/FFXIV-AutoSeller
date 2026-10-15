@@ -30,6 +30,7 @@ internal static class SellPlanner
 
         cancellationToken.ThrowIfCancellationRequested();
         work.AddUnplaced();
+        work.AddVendoring();
         return work.ToPlan();
     }
 
@@ -87,7 +88,7 @@ internal static class SellPlanner
                     AddLot(assigned[index].Lot, retainer.RetainerId, AllocationReason.Assigned, assigned[index].Move);
                 }
 
-                groups.Add(new PlanGroup(retainer.RetainerId, start, rows.Count - start, ChangesIn(start)));
+                groups.Add(new PlanGroup(retainer.RetainerId, start, rows.Count - start, ChangesIn(start), PlanGroupKind.Retainer));
             }
 
             retainers.Add(Summarize(retainer, market));
@@ -104,7 +105,26 @@ internal static class SellPlanner
 
             if (rows.Count > start)
             {
-                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0));
+                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0, PlanGroupKind.Unplaced));
+            }
+        }
+
+        public void AddVendoring()
+        {
+            var verdicts = VendorRules.Plan(stock, input.Rules, input.VendoredValueCap, input.Edits);
+            var start = rows.Count;
+            for (var index = 0; index < verdicts.Length; index++)
+            {
+                var verdict = verdicts[index];
+                if (verdict.IsVendored || verdict.Reason == VendorReason.Excluded)
+                {
+                    AddVendorRow(verdict, stock[index].Item.VendorPrice);
+                }
+            }
+
+            if (rows.Count > start)
+            {
+                groups.Add(new PlanGroup(PlanRow.Unplaced, start, rows.Count - start, 0, PlanGroupKind.Vendor));
             }
         }
 
@@ -119,7 +139,7 @@ internal static class SellPlanner
                 Groups = groups.ToImmutable(),
                 Retainers = retainers.ToImmutable(),
                 EditTargets = editTargets.ToImmutable(),
-                Totals = Total(built.AsSpan(), estimate, VendorRules.PlannedValue(stock, input.Rules, input.VendoredValueCap)),
+                Totals = Total(built.AsSpan(), estimate),
             };
         }
 
@@ -217,6 +237,19 @@ internal static class SellPlanner
             }
         }
 
+        private void AddVendorRow(in VendorVerdict verdict, uint vendorPrice)
+        {
+            var slot = verdict.Slot;
+            var item = new ItemKey(slot.ItemId, slot.IsHq);
+            var key = PlanRowKey.ForVendor(slot);
+            var reference = input.ReferenceFor(item);
+            var excluded = verdict.Reason == VendorReason.Excluded;
+            var decision = excluded ? new Decision(SellAction.Skip, 0, 0, DecisionReason.Excluded, default) : VendorRules.DecisionFor(verdict, vendorPrice);
+            var row = new PlanRow(key, PlanRow.Unplaced, RunRowKind.Vendor, slot.Source, slot.Quantity, 0, decision, Usable(reference, item), ListingDuty.Due, AllocationReason.Assigned, MoveOutcome.None, 0, excluded ? PlanRowEdits.Excluded : PlanRowEdits.None, TimeSpan.Zero, 0, default);
+            rows.Add(row);
+            editTargets.Add(row.EditTarget);
+        }
+
         private CompetitorSnapshot Estimate(ItemKey item)
         {
             var world = MarketEstimate.WorldOf(homeReferences, item);
@@ -312,16 +345,18 @@ internal static class SellPlanner
             _ => DecisionReason.None,
         };
 
-        private static PlanTotals Total(ReadOnlySpan<PlanRow> rows, in RunTimeEstimateResult estimate, long vendorGil)
+        private static PlanTotals Total(ReadOnlySpan<PlanRow> rows, in RunTimeEstimateResult estimate)
         {
             var listingsToChange = 0;
             var newListings = 0;
             long listedValue = 0;
+            long vendorGil = 0;
             var awaitingApproval = 0;
             for (var index = 0; index < rows.Length; index++)
             {
                 var row = rows[index];
                 listedValue = Gil.SaturatingAdd(listedValue, row.WrittenValue);
+                vendorGil = Gil.SaturatingAdd(vendorGil, row.VendorValue);
                 if (row.NeedsApproval)
                 {
                     awaitingApproval++;

@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "El precio que pondría la ronda. Antes de la ronda es una estimación de Universalis; la ronda compara los precios en el mercado antes de decidir.",
   "plan.column.referenceHelp": "El precio medio de las ventas recientes de esta calidad en tu mundo, o en tu centro de datos si tu mundo no tiene ninguna.",
   "plan.group.unplaced": "Sin asignar",
+  "plan.group.vendor": "Al mercader, mediante un empleado",
   "plan.group.rows.one": "{0} fila",
   "plan.group.rows.other": "{0} filas",
   "plan.group.changes": "{0} por cambiar",

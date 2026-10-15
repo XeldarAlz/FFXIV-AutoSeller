@@ -87,7 +87,7 @@ internal static class PlanFixtures
         var groups = plan.Groups;
         for (var index = 0; index < groups.Length; index++)
         {
-            if (groups[index].RetainerId == retainerId)
+            if (groups[index].RetainerId == retainerId && groups[index].Kind != PlanGroupKind.Vendor)
             {
                 return groups[index];
             }
@@ -102,7 +102,7 @@ internal static class PlanFixtures
         var groups = plan.Groups;
         for (var index = 0; index < groups.Length; index++)
         {
-            if (groups[index].RetainerId == retainerId)
+            if (groups[index].RetainerId == retainerId && groups[index].Kind != PlanGroupKind.Vendor)
             {
                 return true;
             }

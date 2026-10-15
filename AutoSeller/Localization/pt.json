@@ -75,6 +75,7 @@
   "plan.column.suggestedHelp": "O preço que a rodada definiria. Antes da rodada é uma estimativa do Universalis; a rodada compara os preços no mercado antes de decidir.",
   "plan.column.referenceHelp": "O preço médio das vendas recentes desta qualidade no seu mundo, ou no seu data center quando seu mundo não tem nenhuma.",
   "plan.group.unplaced": "Não alocado",
+  "plan.group.vendor": "Ao NPC, por meio de um ajudante",
   "plan.group.rows.one": "{0} linha",
   "plan.group.rows.other": "{0} linhas",
   "plan.group.changes": "{0} para mudar",
