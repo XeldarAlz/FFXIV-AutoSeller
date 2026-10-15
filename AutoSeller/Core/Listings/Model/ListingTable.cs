@@ -227,11 +227,12 @@ internal sealed class ListingTable
             }
 
             var snapshots = record.Snapshots.IsDefault ? [] : record.Snapshots;
+            var ages = record.ListingAges.IsDefault ? [] : record.ListingAges.AsSpan();
             for (var snapshotIndex = 0; snapshotIndex < snapshots.Length; snapshotIndex++)
             {
                 if (snapshots[snapshotIndex] is { } snapshot)
                 {
-                    scan.Add(snapshot, histories[characterIndex]);
+                    scan.Add(snapshot, histories[characterIndex], ages);
                 }
             }
         }

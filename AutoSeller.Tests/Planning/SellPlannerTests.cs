@@ -174,6 +174,20 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void AListingIsUndercutOnlyByDataNewerThanItsListingTime()
+    {
+        var seenAfterTheData = MarketOf(Alpha, Now.AddMinutes(-10), 10_000, listedAtReference);
+        var listedBeforeTheData = new ListingAge(Alpha, listedAtReference, Now.AddHours(-3));
+        var unknownAge = Input([OreRule()], [seenAfterTheData, MarketAt(Beta)]);
+        var knownAge = unknownAge with { ListingAges = [listedBeforeTheData] };
+
+        Assert.False(Row(Build(unknownAge), listingKey).IsUndercut);
+        Assert.Empty(unknownAge.RetainersToVisit(true));
+        Assert.True(Row(Build(knownAge), listingKey).IsUndercut);
+        Assert.Equal<ulong>([Alpha], knownAge.RetainersToVisit(true));
+    }
+
+    [Fact]
     public void ARecentRepriceKeepsTheListingWithTheCooldownLeft()
     {
         var repriced = new RepriceEntry(Now - TimeSpan.FromMinutes(30), []);

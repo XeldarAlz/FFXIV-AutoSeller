@@ -52,6 +52,19 @@ public sealed class MarketEstimateTests
     }
 
     [Fact]
+    public void TheWorldLowestIsTakenOnlyFromKnownWorldData()
+    {
+        var known = PlanFixtures.References(PlanFixtures.OreReferences(OreReference, Lowest));
+        var stale = PlanFixtures.References(PlanFixtures.OreReferences(OreReference, Lowest, ReferenceSelector.UniversalisLifetime));
+
+        Assert.True(MarketEstimate.TryWorldLowest(known, NormalOre, Now, out var lowest));
+        Assert.Equal(new WorldListing(NormalOre, Lowest, Now.AddHours(-1)), lowest);
+        Assert.False(MarketEstimate.TryWorldLowest(stale, NormalOre, Now, out _));
+        Assert.False(MarketEstimate.TryWorldLowest(known, new ItemKey(Ore, true), Now, out _));
+        Assert.False(MarketEstimate.TryWorldLowest(null, NormalOre, Now, out _));
+    }
+
+    [Fact]
     public void OnlyTheWorldScopeOfTheSameQualityCounts()
     {
         Assert.False(MarketEstimate.IsKnown(world with { Source = ReferenceSource.UniversalisDataCenter }, NormalOre, Now));

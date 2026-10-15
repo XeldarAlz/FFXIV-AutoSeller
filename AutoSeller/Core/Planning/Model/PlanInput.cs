@@ -46,6 +46,8 @@ internal sealed record PlanInput
 
     public ImmutableArray<ListingStreak> Streaks { get; init; } = [];
 
+    public ImmutableArray<ListingAge> ListingAges { get; init; } = [];
+
     public long VendoredValueCap { get; init; } = RunCaps.DefaultMaxVendoredValue;
 
     public required OwnSellers OwnSellers { get; init; }
@@ -92,7 +94,7 @@ internal sealed record PlanInput
         var reprices = RepriceHistory.Restore(Reprices.AsSpan());
         for (var index = 0; index < Markets.Length; index++)
         {
-            scan.Add(Markets[index], reprices);
+            scan.Add(Markets[index], reprices, ListingAges.IsDefault ? [] : ListingAges.AsSpan());
         }
 
         return scan.Mark();

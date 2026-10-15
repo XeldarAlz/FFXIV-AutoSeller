@@ -47,6 +47,8 @@ internal sealed class CharacterData
 
     public IReadOnlyList<ListingStreak> Streaks => streaks;
 
+    public IReadOnlyList<ListingAge> Ages => listingAges;
+
     public PlanEdits PlanEdits { get; private set; } = PlanEdits.None;
 
     public int RepriceCount => reprices.Count;
