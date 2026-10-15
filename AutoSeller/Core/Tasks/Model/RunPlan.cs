@@ -132,6 +132,18 @@ internal static class RunPlanner
         return With(inputs, Restock(inputs.Stock, item, fresh, coverage), freeBagSlots);
     }
 
+    public static RunPlanInputs WithEdits(RunPlanInputs inputs, PlanEdits edits)
+    {
+        return ReferenceEquals(edits, inputs.Edits) ? inputs : new RunPlanInputs
+        {
+            Stock = inputs.Stock,
+            FreeBagSlots = inputs.FreeBagSlots,
+            Rules = inputs.Rules,
+            Edits = edits,
+            Retainers = inputs.Retainers,
+        };
+    }
+
     public static RunPlanInputs WithRetainerPages(RunPlanInputs inputs, ulong retainerId, ReadOnlySpan<StockSlot> fresh)
     {
         var stock = inputs.Stock;

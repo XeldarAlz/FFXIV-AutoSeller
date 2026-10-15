@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks.Model;
@@ -87,6 +88,59 @@ public sealed class SaddlebagMovesTests
         Assert.Equal(new SaleWrite(WriteKind.Move, Beta, Saddlebag, 1, Ore, false, LotQuantity, 0, 0, default), write);
         Assert.True(write.IsWellFormed);
         Assert.False(write.SetsPrice);
+    }
+
+    [Fact]
+    public void APricedAndMovedSaddlebagLotKeepsItsPriceAndRetainerInTheBags()
+    {
+        const uint price = 1_500;
+        var row = new PlanRowKey(0, Saddlebag, 1, 0, Ore, false);
+        var unedited = Inputs(1, Stock(cheapStack, 1));
+        var landed = OreInTheBags with { Slot = 7 };
+        var byValue = Assert.Single(Build(SaddlebagMoves.Restock(unedited, [cheapStack], [landed], FreeBagSlots - 1, default)).Allocation.Assignments).RetainerId;
+        var chosen = byValue == Alpha ? Beta : Alpha;
+        var edits = PlanEdits.Restore([PlanEdit.Price(row, price, Now), PlanEdit.Move(row, chosen, Now)]);
+        var inputs = RunPlanner.WithEdits(unedited, edits);
+
+        var restocked = SaddlebagMoves.Restock(inputs, [cheapStack], [landed], FreeBagSlots - 1, default);
+        var lot = Assert.Single(Build(restocked).Allocation.Assignments);
+
+        Assert.Equal(new PlanRowKey(0, BagContainer, 7, 0, Ore, false), lot.Lot.Row);
+        Assert.Equal(chosen, lot.RetainerId);
+        Assert.Equal(PriceOverride.SetByPlayer(price), PriceOverrides.ForLot(restocked.Edits, lot.Lot.Row));
+        Assert.Same(edits, inputs.Edits);
+    }
+
+    [Fact]
+    public void AMovedStackLandsWhereABagSlotGainedExactlyItsQuantity()
+    {
+        var partial = OreInTheBags with { Slot = 7, Quantity = 5 };
+        StockSlot[] before = [new StockSlot(partial, OreFacts, OreReference)];
+        var merged = partial with { Quantity = 5 + LotQuantity };
+        var second = cheapStack with { Slot = 2 };
+
+        Assert.Equal(new LandedStack(cheapStack, merged), Assert.Single(SaddlebagMoves.Landed([cheapStack], before, [merged])));
+        Assert.Empty(SaddlebagMoves.Landed([cheapStack], before, [partial with { Quantity = 4 + LotQuantity }, OreInTheBags with { Slot = 8, Quantity = 1 }]));
+        Assert.Empty(SaddlebagMoves.Landed([cheapStack], [], [dearStack with { Container = BagContainer, Slot = 9, Source = SlotSource.Bags }]));
+        Assert.Equal(
+            [new LandedStack(cheapStack, OreInTheBags with { Slot = 8 }), new LandedStack(second, OreInTheBags with { Slot = 9 })],
+            SaddlebagMoves.Landed([cheapStack, second], [], [OreInTheBags with { Slot = 8 }, OreInTheBags with { Slot = 9 }]).AsSpan().ToArray());
+    }
+
+    [Fact]
+    public void ACarriedEditNeverReplacesTheBagSlotsOwnEdit()
+    {
+        var saddlebagRow = new PlanRowKey(0, Saddlebag, 1, 0, Ore, false);
+        var bagRow = new PlanRowKey(0, BagContainer, 7, 0, Ore, false);
+        var edits = PlanEdits.Restore([PlanEdit.Price(saddlebagRow, 1_500, Now), PlanEdit.Exclude(saddlebagRow, Now), PlanEdit.Price(bagRow, 1_200, Now)]);
+
+        var carried = SaddlebagMoves.CarryEdits(edits, [new LandedStack(cheapStack, OreInTheBags with { Slot = 7 })]);
+
+        Assert.True(carried.TryGetPrice(bagRow, out var price));
+        Assert.Equal(1_200u, price);
+        Assert.True(carried.IsExcluded(bagRow));
+        Assert.Equal(4, carried.Items.Length);
+        Assert.Same(edits, SaddlebagMoves.CarryEdits(edits, []));
     }
 
     private static StockSlot Stock(in SlotFacts slot, uint referencePrice)
