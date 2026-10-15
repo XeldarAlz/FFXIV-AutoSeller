@@ -57,7 +57,8 @@ internal sealed class UndercutWatchService : IDisposable
         }
 
         LastCheckUtc = DateTime.UtcNow;
-        RunLog.Info($"Undercut watch: checking {items.Length} listed item(s) against Universalis, every {configuration.UndercutWatchMinutes} minutes: {references.Fetch(items.AsSpan())}.");
+        var fetch = references.Fetch(items.AsSpan());
+        RunLog.Info($"Undercut watch: checking {items.Length} listed item(s) against Universalis, every {configuration.UndercutWatchMinutes} minutes: {fetch}.");
     }
 
     private void TrackLowestPrices(CharacterData data)
@@ -77,16 +78,14 @@ internal sealed class UndercutWatchService : IDisposable
             for (var slotIndex = 0; slotIndex < slots.Length; slotIndex++)
             {
                 var listing = slots[slotIndex];
-                var world = MarketEstimate.WorldOf(current, listing.Key);
-                if (!MarketEstimate.IsKnown(world, listing.Key, nowUtc))
+                if (!MarketEstimate.TryWorldLowest(current, listing.Key, nowUtc, out var lowest))
                 {
                     continue;
                 }
 
                 var key = new RepriceKey(snapshot.RetainerId, listing.Slot, listing.Key);
-                var listedSince = data.ListedSince(snapshot.RetainerId, listing, snapshot.ReadAtUtc);
-                var repricedAt = data.RepriceEntryFor(key).LastRepriceUtc;
-                data.TrackLowestPrice(key, listing.UnitPrice, repricedAt > listedSince ? repricedAt : listedSince, new LowestPriceCheck(world.UpdatedAtUtc, world.LowestListing));
+                var watched = new WatchedListing(snapshot.RetainerId, listing.Slot, listing.Key, listing.UnitPrice, data.ListedSince(snapshot.RetainerId, listing, snapshot.ReadAtUtc), data.RepriceEntryFor(key).LastRepriceUtc);
+                data.TrackLowestPrice(key, watched.UnitPrice, watched.PricedAtUtc, LowestPriceCheck.Of(lowest));
             }
         }
     }
