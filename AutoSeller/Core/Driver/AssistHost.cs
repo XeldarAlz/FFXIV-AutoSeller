@@ -13,16 +13,21 @@ namespace AutoSeller.Core.Driver;
 
 internal sealed class AssistHost : IDisposable
 {
+    private const int OriginFreshMs = 5_000;
+
     private readonly Plugin plugin;
     private AssistView view = AssistView.Idle;
     private AssistTask? task;
     private long revision;
+    private AssistOrigin menuOrigin = AssistOrigin.Unknown;
+    private long menuOpenedAtMs;
 
     public AssistHost(Plugin plugin)
     {
         this.plugin = plugin;
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerClicks.SellWindowAddon, OnSellWindowSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, RetainerClicks.SellWindowAddon, OnSellWindowClosing);
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerClicks.ContextMenuAddon, OnContextMenuSetup);
     }
 
     public AssistView View => Volatile.Read(ref view);
@@ -31,6 +36,7 @@ internal sealed class AssistHost : IDisposable
     {
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerClicks.SellWindowAddon, OnSellWindowSetup);
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, RetainerClicks.SellWindowAddon, OnSellWindowClosing);
+        Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerClicks.ContextMenuAddon, OnContextMenuSetup);
         var automation = ClibServices.Automation;
         if (ReferenceEquals(automation.CurrentTask, task))
         {
@@ -43,9 +49,22 @@ internal sealed class AssistHost : IDisposable
         Volatile.Write(ref view, new AssistView(Interlocked.Increment(ref revision), status, itemName, suggestion, decision, cooldownLeft));
     }
 
+    private void OnContextMenuSetup(AddonEvent type, AddonArgs args)
+    {
+        if (!plugin.Configuration.AssistEnabled || plugin.Controller.HoldsRetainerWindows)
+        {
+            return;
+        }
+
+        menuOrigin = RetainerReads.MenuOrigin();
+        menuOpenedAtMs = Environment.TickCount64;
+    }
+
     private void OnSellWindowSetup(AddonEvent type, AddonArgs args)
     {
         Volatile.Write(ref view, AssistView.Idle);
+        var origin = Environment.TickCount64 - menuOpenedAtMs <= OriginFreshMs ? menuOrigin : AssistOrigin.Unknown;
+        menuOrigin = AssistOrigin.Unknown;
         var configuration = plugin.Configuration;
         var automation = ClibServices.Automation;
         var block = AssistGate.Check(new AssistFacts(
@@ -64,8 +83,8 @@ internal sealed class AssistHost : IDisposable
             return;
         }
 
-        RunLog.Info("Assist: a sell window was opened by hand; its prices are compared.");
-        if (TaskStarter.TryStart(() => task = new AssistTask(plugin, this)))
+        RunLog.Info($"Assist: a sell window was opened by hand ({origin.Opening}); its prices are compared.");
+        if (TaskStarter.TryStart(() => task = new AssistTask(plugin, this, origin)))
         {
             plugin.Marketbuddy.Hold();
         }

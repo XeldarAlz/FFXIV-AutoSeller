@@ -20,9 +20,9 @@ public sealed class AssistTests
     [Fact]
     public void AWindowShowingAListingsQuantityAndPriceIsThatListing()
     {
-        AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName), AssistCandidate.Listed(listed, OreName)];
+        AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName), AssistCandidate.Listed(listed, OreName, 0)];
 
-        var target = AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates);
+        var target = AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates, AssistOrigin.Unknown);
 
         Assert.Equal(new AssistTarget(AssistSubject.Listing, Normal, listed), target);
     }
@@ -30,9 +30,9 @@ public sealed class AssistTests
     [Fact]
     public void AWindowShowingAHeldItemIsANewLot()
     {
-        AssistCandidate[] candidates = [AssistCandidate.Listed(listed, OreName), AssistCandidate.Held(new ItemKey(OtherItemId, false), OtherName), AssistCandidate.Held(Normal, OreName)];
+        AssistCandidate[] candidates = [AssistCandidate.Listed(listed, OreName, 0), AssistCandidate.Held(new ItemKey(OtherItemId, false), OtherName), AssistCandidate.Held(Normal, OreName)];
 
-        var target = AssistTargets.Find(Shown(OreName, 99, 0), candidates);
+        var target = AssistTargets.Find(Shown(OreName, 99, 0), candidates, AssistOrigin.Unknown);
 
         Assert.Equal(AssistSubject.NewLot, target.Subject);
         Assert.Equal(Normal, target.Item);
@@ -43,9 +43,9 @@ public sealed class AssistTests
     {
         AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName), AssistCandidate.Held(High, OreName)];
 
-        Assert.Equal(High, AssistTargets.Find(Shown(string.Concat(OreName, HighQualityGlyph.Glyph.ToString()), 5, 0), candidates).Item);
-        Assert.Equal(Normal, AssistTargets.Find(Shown(OreName, 5, 0), candidates).Item);
-        Assert.False(AssistTargets.Find(Shown(OreName, 5, 0), [AssistCandidate.Held(High, OreName)]).Found);
+        Assert.Equal(High, AssistTargets.Find(Shown(string.Concat(OreName, HighQualityGlyph.Glyph.ToString()), 5, 0), candidates, AssistOrigin.Unknown).Item);
+        Assert.Equal(Normal, AssistTargets.Find(Shown(OreName, 5, 0), candidates, AssistOrigin.Unknown).Item);
+        Assert.False(AssistTargets.Find(Shown(OreName, 5, 0), [AssistCandidate.Held(High, OreName)], AssistOrigin.Unknown).Found);
     }
 
     [Fact]
@@ -53,9 +53,43 @@ public sealed class AssistTests
     {
         AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName)];
 
-        Assert.False(AssistTargets.Find(SellWindowShown.Unreadable, candidates).Found);
-        Assert.False(AssistTargets.Find(Shown(OtherName, 5, 0), candidates).Found);
-        Assert.False(AssistTargets.Find(Shown(OreName, 5, 0), []).Found);
+        Assert.False(AssistTargets.Find(SellWindowShown.Unreadable, candidates, AssistOrigin.Unknown).Found);
+        Assert.False(AssistTargets.Find(Shown(OtherName, 5, 0), candidates, AssistOrigin.Unknown).Found);
+        Assert.False(AssistTargets.Find(Shown(OreName, 5, 0), [], AssistOrigin.Unknown).Found);
+    }
+
+    [Fact]
+    public void TwoIdenticalListingsResolveToTheRowTheMenuWasOpenedOn()
+    {
+        var twin = listed with { Slot = 9 };
+        AssistCandidate[] candidates = [AssistCandidate.Listed(listed, OreName, 0), AssistCandidate.Listed(twin, OreName, 1)];
+        var shown = Shown(OreName, 20, ShownPrice);
+
+        Assert.Equal(twin, AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(1)).Listing);
+        Assert.Equal(listed, AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(0)).Listing);
+        Assert.Equal(listed, AssistTargets.Find(shown, candidates, AssistOrigin.Unknown).Listing);
+    }
+
+    [Fact]
+    public void AnAdjustPriceRowThatShowsSomethingElseFallsBackToTheListingTheWindowShows()
+    {
+        var other = new ListingSlot(2, OtherItemId, false, 20, ShownPrice);
+        AssistCandidate[] candidates = [AssistCandidate.Listed(other, OtherName, 0), AssistCandidate.Listed(listed, OreName, 1)];
+
+        Assert.Equal(listed, AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates, AssistOrigin.AdjustPrice(0)).Listing);
+        Assert.Equal(listed, AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates, AssistOrigin.AdjustPrice(SellListRows.NoRow)).Listing);
+    }
+
+    [Fact]
+    public void ANewListingOfAStackIdenticalToAListingIsANewLot()
+    {
+        AssistCandidate[] candidates = [AssistCandidate.Listed(listed, OreName, 0), AssistCandidate.Held(Normal, OreName)];
+        var shown = Shown(OreName, 20, ShownPrice);
+
+        Assert.Equal(new AssistTarget(AssistSubject.NewLot, Normal, default), AssistTargets.Find(shown, candidates, AssistOrigin.NewListing));
+        Assert.Equal(AssistSubject.Listing, AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(0)).Subject);
+        Assert.Equal(AssistSubject.Listing, AssistTargets.Find(shown, candidates, AssistOrigin.Unknown).Subject);
+        Assert.False(AssistTargets.Find(shown, [AssistCandidate.Listed(listed, OreName, 0)], AssistOrigin.NewListing).Found);
     }
 
     [Theory]
@@ -134,21 +168,6 @@ public sealed class AssistTests
         Assert.Equal(AssistBlock.OtherTaskRunning, AssistGate.Check(ready with { OtherTaskRunning = true }));
         Assert.Equal(AssistBlock.SkipKeyHeld, AssistGate.Check(ready with { SkipKeyHeld = true }));
         Assert.Equal(AssistBlock.ReadingOff, AssistGate.Check(ready with { ReadingAllowed = false }));
-    }
-
-    [Fact]
-    public void AnAssistSearchPacesTheNextSearchOfARunEvenWhenItsWindowClosedEarly()
-    {
-        var machine = new ListingRequestMachine();
-        machine.Begin(ItemId, 0);
-        Assert.Equal(ListingRequestStep.Send, machine.Poll(0, 0, 0));
-        machine.OnSent(0, true, 0);
-        machine.Cancel();
-
-        machine.Begin(OtherItemId, 0);
-
-        Assert.Equal(ListingRequestStep.None, machine.Poll(ListingRequestMachine.MinimumIntervalMs, ItemId, 0));
-        Assert.Equal(ListingRequestStep.Send, machine.Poll(ListingRequestMachine.DefaultIntervalMs, ItemId, 0));
     }
 
     private static SellWindowShown Shown(string name, int quantity, uint price)

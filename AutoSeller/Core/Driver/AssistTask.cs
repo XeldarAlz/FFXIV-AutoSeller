@@ -23,12 +23,14 @@ internal sealed class AssistTask : AutoCommon
     private readonly ListingSlot[] listings = new ListingSlot[RetainerSnapshot.SlotCount];
     private readonly Plugin plugin;
     private readonly AssistHost host;
+    private readonly AssistOrigin origin;
     private bool released;
 
-    public AssistTask(Plugin plugin, AssistHost host)
+    public AssistTask(Plugin plugin, AssistHost host, AssistOrigin origin)
     {
         this.plugin = plugin;
         this.host = host;
+        this.origin = origin;
         CancelToken.Register(ReleaseShared);
     }
 
@@ -44,7 +46,7 @@ internal sealed class AssistTask : AutoCommon
                 return;
             }
 
-            var target = AssistTargets.Find(shown, Candidates());
+            var target = AssistTargets.Find(shown, Candidates(), origin);
             if (!target.Found)
             {
                 RunLog.Info($"Assist: '{shown.ItemName}' ({QualityLabel.Of(shown.IsHq)}) x{shown.Quantity} at {shown.AskingPrice} is not among the bags or this retainer's listings; nothing is typed.");
@@ -131,7 +133,7 @@ internal sealed class AssistTask : AutoCommon
         {
             for (var index = 0; index < count; index++)
             {
-                candidates.Add(AssistCandidate.Listed(listings[index], plugin.GameItems.Get(listings[index].ItemId).Name));
+                candidates.Add(AssistCandidate.Listed(listings[index], plugin.GameItems.Get(listings[index].ItemId).Name, index));
             }
         }
 

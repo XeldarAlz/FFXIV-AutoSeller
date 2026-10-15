@@ -11,11 +11,27 @@ internal enum AssistSubject : byte
     NewLot,
 }
 
-internal readonly record struct AssistCandidate(ItemKey Item, string Name, bool IsListing, ListingSlot Listing)
+internal enum AssistOpening : byte
 {
-    public static AssistCandidate Held(ItemKey item, string name) => new(item, name, false, default);
+    Unknown,
+    AdjustPrice,
+    NewListing,
+}
 
-    public static AssistCandidate Listed(in ListingSlot listing, string name) => new(listing.Key, name, true, listing);
+internal readonly record struct AssistOrigin(AssistOpening Opening, int Row)
+{
+    public static AssistOrigin Unknown => new(AssistOpening.Unknown, SellListRows.NoRow);
+
+    public static AssistOrigin NewListing => new(AssistOpening.NewListing, SellListRows.NoRow);
+
+    public static AssistOrigin AdjustPrice(int row) => new(AssistOpening.AdjustPrice, row);
+}
+
+internal readonly record struct AssistCandidate(ItemKey Item, string Name, bool IsListing, ListingSlot Listing, int Row)
+{
+    public static AssistCandidate Held(ItemKey item, string name) => new(item, name, false, default, SellListRows.NoRow);
+
+    public static AssistCandidate Listed(in ListingSlot listing, string name, int row) => new(listing.Key, name, true, listing, row);
 }
 
 internal readonly record struct AssistTarget(AssistSubject Subject, ItemKey Item, ListingSlot Listing)
@@ -25,24 +41,49 @@ internal readonly record struct AssistTarget(AssistSubject Subject, ItemKey Item
 
 internal static class AssistTargets
 {
-    public static AssistTarget Find(in SellWindowShown shown, ReadOnlySpan<AssistCandidate> candidates)
+    public static AssistTarget Find(in SellWindowShown shown, ReadOnlySpan<AssistCandidate> candidates, in AssistOrigin origin)
     {
         if (!shown.Readable)
         {
             return default;
         }
 
+        if (origin.Opening == AssistOpening.NewListing)
+        {
+            return HeldShown(shown, candidates);
+        }
+
+        if (origin.Opening == AssistOpening.AdjustPrice && origin.Row != SellListRows.NoRow)
+        {
+            var atRow = ListingShown(shown, candidates, origin.Row);
+            if (atRow.Found)
+            {
+                return atRow;
+            }
+        }
+
+        var listing = ListingShown(shown, candidates, SellListRows.NoRow);
+        return listing.Found ? listing : HeldShown(shown, candidates);
+    }
+
+    private static AssistTarget ListingShown(in SellWindowShown shown, ReadOnlySpan<AssistCandidate> candidates, int row)
+    {
         var quantity = (uint)Math.Max(0, shown.Quantity);
         var price = (uint)Math.Max(0, shown.AskingPrice);
         for (var index = 0; index < candidates.Length; index++)
         {
             var candidate = candidates[index];
-            if (candidate.IsListing && Shows(shown, candidate) && candidate.Listing.Quantity == quantity && candidate.Listing.UnitPrice == price)
+            if (candidate.IsListing && (row == SellListRows.NoRow || candidate.Row == row) && Shows(shown, candidate) && candidate.Listing.Quantity == quantity && candidate.Listing.UnitPrice == price)
             {
                 return new AssistTarget(AssistSubject.Listing, candidate.Item, candidate.Listing);
             }
         }
 
+        return default;
+    }
+
+    private static AssistTarget HeldShown(in SellWindowShown shown, ReadOnlySpan<AssistCandidate> candidates)
+    {
         for (var index = 0; index < candidates.Length; index++)
         {
             var candidate = candidates[index];
