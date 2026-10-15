@@ -98,8 +98,8 @@ internal static partial class L
         public static readonly LocString ReasonPlayerPrice = new("plan.reason.playerPrice", "Your price");
         public static readonly LocString ReasonApproved = new("plan.reason.approved", "Approved drop");
         public static readonly LocString ReasonBelowFloorKept = new("plan.reason.belowFloorKept", "Below floor, kept");
-        public static readonly LocString ReasonBelowFloorListedAtFloor = new("plan.reason.belowFloorListedAtFloor", "Below floor, listed at the floor");
-        public static readonly LocString ReasonBelowFloorReturned = new("plan.reason.belowFloorReturned", "Below floor for 3 days, returned");
+        public static readonly LocString ReasonBelowFloorListedAtFloor = new("plan.reason.belowFloorListedAtFloor", "Below floor, at the floor price");
+        public static readonly LocString ReasonBelowFloorReturned = new("plan.reason.belowFloorReturned", "Below floor for 3 days");
         public static readonly LocString ReasonOverStepLimit = new("plan.reason.overStepLimit", "Over the step limit, needs approval");
         public static readonly LocString ReasonCooldown = new("plan.reason.cooldown", "Cooldown {0}");
         public static readonly LocString ReasonPriceWar = new("plan.reason.priceWar", "Price war, paused");
