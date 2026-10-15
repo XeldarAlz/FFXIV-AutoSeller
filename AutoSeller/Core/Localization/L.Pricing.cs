@@ -7,6 +7,8 @@ internal static partial class L
         public static readonly LocString Tab = new("pricing.tab", "Pricing");
         public static readonly LocString TabSub = new("pricing.tabSub", "How prices are chosen, how far one step may move them, and when a run holds back.");
         public static readonly LocString GroupPrice = new("pricing.group.price", "Price");
+        public static readonly LocString UndercutAll = new("pricing.undercutAll", "Undercut all my listings");
+        public static readonly LocString UndercutAllHelp = new("pricing.undercutAllHelp", "Keep every listing your retainers have up the cheapest on the board, with or without an item rule. A listing never goes below its floor, and items on the never-sell list are left alone.");
         public static readonly LocString Mode = new("pricing.mode", "Mode");
         public static readonly LocString ModeHelp = new("pricing.modeHelp", "How a price is set against the lowest same-quality listing of another seller.");
         public static readonly LocString ModeUndercut = new("pricing.mode.undercut", "Undercut");

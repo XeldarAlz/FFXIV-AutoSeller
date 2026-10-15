@@ -53,6 +53,31 @@ public sealed class PricingRuleTests
     }
 
     [Fact]
+    public void UndercuttingAllListingsManagesAnItemNoRuleNames()
+    {
+        Assert.True(PricingRule.Manages(Book(undercutAllListings: true), normalOre, MaterialCategory, 0));
+        Assert.False(PricingRule.Manages(Book(), normalOre, MaterialCategory, 0));
+    }
+
+    [Fact]
+    public void UndercuttingAllListingsLeavesNeverSellAndPausedItemsAlone()
+    {
+        Assert.False(PricingRule.Manages(Book(neverSell: [Ore], undercutAllListings: true), normalOre, MaterialCategory, 0));
+        Assert.False(PricingRule.Manages(Book([SellRule(paused: true)], undercutAllListings: true), normalOre, MaterialCategory, 0));
+    }
+
+    [Fact]
+    public void ARuleBookHasRulesOnceAnyOfThemGivesARunWork()
+    {
+        Assert.False(Book().HasRules);
+        Assert.True(Book(undercutAllListings: true).HasRules);
+        Assert.True(BookSelling(SellRule()).HasRules);
+        Assert.True(Book(categoryRules: [Category(MaterialCategory)]).HasRules);
+        Assert.True(Book(vendor: VendorSettings.Off with { VendorList = ItemIdSet.From([Ore]) }).HasRules);
+        Assert.True(Book(vendor: VendorSettings.Off with { Enabled = true }).HasRules);
+    }
+
+    [Fact]
     public void APausedEntryManagesNothing()
     {
         Assert.False(PricingRule.Manages(BookSelling(SellRule(paused: true)), normalOre, MaterialCategory, CategoryMinimum));

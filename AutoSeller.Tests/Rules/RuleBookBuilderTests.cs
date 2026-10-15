@@ -89,6 +89,6 @@ public sealed class RuleBookBuilderTests
 
     private static RuleChoices Choices()
     {
-        return new RuleChoices([], [], [], false, [], VendorSettings.DefaultJunkThreshold, false, false, []);
+        return new RuleChoices([], [], [], false, [], VendorSettings.DefaultJunkThreshold, false, false, [], false);
     }
 }

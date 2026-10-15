@@ -94,9 +94,9 @@ internal static partial class L
         public static readonly LocString VendoredValueCapHelp = new("rules.vendor.capHelp", "A run stops vendoring once the vendor price of what it sold would pass this.");
         public static readonly LocString VendorList = new("rules.vendor.list", "Always vendor");
         public static readonly LocString VendorSearchHint = new("rules.vendor.searchHint", "Add an item to always vendor");
-        public static readonly LocString VendorListEmpty = new("rules.vendor.listEmpty", "Items on this list are vendored even when they are not junk, as long as vendoring is on.");
+        public static readonly LocString VendorListEmpty = new("rules.vendor.listEmpty", "Items on this list are sold to a vendor through your retainer, whether Vendor junk is on or not.");
         public static readonly LocString RemoveVendorItem = new("rules.vendor.remove", "Remove from the vendor list");
-        public static readonly LocString VendorFootnote = new("rules.vendor.footnote", "Vendoring stays off until you turn it on. High quality items, gear and items AutoRetainer protects are never vendored.");
+        public static readonly LocString VendorFootnote = new("rules.vendor.footnote", "Junk is only vendored once you turn Vendor junk on. High quality items, gear and items AutoRetainer protects are never vendored.");
 
         public static readonly LocString BlockedIntro = new("rules.blocked.intro", "Items in your bags that a rule matches but that will not be listed, and why.");
         public static readonly LocString BlockedRefresh = new("rules.blocked.refresh", "Refresh");

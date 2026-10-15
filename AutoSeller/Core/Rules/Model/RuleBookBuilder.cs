@@ -9,7 +9,8 @@ internal readonly record struct RuleChoices(
     uint JunkThreshold,
     bool SellFromSaddlebag,
     bool SellFromArmoury,
-    IReadOnlyList<ulong> InventoryRetainerIds);
+    IReadOnlyList<ulong> InventoryRetainerIds,
+    bool UndercutAllListings);
 
 internal static class RuleBookBuilder
 {
@@ -17,7 +18,7 @@ internal static class RuleBookBuilder
     {
         var vendor = new VendorSettings(choices.VendoringEnabled, ItemIdSet.From(choices.VendorList), choices.JunkThreshold);
         var sources = SourcesFor(choices.SellFromSaddlebag, choices.SellFromArmoury, choices.InventoryRetainerIds.Count);
-        return RuleBook.Create(choices.SellList, choices.CategoryRules, ItemIdSet.From(choices.NeverSell), vendor, sources, choices.InventoryRetainerIds);
+        return RuleBook.Create(choices.SellList, choices.CategoryRules, ItemIdSet.From(choices.NeverSell), vendor, sources, choices.InventoryRetainerIds, choices.UndercutAllListings);
     }
 
     public static SellSources SourcesFor(bool sellFromSaddlebag, bool sellFromArmoury, int inventoryRetainerCount)

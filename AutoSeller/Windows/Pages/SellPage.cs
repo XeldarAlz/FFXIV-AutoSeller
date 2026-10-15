@@ -15,6 +15,8 @@ internal sealed class SellPage
     private const float TableGap = 16f;
     private const int RefusalShownMs = 8_000;
     private const int RefusalFreshMs = 1_000;
+    private const int ItemsView = 0;
+    private const int PlanView = 1;
 
     private readonly SellHeader header = new();
     private readonly RetainerStrip strip = new();
@@ -22,6 +24,10 @@ internal sealed class SellPage
     private readonly RunningPanel running = new();
     private readonly FinishedRunCard finished = new();
     private readonly PlanTable table = new();
+    private readonly BagItemsView bagItems = new();
+    private readonly Segmented.Item[] viewItems = new Segmented.Item[2];
+    private LanguageInfo? viewItemsLanguage;
+    private int view = ItemsView;
     private Guid dismissedRunId;
     private TransientNotice refusalNotice;
     private long shownRefusalAtMs;
@@ -80,6 +86,14 @@ internal sealed class SellPage
             Styling.VSpace(SectionGap);
         }
 
+        DrawViewSwitch();
+        Styling.VSpace(SectionGap);
+        if (view == ItemsView)
+        {
+            bagItems.Draw(plugin, plan);
+            return;
+        }
+
         totals.Draw(plan);
         Styling.VSpace(SectionGap);
         if (!plan.HasMarkets)
@@ -99,6 +113,18 @@ internal sealed class SellPage
 
         Styling.VSpace(TableGap - SectionGap);
         table.Draw(plugin, plan, run, showRun);
+    }
+
+    private void DrawViewSwitch()
+    {
+        if (!ReferenceEquals(viewItemsLanguage, Loc.Current))
+        {
+            viewItemsLanguage = Loc.Current;
+            viewItems[ItemsView] = new Segmented.Item(FontAwesomeIcon.BoxOpen, Loc.T(L.Sell.ViewItems));
+            viewItems[PlanView] = new Segmented.Item(FontAwesomeIcon.ClipboardList, Loc.T(L.Sell.ViewPlan));
+        }
+
+        Segmented.Draw("##asell_sell_view", viewItems, ref view, true, Layout.ActionPillHeight, Segmented.PreferredWidth(viewItems));
     }
 
     private void DrawRefusal(in StartRefusal refusal)

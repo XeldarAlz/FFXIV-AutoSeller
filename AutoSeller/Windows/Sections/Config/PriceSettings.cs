@@ -49,6 +49,15 @@ internal static class PriceSettings
     private static void DrawPriceGroup(Configuration configuration)
     {
         using var group = SettingsGroup.Begin(Loc.T(L.Pricing.GroupPrice));
+        SettingsRow.Draw(Loc.T(L.Pricing.UndercutAll), Loc.T(L.Pricing.UndercutAllHelp), SettingsControls.ToggleWidth, configuration, static configuration =>
+        {
+            if (SettingsControls.Toggle("##asell_pricing_undercut_all", configuration.UndercutAllListings, out var value))
+            {
+                configuration.UndercutAllListings = value;
+                configuration.RulesChanged();
+            }
+        }, SettingsRow.ToggleHeight);
+
         SettingsRow.Draw(Loc.T(L.Pricing.Mode), Loc.T(L.Pricing.ModeHelp), SettingsControls.RowComboWidth, configuration, static configuration =>
         {
             var selected = (int)configuration.Pricing.Mode;

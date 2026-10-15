@@ -10,6 +10,8 @@ internal readonly record struct VendorSettings(bool Enabled, ItemIdSet VendorLis
 {
     public const uint DefaultJunkThreshold = 1_000;
 
+    public bool VendorsAnything => Enabled || !VendorList.Ids.IsEmpty;
+
     public static VendorSettings Off => new(false, ItemIdSet.Empty, DefaultJunkThreshold);
 }
 
@@ -115,6 +117,11 @@ internal static class VendorRules
             return VendorReason.VendorList;
         }
 
+        if (!settings.Enabled)
+        {
+            return VendorReason.VendoringOff;
+        }
+
         if (stock.ReferenceUnitPrice == 0)
         {
             return VendorReason.NoReferenceValue;
@@ -129,15 +136,36 @@ internal static class VendorRules
         return Gil.SaturatingMultiply(stock.Item.VendorPrice, stock.Slot.Quantity);
     }
 
+    public static bool CanBeVendored(in StockSlot stock, RuleBook rules)
+    {
+        return HoldingRefusal(stock, rules) is null && stock.Item.VendorPrice > 0;
+    }
+
     private static VendorReason? Refusal(in StockSlot stock, RuleBook rules)
+    {
+        if (HoldingRefusal(stock, rules) is { } holding)
+        {
+            return holding;
+        }
+
+        var item = stock.Item;
+        if (rules.IsOnSellList(stock.Slot.ItemId))
+        {
+            return VendorReason.OnSellList;
+        }
+
+        if (Eligibility.MatchCategory(rules, item.ItemUiCategory, stock.ReferenceUnitPrice, out _) == EligibilityReason.Eligible)
+        {
+            return VendorReason.MatchedCategoryRule;
+        }
+
+        return item.VendorPrice == 0 ? VendorReason.NoVendorPrice : null;
+    }
+
+    private static VendorReason? HoldingRefusal(in StockSlot stock, RuleBook rules)
     {
         var slot = stock.Slot;
         var item = stock.Item;
-        if (!rules.Vendor.Enabled)
-        {
-            return VendorReason.VendoringOff;
-        }
-
         if (slot.Source != SlotSource.Bags)
         {
             return VendorReason.NotInBags;
@@ -163,26 +191,6 @@ internal static class VendorRules
             return VendorReason.Collectable;
         }
 
-        if (rules.NeverSell.Contains(slot.ItemId))
-        {
-            return VendorReason.NeverSell;
-        }
-
-        if (rules.IsOnSellList(slot.ItemId))
-        {
-            return VendorReason.OnSellList;
-        }
-
-        if (Eligibility.MatchCategory(rules, item.ItemUiCategory, stock.ReferenceUnitPrice, out _) == EligibilityReason.Eligible)
-        {
-            return VendorReason.MatchedCategoryRule;
-        }
-
-        if (item.VendorPrice == 0)
-        {
-            return VendorReason.NoVendorPrice;
-        }
-
-        return null;
+        return rules.NeverSell.Contains(slot.ItemId) ? VendorReason.NeverSell : null;
     }
 }

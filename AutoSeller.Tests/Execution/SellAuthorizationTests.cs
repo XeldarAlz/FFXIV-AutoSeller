@@ -158,6 +158,34 @@ public sealed class SellAuthorizationTests
     }
 
     [Fact]
+    public void UndercuttingAllListingsIsReadBackFromTheJournal()
+    {
+        var rules = RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, [], true);
+        var authorization = Authorization(rules: rules);
+
+        var line = JsonSerializer.Serialize<JournalEvent>(authorization.ToJournalEvent(1, Now), RunJournal.SerializerOptions);
+        var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(line, RunJournal.SerializerOptions));
+        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
+
+        Assert.True(restored!.Rules.UndercutAllListings);
+        Assert.Equal(authorization.RulesHash, restored.RulesHash);
+        Assert.NotEqual(Authorization().RulesHash, restored.RulesHash);
+    }
+
+    [Fact]
+    public void AJournalEntryFromBeforeUndercuttingAllListingsReadsItAsOff()
+    {
+        var line = JsonSerializer.Serialize<JournalEvent>(Authorization().ToJournalEvent(1, Now), RunJournal.SerializerOptions);
+        var older = line.Replace(",\"UndercutAllListings\":false", string.Empty, StringComparison.Ordinal);
+
+        var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(older, RunJournal.SerializerOptions));
+
+        Assert.DoesNotContain("UndercutAllListings", older, StringComparison.Ordinal);
+        Assert.False(recorded.Rules.UndercutAllListings);
+        Assert.True(recorded.IsWellFormed());
+    }
+
+    [Fact]
     public void AJournalPlanPriceOutsideTheMarketRangeIsNotRestored()
     {
         var recorded = Authorization().ToJournalEvent(1, Now) with { PlanEdits = [new PlanEdit(ListingRow, PlanEditKind.Price, (ulong)uint.MaxValue + 2, Now)] };

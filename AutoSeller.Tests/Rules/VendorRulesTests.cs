@@ -19,6 +19,28 @@ public sealed class VendorRulesTests
     }
 
     [Fact]
+    public void AVendorListItemIsVendoredWithJunkVendoringOff()
+    {
+        var settings = VendorSettings.Off with { VendorList = ItemIdSet.From([Junk]) };
+
+        Assert.Equal(VendorReason.VendorList, VendorRules.Check(Cheap(), Book(vendor: settings)));
+        Assert.Equal(VendorReason.VendoringOff, VendorRules.Check(Stock(Bag(Shard, 10), Material(Shard), 5), Book(vendor: settings)));
+        Assert.True(settings.VendorsAnything);
+        Assert.False(VendorSettings.Off.VendorsAnything);
+    }
+
+    [Fact]
+    public void AnItemThatCouldGoToAVendorIgnoresTheSellListAndTheSwitch()
+    {
+        Assert.True(VendorRules.CanBeVendored(Cheap(), Book([SellRule(Junk)])));
+        Assert.False(VendorRules.CanBeVendored(Cheap() with { Slot = Bag(Junk, 10, isHq: true) }, Book()));
+        Assert.False(VendorRules.CanBeVendored(Stock(Bag(Sword, 1), Gear(), 1), Book()));
+        Assert.False(VendorRules.CanBeVendored(Cheap() with { Item = Material(Junk, vendorPrice: 0) }, Book()));
+        Assert.False(VendorRules.CanBeVendored(Stock(In(SlotSource.Saddlebag, Junk, 10), Material(Junk), 1), Book()));
+        Assert.False(VendorRules.CanBeVendored(Cheap(), Book(neverSell: [Junk])));
+    }
+
+    [Fact]
     public void CheapNormalQualityStackIsJunk()
     {
         Assert.Equal(VendorReason.Junk, VendorRules.Check(Cheap(), Book(vendor: On())));

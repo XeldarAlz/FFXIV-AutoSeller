@@ -21,6 +21,8 @@ internal sealed record AuthorizedRules
 
     public required ImmutableArray<ulong> InventoryRetainerIds { get; init; }
 
+    public bool UndercutAllListings { get; init; }
+
     public static AuthorizedRules From(RuleBook rules)
     {
         return new AuthorizedRules
@@ -33,6 +35,7 @@ internal sealed record AuthorizedRules
             JunkThreshold = rules.Vendor.JunkThreshold,
             Sources = rules.Sources,
             InventoryRetainerIds = rules.InventoryRetainerIds,
+            UndercutAllListings = rules.UndercutAllListings,
         };
     }
 
@@ -44,6 +47,6 @@ internal sealed record AuthorizedRules
     public RuleBook ToRuleBook()
     {
         var vendor = new VendorSettings(VendoringEnabled, ItemIdSet.From(VendorList), JunkThreshold);
-        return RuleBook.Restore(SellList, CategoryRules, ItemIdSet.From(NeverSell), vendor, Sources, InventoryRetainerIds);
+        return RuleBook.Restore(SellList, CategoryRules, ItemIdSet.From(NeverSell), vendor, Sources, InventoryRetainerIds, UndercutAllListings);
     }
 }

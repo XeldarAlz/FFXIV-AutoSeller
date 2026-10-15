@@ -46,6 +46,29 @@ internal static partial class L
         public static readonly LocString Title = new("sell.title", "Sell");
         public static readonly LocString Subtitle = new("sell.subtitle", "Your retainers' listings and the plan for the next run.");
         public static readonly LocString Empty = new("sell.empty", "Nothing planned yet. Your retainers' listings and the next run's plan will show up here.");
+        public static readonly LocString ViewItems = new("sell.view.items", "Your items");
+        public static readonly LocString ViewPlan = new("sell.view.plan", "Plan");
+        public static readonly LocString ItemsWorth = new("sell.items.worth", "Could sell for");
+        public static readonly LocString ItemsWorthSub = new("sell.items.worthSub", "everything you carry");
+        public static readonly LocString ItemsWorthHelp = new("sell.items.worthHelp", "What your items would fetch at today's prices: on the market board just under the cheapest seller, or at the NPC price for items that can only go to a vendor. Market prices come from Universalis and change all the time.");
+        public static readonly LocString ItemsChosen = new("sell.items.chosen", "Ticked to sell");
+        public static readonly LocPlural ItemsChosenCount = new("sell.items.chosenCount", "{0} item", "{0} items");
+        public static readonly LocString ItemsIntro = new("sell.items.intro", "Tick Market board or NPC on what you want sold, then press Start. The box shows the best price, just under the cheapest seller; type your own to change it.");
+        public static readonly LocString ItemsSearchHint = new("sell.items.searchHint", "Find an item");
+        public static readonly LocString ItemsEmpty = new("sell.items.empty", "Nothing you carry can be sold. Turn on the saddlebag or the armoury chest above to see what they hold.");
+        public static readonly LocString ItemsNoMatch = new("sell.items.noMatch", "No item matches your search.");
+        public static readonly LocString ItemsMarket = new("sell.items.market", "Market board");
+        public static readonly LocString ItemsMarketHelp = new("sell.items.marketHelp", "List it on the market board at the price in the box and keep it the cheapest. Click again to stop selling it.");
+        public static readonly LocString ItemsVendor = new("sell.items.vendor", "NPC");
+        public static readonly LocString ItemsVendorHelp = new("sell.items.vendorHelp", "Sell it to a vendor through your retainer at the NPC price. Click again to stop.");
+        public static readonly LocString ItemsCannotList = new("sell.items.cannotList", "It cannot go on the market board: it is untradable, collectable, spiritbound, in a gear set, protected by AutoRetainer or on your never-sell list.");
+        public static readonly LocString ItemsCannotVendor = new("sell.items.cannotVendor", "Only normal quality items in your bags that are not gear and have an NPC price can go to a vendor.");
+        public static readonly LocString ItemsQuantity = new("sell.items.quantity", "×{0}");
+        public static readonly LocString ItemsQuantityHq = new("sell.items.quantityHq", "×{0} ({1} HQ)");
+        public static readonly LocString ItemsNoPrice = new("sell.items.noPrice", "No price yet");
+        public static readonly LocString ItemsPriceHelp = new("sell.items.priceHelp", "Best price {0}, just under the cheapest seller. Type your own price, or clear the box to go back to the best price. A run never lists below {1}.");
+        public static readonly LocString ItemsPriceHelpNoBest = new("sell.items.priceHelpNoBest", "No market price yet. Type your own price, or wait for prices to load. A run never lists below {0}.");
+        public static readonly LocString ItemsBelowFloor = new("sell.items.belowFloor", "Below the lowest allowed price of {0}, so it stays in your bags");
     }
 
     internal static class Dock
@@ -110,14 +133,14 @@ internal static partial class L
         public static readonly LocString BlockProtectListUnreadable = new("run.block.protectListUnreadable", "AutoRetainer cannot read its protect list for this character, so nothing is sold until it can. This happens when AutoRetainer has no data for the character; the Console has the details.");
         public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
-        public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
+        public static readonly LocString BlockNoRules = new("run.block.noRules", "Tick an item to sell under Your items on the Sell page, or turn on Undercut all my listings in Settings, Pricing.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
         public static readonly LocString BlockAuthorization = new("run.block.authorization", "The run could not be authorized. The Console has the details.");
         public static readonly LocString BlockSellListNotOpen = new("run.block.sellListNotOpen", "Open a retainer's sell list first.");
         public static readonly LocString BlockRetainerNotEnabled = new("run.block.retainerNotEnabled", "This retainer is not enabled on the Sell page.");
         public static readonly LocString BlockSetup = new("run.block.setup", "Install vnavmesh from the Plugins page first; a run walks to the summoning bell with it.");
         public static readonly LocString BlockNothingNeeded = new("run.block.nothingNeeded", "No enabled retainer needs a visit: none has an undercut listing, a lot to list or a listing to return. Turn off Only retainers that need it on the Sell page to visit them all.");
-        public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room and press Start again");
+        public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room, or pick the bell runs use in Settings, General, and press Start again");
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
         public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
         public static readonly LocString NeedsGilLimit = new("run.needs.gilLimit", "a retainer is close to its gil limit");
@@ -246,6 +269,8 @@ internal static partial class L
             new("changelog.r1000.10", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
             new("changelog.r1000.11", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
             new("changelog.r1000.12", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
+            new("changelog.r1000.13", "Your items on the Sell page: everything you carry with its best price and what it could all sell for; tick Market board or NPC, type your own price if you like, and press Start"),
+            new("changelog.r1000.14", "Every listing your retainers have up is undercut out of the box, never below its floor; turn it off in Settings, Pricing"),
         ];
     }
 
@@ -349,6 +374,20 @@ internal static partial class L
         public static readonly LocString AutoPauseHelp = new("settings.general.autoPauseHelp", "Pause the run while you are inside a duty, trial, raid or any other instanced content, and carry on where it stopped once you are back outside.");
         public static readonly LocString PauseTyping = new("settings.general.pauseTyping", "Hold while typing");
         public static readonly LocString PauseTypingHelp = new("settings.general.pauseTypingHelp", "While a text box of the game has focus, like the chat line, a run starts no new move until you close it. A move already under way carries on.");
+        public static readonly LocString BellGroup = new("settings.bell.group", "Summoning bell");
+        public static readonly LocString BellChoice = new("settings.bell.choice", "Bell for runs");
+        public static readonly LocString BellChoiceHelp = new("settings.bell.choiceHelp", "Where Start goes to work your retainers. If you already stand at a bell, that bell is used.");
+        public static readonly LocString BellNearest = new("settings.bell.nearest", "Nearest bell");
+        public static readonly LocString BellNearestDetail = new("settings.bell.nearestDetail", "A bell within 50 m, otherwise the bell in your inn room");
+        public static readonly LocString BellInn = new("settings.bell.inn", "My inn room");
+        public static readonly LocString BellInnDetail = new("settings.bell.innDetail", "Always the bell in your inn room");
+        public static readonly LocString BellPicked = new("settings.bell.picked", "A bell I picked");
+        public static readonly LocString BellPickedDetail = new("settings.bell.pickedDetail", "The bell you save below; runs teleport and walk there");
+        public static readonly LocString BellPickedAt = new("settings.bell.pickedAt", "Picked bell: {0}");
+        public static readonly LocString BellPickedNone = new("settings.bell.pickedNone", "Picked bell: none yet");
+        public static readonly LocString BellPick = new("settings.bell.pick", "Use the bell I'm standing at");
+        public static readonly LocString BellPickHelp = new("settings.bell.pickHelp", "Saves the summoning bell next to you, so every run goes there, teleporting first when it is far. Bells in cities work best.");
+        public static readonly LocString BellPickNoBell = new("settings.bell.pickNoBell", "Stand next to a summoning bell first.");
     }
 
     internal static class Plugin

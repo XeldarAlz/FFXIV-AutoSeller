@@ -49,6 +49,7 @@ public sealed partial class Configuration : IPluginConfiguration
         changed |= RepairCapSettings();
         changed |= RepairMarketSettings();
         changed |= RepairSaleSettings();
+        changed |= RepairBellSettings();
         if (Version >= CurrentVersion)
         {
             return changed;

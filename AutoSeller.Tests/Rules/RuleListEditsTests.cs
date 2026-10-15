@@ -70,6 +70,49 @@ public sealed class RuleListEditsTests
     }
 
     [Fact]
+    public void ChoosingAChannelMovesTheItemBetweenTheLists()
+    {
+        var sellList = new List<ItemRule>();
+        var vendorList = new List<uint>();
+
+        Assert.True(RuleListEdits.Choose(sellList, vendorList, Ore, true, SellChannel.MarketBoard));
+        Assert.Equal(SellChannel.MarketBoard, RuleListEdits.ChannelOf(sellList, vendorList, Ore));
+        Assert.False(RuleListEdits.Choose(sellList, vendorList, Ore, true, SellChannel.MarketBoard));
+        Assert.True(RuleListEdits.Choose(sellList, vendorList, Ore, true, SellChannel.Vendor));
+        Assert.Empty(sellList);
+        Assert.Equal([Ore], vendorList);
+        Assert.True(RuleListEdits.Choose(sellList, vendorList, Ore, true, SellChannel.None));
+        Assert.Equal(SellChannel.None, RuleListEdits.ChannelOf(sellList, vendorList, Ore));
+        Assert.False(RuleListEdits.Choose(sellList, vendorList, 0, true, SellChannel.MarketBoard));
+    }
+
+    [Fact]
+    public void UntickingAnItemDropsEveryEntryItHad()
+    {
+        var sellList = new List<ItemRule> { SellRule(qualities: QualityFilter.Normal), SellRule(qualities: QualityFilter.High), SellRule(Potion) };
+        var vendorList = new List<uint>();
+
+        Assert.True(RuleListEdits.Choose(sellList, vendorList, Ore, true, SellChannel.None));
+
+        Assert.Equal(Potion, Assert.Single(sellList).ItemId);
+    }
+
+    [Fact]
+    public void ACustomPriceListsTheItemAndClearingItKeepsItListed()
+    {
+        var sellList = new List<ItemRule>();
+        List<uint> vendorList = [Ore];
+
+        Assert.True(RuleListEdits.SetFixedPrice(sellList, vendorList, Ore, true, 1_200));
+        Assert.Empty(vendorList);
+        Assert.Equal(1_200u, RuleListEdits.FixedPriceOf(sellList, Ore));
+        Assert.False(RuleListEdits.SetFixedPrice(sellList, vendorList, Ore, true, 1_200));
+        Assert.True(RuleListEdits.SetFixedPrice(sellList, vendorList, Ore, true, 0));
+        Assert.Equal(0u, RuleListEdits.FixedPriceOf(sellList, Ore));
+        Assert.Equal(SellChannel.MarketBoard, RuleListEdits.ChannelOf(sellList, vendorList, Ore));
+    }
+
+    [Fact]
     public void IdListAddsAnItemOnce()
     {
         var ids = new List<uint>();

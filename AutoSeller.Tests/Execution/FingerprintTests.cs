@@ -43,6 +43,7 @@ public sealed class FingerprintTests
             ("junk threshold", new Inputs { JunkThreshold = VendorSettings.DefaultJunkThreshold + 1 }),
             ("sources", new Inputs { Sources = SellSources.Bags }),
             ("inventory retainers", new Inputs { InventoryRetainers = [FirstRetainer, SecondRetainer] }),
+            ("undercut all listings", new Inputs { UndercutAllListings = true }),
         };
 
         for (var index = 0; index < variants.Length; index++)
@@ -210,7 +211,7 @@ public sealed class FingerprintTests
         }
 
         var vendor = new VendorSettings(inputs.VendoringEnabled, ItemIdSet.From(inputs.VendorList), inputs.JunkThreshold);
-        return RuleBook.Create(rules, categoryRules, ItemIdSet.From(inputs.NeverSell), vendor, inputs.Sources, inputs.InventoryRetainers);
+        return RuleBook.Create(rules, categoryRules, ItemIdSet.From(inputs.NeverSell), vendor, inputs.Sources, inputs.InventoryRetainers, inputs.UndercutAllListings);
     }
 
     private sealed class Inputs
@@ -240,5 +241,7 @@ public sealed class FingerprintTests
         public SellSources Sources { get; init; } = SellSources.Bags | SellSources.RetainerPages;
 
         public ulong[] InventoryRetainers { get; init; } = [SecondRetainer];
+
+        public bool UndercutAllListings { get; init; }
     }
 }

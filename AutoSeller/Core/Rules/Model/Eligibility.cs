@@ -87,7 +87,7 @@ internal static class Eligibility
         return covered ? EligibilityReason.BelowCategoryMinimum : EligibilityReason.NoMatchingRule;
     }
 
-    private static EligibilityReason CheckHolding(in SlotFacts slot, in ItemFacts item, RuleBook rules)
+    public static EligibilityReason CheckHolding(in SlotFacts slot, in ItemFacts item, RuleBook rules)
     {
         if (!rules.Allows(slot))
         {

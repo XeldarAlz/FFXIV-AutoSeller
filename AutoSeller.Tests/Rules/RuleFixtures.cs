@@ -90,7 +90,8 @@ internal static class RuleFixtures
         IEnumerable<uint>? neverSell = null,
         SellSources sources = SellSources.Default,
         IEnumerable<ulong>? inventoryRetainerIds = null,
-        VendorSettings? vendor = null)
+        VendorSettings? vendor = null,
+        bool undercutAllListings = false)
     {
         return RuleBook.Create(
             sellList ?? [],
@@ -98,7 +99,8 @@ internal static class RuleFixtures
             ItemIdSet.From(neverSell ?? []),
             vendor ?? VendorSettings.Off,
             sources,
-            inventoryRetainerIds ?? [FirstRetainer, SecondRetainer]);
+            inventoryRetainerIds ?? [FirstRetainer, SecondRetainer],
+            undercutAllListings);
     }
 
     public static RuleBook BookSelling(params ItemRule[] sellList)

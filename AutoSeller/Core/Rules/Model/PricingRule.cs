@@ -30,7 +30,7 @@ internal static class PricingRule
             return Eligibility.MatchSellList(entries, item.IsHq, out _) == EligibilityReason.Eligible;
         }
 
-        return Eligibility.MatchCategory(rules, itemUiCategory, referenceUnitPrice, out _) == EligibilityReason.Eligible;
+        return rules.UndercutAllListings || Eligibility.MatchCategory(rules, itemUiCategory, referenceUnitPrice, out _) == EligibilityReason.Eligible;
     }
 
     private static ItemRuleSnapshot OpenRule(ItemKey item)

@@ -19,13 +19,16 @@ public abstract partial class AutoCommon
     private const int BellStepUpWatchdogMs = 10_000;
     private const int BellStepUpStallMs = 2_500;
     private const int InnBellSightMs = 10_000;
+    private const float PickedBellArriveWithinMeters = 1.5f;
 
     private static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
 
     private protected async Task<BellArrival> GoToBell(string scope)
     {
-        var route = BellApproach.Choose(BellSituationNow(out var bell));
-        Diag($"{scope}: bell route {route} from {TerritoryNames.Of(Svc.ClientState.TerritoryType)} ({ConditionTag()})");
+        var situation = BellSituationNow(out var bell);
+        var route = BellApproach.Choose(situation);
+        var configuration = Plugin.Instance.Configuration;
+        Diag($"{scope}: bell route {route} from {TerritoryNames.Of(Svc.ClientState.TerritoryType)}, bell choice {configuration.BellChoice} ({ConditionTag()})");
         switch (route)
         {
             case BellRoute.AtRetainerList:
@@ -35,8 +38,16 @@ public abstract partial class AutoCommon
                 return BellArrival.BellBusy;
             case BellRoute.Interact:
                 return await ReadyAtBell(scope);
-            case BellRoute.WalkToBell:
-                return await WalkToBell(bell, scope);
+        }
+
+        if (configuration.BellChoice == BellChoice.Picked && configuration.PickedBell is { } picked)
+        {
+            return await GoToPickedBell(picked, scope);
+        }
+
+        if (route == BellRoute.WalkToBell && (configuration.BellChoice != BellChoice.InnRoom || situation.InInnRoom))
+        {
+            return await WalkToBell(bell, scope);
         }
 
         return await GoToInnBell(scope);
@@ -88,6 +99,31 @@ public abstract partial class AutoCommon
         return BellApproach.InReach(bell.Distance) ? await ReadyAtBell(scope) : await WalkToBell(bell, scope);
     }
 
+    private async Task<BellArrival> GoToPickedBell(PickedBell picked, string scope)
+    {
+        var zoneName = TerritoryNames.Of(picked.TerritoryId);
+        Diag($"{scope}: going to the picked summoning bell in {zoneName} at {FormatPosition(picked.Bell)}");
+        await HoldWhileTyping("the trip to the picked summoning bell");
+        var arrived = await TravelTo(picked.TerritoryId, picked.Stand, PickedBellArriveWithinMeters);
+        if (CancelToken.IsCancellationRequested)
+        {
+            return BellArrival.Cancelled;
+        }
+
+        if (BellInReach())
+        {
+            return await ReadyAtBell(scope);
+        }
+
+        if (arrived && SummoningBells.TryFindNearest(out var bell) && bell.Distance <= BellApproach.WalkWithinMeters)
+        {
+            return await WalkToBell(bell, scope);
+        }
+
+        Warn($"{scope}: the picked summoning bell in {zoneName} was not reached");
+        return BellArrival.NotReached;
+    }
+
     private async Task<BellArrival> WalkToBell(BellSighting bell, string scope)
     {
         var target = bell.Position;
@@ -100,13 +136,13 @@ public abstract partial class AutoCommon
 
             await HoldWhileTyping("the walk to the summoning bell");
             await WaitForNavmeshReady(TravelNavmeshWaitMs, TravelNavmeshPollFrames);
-            if (await RouteToBellFallsShort(target, scope))
+            if (await FloorBesideBell(target, scope) is not { } floor)
             {
                 return BellArrival.NotReached;
             }
 
-            Diag($"{scope}: walking {DistanceTo(target):F0}m to the summoning bell at {FormatPosition(target)} (walk {walk}/{MaxBellWalks})");
-            var arrived = await TravelTo(Svc.ClientState.TerritoryType, target, BellWalkArriveWithinMeters);
+            Diag($"{scope}: walking {DistanceTo(floor):F0}m to the floor at {FormatPosition(floor)} beside the summoning bell at {FormatPosition(target)} (walk {walk}/{MaxBellWalks})");
+            var arrived = await TravelTo(Svc.ClientState.TerritoryType, floor, BellWalkArriveWithinMeters);
             if (CancelToken.IsCancellationRequested)
             {
                 return BellArrival.Cancelled;
@@ -183,21 +219,26 @@ public abstract partial class AutoCommon
     private static bool BellWithinStepUpStop()
         => SummoningBells.TryFindNearest(out var bell) && bell.Distance <= BellStepUpStopMeters;
 
-    private async Task<bool> RouteToBellFallsShort(Vector3 target, string scope)
+    private async Task<Vector3?> FloorBesideBell(Vector3 bell, string scope)
     {
         if (Svc.Objects.LocalPlayer is not { } player)
         {
-            return false;
+            return bell;
         }
 
-        var route = await ProbeGroundRoute(player.Position, target);
-        if (route.Kind != GroundRouteKind.Partial || route.ShortfallMeters <= BellApproach.InteractReachMeters)
+        var route = await ProbeGroundRoute(player.Position, bell);
+        if (route.Kind == GroundRouteKind.Unknown)
         {
-            return false;
+            return bell;
         }
 
-        Warn($"{scope}: the ground route ends {route.ShortfallMeters:F0}m short of the summoning bell at {FormatPosition(target)}");
-        return true;
+        if (route.Kind == GroundRouteKind.Partial && route.ShortfallMeters > BellApproach.InteractReachMeters)
+        {
+            Warn($"{scope}: the ground route ends {route.ShortfallMeters:F0}m short of the summoning bell at {FormatPosition(bell)}");
+            return null;
+        }
+
+        return route.End;
     }
 
     private async Task<BellArrival> ReadyAtBell(string scope)

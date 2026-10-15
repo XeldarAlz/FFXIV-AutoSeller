@@ -80,6 +80,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
+    private readonly SellListWatcher sellListWatcher;
     private readonly AppWindow appWindow;
     private readonly SellNowButton sellNowButton;
     private readonly SaleNoticeWatcher saleNotices;
@@ -151,6 +152,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
             completed.Push(gmAlertWatcher.Dispose);
+            sellListWatcher = new SellListWatcher(RetainerMarket, () => Controller.Running || Controller.Settling);
+            completed.Push(sellListWatcher.Dispose);
 
             InitializeLocalization();
             Fonts.Initialize(PluginInterface.UiBuilder, PluginDirectory);

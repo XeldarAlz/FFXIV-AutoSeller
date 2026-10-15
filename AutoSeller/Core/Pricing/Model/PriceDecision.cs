@@ -243,7 +243,7 @@ internal static class PriceDecision
         return default;
     }
 
-    private static uint Undercut(uint lowest, PricingSettings settings)
+    public static uint Undercut(uint lowest, PricingSettings settings)
     {
         var amount = settings.UndercutUnit == UndercutUnit.Percent
             ? Math.Max(1, Gil.ScaleDown(lowest, settings.UndercutBasisPoints, PriceMath.BasisPointScale))

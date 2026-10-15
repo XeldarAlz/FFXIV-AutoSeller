@@ -14,7 +14,8 @@ internal sealed class RuleBook
         ItemIdSet neverSell,
         VendorSettings vendor,
         SellSources sources,
-        ImmutableArray<ulong> inventoryRetainerIds)
+        ImmutableArray<ulong> inventoryRetainerIds,
+        bool undercutAllListings)
     {
         SellList = sellList;
         CategoryRules = categoryRules;
@@ -22,6 +23,7 @@ internal sealed class RuleBook
         Vendor = vendor;
         Sources = sources;
         InventoryRetainerIds = inventoryRetainerIds;
+        UndercutAllListings = undercutAllListings;
     }
 
     public ImmutableArray<ItemRuleSnapshot> SellList { get; }
@@ -36,15 +38,20 @@ internal sealed class RuleBook
 
     public ImmutableArray<ulong> InventoryRetainerIds { get; }
 
+    public bool UndercutAllListings { get; }
+
+    public bool HasRules => UndercutAllListings || !SellList.IsEmpty || !CategoryRules.IsEmpty || Vendor.VendorsAnything;
+
     public static RuleBook Create(
         IEnumerable<ItemRule> sellList,
         IEnumerable<CategoryRule> categoryRules,
         ItemIdSet neverSell,
         in VendorSettings vendor,
         SellSources sources,
-        IEnumerable<ulong> inventoryRetainerIds)
+        IEnumerable<ulong> inventoryRetainerIds,
+        bool undercutAllListings = false)
     {
-        return Restore(SnapshotsOf(sellList), EnabledCategoryRules(categoryRules), neverSell, vendor, sources, [.. inventoryRetainerIds]);
+        return Restore(SnapshotsOf(sellList), EnabledCategoryRules(categoryRules), neverSell, vendor, sources, [.. inventoryRetainerIds], undercutAllListings);
     }
 
     public static RuleBook Restore(
@@ -53,9 +60,10 @@ internal sealed class RuleBook
         ItemIdSet neverSell,
         in VendorSettings vendor,
         SellSources sources,
-        ImmutableArray<ulong> inventoryRetainerIds)
+        ImmutableArray<ulong> inventoryRetainerIds,
+        bool undercutAllListings = false)
     {
-        return new RuleBook(SortedByItem(sellList.AsSpan()), categoryRules, neverSell, vendor, sources, SortedIds.Of(inventoryRetainerIds.AsSpan()));
+        return new RuleBook(SortedByItem(sellList.AsSpan()), categoryRules, neverSell, vendor, sources, SortedIds.Of(inventoryRetainerIds.AsSpan()), undercutAllListings);
     }
 
     public bool Allows(in SlotFacts slot)

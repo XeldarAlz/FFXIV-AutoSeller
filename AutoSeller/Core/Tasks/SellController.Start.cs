@@ -130,7 +130,7 @@ internal sealed partial class SellController
             plugin.AutoRetainer.ProtectListReadable(),
             ledger.BlocksWrites,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
-            rules.SellList.Length > 0 || rules.CategoryRules.Length > 0,
+            rules.HasRules,
             hasEnabledRetainers,
             Settling,
             ExternalPlugins.AllRequiredInstalled()));

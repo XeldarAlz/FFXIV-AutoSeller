@@ -51,6 +51,18 @@ internal sealed unsafe class MarketReader
 
     public bool Available { get; }
 
+    public bool TryGetOpenSellList(out ulong retainerId)
+    {
+        retainerId = 0;
+        if (!Available || !retainers.TryGetOpenRetainer(out var retainer) || !SellListReady())
+        {
+            return false;
+        }
+
+        retainerId = retainer.RetainerId;
+        return true;
+    }
+
     public MarketRead ReadOpenRetainer(DateTime nowUtc)
     {
         if (!Available)

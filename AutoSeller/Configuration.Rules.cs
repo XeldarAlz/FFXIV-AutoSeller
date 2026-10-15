@@ -20,6 +20,8 @@ public sealed partial class Configuration
 
     public long VendoredValueCap { get; set; } = RunCaps.DefaultMaxVendoredValue;
 
+    public bool UndercutAllListings { get; set; } = true;
+
     [JsonIgnore]
     public int RulesRevision { get; private set; }
 
@@ -29,7 +31,7 @@ public sealed partial class Configuration
         SaveDebounced();
     }
 
-    internal bool HasRules() => SellList.Count > 0 || CategoryRules.Count > 0;
+    internal bool HasRules() => UndercutAllListings || SellList.Count > 0 || CategoryRules.Count > 0 || VendorList.Count > 0 || VendoringEnabled;
 
     internal RuleBook BuildRuleBook() => RuleBookBuilder.Build(new RuleChoices(
         SellList,
@@ -40,7 +42,8 @@ public sealed partial class Configuration
         JunkThreshold,
         SellFromSaddlebag,
         SellFromArmoury,
-        InventoryRetainerIds));
+        InventoryRetainerIds,
+        UndercutAllListings));
 
     internal void ReplaceRules(RulesDocument document)
     {
