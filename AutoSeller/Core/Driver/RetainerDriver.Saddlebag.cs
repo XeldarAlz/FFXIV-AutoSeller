@@ -47,7 +47,7 @@ internal sealed partial class RetainerDriver
     {
         var moves = SaddlebagMoves.Plan(BuildPlan(), session.PlanInputs.Stock.AsSpan(), session.Retainers.AsSpan(), BagReader.FreeBagSlots());
         movesPlanned = moves.Length;
-        if (moves.IsEmpty)
+        if (moves.IsEmpty || !ItemMenusOpen("moving stacks from the saddlebag"))
         {
             return Stop.None;
         }

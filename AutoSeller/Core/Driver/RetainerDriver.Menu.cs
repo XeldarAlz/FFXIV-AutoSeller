@@ -3,6 +3,7 @@ using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
@@ -14,6 +15,7 @@ namespace AutoSeller.Core.Driver;
 internal sealed partial class RetainerDriver
 {
     private readonly List<PendingReturn> returns = [];
+    private bool itemMenusReported;
 
     private async Task<Stop> QueueReturn(RunDecision outcome, SaleWrite write, ListingSlot listing)
     {
@@ -99,7 +101,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
     {
         var authorization = session.Authorization;
-        if (!authorization.Rules.Vendor.Enabled)
+        if (!authorization.Rules.Vendor.Enabled || !ItemMenusOpen("vendoring"))
         {
             return Stop.None;
         }
@@ -171,6 +173,23 @@ internal sealed partial class RetainerDriver
             write,
             retainer,
             new MenuChoice(() => RetainerClicks.ItemMenuShows(slot.Container, slot.Slot), () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring));
+    }
+
+    private bool ItemMenusOpen(string feature)
+    {
+        var gates = plugin.Market.Gates;
+        if (gates.Allows(MarketGate.ItemMenus))
+        {
+            return true;
+        }
+
+        if (!itemMenusReported)
+        {
+            itemMenusReported = true;
+            Warn($"Driver: {feature} is off for this run because the {gates.FailureOf(MarketGate.ItemMenus)} check failed; the game's item menu cannot be opened safely.");
+        }
+
+        return false;
     }
 
     private bool TryReadStackSlot(in SlotFacts slot, out SlotReading observed)

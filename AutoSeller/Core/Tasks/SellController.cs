@@ -1,4 +1,5 @@
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Stats;
 using AutoSeller.Core.Tasks.Model;
@@ -23,7 +24,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 
     public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
 
-    public bool PostprocessVendoringLeft => postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps(), plugin.Configuration.DryRun);
+    public bool PostprocessVendoringLeft => plugin.Market.Gates.Allows(MarketGate.ItemMenus) && postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps(), plugin.Configuration.DryRun);
 
     public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 
