@@ -59,33 +59,41 @@ internal sealed partial class RetainerDriver
         }
     }
 
-    private async Task<ImmutableArray<SaleRecord>> WaitForSaleHistory(RunRetainer retainer)
+    private async Task<SaleHistoryRead> WaitForSaleHistory(RunRetainer retainer)
     {
         var characterContentId = session.Authorization.CharacterContentId;
+        var reader = plugin.SaleHistory;
         var deadline = Environment.TickCount64 + SaleHistoryReadMs;
-        while (Environment.TickCount64 < deadline && !CancelToken.IsCancellationRequested)
+        while (!CancelToken.IsCancellationRequested)
         {
-            if (plugin.SaleHistory.TryRead(characterContentId, retainer.RetainerId, retainer.SellerTaxPercent, DateTime.UtcNow, out var sales))
+            var parsed = reader.TryRead(characterContentId, retainer.RetainerId, retainer.SellerTaxPercent, DateTime.UtcNow, out var sales);
+            var verdict = SaleHistoryWait.Judge(reader.Source, parsed, sales.Length, Environment.TickCount64 >= deadline);
+            if (verdict != SaleHistoryReadVerdict.Pending)
             {
-                return sales;
+                return new SaleHistoryRead(verdict, sales);
             }
 
             await NextFrame(StepPollFrames);
         }
 
-        return default;
+        return new SaleHistoryRead(SaleHistoryReadVerdict.Unread, []);
     }
 
-    private void RecordSaleHistory(RunRetainer retainer, ImmutableArray<SaleRecord> sales)
+    private void RecordSaleHistory(RunRetainer retainer, in SaleHistoryRead read)
     {
-        if (sales.IsDefault)
+        switch (read.Verdict)
         {
-            Warn($"Driver: the sale history of {retainer.Name} could not be read from the {plugin.SaleHistory.Source} within {SaleHistoryReadMs} ms; the Console has its raw values.");
-            return;
+            case SaleHistoryReadVerdict.Read:
+                var recorded = plugin.Sales.Record(session.Authorization.CharacterContentId, read.Sales.AsSpan());
+                Diag($"Driver: the sale history of {retainer.Name} holds {read.Sales.Length} sale(s), {recorded} of them new.");
+                return;
+            case SaleHistoryReadVerdict.ReadEmpty:
+                Warn($"Driver: the sale history of {retainer.Name} showed no sale for {SaleHistoryReadMs} ms from the {plugin.SaleHistory.Source}; it is taken as empty, and the Console has its raw values.");
+                return;
+            default:
+                Warn($"Driver: the sale history of {retainer.Name} could not be read from the {plugin.SaleHistory.Source} within {SaleHistoryReadMs} ms; the Console has its raw values.");
+                return;
         }
-
-        var recorded = plugin.Sales.Record(session.Authorization.CharacterContentId, sales.AsSpan());
-        Diag($"Driver: the sale history of {retainer.Name} holds {sales.Length} sale(s), {recorded} of them new.");
     }
 
     private async Task<Stop> CloseSaleHistory(RunRetainer retainer)
@@ -99,4 +107,6 @@ internal sealed partial class RetainerDriver
         var menu = await Watch(ChainStep.Opens(ChainWindow.SelectString, MenuReturnMs, ChainWindow.RetainerList | ChainWindow.Talk), RetainerClicks.ProgressTalk);
         return menu.Succeeded ? Stop.None : Failed(menu, DriverHalt.WindowsDidNotClose, $"the menu of {retainer.Name} did not come back after the sale history");
     }
+
+    private readonly record struct SaleHistoryRead(SaleHistoryReadVerdict Verdict, ImmutableArray<SaleRecord> Sales);
 }
