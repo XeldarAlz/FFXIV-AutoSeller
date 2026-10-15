@@ -693,7 +693,7 @@
   "rules.never.footnote": "The never-sell list wins over the sell list, the category rules and the vendor rules.",
   "rules.vendor.group": "Vendoring",
   "rules.vendor.enabled": "Vendor junk",
-  "rules.vendor.enabledHelp": "Sell junk to the NPC through your retainer. Only normal quality items from your bags that are not gear, not protected and not on the sell list are vendored.",
+  "rules.vendor.enabledHelp": "Sell junk to a vendor through your retainer. Only normal quality items from your bags that are not gear, not protected and not on the sell list are vendored.",
   "rules.vendor.junkThreshold": "Junk threshold",
   "rules.vendor.junkThresholdHelp": "A stack is junk when its reference value, for the whole stack, is below this.",
   "rules.vendor.cap": "Vendored value per run",

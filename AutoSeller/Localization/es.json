@@ -693,7 +693,7 @@
   "rules.never.footnote": "La lista de nunca vender tiene prioridad sobre la lista de venta, las reglas de categoría y las reglas del mercader.",
   "rules.vendor.group": "Venta al mercader",
   "rules.vendor.enabled": "Vender basura",
-  "rules.vendor.enabledHelp": "Vende la basura al PNJ a través de tu empleado. Solo se venden objetos de calidad normal de tu inventario que no sean equipo, no estén protegidos y no estén en la lista de venta.",
+  "rules.vendor.enabledHelp": "Vende la basura a un mercader a través de tu empleado. Solo se venden objetos de calidad normal de tu inventario que no sean equipo, no estén protegidos y no estén en la lista de venta.",
   "rules.vendor.junkThreshold": "Umbral de basura",
   "rules.vendor.junkThresholdHelp": "Una pila es basura cuando su valor de referencia, para la pila entera, está por debajo de esto.",
   "rules.vendor.cap": "Valor vendido al mercader por ronda",
