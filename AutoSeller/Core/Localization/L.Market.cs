@@ -37,6 +37,7 @@ internal static partial class L
         public static readonly LocString SendPathSearchProxy = new("market.sendPath.searchProxy", "the item search proxy, at a summoning bell or a market board");
         public static readonly LocString HistoryPathUsage = new("market.historyPath.usage", "Usage: /asell historypath window | packet. Retainer sale histories are currently read from {0}.");
         public static readonly LocString HistoryPathSet = new("market.historyPath.set", "Retainer sale histories are now read from {0}, from the next visit on.");
+        public static readonly LocString HistoryPathFallback = new("market.historyPath.fallback", "The data the game receives for the Sale History window cannot be read until its handler is found in game, so retainer sale histories are still read from {0}.");
         public static readonly LocString HistoryPathWindow = new("market.historyPath.window", "the Sale History window");
         public static readonly LocString HistoryPathPacket = new("market.historyPath.packet", "the data the game receives for the Sale History window");
     }

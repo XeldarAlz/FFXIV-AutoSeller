@@ -43,17 +43,24 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
 
     private delegate nint HistoryPacketDelegate(nint first, nint packetData, nint third, nint fourth);
 
-    public SaleHistorySource Source => configuration.SaleHistorySource == SaleHistorySource.Packet && packetHook is not null ? SaleHistorySource.Packet : SaleHistorySource.Window;
+    public SaleHistorySource Source => SaleHistorySources.InUse(configuration.SaleHistorySource, packetHook is not null);
 
     public void Arm(ulong retainerId)
     {
         packetCaptured = false;
         armedRetainerId = retainerId;
         reportedCount = NothingReported;
+        PrepareSource();
+    }
+
+    public SaleHistorySource PrepareSource()
+    {
         if (configuration.SaleHistorySource == SaleHistorySource.Packet)
         {
             EnsurePacketHook();
         }
+
+        return Source;
     }
 
     public void Disarm()

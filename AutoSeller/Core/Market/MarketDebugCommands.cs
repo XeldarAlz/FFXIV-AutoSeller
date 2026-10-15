@@ -92,14 +92,15 @@ internal static class MarketDebugCommands
         var configuration = plugin.Configuration;
         if (!TryParseHistoryPath(arguments, out var source))
         {
-            PrintError(Loc.T(L.Market.HistoryPathUsage, HistoryPathText(configuration.SaleHistorySource)));
+            PrintError(Loc.T(L.Market.HistoryPathUsage, HistoryPathText(plugin.SaleHistory.PrepareSource())));
             return;
         }
 
         configuration.SaleHistorySource = source;
         configuration.Save();
-        RunLog.Info($"Sale history: read from the {source} from the next retainer visit on.");
-        Print(Loc.T(L.Market.HistoryPathSet, HistoryPathText(source)));
+        var inUse = plugin.SaleHistory.PrepareSource();
+        RunLog.Info($"Sale history: {source} chosen, read from the {inUse} from the next retainer visit on.");
+        Print(inUse == source ? Loc.T(L.Market.HistoryPathSet, HistoryPathText(source)) : Loc.T(L.Market.HistoryPathFallback, HistoryPathText(inUse)));
     }
 
     public static void PrintStatus(Plugin plugin)
