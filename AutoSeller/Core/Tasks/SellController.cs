@@ -8,6 +8,7 @@ namespace AutoSeller.Core.Tasks;
 internal sealed partial class SellController(Plugin plugin, RunHistory history)
 {
     private readonly FaultResumeBudget faultBudget = new();
+    private readonly PostprocessTally postprocessTally = new();
     private bool? onlyRetainersThatNeedIt;
 
     public PauseReason PauseReason { get; private set; } = PauseReason.None;
@@ -21,6 +22,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
     public PlanInput? RunInput => session?.Input;
 
     public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
+
+    public bool PostprocessVendoringLeft => postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps(), plugin.Configuration.DryRun);
 
     public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 
@@ -78,6 +81,15 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
     {
         onlyRetainersThatNeedIt = only == plugin.Configuration.OnlyRetainersThatNeedIt ? null : only;
         RunLog.Info($"Run option: the next run visits {(only ? "only the retainers that need it" : "every enabled retainer")}.");
+    }
+
+    public void EndPostprocessVisit(string reason)
+    {
+        var carried = postprocessTally.Carried;
+        if (postprocessTally.Forget())
+        {
+            RunLog.Info($"AutoRetainer post-process: {reason}; the caps start again for the next visit ({carried.Reprices} reprice(s), {carried.NewListings} listing(s) and {carried.VendoredValue} gil vendored in this one).");
+        }
     }
 
     public void StopForAlert() => Stop();

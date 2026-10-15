@@ -192,14 +192,16 @@ internal sealed partial class SellController
             return Refuse(mode, StartBlock.NotAuthorized, problem.ToString());
         }
 
-        var active = new SellRunSession(authorization!, input, ledger.Review, ledger.JournalFor(dryRun), mode);
+        var caps = authorization!.Caps;
+        var values = mode == RunMode.Postprocess ? postprocessTally.BookFor(caps, dryRun) : new ValueBook(caps);
+        var active = new SellRunSession(authorization, input, ledger.Review, ledger.JournalFor(dryRun), mode, values);
         if (active.Retainers.IsEmpty)
         {
             return Refuse(mode, StartBlock.NoEnabledRetainers, "none of the authorized retainers is enabled in the plan");
         }
 
         plugin.Market.Tracker.ClearReuse();
-        if (!active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
+        if (!active.Journal.TryAppend(authorization.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
         {
             ledger.Invalidate();
             return Refuse(mode, StartBlock.NotAuthorized, $"the journal refused the run's authorization: {active.Journal.LastError}");
@@ -213,7 +215,8 @@ internal sealed partial class SellController
         faultBudget.Reset();
         RunLog.Info(
             $"Run {authorization.RunId} authorized ({mode}): {active.Retainers.Length} retainer(s) to visit of {active.PlanInputs.Retainers.Length} enabled, {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
-            $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, dry run {authorization.DryRun}, policy {authorization.PolicyVersion}.");
+            $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, dry run {authorization.DryRun}, policy {authorization.PolicyVersion}" +
+            $"{(mode == RunMode.Postprocess ? $", {values.Reprices} reprice(s), {values.NewListings} listing(s) and {values.VendoredValue} gil vendored earlier in this bell visit" : string.Empty)}.");
         if (mode.StartedByPlayer())
         {
             Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.Plural(dryRun ? L.Run.ChatStarted : L.Run.ChatStartedLive, active.Retainers.Length)}");

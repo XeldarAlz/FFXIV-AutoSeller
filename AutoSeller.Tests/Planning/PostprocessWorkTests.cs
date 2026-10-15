@@ -87,6 +87,15 @@ public sealed class PostprocessWorkTests
     }
 
     [Fact]
+    public void JunkIsNoWorkOnceTheBellVisitSpentTheVendorCap()
+    {
+        var plan = SellPlanner.Build(VendoringInput(PlanEdits.None), CancellationToken.None);
+
+        Assert.Equal(0, PostprocessWork.Count(plan, Alpha, false));
+        Assert.Equal(0, PostprocessWork.Count(plan, Beta, false));
+    }
+
+    [Fact]
     public void JunkLeftOutOfTheRunIsNoWork()
     {
         var key = PlanRowKey.ForVendor(junkSlot.Slot);

@@ -309,6 +309,11 @@ internal sealed partial class SellController
         }
 
         var authorization = active.Authorization;
+        if (active.Mode == RunMode.Postprocess)
+        {
+            postprocessTally.Keep(active.Values, authorization.DryRun);
+        }
+
         plugin.Suppression.Release(authorization.RunId);
         var endedAtUtc = active.EndedAtUtc;
         if (!active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State }))
