@@ -8,6 +8,7 @@ using AutoSeller.Core.Market;
 using AutoSeller.Core.Sales.Model;
 using Dalamud.Hooking;
 using ECommons.DalamudServices;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Sales;
 
@@ -18,17 +19,22 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
     private const string HistoryPacketSignature = "40 53 56 57 41 57 48 83 EC 38 48 8B F1";
     private const string HistoryPacketName = "the retainer sale history packet handler";
     private const int MaximumWindowValues = SaleHistoryWindowLayout.ValueCount + SaleHistoryWindowLayout.RowStride;
+    private const int NothingReported = -1;
 
     private readonly Configuration configuration;
     private readonly int[] windowValues = new int[MaximumWindowValues];
+    private readonly AtkValueType[] windowTypes = new AtkValueType[MaximumWindowValues];
+    private readonly int[] reportedValues = new int[MaximumWindowValues];
+    private readonly AtkValueType[] reportedTypes = new AtkValueType[MaximumWindowValues];
     private readonly byte[] packet = new byte[SaleHistoryLayout.PacketLength];
-    private readonly DiagnosticLog windowLog = new();
     private readonly DiagnosticLog packetLog = new();
     private readonly StringBuilder line = new();
     private Hook<HistoryPacketDelegate>? packetHook;
     private bool packetHookTried;
     private ulong armedRetainerId;
     private volatile bool packetCaptured;
+    private int reportedCount = NothingReported;
+    private int reportedTotal;
 
     public SaleHistoryReader(Configuration configuration)
     {
@@ -43,6 +49,7 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
     {
         packetCaptured = false;
         armedRetainerId = retainerId;
+        reportedCount = NothingReported;
         if (Source == SaleHistorySource.Packet)
         {
             EnsurePacketHook();
@@ -82,12 +89,35 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
             return false;
         }
 
-        var count = Math.Min((int)window->AtkValuesCount, windowValues.Length);
-        line.Clear().Append("Sale history: the window holds ").Append(window->AtkValuesCount).Append(" value(s):");
+        var total = (int)window->AtkValuesCount;
+        var count = Math.Min(total, windowValues.Length);
+        var changed = count != reportedCount || total != reportedTotal;
         for (var index = 0; index < count; index++)
         {
             ref readonly var value = ref window->AtkValues[index];
             windowValues[index] = AtkValueReads.Integer(value);
+            windowTypes[index] = value.Type;
+            changed |= windowValues[index] != reportedValues[index] || windowTypes[index] != reportedTypes[index];
+        }
+
+        if (changed)
+        {
+            ReportWindow(window, count, total);
+        }
+
+        return SaleHistoryWindowParser.TryParse(windowValues.AsSpan(0, count), characterContentId, retainerId, sellerTaxPercent, nowUtc, out sales);
+    }
+
+    private void ReportWindow(AtkUnitBase* window, int count, int total)
+    {
+        reportedCount = count;
+        reportedTotal = total;
+        windowValues.AsSpan(0, count).CopyTo(reportedValues);
+        windowTypes.AsSpan(0, count).CopyTo(reportedTypes);
+        line.Clear().Append("Sale history: the window holds ").Append(total).Append(" value(s):");
+        for (var index = 0; index < count; index++)
+        {
+            ref readonly var value = ref window->AtkValues[index];
             line.Append(" [").Append(index).Append("] ").Append(value.Type);
             if (AtkValueReads.IsText(value))
             {
@@ -99,8 +129,7 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
             }
         }
 
-        windowLog.Report(line.ToString());
-        return SaleHistoryWindowParser.TryParse(windowValues.AsSpan(0, count), characterContentId, retainerId, sellerTaxPercent, nowUtc, out sales);
+        RunLog.Info(line.ToString());
     }
 
     private void EnsurePacketHook()
