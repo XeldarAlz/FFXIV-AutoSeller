@@ -16,7 +16,7 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
 {
     public static readonly string WindowAddon = ChainWindows.NameOf(ChainWindow.RetainerHistory);
 
-    private const string HistoryPacketSignature = "40 53 56 57 41 57 48 83 EC 38 48 8B F1";
+    private const string HistoryPacketSignature = "";
     private const string HistoryPacketName = "the retainer sale history packet handler";
     private const int MaximumWindowValues = SaleHistoryWindowLayout.ValueCount + SaleHistoryWindowLayout.RowStride;
     private const int NothingReported = -1;
@@ -43,14 +43,14 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
 
     private delegate nint HistoryPacketDelegate(nint first, nint packetData, nint third, nint fourth);
 
-    public SaleHistorySource Source => configuration.SaleHistorySource;
+    public SaleHistorySource Source => configuration.SaleHistorySource == SaleHistorySource.Packet && packetHook is not null ? SaleHistorySource.Packet : SaleHistorySource.Window;
 
     public void Arm(ulong retainerId)
     {
         packetCaptured = false;
         armedRetainerId = retainerId;
         reportedCount = NothingReported;
-        if (Source == SaleHistorySource.Packet)
+        if (configuration.SaleHistorySource == SaleHistorySource.Packet)
         {
             EnsurePacketHook();
         }
@@ -140,9 +140,15 @@ internal sealed unsafe class SaleHistoryReader : IDisposable
         }
 
         packetHookTried = true;
+        if (HistoryPacketSignature.Length == 0)
+        {
+            RunLog.Warning($"Sale history: {HistoryPacketName} has no signature until the first in-game session derives one; the history is read from the window.");
+            return;
+        }
+
         if (!Svc.SigScanner.TryScanText(HistoryPacketSignature, out var address))
         {
-            RunLog.Warning($"Sale history: {HistoryPacketName} was not found; the history cannot be read from its packet.");
+            RunLog.Warning($"Sale history: {HistoryPacketName} was not found; the history is read from the window.");
             return;
         }
 
