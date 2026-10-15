@@ -50,7 +50,7 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         var padY = PadY * scale;
         var lineGap = LineGap * scale;
         var wrapWidth = width - padX * 2f;
-        var heights = (Span<float>)stackalloc float[Lines];
+        Span<float> heights = stackalloc float[Lines];
         using (Fonts.PushCaption())
         {
             heights[0] = TextDraw.Measure(lines[0]).Y;
@@ -107,7 +107,11 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         builtLanguage = Loc.Current;
         builtSkipKey = skipKey;
         lineCount = 0;
-        Add(TextDraw.Upper(string.Concat(Loc.T(L.Assist.CardTitle), TextDraw.Separator, view.ItemName)), Styling.TextDim);
+        using (Fonts.PushCaption())
+        {
+            Add(TextDraw.Truncate(TextDraw.Upper(string.Concat(Loc.T(L.Assist.CardTitle), TextDraw.Separator, view.ItemName)), (CardWidth - PadX * 2f) * Scale), Styling.TextDim);
+        }
+
         switch (view.Status)
         {
             case AssistStatus.Comparing:
