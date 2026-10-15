@@ -1,5 +1,6 @@
 using AutoSeller.Core.Localization;
 using System.IO;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace AutoSeller.Tests;
@@ -10,24 +11,49 @@ public sealed partial class CommandHelpTests
     private const string HelpSeparator = " | ";
     private const string CommandsHeading = "## Commands";
     private const string NextHeading = "## Known limits";
+    private const string ReadmeFileName = "README.md";
+
+    public static TheoryData<string> Languages()
+    {
+        return new TheoryData<string>(RepositoryFiles.LanguageCodes);
+    }
 
     [Fact]
     public void TheReadmeTableAndTheCommandHelpListTheSameSubcommands()
     {
-        var readme = File.ReadAllText(Path.Combine(RepositoryFiles.Root, "README.md"));
+        AssertSameSubcommands(L.Plugin.CommandHelp.Source, L.Plugin.CommandHelp.Key);
+    }
+
+    [Theory]
+    [MemberData(nameof(Languages))]
+    public void TheCommandHelpOfEveryCatalogListsTheReadmeSubcommands(string languageCode)
+    {
+        AssertSameSubcommands(CatalogText(languageCode, L.Plugin.CommandHelp.Key), $"{languageCode}.json");
+    }
+
+    private static void AssertSameSubcommands(string help, string helpSource)
+    {
+        var documented = ReadmeSubcommands();
+        var helped = HelpSubcommands(help);
+
+        Assert.NotEmpty(helped);
+        Assert.True(documented.SetEquals(helped), $"Only in the README: {string.Join(", ", Except(documented, helped))}. Only in the command help of {helpSource}: {string.Join(", ", Except(helped, documented))}.");
+    }
+
+    private static string CatalogText(string languageCode, string key)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(RepositoryFiles.CatalogPath(languageCode)));
+        return document.RootElement.GetProperty(key).GetString() ?? string.Empty;
+    }
+
+    private static HashSet<string> ReadmeSubcommands()
+    {
+        var readme = File.ReadAllText(Path.Combine(RepositoryFiles.Root, ReadmeFileName));
         var start = readme.IndexOf(CommandsHeading, StringComparison.Ordinal);
         var end = readme.IndexOf(NextHeading, StringComparison.Ordinal);
         Assert.True(start >= 0 && end > start, "The README has no Commands section before Known limits.");
 
-        var documented = ReadmeSubcommands(readme[start..end]);
-        var helped = HelpSubcommands(L.Plugin.CommandHelp.Source);
-
-        Assert.NotEmpty(helped);
-        Assert.True(documented.SetEquals(helped), $"Only in the README: {string.Join(", ", Except(documented, helped))}. Only in the command help: {string.Join(", ", Except(helped, documented))}.");
-    }
-
-    private static HashSet<string> ReadmeSubcommands(string table)
-    {
+        var table = readme[start..end];
         var subcommands = new HashSet<string>(StringComparer.Ordinal);
         var matches = ReadmeRowPattern().Matches(table);
         for (var index = 0; index < matches.Count; index++)

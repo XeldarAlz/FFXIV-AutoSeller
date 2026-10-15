@@ -11,16 +11,14 @@ public sealed partial class LocalizationCatalogTests
     private const string EnglishCode = "en";
     private const char EmDash = '\u2014';
 
-    private static readonly string[] languageCodes = ["en", "de", "es", "fr", "ja", "pt", "ru", "tr", "zh"];
-
     public static TheoryData<string> TranslatedLanguages()
     {
         var data = new TheoryData<string>();
-        for (var index = 0; index < languageCodes.Length; index++)
+        for (var index = 0; index < RepositoryFiles.LanguageCodes.Length; index++)
         {
-            if (languageCodes[index] != EnglishCode)
+            if (RepositoryFiles.LanguageCodes[index] != EnglishCode)
             {
-                data.Add(languageCodes[index]);
+                data.Add(RepositoryFiles.LanguageCodes[index]);
             }
         }
 
@@ -60,12 +58,12 @@ public sealed partial class LocalizationCatalogTests
     [Fact]
     public void NoCatalogHoldsAnEmDash()
     {
-        for (var languageIndex = 0; languageIndex < languageCodes.Length; languageIndex++)
+        for (var languageIndex = 0; languageIndex < RepositoryFiles.LanguageCodes.Length; languageIndex++)
         {
-            var entries = ReadCatalog(languageCodes[languageIndex]);
+            var entries = ReadCatalog(RepositoryFiles.LanguageCodes[languageIndex]);
             for (var entryIndex = 0; entryIndex < entries.Count; entryIndex++)
             {
-                Assert.True(entries[entryIndex].Value.IndexOf(EmDash) < 0, $"{languageCodes[languageIndex]}.json has an em dash in {entries[entryIndex].Key}.");
+                Assert.True(entries[entryIndex].Value.IndexOf(EmDash) < 0, $"{RepositoryFiles.LanguageCodes[languageIndex]}.json has an em dash in {entries[entryIndex].Key}.");
             }
         }
     }
@@ -84,7 +82,7 @@ public sealed partial class LocalizationCatalogTests
 
     private static List<KeyValuePair<string, string>> ReadCatalog(string languageCode)
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(RepositoryFiles.CatalogDirectory, string.Concat(languageCode, ".json"))));
+        using var document = JsonDocument.Parse(File.ReadAllText(RepositoryFiles.CatalogPath(languageCode)));
         var entries = new List<KeyValuePair<string, string>>();
         foreach (var property in document.RootElement.EnumerateObject())
         {
