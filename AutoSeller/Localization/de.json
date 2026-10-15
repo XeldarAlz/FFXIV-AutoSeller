@@ -838,7 +838,7 @@
   "assist.tabSub": "Hilfe beim Anbieten von Hand und ein Auge auf Unterbietungen.",
   "assist.group": "Assistent",
   "assist.enabled": "Assistenzmodus",
-  "assist.enabledHelp": "Wenn du das Verkaufsfenster selbst öffnest, werden Preise verglichen und der vorgeschlagene Preis mit Begründung eingetragen. Bestätigen musst du selbst.",
+  "assist.enabledHelp": "Wenn du das Verkaufsfenster selbst öffnest, werden Preise verglichen und der vorgeschlagene Preis mit Begründung eingetragen. Bestätigen musst du selbst. Solange der Testlauf an ist, wird der Preis nur angezeigt, nie eingetippt.",
   "assist.skipKey": "Taste zum Überspringen",
   "assist.skipKeyHelp": "Halte diese Taste, während sich das Verkaufsfenster öffnet, um den Assistenten für dieses Fenster zu überspringen.",
   "assist.key.shift": "Umschalt",

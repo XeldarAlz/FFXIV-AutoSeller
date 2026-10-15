@@ -838,7 +838,7 @@
   "assist.tabSub": "Elle ilan verirken yardım ve altına inmelere göz kulak olmak.",
   "assist.group": "Yardım",
   "assist.enabled": "Yardım modu",
-  "assist.enabledHelp": "Satış penceresini kendiniz açtığınızda fiyatları karşılaştırır ve önerilen fiyatı nedeniyle birlikte yazar. Onayı siz verirsiniz.",
+  "assist.enabledHelp": "Satış penceresini kendiniz açtığınızda fiyatları karşılaştırır ve önerilen fiyatı nedeniyle birlikte yazar. Onayı siz verirsiniz. Deneme açıkken fiyat yalnızca gösterilir, asla yazılmaz.",
   "assist.skipKey": "Atlama tuşu",
   "assist.skipKeyHelp": "O pencerede yardımı atlamak için satış penceresi açılırken bu tuşu basılı tutun.",
   "assist.key.shift": "Shift",

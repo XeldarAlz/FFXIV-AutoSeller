@@ -838,7 +838,7 @@
   "assist.tabSub": "在你手动挂单时提供帮助，并留意被压价的情况。",
   "assist.group": "辅助",
   "assist.enabled": "辅助模式",
-  "assist.enabledHelp": "当你亲自打开出售窗口时，比较价格并填入建议价格及其原因。确认由你来按。",
+  "assist.enabledHelp": "当你亲自打开出售窗口时，比较价格并填入建议价格及其原因。确认由你来按。试运行开启时，只显示价格，不会输入。",
   "assist.skipKey": "跳过键",
   "assist.skipKeyHelp": "在出售窗口打开时按住此键，即可在该窗口跳过辅助。",
   "assist.key.shift": "Shift",

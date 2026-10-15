@@ -838,7 +838,7 @@
   "assist.tabSub": "De l'aide quand vous mettez en vente à la main, et un œil sur les sous-enchères.",
   "assist.group": "Assistance",
   "assist.enabled": "Mode assistance",
-  "assist.enabledHelp": "Quand vous ouvrez vous-même la fenêtre de vente, comparer les prix et remplir le prix suggéré avec sa raison. C'est vous qui confirmez.",
+  "assist.enabledHelp": "Quand vous ouvrez vous-même la fenêtre de vente, comparer les prix et remplir le prix suggéré avec sa raison. C'est vous qui confirmez. Tant que l'essai est activé, le prix est seulement affiché, jamais saisi.",
   "assist.skipKey": "Touche pour passer",
   "assist.skipKeyHelp": "Maintenez cette touche pendant l'ouverture de la fenêtre de vente pour passer l'assistance pour cette fenêtre.",
   "assist.key.shift": "Maj",

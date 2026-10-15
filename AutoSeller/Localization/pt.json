@@ -838,7 +838,7 @@
   "assist.tabSub": "Ajuda quando você anuncia à mão, e um olho nas coberturas.",
   "assist.group": "Assistente",
   "assist.enabled": "Modo assistente",
-  "assist.enabledHelp": "Quando você mesmo abre a janela de venda, compara preços e preenche o preço sugerido com o motivo. Você aperta Confirmar.",
+  "assist.enabledHelp": "Quando você mesmo abre a janela de venda, compara preços e preenche o preço sugerido com o motivo. Você aperta Confirmar. Enquanto o teste está ligado, o preço só é mostrado, nunca digitado.",
   "assist.skipKey": "Tecla para pular",
   "assist.skipKeyHelp": "Segure esta tecla enquanto a janela de venda abre para pular o assistente nessa janela.",
   "assist.key.shift": "Shift",

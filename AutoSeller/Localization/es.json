@@ -838,7 +838,7 @@
   "assist.tabSub": "Ayuda cuando anuncias a mano, y vigilancia de las rebajas.",
   "assist.group": "Asistente",
   "assist.enabled": "Modo asistente",
-  "assist.enabledHelp": "Cuando abres tú la ventana de venta, compara precios y rellena el precio sugerido con su motivo. Tú pulsas Confirmar.",
+  "assist.enabledHelp": "Cuando abres tú la ventana de venta, compara precios y rellena el precio sugerido con su motivo. Tú pulsas Confirmar. Mientras la prueba está activada, el precio solo se muestra y nunca se escribe.",
   "assist.skipKey": "Tecla para omitir",
   "assist.skipKeyHelp": "Mantén esta tecla mientras se abre la ventana de venta para omitir el asistente en esa ventana.",
   "assist.key.shift": "Mayús",

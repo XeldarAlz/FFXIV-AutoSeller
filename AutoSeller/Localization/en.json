@@ -838,7 +838,7 @@
   "assist.tabSub": "Help when you list by hand, and keep an eye on undercuts.",
   "assist.group": "Assist",
   "assist.enabled": "Assist mode",
-  "assist.enabledHelp": "When you open the sell window yourself, compare prices and fill in the suggested price with its reason. You press Confirm.",
+  "assist.enabledHelp": "When you open the sell window yourself, compare prices and fill in the suggested price with its reason. You press Confirm. While the dry run is on, the price is only shown, never typed.",
   "assist.skipKey": "Skip key",
   "assist.skipKeyHelp": "Hold this key while the sell window opens to skip Assist for that window.",
   "assist.key.shift": "Shift",

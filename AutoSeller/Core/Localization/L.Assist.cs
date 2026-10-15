@@ -8,7 +8,7 @@ internal static partial class L
         public static readonly LocString TabSub = new("assist.tabSub", "Help when you list by hand, and keep an eye on undercuts.");
         public static readonly LocString Group = new("assist.group", "Assist");
         public static readonly LocString Enabled = new("assist.enabled", "Assist mode");
-        public static readonly LocString EnabledHelp = new("assist.enabledHelp", "When you open the sell window yourself, compare prices and fill in the suggested price with its reason. You press Confirm.");
+        public static readonly LocString EnabledHelp = new("assist.enabledHelp", "When you open the sell window yourself, compare prices and fill in the suggested price with its reason. You press Confirm. While the dry run is on, the price is only shown, never typed.");
         public static readonly LocString SkipKey = new("assist.skipKey", "Skip key");
         public static readonly LocString SkipKeyHelp = new("assist.skipKeyHelp", "Hold this key while the sell window opens to skip Assist for that window.");
         public static readonly LocString KeyShift = new("assist.key.shift", "Shift");
