@@ -294,7 +294,7 @@ internal sealed partial class RetainerDriver
 
         var rules = session.PlanInputs.Rules;
         var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        session.Replan(item, RunPlanner.Replan(session.PlanInputs, item, read.Slots.AsSpan(), read.FreeBagSlots));
+        session.Replan(item, RunPlanner.Replan(session.PlanInputs, item, read.Slots.AsSpan(), read.FreeBagSlots, read.Coverage));
         Diag($"Driver: item {item.ItemId} {QualityLabel.Of(item.IsHq)} moved since the plan; its stacks were read again and the lots are planned once more.");
         return true;
     }

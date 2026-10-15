@@ -10,35 +10,6 @@ namespace AutoSeller.Core.Planning.Model;
 
 internal static class PlanStock
 {
-    public static ImmutableArray<StockSlot> Listable(ImmutableArray<StockSlot> captured, ReferenceSnapshot? references, uint homeWorldId, DateTime nowUtc)
-    {
-        var listable = ImmutableArray.CreateBuilder<StockSlot>(captured.Length);
-        for (var index = 0; index < captured.Length; index++)
-        {
-            var slot = captured[index];
-            if (RunPlanner.CanListFrom(slot.Slot.Source))
-            {
-                listable.Add(Priced(slot, references, homeWorldId, nowUtc));
-            }
-        }
-
-        return listable.ToImmutable();
-    }
-
-    public static int LeftOut(ReadOnlySpan<StockSlot> captured)
-    {
-        var leftOut = 0;
-        for (var index = 0; index < captured.Length; index++)
-        {
-            if (!RunPlanner.CanListFrom(captured[index].Slot.Source))
-            {
-                leftOut++;
-            }
-        }
-
-        return leftOut;
-    }
-
     public static ImmutableArray<StockSlot> Priced(ImmutableArray<StockSlot> stock, ReferenceSnapshot? references, uint homeWorldId, DateTime nowUtc)
     {
         var priced = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);

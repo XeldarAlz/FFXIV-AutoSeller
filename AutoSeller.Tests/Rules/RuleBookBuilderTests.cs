@@ -30,6 +30,18 @@ public sealed class RuleBookBuilderTests
     }
 
     [Fact]
+    public void ARetainerIsSoldFromOnlyWhenTheSourceAndItsToggleAreOn()
+    {
+        var withPages = RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default | SellSources.RetainerPages, [21, 7]);
+        var withoutPages = RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, [21]);
+
+        Assert.True(withPages.SellsFromRetainer(21));
+        Assert.True(withPages.SellsFromRetainer(7));
+        Assert.False(withPages.SellsFromRetainer(8));
+        Assert.False(withoutPages.SellsFromRetainer(21));
+    }
+
+    [Fact]
     public void EveryListReachesTheRuleBook()
     {
         var choices = Choices() with

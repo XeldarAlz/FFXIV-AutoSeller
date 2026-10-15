@@ -14,15 +14,12 @@ public sealed class PlanStockTests
     private static readonly SlotFacts crystals = OreInTheBags with { Source = SlotSource.Crystals, Container = 2_001 };
 
     [Fact]
-    public void OnlyBagAndCrystalStacksAreListedAndEachGetsItsReference()
+    public void EveryStackOfEverySourceGetsItsReference()
     {
-        var listable = PlanStock.Listable([Captured(OreInTheBags), Captured(inTheSaddlebag), Captured(crystals)], References(OreReferences(OreReference, WorldLowest)), HomeWorld, Now);
+        var priced = PlanStock.Priced([Captured(OreInTheBags), Captured(inTheSaddlebag), Captured(crystals)], References(OreReferences(OreReference, WorldLowest)), HomeWorld, Now);
 
-        Assert.Equal(2, listable.Length);
-        Assert.Equal(SlotSource.Bags, listable[0].Slot.Source);
-        Assert.Equal(SlotSource.Crystals, listable[1].Slot.Source);
-        Assert.All(listable, slot => Assert.Equal(OreReference, slot.ReferenceUnitPrice));
-        Assert.Equal(1, PlanStock.LeftOut([Captured(OreInTheBags), Captured(inTheSaddlebag), Captured(crystals)]));
+        Assert.Equal([SlotSource.Bags, SlotSource.Saddlebag, SlotSource.Crystals], [priced[0].Slot.Source, priced[1].Slot.Source, priced[2].Slot.Source]);
+        Assert.All(priced, slot => Assert.Equal(OreReference, slot.ReferenceUnitPrice));
     }
 
     [Fact]
@@ -51,8 +48,8 @@ public sealed class PlanStockTests
 
         var run = input.ToRunInputs();
 
-        Assert.Single(run.Stock);
-        Assert.Equal(OreReference, run.Stock[0].ReferenceUnitPrice);
+        Assert.Equal(2, run.Stock.Length);
+        Assert.All(run.Stock, slot => Assert.Equal(OreReference, slot.ReferenceUnitPrice));
         Assert.Equal(2, run.Retainers.Length);
         Assert.Equal(BetaTaxPercent, run.Retainers[1].SellerTaxPercent);
         Assert.Same(input.Rules, run.Rules);

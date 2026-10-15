@@ -21,6 +21,11 @@ internal static class ReconcileHints
             return Agree(Changed(intent.ItemCountBefore, heldNow, -(long)write.Quantity), Changed(intent.GilBefore, gilNow, write.TryGetValue(out var value) ? value : null));
         }
 
+        if (write.Kind == WriteKind.Move)
+        {
+            return Changed(intent.ItemCountBefore, heldNow, write.Quantity) ?? ReconcileHint.NoFreshRead;
+        }
+
         if (latest is null || latest.RetainerId != write.RetainerId || latest.ReadAtUtc <= intent.AtUtc)
         {
             return ReconcileHint.NoFreshRead;

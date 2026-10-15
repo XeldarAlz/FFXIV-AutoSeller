@@ -69,6 +69,11 @@ internal sealed class RuleBook
         return slot.Source != SlotSource.RetainerPage || InventoryRetainerIds.AsSpan().BinarySearch(slot.RetainerId) >= 0;
     }
 
+    public bool SellsFromRetainer(ulong retainerId)
+    {
+        return (Sources & SellSources.RetainerPages) != 0 && InventoryRetainerIds.AsSpan().BinarySearch(retainerId) >= 0;
+    }
+
     public bool IsOnSellList(uint itemId)
     {
         return !EntriesFor(itemId).IsEmpty;

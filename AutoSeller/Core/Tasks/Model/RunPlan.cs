@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
@@ -9,6 +10,12 @@ using AutoSeller.Core.Shared;
 namespace AutoSeller.Core.Tasks.Model;
 
 internal readonly record struct RunRetainer(ulong RetainerId, string Name, byte Town, byte SellerTaxPercent);
+
+internal enum SellListKind : byte
+{
+    Inventory,
+    RetainerInventory,
+}
 
 internal sealed class RunPlanInputs
 {
@@ -43,6 +50,22 @@ internal sealed class RunPlan
 
         return assigned.ToImmutable();
     }
+
+    public int CountFor(ulong retainerId, SellListKind list)
+    {
+        var count = 0;
+        var assignments = Allocation.Assignments;
+        for (var index = 0; index < assignments.Length; index++)
+        {
+            var lot = assignments[index].Lot;
+            if (assignments[index].RetainerId == retainerId && SourceContainers.TryGetSource(lot.Row.Container, out var source) && RunPlanner.ListsIn(list, source))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 }
 
 internal static class RunPlanner
@@ -75,9 +98,16 @@ internal static class RunPlanner
         return visiting.ToImmutable();
     }
 
-    public static bool CanListFrom(SlotSource source)
+    public static bool ListsIn(SellListKind list, SlotSource source)
     {
-        return source is SlotSource.Bags or SlotSource.Crystals;
+        return list == SellListKind.RetainerInventory
+            ? source == SlotSource.RetainerPage
+            : source is SlotSource.Bags or SlotSource.Crystals or SlotSource.Armoury;
+    }
+
+    public static bool NeedsRetainerPass(bool sellsFromRetainer, bool pagesRead, int pageLots)
+    {
+        return sellsFromRetainer && (!pagesRead || pageLots > 0);
     }
 
     public static ImmutableArray<RunRetainer> WithSellerTaxes(ImmutableArray<RunRetainer> retainers, in TaxRatesResult taxes)
@@ -97,16 +127,37 @@ internal static class RunPlanner
         return planned.Key == item && planned.Quantity == quantity;
     }
 
-    public static RunPlanInputs Replan(RunPlanInputs inputs, ItemKey item, ReadOnlySpan<SlotFacts> fresh, int freeBagSlots)
+    public static RunPlanInputs Replan(RunPlanInputs inputs, ItemKey item, ReadOnlySpan<SlotFacts> fresh, int freeBagSlots, in StockCoverage coverage)
     {
-        return new RunPlanInputs
+        return With(inputs, Restock(inputs.Stock, item, fresh, coverage), freeBagSlots);
+    }
+
+    public static RunPlanInputs WithRetainerPages(RunPlanInputs inputs, ulong retainerId, ReadOnlySpan<StockSlot> fresh)
+    {
+        var stock = inputs.Stock;
+        var restocked = ImmutableArray.CreateBuilder<StockSlot>(stock.Length + fresh.Length);
+        for (var index = 0; index < stock.Length; index++)
         {
-            Stock = Restock(inputs.Stock, item, fresh),
-            FreeBagSlots = freeBagSlots,
-            Rules = inputs.Rules,
-            Edits = inputs.Edits,
-            Retainers = inputs.Retainers,
-        };
+            if (!IsPageOf(stock[index].Slot, retainerId))
+            {
+                restocked.Add(stock[index]);
+            }
+        }
+
+        for (var index = 0; index < fresh.Length; index++)
+        {
+            if (IsPageOf(fresh[index].Slot, retainerId))
+            {
+                restocked.Add(fresh[index]);
+            }
+        }
+
+        return With(inputs, restocked.ToImmutable(), inputs.FreeBagSlots);
+    }
+
+    public static bool IsPageOf(in SlotFacts slot, ulong retainerId)
+    {
+        return slot.Source == SlotSource.RetainerPage && slot.RetainerId == retainerId;
     }
 
     public static void ForgetLots(HashSet<PlanRowKey> handled, ItemKey item)
@@ -114,19 +165,21 @@ internal static class RunPlanner
         handled.RemoveWhere(row => !row.IsListing && row.Item == item);
     }
 
-    public static ImmutableArray<StockSlot> Restock(ImmutableArray<StockSlot> stock, ItemKey item, ReadOnlySpan<SlotFacts> fresh)
+    public static ImmutableArray<StockSlot> Restock(ImmutableArray<StockSlot> stock, ItemKey item, ReadOnlySpan<SlotFacts> fresh, in StockCoverage coverage)
     {
         var restocked = ImmutableArray.CreateBuilder<StockSlot>(stock.Length + fresh.Length);
         StockSlot? model = null;
         for (var index = 0; index < stock.Length; index++)
         {
-            if (stock[index].Slot.Key != item)
+            if (stock[index].Slot.Key == item)
             {
-                restocked.Add(stock[index]);
-                continue;
+                model ??= stock[index];
             }
 
-            model ??= stock[index];
+            if (stock[index].Slot.Key != item || !coverage.Covers(stock[index].Slot))
+            {
+                restocked.Add(stock[index]);
+            }
         }
 
         if (model is not { } known)
@@ -136,7 +189,7 @@ internal static class RunPlanner
 
         for (var index = 0; index < fresh.Length; index++)
         {
-            if (fresh[index].Key == item && CanListFrom(fresh[index].Source))
+            if (fresh[index].Key == item)
             {
                 restocked.Add(known with { Slot = fresh[index] });
             }
@@ -172,6 +225,18 @@ internal static class RunPlanner
         }
 
         return null;
+    }
+
+    private static RunPlanInputs With(RunPlanInputs inputs, ImmutableArray<StockSlot> stock, int freeBagSlots)
+    {
+        return new RunPlanInputs
+        {
+            Stock = stock,
+            FreeBagSlots = freeBagSlots,
+            Rules = inputs.Rules,
+            Edits = inputs.Edits,
+            Retainers = inputs.Retainers,
+        };
     }
 
     private static ImmutableArray<AllocationLot> LotsToPlace(LotPlan plan, IReadOnlySet<PlanRowKey> handled)

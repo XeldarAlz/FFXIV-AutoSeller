@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Pricing.Universalis;
 using AutoSeller.Core.Retainers.Model;
@@ -26,7 +27,7 @@ internal sealed record PlanInput
 
     public required int FreeBagSlots { get; init; }
 
-    public required bool BagsComplete { get; init; }
+    public StockCoverage Coverage { get; init; }
 
     public required RuleBook Rules { get; init; }
 
@@ -60,7 +61,7 @@ internal sealed record PlanInput
     {
         return new RunPlanInputs
         {
-            Stock = PlanStock.Listable(Stock, References, HomeWorldId, NowUtc),
+            Stock = PlanStock.Priced(Stock, References, HomeWorldId, NowUtc),
             FreeBagSlots = FreeBagSlots,
             Rules = Rules,
             Edits = Edits,

@@ -160,12 +160,6 @@ internal sealed partial class SellController
         }
 
         plugin.Market.Tracker.ClearReuse();
-        var leftOut = PlanStock.LeftOut(input.Stock.AsSpan());
-        if (leftOut > 0)
-        {
-            RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
-        }
-
         if (!active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
         {
             ledger.Invalidate();

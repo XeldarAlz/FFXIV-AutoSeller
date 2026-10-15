@@ -52,6 +52,41 @@ public sealed class SourceContainersTests
         }
     }
 
+    [Theory]
+    [InlineData(0u, (byte)SlotSource.Bags)]
+    [InlineData(2_001u, (byte)SlotSource.Crystals)]
+    [InlineData(3_500u, (byte)SlotSource.Armoury)]
+    [InlineData(4_101u, (byte)SlotSource.Saddlebag)]
+    [InlineData(10_006u, (byte)SlotSource.RetainerPage)]
+    [InlineData(12_001u, (byte)SlotSource.RetainerPage)]
+    public void EveryReadContainerNamesItsSource(uint container, byte source)
+    {
+        Assert.True(SourceContainers.TryGetSource(container, out var found));
+        Assert.Equal((SlotSource)source, found);
+        Assert.Equal(found == SlotSource.RetainerPage, SourceContainers.IsRetainerPage(container));
+    }
+
+    [Fact]
+    public void TheMarketAndEquippedGearHaveNoSource()
+    {
+        Assert.False(SourceContainers.TryGetSource(ListingSlot.MarketContainer, out _));
+        Assert.False(SourceContainers.TryGetSource(1_000, out _));
+        Assert.False(SourceContainers.IsRetainerPage(ListingSlot.MarketContainer));
+    }
+
+    [Fact]
+    public void TheCharacterContainersAreEveryContainerButTheRetainers()
+    {
+        var all = SourceContainers.For((SellSources)byte.MaxValue, readRetainer: false);
+        var character = SourceContainers.CharacterContainers();
+
+        Assert.Equal(all.Length, character.Length);
+        for (var index = 0; index < all.Length; index++)
+        {
+            Assert.Contains(all[index].Container, character);
+        }
+    }
+
     private static int Count(ImmutableArray<SourceContainer> containers, SlotSource source)
     {
         return Of(containers, source).Count;
