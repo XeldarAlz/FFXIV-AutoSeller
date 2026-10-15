@@ -5,6 +5,10 @@ namespace AutoSeller.Tests.Pricing;
 
 public sealed class ListingStreakTests
 {
+    private const uint Floor = 500;
+    private const uint UnderTheFloor = 400;
+    private const uint OverTheFloor = 650;
+
     private static readonly RepriceKey key = new(101, 3, new ItemKey(5_057, false));
 
     [Theory]
@@ -12,9 +16,9 @@ public sealed class ListingStreakTests
     [InlineData((byte)DecisionReason.BelowFloorReturned)]
     public void TheFirstBelowFloorDecisionStartsTheStreakAndLaterOnesKeepItsStart(byte reasonValue)
     {
-        var reason = (DecisionReason)reasonValue;
-        var started = BelowFloorStreak.Advance(default, reason, Now);
-        var kept = BelowFloorStreak.Advance(started, reason, Now.AddDays(2));
+        var decision = Decided((DecisionReason)reasonValue, UnderTheFloor);
+        var started = BelowFloorStreak.Advance(default, decision, Now);
+        var kept = BelowFloorStreak.Advance(started, decision, Now.AddDays(2));
 
         Assert.Equal(Now, started);
         Assert.Equal(Now, kept);
@@ -30,7 +34,16 @@ public sealed class ListingStreakTests
     [InlineData((byte)DecisionReason.PriceWar)]
     public void AMarketAtOrAboveTheFloorEndsTheStreak(byte reasonValue)
     {
-        Assert.Equal(default, BelowFloorStreak.Advance(Now.AddDays(-4), (DecisionReason)reasonValue, Now));
+        Assert.Equal(default, BelowFloorStreak.Advance(Now.AddDays(-4), Decided((DecisionReason)reasonValue, OverTheFloor), Now));
+    }
+
+    [Fact]
+    public void OurOwnPriceUnderTheFloorWithTheMarketAboveItNeitherStartsNorKeepsTheStreak()
+    {
+        var keptBelowWithTheMarketAbove = Decided(DecisionReason.BelowFloorKept, OverTheFloor);
+
+        Assert.Equal(default, BelowFloorStreak.Advance(default, keptBelowWithTheMarketAbove, Now));
+        Assert.Equal(default, BelowFloorStreak.Advance(Now.AddDays(-4), keptBelowWithTheMarketAbove, Now));
     }
 
     [Theory]
@@ -38,14 +51,15 @@ public sealed class ListingStreakTests
     [InlineData((byte)DecisionReason.NoPriceData)]
     [InlineData((byte)DecisionReason.NotEligible)]
     [InlineData((byte)DecisionReason.Excluded)]
+    [InlineData((byte)DecisionReason.PlayerPriceBelowFloor)]
     [InlineData((byte)DecisionReason.None)]
     public void ADecisionThatCouldNotJudgeTheMarketLeavesTheStreakAlone(byte reasonValue)
     {
-        var reason = (DecisionReason)reasonValue;
+        var decision = Decided((DecisionReason)reasonValue, UnderTheFloor);
         var since = Now.AddDays(-4);
 
-        Assert.Equal(since, BelowFloorStreak.Advance(since, reason, Now));
-        Assert.Equal(default, BelowFloorStreak.Advance(default, reason, Now));
+        Assert.Equal(since, BelowFloorStreak.Advance(since, decision, Now));
+        Assert.Equal(default, BelowFloorStreak.Advance(default, decision, Now));
     }
 
     [Fact]
@@ -63,5 +77,10 @@ public sealed class ListingStreakTests
     {
         Assert.True(new ListingStreak(key, default, default).IsEmpty);
         Assert.False(new ListingStreak(key, Now, default).IsEmpty);
+    }
+
+    private static Decision Decided(DecisionReason reason, uint proposedPrice)
+    {
+        return new Decision(SellAction.Keep, 1_000, proposedPrice, reason, new DecisionEvidence(0, 0, 0, 0, ReferenceSource.None, 0, Floor));
     }
 }

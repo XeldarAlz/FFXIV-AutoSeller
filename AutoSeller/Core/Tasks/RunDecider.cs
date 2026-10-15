@@ -79,7 +79,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
 
     public void TrackListing(ulong retainerId, in ListingSlot listing, in Decision decision, DateTime nowUtc)
     {
-        plugin.Characters.Current?.TrackDecision(new RepriceKey(retainerId, listing.Slot, listing.Key), decision.Reason, nowUtc);
+        plugin.Characters.Current?.TrackDecision(new RepriceKey(retainerId, listing.Slot, listing.Key), decision, nowUtc);
     }
 
     public SaleVerdict GuardListing(ulong retainerId, in ListingSlot listing, in SellWindowShown shown, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)

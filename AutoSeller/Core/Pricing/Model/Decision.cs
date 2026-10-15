@@ -36,6 +36,7 @@ internal enum DecisionReason : byte
     NoFreeSlot,
     Excluded,
     VendorList,
+    PlayerPriceBelowFloor,
 }
 
 internal readonly record struct DecisionEvidence(

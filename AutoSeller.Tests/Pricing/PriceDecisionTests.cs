@@ -373,7 +373,7 @@ public sealed class PriceDecisionTests
     {
         var input = Existing(1_100, BlindSnapshot(BlindSearch.Capped), FreshReference) with { Override = PriceOverride.SetByPlayer(400) };
 
-        AssertDecision(Decide(input), SellAction.Keep, 1_100, 400, DecisionReason.BelowFloorKept);
+        AssertDecision(Decide(input), SellAction.Keep, 1_100, 400, DecisionReason.PlayerPriceBelowFloor);
     }
 
     [Fact]
@@ -536,7 +536,7 @@ public sealed class PriceDecisionTests
     {
         var input = Existing(1_000, Snapshot(Competitors(1_000)), FreshReference) with { Override = PriceOverride.SetByPlayer(400) };
 
-        AssertDecision(Decide(input), SellAction.Keep, 1_000, 400, DecisionReason.BelowFloorKept);
+        AssertDecision(Decide(input), SellAction.Keep, 1_000, 400, DecisionReason.PlayerPriceBelowFloor);
     }
 
     [Fact]

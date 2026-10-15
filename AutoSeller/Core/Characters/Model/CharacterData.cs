@@ -251,10 +251,10 @@ internal sealed class CharacterData
         return index < 0 ? new ListingStreak(key, default, default) : streaks[index];
     }
 
-    public void TrackDecision(RepriceKey key, DecisionReason reason, DateTime nowUtc)
+    public void TrackDecision(RepriceKey key, in Decision decision, DateTime nowUtc)
     {
         var streak = StreakFor(key);
-        PutStreak(streak with { BelowFloorSinceUtc = BelowFloorStreak.Advance(streak.BelowFloorSinceUtc, reason, nowUtc) });
+        PutStreak(streak with { BelowFloorSinceUtc = BelowFloorStreak.Advance(streak.BelowFloorSinceUtc, decision, nowUtc) });
     }
 
     public void TrackLowestPrice(RepriceKey key, uint ourUnitPrice, DateTime priceSetAtUtc, in LowestPriceCheck check)

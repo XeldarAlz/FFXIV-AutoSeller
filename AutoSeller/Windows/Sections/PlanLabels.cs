@@ -132,7 +132,7 @@ internal static class PlanLabels
         DecisionReason.CeilingApplied => Loc.T(L.Plan.ReasonCeilingApplied),
         DecisionReason.PlayerPrice => Loc.T(L.Plan.ReasonPlayerPrice),
         DecisionReason.Approved => Loc.T(L.Plan.ReasonApproved),
-        DecisionReason.BelowFloorKept => Loc.T(L.Plan.ReasonBelowFloorKept),
+        DecisionReason.BelowFloorKept or DecisionReason.PlayerPriceBelowFloor => Loc.T(L.Plan.ReasonBelowFloorKept),
         DecisionReason.BelowFloorListedAtFloor => Loc.T(L.Plan.ReasonBelowFloorListedAtFloor),
         DecisionReason.BelowFloorReturned => Loc.T(L.Plan.ReasonBelowFloorReturned),
         DecisionReason.OverStepLimit => Loc.T(L.Plan.ReasonOverStepLimit),

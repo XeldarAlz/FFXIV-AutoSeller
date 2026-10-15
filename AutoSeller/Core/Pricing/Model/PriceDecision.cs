@@ -163,7 +163,7 @@ internal static class PriceDecision
     {
         if (price < floor)
         {
-            return Keep(current, price, DecisionReason.BelowFloorKept, evidence);
+            return Keep(current, price, DecisionReason.PlayerPriceBelowFloor, evidence);
         }
 
         if (price == current)
