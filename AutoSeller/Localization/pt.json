@@ -946,7 +946,7 @@
   "journal.unreadableBody": "Não foi possível ler o diário de mudanças de anúncios, então nenhum preço é gravado. O console tem os detalhes.",
   "journal.setAside": "Separar",
   "journal.setAsideFailed": "Não foi possível separar o diário; o console tem os detalhes.",
-  "journal.listTitle": "Este anúncio foi publicado a {0}?",
+  "journal.listTitle": "Este lote foi anunciado a {0}?",
   "journal.repriceTitle": "Este anúncio mudou para {0}?",
   "journal.returnTitle": "Este anúncio voltou para o ajudante?",
   "journal.vendorTitle": "O ajudante vendeu esta pilha por {0}?",
