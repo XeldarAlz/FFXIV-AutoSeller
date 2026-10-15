@@ -22,6 +22,7 @@ internal sealed class AssistHost : IDisposable
     private readonly Plugin plugin;
     private readonly ListingSlot[] market = new ListingSlot[RetainerSnapshot.SlotCount];
     private AssistReprice expected;
+    private bool heldBeforeSetup;
     private long watchUntilMs;
     private bool watching;
     private AssistView view = AssistView.Idle;
@@ -33,6 +34,7 @@ internal sealed class AssistHost : IDisposable
     public AssistHost(Plugin plugin)
     {
         this.plugin = plugin;
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PreSetup, RetainerClicks.SellWindowAddon, OnSellWindowPreSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerClicks.SellWindowAddon, OnSellWindowSetup);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, RetainerClicks.SellWindowAddon, OnSellWindowClosing);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, RetainerClicks.ContextMenuAddon, OnContextMenuSetup);
@@ -42,6 +44,7 @@ internal sealed class AssistHost : IDisposable
 
     public void Dispose()
     {
+        Svc.AddonLifecycle.UnregisterListener(AddonEvent.PreSetup, RetainerClicks.SellWindowAddon, OnSellWindowPreSetup);
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerClicks.SellWindowAddon, OnSellWindowSetup);
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, RetainerClicks.SellWindowAddon, OnSellWindowClosing);
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerClicks.ContextMenuAddon, OnContextMenuSetup);
@@ -74,6 +77,18 @@ internal sealed class AssistHost : IDisposable
         menuOpenedAtMs = Environment.TickCount64;
     }
 
+    private void OnSellWindowPreSetup(AddonEvent type, AddonArgs args)
+    {
+        heldBeforeSetup = false;
+        if (Block() != AssistBlock.None)
+        {
+            return;
+        }
+
+        plugin.Marketbuddy.Hold();
+        heldBeforeSetup = true;
+    }
+
     private void OnSellWindowSetup(AddonEvent type, AddonArgs args)
     {
         Volatile.Write(ref view, AssistView.Idle);
@@ -84,16 +99,12 @@ internal sealed class AssistHost : IDisposable
 
         var origin = Environment.TickCount64 - menuOpenedAtMs <= OriginFreshMs ? menuOrigin : AssistOrigin.Unknown;
         menuOrigin = AssistOrigin.Unknown;
-        var configuration = plugin.Configuration;
-        var automation = ClibServices.Automation;
-        var block = AssistGate.Check(new AssistFacts(
-            configuration.AssistEnabled,
-            plugin.Controller.HoldsRetainerWindows,
-            automation.Running && !ReferenceEquals(automation.CurrentTask, task),
-            SkipKeyHeld(configuration.AssistSkipKey),
-            plugin.Market.Gates.Allows(MarketGate.ReadListings)));
+        var held = heldBeforeSetup;
+        heldBeforeSetup = false;
+        var block = Block();
         if (block != AssistBlock.None)
         {
+            ReleaseIf(held);
             if (block is not (AssistBlock.AssistOff or AssistBlock.RunOwnsWindows))
             {
                 RunLog.Info($"Assist: a sell window opened, and Assist leaves it alone ({block}).");
@@ -106,6 +117,29 @@ internal sealed class AssistHost : IDisposable
         if (TaskStarter.TryStart(() => task = new AssistTask(plugin, this, origin)))
         {
             plugin.Marketbuddy.Hold();
+            return;
+        }
+
+        ReleaseIf(held);
+    }
+
+    private AssistBlock Block()
+    {
+        var configuration = plugin.Configuration;
+        var automation = ClibServices.Automation;
+        return AssistGate.Check(new AssistFacts(
+            configuration.AssistEnabled,
+            plugin.Controller.HoldsRetainerWindows,
+            automation.Running && !ReferenceEquals(automation.CurrentTask, task),
+            SkipKeyHeld(configuration.AssistSkipKey),
+            plugin.Market.Gates.Allows(MarketGate.ReadListings)));
+    }
+
+    private void ReleaseIf(bool held)
+    {
+        if (held)
+        {
+            plugin.Marketbuddy.Release();
         }
     }
 
