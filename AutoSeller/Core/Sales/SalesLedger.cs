@@ -21,6 +21,7 @@ internal sealed class SalesLedger
     private Task<LoadedSales>? loading;
     private long loadedAtMs = long.MinValue;
     private bool dirty = true;
+    private string? reportedReadError;
 
     public SalesLedger(string configDirectory)
     {
@@ -96,16 +97,29 @@ internal sealed class SalesLedger
         loading = null;
         if (!finished.IsCompletedSuccessfully)
         {
-            dirty = true;
-            RunLog.Warning($"Sales: the sales files could not be read: {finished.Exception?.GetBaseException().Message}");
+            ReportReadError($"the sales files could not be read: {finished.Exception?.GetBaseException().Message}");
             return;
         }
 
         var loaded = finished.Result;
-        dirty |= loaded.UnreadFiles > 0;
+        ReportReadError(loaded.Error);
         Merged = loaded.Sales;
         Revision++;
         RunLog.Debug($"Sales: {Merged.Length} sale(s) after merging the sales files, {loaded.UnreadFiles} file(s) to read again.");
+    }
+
+    private void ReportReadError(string? error)
+    {
+        if (string.Equals(error, reportedReadError, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        reportedReadError = error;
+        if (error is not null)
+        {
+            RunLog.Warning($"Sales: {error}; the sales files are read again in {ReloadMs / TimeUnits.MillisecondsPerSecond} s or after the next sale.");
+        }
     }
 
     public void Flush()
@@ -178,12 +192,13 @@ internal sealed class SalesLedger
     {
         if (!Directory.Exists(directory))
         {
-            return new LoadedSales([], 0);
+            return new LoadedSales([], 0, null);
         }
 
         var paths = Directory.GetFiles(directory, SalesFile.FilePattern);
         var all = new List<SaleRecord>();
         var unread = 0;
+        string? error = null;
         for (var index = 0; index < paths.Length; index++)
         {
             if (!SalesFile.TryReadContentId(paths[index], out var contentId))
@@ -195,7 +210,7 @@ internal sealed class SalesLedger
             if (read.Failed)
             {
                 unread++;
-                RunLog.Warning($"Sales: {paths[index]} could not be read: {read.Error}");
+                error ??= $"{paths[index]} could not be read: {read.Error}";
                 continue;
             }
 
@@ -209,10 +224,10 @@ internal sealed class SalesLedger
             }
         }
 
-        return new LoadedSales(SaleMatcher.Merge(CollectionsMarshal.AsSpan(all)), unread);
+        return new LoadedSales(SaleMatcher.Merge(CollectionsMarshal.AsSpan(all)), unread, error);
     }
 
     private readonly record struct UnwrittenSales(ulong CharacterContentId, ImmutableArray<SaleRecord> Sales);
 
-    private readonly record struct LoadedSales(ImmutableArray<SaleRecord> Sales, int UnreadFiles);
+    private readonly record struct LoadedSales(ImmutableArray<SaleRecord> Sales, int UnreadFiles, string? Error);
 }
