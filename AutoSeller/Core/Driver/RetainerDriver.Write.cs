@@ -19,8 +19,13 @@ internal sealed partial class RetainerDriver
     private readonly ListingSlot[] marketAfter = new ListingSlot[RetainerSnapshot.SlotCount];
     private MarketSample before;
 
+    private bool DryRunTurnedOn => !session.Authorization.DryRun && plugin.Configuration.DryRun;
+
+    private bool WriteHeldBack => session.StopRequested || DryRunTurnedOn;
+
     private async Task<Stop> Conclude(RunDecision outcome, Func<SaleWrite> buildWrite, RunRetainer retainer, string itemName)
     {
+        outcome = HeldBackByDryRun(outcome);
         if (!outcome.Clear || outcome.Decision.Action is not (SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List))
         {
             return await RecordAndCancel(outcome, retainer);
@@ -66,23 +71,21 @@ internal sealed partial class RetainerDriver
             return new Written(mismatch, RunSkip.WindowMismatch, settled.Halted ? settled : unreadable);
         }
 
-        if (session.StopRequested)
+        if (WriteHeldBack)
         {
-            Diag($"Driver: Stop came before Confirm; write {writeId} is cancelled.");
-            return NotConfirmed(intent, retainer);
+            return HeldBack(intent, retainer, "Confirm");
         }
 
         session.Enter(RunState.Confirming);
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
-            stopped = session.StopRequested;
+            stopped = WriteHeldBack;
             return stopped || PriceWriter.Confirm();
         });
         if (stopped)
         {
-            Diag($"Driver: Stop came before Confirm could be pressed; write {writeId} is cancelled.");
-            return NotConfirmed(intent, retainer);
+            return HeldBack(intent, retainer, "Confirm could be pressed");
         }
 
         if (!pressed)
@@ -144,6 +147,19 @@ internal sealed partial class RetainerDriver
         Warn($"Driver: before writing item {write.ItemId} {QualityLabel.Of(write.IsHq)} on {retainer.Name} the market read {before.MarketReadable} and the slot held {before.ItemCount}; the read-back could not judge the write, so nothing is journaled or typed.");
         var stop = before.MarketReadable ? Stop.None : new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} could not be read while its sell window was open");
         return new Written(default, RunSkip.ReadBackUnavailable, stop);
+    }
+
+    private RunDecision HeldBackByDryRun(in RunDecision outcome)
+    {
+        return outcome.Clear && DryRunTurnedOn ? outcome with { Guard = SaleRejection.DryRunChanged } : outcome;
+    }
+
+    private Written HeldBack(WriteIntent intent, RunRetainer retainer, string moment)
+    {
+        var dryRun = DryRunTurnedOn;
+        Diag($"Driver: {(dryRun ? "the dry run was turned on" : "Stop came")} before {moment}; write {intent.WriteId} is cancelled.");
+        var written = NotConfirmed(intent, retainer);
+        return dryRun && !written.Stop.Halted ? written with { Stop = StopForGuard(SaleRejection.DryRunChanged) } : written;
     }
 
     private Written NotConfirmed(WriteIntent intent, RunRetainer retainer)

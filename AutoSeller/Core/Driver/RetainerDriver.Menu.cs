@@ -188,6 +188,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, MenuChoice choice)
     {
+        outcome = HeldBackByDryRun(outcome);
         if (!outcome.Clear)
         {
             Record(outcome, retainer);
@@ -229,22 +230,26 @@ internal sealed partial class RetainerDriver
             return new Written(mismatch, RunSkip.WindowMismatch, Settle(intent, mismatch, retainer));
         }
 
-        if (session.StopRequested)
+        if (WriteHeldBack)
         {
-            Diag($"Driver: Stop came before the menu entry was chosen; write {intent.WriteId} is cancelled.");
-            return NotConfirmed(intent, retainer);
+            return HeldBack(intent, retainer, "the menu entry was chosen");
         }
 
         session.Enter(choice.Pressing);
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
-            stopped = session.StopRequested;
+            stopped = WriteHeldBack;
             return stopped || choice.Choose();
         });
-        if (stopped || !pressed)
+        if (stopped)
         {
-            Warn($"Driver: the menu entry for write {intent.WriteId} was not chosen ({(stopped ? "Stop came first" : "it could not be pressed")}); it is cancelled.");
+            return HeldBack(intent, retainer, "the menu entry could be chosen");
+        }
+
+        if (!pressed)
+        {
+            Warn($"Driver: the menu entry for write {intent.WriteId} could not be pressed; it is cancelled.");
             return NotConfirmed(intent, retainer);
         }
 

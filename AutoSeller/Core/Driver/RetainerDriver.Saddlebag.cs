@@ -146,11 +146,12 @@ internal sealed partial class RetainerDriver
         var write = move.Write;
         var observed = TryReadStackSlot(slot, out var reading) ? reading : default;
         var verdict = decider.GuardMove(move.Stock, observed, write, DateTime.UtcNow);
-        if (!verdict.IsAllowed)
+        var rejection = verdict.IsAllowed && DryRunTurnedOn ? SaleRejection.DryRunChanged : verdict.Rejection;
+        if (rejection != SaleRejection.None)
         {
-            Warn($"Driver: moving item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from the saddlebag for {retainer.Name} was refused by the sale guard ({verdict.Rejection}).");
+            Warn($"Driver: moving item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from the saddlebag for {retainer.Name} was refused by the sale guard ({rejection}).");
             var closed = await UnwindAboveSellList();
-            return closed.Halted ? closed : StopForGuard(verdict.Rejection);
+            return closed.Halted ? closed : StopForGuard(rejection);
         }
 
         if (session.Authorization.DryRun)

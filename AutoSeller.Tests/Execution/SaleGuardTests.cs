@@ -22,6 +22,8 @@ public sealed class SaleGuardTests
         (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRules = LoweredFloorRules }),
         (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricing = WiderStepLimit }),
         (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEdits = EditedPlan }),
+        (SaleRejection.DryRunChanged, () => GuardInput(Reprice()) with { CurrentDryRun = true }),
+        (SaleRejection.CapsChanged, () => GuardInput(Reprice()) with { CurrentCaps = RunCaps.Default with { MaxReprices = 0 } }),
         (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),
         (SaleRejection.WindowChainNotReady, () => GuardInput(Reprice()) with { WindowChainReady = false }),
@@ -311,7 +313,7 @@ public sealed class SaleGuardTests
     [Fact]
     public void CapsComeFromTheAuthorization()
     {
-        var input = GuardInput(Reprice()) with { Authorization = Authorization(new RunCaps(2, 100, 20_000)) };
+        var input = GuardInput(Reprice(), Authorization(new RunCaps(2, 100, 20_000)));
 
         Assert.True(SaleGuard.Evaluate(input with { Value = new ValueState(1, 0, 0, Guid.Empty) }).IsAllowed);
         Assert.Equal(SaleRejection.RepriceCapReached, SaleGuard.Evaluate(input with { Value = new ValueState(2, 0, 0, Guid.Empty) }).Rejection);
