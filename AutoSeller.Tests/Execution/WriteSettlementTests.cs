@@ -1,5 +1,4 @@
 using AutoSeller.Core.Execution.Model;
-using AutoSeller.Core.Ledger;
 using AutoSeller.Tests.Ledger;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
 
@@ -75,11 +74,11 @@ public sealed class WriteSettlementTests
     }
 
     [Fact]
-    public void ADryRunOrUntriedWriteHasNothingToJournal()
+    public void AnUntriedWriteHasNothingToJournal()
     {
-        var dry = new WriteSettlement(RunWrite.DryRun, RunReaction.Continue, default, ReadBackCause.None);
+        var untried = new WriteSettlement(RunWrite.None, RunReaction.Continue, default, ReadBackCause.None);
 
-        Assert.Throws<InvalidOperationException>(() => dry.ToJournalEvent(Reprice(), WriteId, RunId, 1, Now));
+        Assert.Throws<InvalidOperationException>(() => untried.ToJournalEvent(Reprice(), WriteId, RunId, 1, Now));
     }
 
     [Fact]

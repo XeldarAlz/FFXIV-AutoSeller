@@ -27,7 +27,6 @@ public sealed class RefusalsTests
     [InlineData((byte)SaleRejection.NoVendorRule, (byte)RefusalKind.VendorRules)]
     [InlineData((byte)SaleRejection.ItemProtected, (byte)RefusalKind.Protected)]
     [InlineData((byte)SaleRejection.VendorProtected, (byte)RefusalKind.Protected)]
-    [InlineData((byte)SaleRejection.DryRunChanged, (byte)RefusalKind.SettingsChanged)]
     [InlineData((byte)SaleRejection.RulesChanged, (byte)RefusalKind.SettingsChanged)]
     public void ARefusalThePlayerCanActOnIsNamed(byte rejection, byte kind)
     {

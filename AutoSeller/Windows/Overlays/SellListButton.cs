@@ -31,7 +31,7 @@ internal sealed class SellListButton(Plugin plugin) : AddonOverlay("Auto Seller 
 
     protected override void DrawOverlay()
     {
-        var help = Loc.T(plugin.Configuration.DryRun ? L.Buttons.RepriceRetainerHelpDryRun : L.Buttons.RepriceRetainerHelpLive);
+        var help = Loc.T(L.Buttons.RepriceRetainerHelp);
         if (PillButton.Draw("##asell_overlay_reprice_retainer", Loc.T(L.Buttons.RepriceRetainer), Styling.AccentGlow, PillButton.Emphasis.Filled, Icon, true, ButtonHeight, help))
         {
             RunLog.Info("Buttons: Reprice this retainer pressed on the sell list.");

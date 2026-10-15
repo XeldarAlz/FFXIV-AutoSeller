@@ -7,7 +7,6 @@ internal enum AssistOutcome : byte
 {
     Typed,
     AlreadyShown,
-    DryRun,
     BelowFloor,
     Kept,
     NoPrice,
@@ -20,7 +19,7 @@ internal readonly record struct AssistSuggestion(AssistOutcome Outcome, uint Pri
 
 internal static class AssistSuggestions
 {
-    public static AssistSuggestion For(in Decision decision, uint vendorPrice, uint shownPrice, bool dryRun)
+    public static AssistSuggestion For(in Decision decision, uint vendorPrice, uint shownPrice)
     {
         var floor = MarketLimits.ClampUnitPrice(Math.Max(decision.Evidence.Floor, (long)vendorPrice + 1));
         if (decision.Action is not (SellAction.List or SellAction.RepriceDown or SellAction.RepriceUp))
@@ -40,6 +39,6 @@ internal static class AssistSuggestions
             return new AssistSuggestion(AssistOutcome.AlreadyShown, price, floor);
         }
 
-        return new AssistSuggestion(dryRun ? AssistOutcome.DryRun : AssistOutcome.Typed, price, floor);
+        return new AssistSuggestion(AssistOutcome.Typed, price, floor);
     }
 }

@@ -22,7 +22,7 @@
 
 Keeping your retainers' listings at a price that sells means visiting a bell, comparing prices and retyping them, retainer by retainer, every time someone undercuts you. Auto Seller reads your bags and your retainers' listings, plans every change across all of them and shows you that plan before anything is clicked. One Start then goes to a summoning bell, reprices what was undercut, lists what your rules allow, vendors what your rules call junk, checks every change and records your sales.
 
-Nothing is sold unless a rule you wrote allows it, no price goes below its floor, and the dry run, on by default, goes through the whole run up to typing a price.
+Nothing is sold unless a rule you wrote allows it, no price goes below its floor, and a run stops at the limits you set for it.
 
 ## Features
 
@@ -52,7 +52,7 @@ As an AutoRetainer post-process it skips the walk, works on the one retainer Aut
 
 ## Safety
 
-- **Dry run.** On by default, it goes through the whole run up to typing a price and marks what it would change. It is the switch beside Start and in Settings, Pricing, Limits per run, and turning it off asks first.
+- **Limits per run.** A run stops repricing and listing at the reprices and new listings per run under Settings, Pricing, Limits per run, and stops vendoring at the vendored value per run of your vendor rules.
 - **Nothing sold without a rule.** Only items your sell list or category rules allow are listed or vendored.
 - **Floors and step limit.** No price is written below the item's floor, and no reprice drops a price further than the step limit without your approval.
 - **Never against yourself.** Your own listings are never undercut, and neither are your alts' listings when AutoRetainer knows them.
@@ -115,7 +115,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 - **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer, and no chat, toast or Discord alert when a listing is undercut yet.
 - **Fixed pacing.** Market searches and window steps keep a fixed safe pace with random jitter; only the delays before moving off and casting a teleport can be changed, under Settings, Humanizer.
 - **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
-- **Not yet run in game.** No part of 1.0.0.0 has run on a live client yet. The writes (typing the price and quantity in the sell window, the Adjust Price, Return to Retainer and Have Retainer Sell Items menus, saddlebag moves and Marketbuddy's lock), the reads (the Sale History window's layout and prices, sale notice values, gear set membership, which gil a vendor sale lands in, how soon listings fill in) and the AutoRetainer post-process over real ventures follow the game data and other tools so far. Each step logs what it did to the Console. Keep the dry run on for your first runs.
+- **Not yet run in game.** No part of 1.0.0.0 has run on a live client yet. The writes (typing the price and quantity in the sell window, the Adjust Price, Return to Retainer and Have Retainer Sell Items menus, saddlebag moves and Marketbuddy's lock), the reads (the Sale History window's layout and prices, sale notice values, gear set membership, which gil a vendor sale lands in, how soon listings fill in) and the AutoRetainer post-process over real ventures follow the game data and other tools so far. Each step logs what it did to the Console. For your first runs, sell one cheap item with low limits per run and watch the whole run.
 
 ## Languages
 

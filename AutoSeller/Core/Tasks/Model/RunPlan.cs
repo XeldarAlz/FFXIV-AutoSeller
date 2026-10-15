@@ -182,14 +182,13 @@ internal static class RunPlanner
         return With(inputs, listable.ToImmutable(), inputs.FreeBagSlots);
     }
 
-    public static RunPlanInputs WithoutSaddlebag(RunPlanInputs inputs, ReadOnlySpan<SlotFacts> kept)
+    public static RunPlanInputs WithoutSaddlebag(RunPlanInputs inputs)
     {
         var stock = inputs.Stock;
         var left = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
         for (var index = 0; index < stock.Length; index++)
         {
-            var slot = stock[index].Slot;
-            if (slot.Source != SlotSource.Saddlebag || Holds(kept, slot))
+            if (stock[index].Slot.Source != SlotSource.Saddlebag)
             {
                 left.Add(stock[index]);
             }
@@ -273,19 +272,6 @@ internal static class RunPlanner
         }
 
         return null;
-    }
-
-    private static bool Holds(ReadOnlySpan<SlotFacts> stacks, in SlotFacts slot)
-    {
-        for (var index = 0; index < stacks.Length; index++)
-        {
-            if (SameStack(stacks[index], slot))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static RunPlanInputs With(RunPlanInputs inputs, ImmutableArray<StockSlot> stock, int freeBagSlots)

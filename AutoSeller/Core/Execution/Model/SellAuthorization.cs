@@ -52,8 +52,6 @@ internal sealed class SellAuthorization
 
     public required RunCaps Caps { get; init; }
 
-    public required bool DryRun { get; init; }
-
     public required int PolicyVersion { get; init; }
 
     public required ImmutableArray<ApprovedPrice> ApprovedPrices { get; init; }
@@ -71,7 +69,6 @@ internal sealed class SellAuthorization
         PricingSettings pricing,
         PlanEdits planEdits,
         RunCaps caps,
-        bool dryRun,
         int policyVersion,
         ImmutableArray<ApprovedPrice> approvedPrices,
         DateTime createdAtUtc,
@@ -106,7 +103,6 @@ internal sealed class SellAuthorization
             PricingHash = Fingerprint.OfPricing(pricing),
             PlanEditsHash = Fingerprint.OfPlanEdits(planEdits),
             Caps = caps,
-            DryRun = dryRun,
             PolicyVersion = policyVersion,
             ApprovedPrices = ImmutableCollectionsMarshal.AsImmutableArray(frozenPrices),
             CreatedAtUtc = createdAtUtc,
@@ -125,7 +121,6 @@ internal sealed class SellAuthorization
             recorded.Pricing,
             PlanEdits.Restore(recorded.PlanEdits.AsSpan()),
             recorded.Caps,
-            recorded.DryRun,
             recorded.PolicyVersion,
             recorded.ApprovedPrices,
             recorded.AuthorizedAtUtc,
@@ -146,7 +141,6 @@ internal sealed class SellAuthorization
             Pricing = Pricing,
             PlanEdits = PlanEdits.Items,
             Caps = Caps,
-            DryRun = DryRun,
             PolicyVersion = PolicyVersion,
             ApprovedPrices = ApprovedPrices,
             AuthorizedAtUtc = CreatedAtUtc,

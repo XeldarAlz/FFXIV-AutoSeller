@@ -63,7 +63,6 @@ internal static partial class L
         public static readonly LocString BelowFloorListingReturn = new("pricing.belowFloorListing.return", "Return after 3 days");
         public static readonly LocString BelowFloorListingReturnDetail = new("pricing.belowFloorListing.returnDetail", "Take the listing back to the retainer once the market has stayed below its floor for 3 days.");
         public static readonly LocString GroupCaps = new("pricing.group.caps", "Limits per run");
-        public static readonly LocString DryRunHelp = new("pricing.dryRunHelp", "Go through the whole run and record what it would change without typing a price. Turning it off asks first.");
         public static readonly LocString MaxReprices = new("pricing.maxReprices", "Reprices per run");
         public static readonly LocString MaxRepricesHelp = new("pricing.maxRepricesHelp", "A run stops repricing after this many reprices. 0 turns repricing off.");
         public static readonly LocString MaxListings = new("pricing.maxListings", "New listings per run");

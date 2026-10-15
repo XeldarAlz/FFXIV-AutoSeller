@@ -88,12 +88,12 @@ internal sealed class FinishedRunCard
         textsRunId = run.RunId;
         textsLanguage = Loc.Current;
         var tally = run.Tally;
-        title = Loc.T(run.DryRun ? L.Plan.FinishedTitleDry : L.Plan.FinishedTitle);
+        title = Loc.T(L.Plan.FinishedTitle);
         outcome = RunLabels.OutcomeLabel(run.State);
         detail = string.Concat(
             Loc.T(L.History.Retainers, run.Visited, run.Retainers.Length), TextDraw.Separator,
-            RunLabels.Changes(run.DryRun, tally.Repriced, tally.Listed, tally.ListedValue),
-            RunLabels.ReturnsAndVendor(run.DryRun, tally.Returned, tally.Vendored, tally.VendoredValue), TextDraw.Separator,
+            RunLabels.Changes(tally.Repriced, tally.Listed, tally.ListedValue),
+            RunLabels.ReturnsAndVendor(tally.Returned, tally.Vendored, tally.VendoredValue), TextDraw.Separator,
             Loc.T(L.History.Kept, tally.Kept), TextDraw.Separator,
             Loc.T(L.History.Skipped, tally.Skipped), TextDraw.Separator,
             Formatting.Elapsed(run.EndedAtUtc - run.StartedAtUtc));

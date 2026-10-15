@@ -12,27 +12,27 @@ public sealed class PostprocessTallyTests
     public void TwoJobsOfOneBellVisitShareTheVendoredValueCap()
     {
         var tally = new PostprocessTally();
-        var first = tally.BookFor(OneVendorLoad, false);
+        var first = tally.BookFor(OneVendorLoad);
         Settle(first, Vendor());
-        tally.Keep(first, false);
+        tally.Keep(first);
 
-        var second = tally.BookFor(OneVendorLoad, false);
+        var second = tally.BookFor(OneVendorLoad);
 
         Assert.Equal(VendorUnitPrice * JunkQuantity, second.VendoredValue);
         Assert.Equal(ValueBookResult.CapReached, second.TryReserve(Guid.NewGuid(), Vendor()));
-        Assert.False(tally.VendoringLeft(OneVendorLoad, false));
+        Assert.False(tally.VendoringLeft(OneVendorLoad));
     }
 
     [Fact]
     public void TheRepriceAndListingCountsCarryIntoTheNextJob()
     {
         var tally = new PostprocessTally();
-        var first = tally.BookFor(RunCaps.Default with { MaxReprices = 1 }, false);
+        var first = tally.BookFor(RunCaps.Default with { MaxReprices = 1 });
         Settle(first, Reprice());
         Settle(first, List());
-        tally.Keep(first, false);
+        tally.Keep(first);
 
-        var second = tally.BookFor(RunCaps.Default with { MaxReprices = 1 }, false);
+        var second = tally.BookFor(RunCaps.Default with { MaxReprices = 1 });
 
         Assert.Equal(1, second.Reprices);
         Assert.Equal(1, second.NewListings);
@@ -43,39 +43,27 @@ public sealed class PostprocessTallyTests
     public void LeavingTheBellStartsTheCapsAgain()
     {
         var tally = new PostprocessTally();
-        var first = tally.BookFor(OneVendorLoad, false);
+        var first = tally.BookFor(OneVendorLoad);
         Settle(first, Vendor());
-        tally.Keep(first, false);
+        tally.Keep(first);
 
         Assert.True(tally.Forget());
         Assert.False(tally.Forget());
 
-        var next = tally.BookFor(OneVendorLoad, false);
+        var next = tally.BookFor(OneVendorLoad);
         Assert.Equal(0, next.VendoredValue);
-        Assert.True(tally.VendoringLeft(OneVendorLoad, false));
+        Assert.True(tally.VendoringLeft(OneVendorLoad));
     }
 
     [Fact]
     public void AWritePendingInOneJobIsNotCarriedAsPending()
     {
         var tally = new PostprocessTally();
-        var first = tally.BookFor(RunCaps.Default, false);
+        var first = tally.BookFor(RunCaps.Default);
         first.TryReserve(Guid.NewGuid(), Reprice());
-        tally.Keep(first, false);
+        tally.Keep(first);
 
-        Assert.False(tally.BookFor(RunCaps.Default, false).HasPendingWrite);
-    }
-
-    [Fact]
-    public void ADryRunTallyDoesNotCountAgainstALiveJob()
-    {
-        var tally = new PostprocessTally();
-        var dry = tally.BookFor(OneVendorLoad, true);
-        Settle(dry, Vendor());
-        tally.Keep(dry, true);
-
-        Assert.Equal(0, tally.BookFor(OneVendorLoad, false).VendoredValue);
-        Assert.Equal(VendorUnitPrice * JunkQuantity, tally.BookFor(OneVendorLoad, true).VendoredValue);
+        Assert.False(tally.BookFor(RunCaps.Default).HasPendingWrite);
     }
 
     private static void Settle(ValueBook book, in SaleWrite write)

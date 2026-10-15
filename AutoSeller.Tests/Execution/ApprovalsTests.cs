@@ -53,7 +53,7 @@ public sealed class ApprovalsTests
         var approved = Approvals.Collect(edits, [Market(Listed, second)], Enabled, playerApprovals);
 
         Assert.Equal([ApprovedPrice.For(FirstRetainer, Listed, ApprovedDrop), ApprovedPrice.For(FirstRetainer, second, 610)], approved.AsSpan().ToArray());
-        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryCreate(RunId, Character, HomeWorld, [FirstRetainer], StartRules, StartPricing, edits, RunCaps.Default, false, SellAuthorization.CurrentPolicyVersion, approved, Now, out _));
+        Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryCreate(RunId, Character, HomeWorld, [FirstRetainer], StartRules, StartPricing, edits, RunCaps.Default, SellAuthorization.CurrentPolicyVersion, approved, Now, out _));
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class ApprovalsTests
         ImmutableArray<ulong> onlyFirst = [FirstRetainer];
 
         var approved = Approvals.Collect(edits, [Market(Listed), MarketOf(SecondRetainer, Listed)], onlyFirst.AsSpan(), [ApprovedPrice.For(SecondRetainer, Listed, 650)]);
-        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, onlyFirst, StartRules, StartPricing, edits, RunCaps.Default, false, SellAuthorization.CurrentPolicyVersion, approved, Now, out var authorization);
+        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, onlyFirst, StartRules, StartPricing, edits, RunCaps.Default, SellAuthorization.CurrentPolicyVersion, approved, Now, out var authorization);
 
         Assert.Equal([ApprovedPrice.For(FirstRetainer, Listed, ApprovedDrop)], approved.AsSpan().ToArray());
         Assert.Equal(AuthorizationProblem.None, problem);

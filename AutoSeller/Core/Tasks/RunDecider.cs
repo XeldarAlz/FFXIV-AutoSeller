@@ -101,7 +101,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
             facts.VendorPrice,
             ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
-        return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
+        return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values);
     }
 
     public SaleVerdict GuardReturn(in ListingSlot listing, in SaleWrite write, DateTime nowUtc)
@@ -115,7 +115,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             PricingRule.For(Authorization.Rules, listing.Key, out _).Floor,
             facts.VendorPrice,
             ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(listing.ItemId)));
-        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSellList), row, NoSearch, default, session.Values, Guid.NewGuid());
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSellList), row, NoSearch, default, session.Values);
     }
 
     public SaleVerdict GuardVendor(in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
@@ -133,7 +133,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             itemProtected,
             vendorRule,
             stock.Item.IsEquippable || stock.Slot.InGearSet);
-        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSellList), row, NoSearch, default, session.Values, Guid.NewGuid());
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSellList), row, NoSearch, default, session.Values);
     }
 
     public SaleVerdict GuardMove(in StockSlot stock, in SlotReading observed, in SaleWrite write, DateTime nowUtc)
@@ -148,7 +148,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             0,
             stock.Item.VendorPrice,
             itemProtected);
-        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSaddlebag), row, NoSearch, default, session.Values, Guid.NewGuid());
+        return RunGuard.Evaluate(Authorization, Live(nowUtc, GuardedWindow.MenuOverSaddlebag), row, NoSearch, default, session.Values);
     }
 
     public SaleVerdict GuardLot(in LotAssignment assignment, in StockSlot stock, in SlotReading observed, in Decision decision, CompetitorSnapshot competition, DateTime nowUtc)
@@ -162,12 +162,11 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             PricingRule.For(Authorization.Rules, stock.Slot.Key, out _).Floor,
             stock.Item.VendorPrice,
             ProtectListHealth.BlocksWrite(plugin.AutoRetainer.ProtectionOf(stock.Slot.ItemId)));
-        return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values, Guid.NewGuid());
+        return RunGuard.Evaluate(Authorization, Live(nowUtc), row, competition, session.Values);
     }
 
     public string Describe(in RunDecision row, string retainerName)
     {
-        var mode = Authorization.DryRun ? "Dry run" : "Run";
         var item = $"{ItemName(row.Row.ItemId)} {QualityLabel.Of(row.Row.IsHq)} x{row.Quantity}";
         var where = row.Kind switch
         {
@@ -177,7 +176,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
         };
         if (row.Skip != RunSkip.None)
         {
-            return $"{mode}, {retainerName}: {item}, {where}: skipped ({row.Skip}{(row.Write == RunWrite.None ? string.Empty : $", write {row.Write}")}).";
+            return $"Run, {retainerName}: {item}, {where}: skipped ({row.Skip}{(row.Write == RunWrite.None ? string.Empty : $", write {row.Write}")}).";
         }
 
         var decision = row.Decision;
@@ -192,7 +191,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             _ => $"leaves it ({decision.Action})",
         };
         var guard = row.Refused ? $", refused by the sale guard ({row.Guard})" : string.Empty;
-        return $"{mode}, {retainerName}: {item}, {where}: {verdict}{guard}, {decision.Reason}; lowest sane competitor {evidence.CompetitorPrice} gil, {evidence.BaitListingsIgnored} bait listing(s) ignored, reference {evidence.ReferencePrice} gil ({evidence.ReferenceSource}), floor {evidence.Floor} gil, generation {evidence.SearchGeneration}.";
+        return $"Run, {retainerName}: {item}, {where}: {verdict}{guard}, {decision.Reason}; lowest sane competitor {evidence.CompetitorPrice} gil, {evidence.BaitListingsIgnored} bait listing(s) ignored, reference {evidence.ReferencePrice} gil ({evidence.ReferenceSource}), floor {evidence.Floor} gil, generation {evidence.SearchGeneration}.";
     }
 
     private static string Outcome(in RunDecision row, string done, string intended) => row.Write switch
@@ -233,7 +232,6 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             configuration.BuildRuleBook(),
             configuration.BuildPricingSettings(),
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,
-            configuration.DryRun,
             configuration.BuildRunCaps(),
             session.Review.BlocksWrites,
             nowUtc);

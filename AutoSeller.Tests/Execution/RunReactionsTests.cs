@@ -1,5 +1,4 @@
 using AutoSeller.Core.Execution.Model;
-using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Tests.Ledger;
 using static AutoSeller.Tests.Execution.ExecutionFixtures;
@@ -45,7 +44,6 @@ public sealed class RunReactionsTests
         [SaleRejection.VendorProtected] = RunReaction.SkipItem,
         [SaleRejection.VendorOnSellList] = RunReaction.SkipItem,
         [SaleRejection.ItemProtected] = RunReaction.SkipItem,
-        [SaleRejection.DryRunChanged] = RunReaction.EndRun,
         [SaleRejection.CapsChanged] = RunReaction.EndRun,
     };
 

@@ -77,18 +77,6 @@ body:
       required: true
 
   - type: dropdown
-    id: dry-run
-    attributes:
-      label: Was the dry run on?
-      description: The Dry run switch next to Start. While it is on, a run goes through everything up to typing a price and writes nothing.
-      options:
-        - Yes, it was a dry run (nothing listed, repriced or vendored)
-        - No, it listed, repriced or vendored for real
-        - Not sure
-    validations:
-      required: true
-
-  - type: dropdown
     id: stage
     attributes:
       label: Where in the run did it fail?

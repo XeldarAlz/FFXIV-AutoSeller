@@ -37,7 +37,7 @@ internal static class PlanLabels
         _ => Styling.TextDim,
     };
 
-    public static string Done(in RunDecision decision, bool dryRun)
+    public static string Done(in RunDecision decision)
     {
         if (decision.Skip != RunSkip.None)
         {
@@ -56,10 +56,10 @@ internal static class PlanLabels
 
         return decision.Decision.Action switch
         {
-            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced),
-            SellAction.List => Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed),
-            SellAction.Return => Loc.T(dryRun ? L.Plan.DoneReturn : L.Plan.DoneReturned),
-            SellAction.Vendor => Loc.T(dryRun ? L.Plan.DoneVendor : L.Plan.DoneVendored),
+            SellAction.RepriceDown or SellAction.RepriceUp => Loc.T(L.Plan.DoneRepriced),
+            SellAction.List => Loc.T(L.Plan.DoneListed),
+            SellAction.Return => Loc.T(L.Plan.DoneReturned),
+            SellAction.Vendor => Loc.T(L.Plan.DoneVendored),
             SellAction.Skip => Loc.T(L.Plan.DoneSkipped),
             _ => Loc.T(L.Plan.DoneKept),
         };
@@ -174,7 +174,6 @@ internal static class PlanLabels
         RunSkip.NoFreeSlot => Loc.T(L.Plan.ReasonNoFreeSlot),
         RunSkip.QuantityOutOfBounds => Loc.T(L.Plan.SkipQuantity),
         RunSkip.ReadBackUnavailable => Loc.T(L.Plan.SkipReadBackUnavailable),
-        RunSkip.WouldMoveFromSaddlebag => Loc.T(L.Plan.SkipWouldMoveFromSaddlebag),
         _ => string.Empty,
     };
 

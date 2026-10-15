@@ -15,7 +15,6 @@ internal readonly record struct RunLiveFacts(
     RuleBook Rules,
     PricingSettings Pricing,
     PlanEdits PlanEdits,
-    bool DryRun,
     RunCaps Caps,
     bool JournalBlocksWrites,
     DateTime NowUtc);
@@ -42,14 +41,14 @@ internal static class RunGuard
             : decision.Action == SellAction.List;
     }
 
-    public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, CompetitorSnapshot competition, ValueBook values, Guid writeId)
+    public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, CompetitorSnapshot competition, ValueBook values)
     {
-        return Evaluate(authorization, live, row, competition.Generation, competition.CapturedAtUtc, values, writeId);
+        return Evaluate(authorization, live, row, competition.Generation, competition.CapturedAtUtc, values);
     }
 
-    public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, int searchGeneration, DateTime searchCapturedAtUtc, ValueBook values, Guid writeId)
+    public static SaleVerdict Evaluate(SellAuthorization authorization, in RunLiveFacts live, in GuardedRow row, int searchGeneration, DateTime searchCapturedAtUtc, ValueBook values)
     {
-        var verdict = SaleGuard.Evaluate(new SaleGuardInput
+        return SaleGuard.Evaluate(new SaleGuardInput
         {
             Authorization = authorization,
             ActiveRunId = authorization.RunId,
@@ -58,7 +57,6 @@ internal static class RunGuard
             CurrentRules = live.Rules,
             CurrentPricing = live.Pricing,
             CurrentPlanEdits = live.PlanEdits,
-            CurrentDryRun = live.DryRun,
             CurrentCaps = live.Caps,
             OpenRetainerId = live.OpenRetainerId,
             WindowChainReady = live.WindowChainReady,
@@ -78,12 +76,6 @@ internal static class RunGuard
             IsProtected = row.Protected,
             OnSellList = authorization.Rules.IsOnSellList(row.Write.ItemId),
         });
-        if (verdict.IsAllowed && authorization.DryRun && values.TryReserve(writeId, row.Write) == ValueBookResult.Applied)
-        {
-            values.Confirm(writeId);
-        }
-
-        return verdict;
     }
 
     public static bool SameCharacter(SellAuthorization authorization, ulong contentId)
@@ -103,7 +95,7 @@ internal static class RunGuard
             return DriverHalt.LeftHomeWorld;
         }
 
-        if (SaleGuard.CheckFrozenSettings(authorization, live.Rules, live.Pricing, live.PlanEdits, live.DryRun, live.Caps) != SaleRejection.None)
+        if (SaleGuard.CheckFrozenSettings(authorization, live.Rules, live.Pricing, live.PlanEdits, live.Caps) != SaleRejection.None)
         {
             return DriverHalt.SettingsChanged;
         }

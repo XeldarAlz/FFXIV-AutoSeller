@@ -94,8 +94,7 @@ internal static partial class L
         public static readonly LocString StatusPausedInContent = new("run.status.pausedInContent", "Paused while you are in content");
         public static readonly LocString StatusPausedInterrupted = new("run.status.pausedInterrupted", "Paused: combat or a duty pop interrupted the run; it carries on once that is over");
         public static readonly LocString StatusStopping = new("run.status.stopping", "Stopping and closing the sell windows");
-        public static readonly LocString StatusDone = new("run.status.done", "Dry run done: {0} to reprice, {1} to list, {2} kept, {3} skipped");
-        public static readonly LocString StatusDoneLive = new("run.status.doneLive", "Run done: {0} repriced, {1} listed, {2} kept, {3} skipped");
+        public static readonly LocString StatusDone = new("run.status.done", "Run done: {0} repriced, {1} listed, {2} kept, {3} skipped");
         public static readonly LocString StatusNeedsPlayer = new("run.status.needsPlayer", "Needs you: {0}");
         public static readonly LocString StatusFailed = new("run.status.failed", "The run failed: {0}");
         public static readonly LocString StatusStopped = new("run.status.stopped", "Stopped");
@@ -126,13 +125,12 @@ internal static partial class L
         public static readonly LocString FailedFault = new("run.failed.fault", "an unexpected error; the Console has the details");
         public static readonly LocString FailedOtherCharacter = new("run.failed.otherCharacter", "another character is logged in than the one the run started for");
         public static readonly LocString FailedMenuText = new("run.failed.menuText", "the retainer menu text could not be read from the game data");
-        public static readonly LocString FailedSettingsChanged = new("run.failed.settingsChanged", "the rules, the pricing settings, the plan edits, the dry run or the limits per run changed after Start; start again to use them");
+        public static readonly LocString FailedSettingsChanged = new("run.failed.settingsChanged", "the rules, the pricing settings, the plan edits or the limits per run changed after Start; start again to use them");
         public static readonly LocString FailedLeftHomeWorld = new("run.failed.leftHomeWorld", "the character left its home world");
         public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after Start; start again for the new day");
         public static readonly LocString FailedGuard = new("run.failed.guard", "a safety check refused the run's next step; the Console has the details");
         public static readonly LocString FailedJournal = new("run.failed.journal", "the journal could not be written, so nothing more is typed; the Console has the details");
-        public static readonly LocPlural ChatStarted = new("run.chat.started", "Dry run started for {0} retainer: prices are compared and nothing is listed or repriced.", "Dry run started for {0} retainers: prices are compared and nothing is listed or repriced.");
-        public static readonly LocPlural ChatStartedLive = new("run.chat.startedLive", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
+        public static readonly LocPlural ChatStarted = new("run.chat.started", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
         public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
         public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
         public static readonly LocString ChatKeepsMoving = new("run.chat.keepsMoving", "The character keeps moving on its own, so paths are dropped as soon as they start. Turn off the pathfinder's 'cancel path on movement input' setting, and check that no key or auto-run is held.");
@@ -153,16 +151,11 @@ internal static partial class L
         public static readonly LocString OutcomeStopped = new("history.outcome.stopped", "Stopped");
         public static readonly LocString OutcomeNeedsPlayer = new("history.outcome.needsPlayer", "Needs you");
         public static readonly LocString OutcomeFailed = new("history.outcome.failed", "Failed");
-        public static readonly LocString DryRun = new("history.dryRun", "Dry run");
         public static readonly LocString Retainers = new("history.retainers", "Retainers: {0} of {1}");
-        public static readonly LocString ToReprice = new("history.toReprice", "{0} to reprice");
-        public static readonly LocString ToList = new("history.toList", "{0} to list");
         public static readonly LocString Repriced = new("history.repriced", "{0} repriced");
         public static readonly LocString Listed = new("history.listed", "{0} listed");
         public static readonly LocString Worth = new("history.worth", "worth {0}");
-        public static readonly LocString ToReturn = new("history.toReturn", "{0} to return");
         public static readonly LocString Returned = new("history.returned", "{0} returned");
-        public static readonly LocString ToVendor = new("history.toVendor", "{0} to vendor for {1}");
         public static readonly LocString Vendored = new("history.vendored", "{0} vendored for {1}");
         public static readonly LocString Kept = new("history.kept", "{0} kept");
         public static readonly LocString Skipped = new("history.skipped", "{0} skipped");
@@ -246,14 +239,13 @@ internal static partial class L
             new("changelog.r1000.3", "Guarded pricing: Undercut or Match against same-quality listings only, never against your own retainers or your alts, with bait listings ignored, a floor from real sales and the vendor price, a step limit, a cooldown and price-war detection"),
             new("changelog.r1000.4", "Start walks to a summoning bell or the bell in your inn room and works through every enabled retainer, or only the ones that need it, holding AutoRetainer back for the run"),
             new("changelog.r1000.5", "Every price is typed in the game's sell window, checked before Confirm and read back after, with a journal entry before each write; anything unclear stops the run and asks you"),
-            new("changelog.r1000.6", "Dry run is on until you switch it off: a run does everything except type a price, and the switch next to Start asks first"),
-            new("changelog.r1000.7", "AutoRetainer: runs after each venture on the retainer it hands over and always hands it back, with a Sell now button, its protect list and your alts"),
-            new("changelog.r1000.8", "Assist fills in the suggested price when you open a sell window yourself and leaves Confirm to you; buttons on the retainer list and the sell list start a run right there"),
-            new("changelog.r1000.9", "Sources: your bags and crystals, and by choice a retainer's own inventory, the saddlebag and the armoury chest, never items in a gear set"),
-            new("changelog.r1000.10", "The undercut watch checks your listings against Universalis on a timer with no game request; the Listings page shows every listing of every character"),
-            new("changelog.r1000.11", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
-            new("changelog.r1000.12", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
-            new("changelog.r1000.13", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
+            new("changelog.r1000.6", "AutoRetainer: runs after each venture on the retainer it hands over and always hands it back, with a Sell now button, its protect list and your alts"),
+            new("changelog.r1000.7", "Assist fills in the suggested price when you open a sell window yourself and leaves Confirm to you; buttons on the retainer list and the sell list start a run right there"),
+            new("changelog.r1000.8", "Sources: your bags and crystals, and by choice a retainer's own inventory, the saddlebag and the armoury chest, never items in a gear set"),
+            new("changelog.r1000.9", "The undercut watch checks your listings against Universalis on a timer with no game request; the Listings page shows every listing of every character"),
+            new("changelog.r1000.10", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
+            new("changelog.r1000.11", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
+            new("changelog.r1000.12", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
         ];
     }
 

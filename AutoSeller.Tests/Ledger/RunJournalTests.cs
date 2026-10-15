@@ -67,7 +67,7 @@ public sealed class RunJournalTests : IDisposable
     {
         var journal = new RunJournal(directory.Path);
         var approved = Approval(650);
-        var authorization = Authorization(new RunCaps(5, 6, 7_000), [approved], dryRun: true);
+        var authorization = Authorization(new RunCaps(5, 6, 7_000), [approved]);
         new JournalWriter(journal).Authorize(authorization);
 
         var restored = JournalReplayer.Replay(new RunJournal(directory.Path).Read().Entries).Authorization;
@@ -80,7 +80,6 @@ public sealed class RunJournalTests : IDisposable
         Assert.Equal(PricingHash, restored.PricingHash);
         Assert.Equal(PlanEditsHash, restored.PlanEditsHash);
         Assert.Equal(StepLimitPercent, restored.StepLimitPercent);
-        Assert.True(restored.DryRun);
     }
 
     [Fact]

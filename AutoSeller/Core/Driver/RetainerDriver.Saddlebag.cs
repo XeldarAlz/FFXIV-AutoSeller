@@ -17,7 +17,6 @@ internal sealed partial class RetainerDriver
     private const int SideWindowCloseMs = 5_000;
 
     private readonly List<SlotFacts> movedStacks = [];
-    private readonly List<SlotFacts> dryRunMoves = [];
     private int movesPlanned;
     private int movesConfirmed;
 
@@ -35,7 +34,7 @@ internal sealed partial class RetainerDriver
     private void LeaveUnmovedStacks()
     {
         var before = session.PlanInputs.Stock.Length;
-        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs, CollectionsMarshal.AsSpan(dryRunMoves));
+        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs);
         var left = before - session.PlanInputs.Stock.Length;
         if (left > 0)
         {
@@ -149,19 +148,11 @@ internal sealed partial class RetainerDriver
         var write = move.Write;
         var observed = TryReadStackSlot(slot, out var reading) ? reading : default;
         var verdict = decider.GuardMove(move.Stock, observed, write, DateTime.UtcNow);
-        var rejection = verdict.IsAllowed && DryRunTurnedOn ? SaleRejection.DryRunChanged : verdict.Rejection;
-        if (rejection != SaleRejection.None)
+        if (!verdict.IsAllowed)
         {
-            Warn($"Driver: moving item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from the saddlebag for {retainer.Name} was refused by the sale guard ({rejection}).");
+            Warn($"Driver: moving item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from the saddlebag for {retainer.Name} was refused by the sale guard ({verdict.Rejection}).");
             var closed = await UnwindAboveSellList();
-            return closed.Halted ? closed : StopForGuard(rejection);
-        }
-
-        if (session.Authorization.DryRun)
-        {
-            dryRunMoves.Add(slot);
-            Diag($"Dry run, {retainer.Name}: would move item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from saddlebag container {slot.Container} slot {slot.Slot} to the bags.");
-            return await UnwindAboveSellList();
+            return closed.Halted ? closed : StopForGuard(verdict.Rejection);
         }
 
         movedStacks.Add(slot);
@@ -212,7 +203,7 @@ internal sealed partial class RetainerDriver
 
     private void ReportMoves(in Stop stop)
     {
-        var summary = $"Driver: saddlebag {Outcome}, {movesConfirmed} of {movesPlanned} planned stack(s) moved to the bags{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";
+        var summary = $"Driver: saddlebag {Outcome}, {movesConfirmed} of {movesPlanned} planned stack(s) moved to the bags";
         if (stop.Halted)
         {
             Warn($"{summary}; halted ({stop.Reason}): {stop.Detail}");

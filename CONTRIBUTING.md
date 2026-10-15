@@ -52,7 +52,7 @@ Keep logic small and direct. This plugin has one job.
 ## Before you open a PR
 
 1. `dotnet build -c Release` cleanly, and `dotnet test -c Release` passes.
-2. Test in game: at least one dry run at a summoning bell with the Console open, from Start through comparing prices to the sell window, and one supervised real listing of a single cheap item when your change touches the run, the pricing or the retainer windows. Watch that listing the whole way and attach its Console lines. When you change the AutoRetainer post-process, let it run after one venture with the dry run on first. Retainer menus and the sell window read differently per client language, so a fix that works in one language may not work in another.
+2. Test in game: at least one run at a summoning bell with the Console open, on a rule for a single cheap item with low limits per run, from Start through comparing prices to the sell window and the listing it makes. Watch it the whole way and attach its Console lines. When you change the AutoRetainer post-process, let it run after one venture on that same cheap rule first. Retainer menus and the sell window read differently per client language, so a fix that works in one language may not work in another.
 3. Keep the diff focused. One concern per PR.
 4. Match the existing style. No heavy abstractions "for later."
 5. Every string a user sees goes through `Core/Localization/L*.cs` and all nine catalogs under `AutoSeller/Localization/`, with the same keys in the same order. CI checks the keys and rejects em dashes.

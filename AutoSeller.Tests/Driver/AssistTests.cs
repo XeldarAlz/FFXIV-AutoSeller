@@ -110,7 +110,7 @@ public sealed class AssistTests
     [InlineData((byte)SellAction.RepriceUp)]
     public void APriceAtOrAboveTheFloorIsTyped(byte action)
     {
-        var suggestion = AssistSuggestions.For(Decided((SellAction)action, 900), VendorPrice, ShownPrice, false);
+        var suggestion = AssistSuggestions.For(Decided((SellAction)action, 900), VendorPrice, ShownPrice);
 
         Assert.Equal(new AssistSuggestion(AssistOutcome.Typed, 900, Floor), suggestion);
         Assert.True(suggestion.Types);
@@ -119,16 +119,7 @@ public sealed class AssistTests
     [Fact]
     public void ThePriceTheWindowAlreadyShowsIsNotTypedAgain()
     {
-        Assert.Equal(AssistOutcome.AlreadyShown, AssistSuggestions.For(Decided(SellAction.RepriceDown, ShownPrice), VendorPrice, ShownPrice, false).Outcome);
-    }
-
-    [Fact]
-    public void TheDryRunTypesNothing()
-    {
-        var suggestion = AssistSuggestions.For(Decided(SellAction.List, 900), VendorPrice, ShownPrice, true);
-
-        Assert.Equal(AssistOutcome.DryRun, suggestion.Outcome);
-        Assert.False(suggestion.Types);
+        Assert.Equal(AssistOutcome.AlreadyShown, AssistSuggestions.For(Decided(SellAction.RepriceDown, ShownPrice), VendorPrice, ShownPrice).Outcome);
     }
 
     [Theory]
@@ -137,7 +128,7 @@ public sealed class AssistTests
     [InlineData(0u, 0u)]
     public void APriceBelowTheFloorOrTheVendorPriceIsNeverTyped(uint price, uint vendorPrice)
     {
-        var suggestion = AssistSuggestions.For(Decided(SellAction.List, price), vendorPrice, ShownPrice, false);
+        var suggestion = AssistSuggestions.For(Decided(SellAction.List, price), vendorPrice, ShownPrice);
 
         Assert.Equal(AssistOutcome.BelowFloor, suggestion.Outcome);
         Assert.False(suggestion.Types);
@@ -151,9 +142,9 @@ public sealed class AssistTests
         var noPrice = new Decision(SellAction.Skip, 0, 0, DecisionReason.NoPriceData, Evidence());
         var lowest = new Decision(SellAction.Keep, ShownPrice, ShownPrice, DecisionReason.AlreadyLowest, Evidence());
 
-        Assert.Equal(new AssistSuggestion(AssistOutcome.Kept, 450, Floor), AssistSuggestions.For(kept, VendorPrice, ShownPrice, false));
-        Assert.Equal(AssistOutcome.NoPrice, AssistSuggestions.For(noPrice, VendorPrice, ShownPrice, false).Outcome);
-        Assert.Equal(AssistOutcome.Kept, AssistSuggestions.For(lowest, VendorPrice, ShownPrice, false).Outcome);
+        Assert.Equal(new AssistSuggestion(AssistOutcome.Kept, 450, Floor), AssistSuggestions.For(kept, VendorPrice, ShownPrice));
+        Assert.Equal(AssistOutcome.NoPrice, AssistSuggestions.For(noPrice, VendorPrice, ShownPrice).Outcome);
+        Assert.Equal(AssistOutcome.Kept, AssistSuggestions.For(lowest, VendorPrice, ShownPrice).Outcome);
     }
 
     [Fact]
@@ -163,7 +154,7 @@ public sealed class AssistTests
         for (var lowest = 1u; lowest <= 2_000; lowest += 37)
         {
             var input = NewLot(Snapshot(Competitor(lowest)), Reference(ReferenceGil)) with { Rule = ItemRuleSnapshot.From(floorRule), Settings = new PricingSettings { BelowFloorNewLot = BelowFloorNewLot.ListAtFloor } };
-            var suggestion = AssistSuggestions.For(PriceDecision.Decide(input), VendorPrice, 0, false);
+            var suggestion = AssistSuggestions.For(PriceDecision.Decide(input), VendorPrice, 0);
 
             Assert.True(!suggestion.Types || suggestion.Price >= Floor, $"typed {suggestion.Price} against a lowest seller at {lowest}");
         }
@@ -189,7 +180,7 @@ public sealed class AssistTests
         var typed = new AssistSuggestion(AssistOutcome.Typed, ShownPrice - 100, Floor);
 
         Assert.False(AssistReprice.For(Retainer, target with { Subject = AssistSubject.NewLot }, typed).IsSet);
-        Assert.False(AssistReprice.For(Retainer, target, typed with { Outcome = AssistOutcome.DryRun }).IsSet);
+        Assert.False(AssistReprice.For(Retainer, target, typed with { Outcome = AssistOutcome.Kept }).IsSet);
         Assert.False(AssistReprice.For(Retainer, target, typed with { Price = ShownPrice }).IsSet);
         Assert.False(AssistReprice.For(0, target, typed).IsSet);
     }

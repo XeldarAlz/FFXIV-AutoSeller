@@ -16,11 +16,11 @@ public sealed class ReturnAndVendorTallyTests
     private static readonly VendorVerdict junk = new(new SlotFacts(0, Junk, JunkQuantity, BagContainer, 9, 0, SlotSource.Bags, false, false, false), VendorReason.Junk, 60);
 
     [Fact]
-    public void AWouldBeReturnCountsAsAReturnAndNotAsSkipped()
+    public void AConfirmedReturnCountsAsAReturnAndNotAsSkipped()
     {
-        var dryRun = RunDecision.ForListing(Alpha, OreListing(), returned) with { Write = RunWrite.DryRun };
+        var confirmed = RunDecision.ForListing(Alpha, OreListing(), returned) with { Write = RunWrite.Confirmed };
 
-        var tally = RunTally.Of([dryRun]);
+        var tally = RunTally.Of([confirmed]);
 
         Assert.Equal(1, tally.Returned);
         Assert.Equal(0, tally.Skipped);
@@ -32,7 +32,7 @@ public sealed class ReturnAndVendorTallyTests
     {
         var vendored = RunDecision.ForVendor(Alpha, junk, 2) with { Write = RunWrite.Confirmed };
 
-        var tally = RunTally.Of([vendored, RunDecision.ForVendor(Beta, junk, 2) with { Write = RunWrite.DryRun }]);
+        var tally = RunTally.Of([vendored, RunDecision.ForVendor(Beta, junk, 2) with { Write = RunWrite.Confirmed }]);
 
         Assert.Equal(2, tally.Vendored);
         Assert.Equal(2L * JunkQuantity * 2, tally.VendoredValue);

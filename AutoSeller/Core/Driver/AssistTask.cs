@@ -72,7 +72,7 @@ internal sealed class AssistTask : AutoCommon
             var decision = Decide(target, competition, nowUtc, out var cooldownLeft);
             var vendorPrice = plugin.GameItems.FactsOf(target.Item.ItemId).VendorPrice;
             var askingPrice = (uint)Math.Max(0, RetainerReads.TypedFields().AskingPrice);
-            var suggestion = AssistSuggestions.For(decision, vendorPrice, askingPrice, plugin.Configuration.DryRun);
+            var suggestion = AssistSuggestions.For(decision, vendorPrice, askingPrice);
             var typed = suggestion.Types && await Type(suggestion.Price, name, target.Item);
             if (suggestion.Types && !typed)
             {
@@ -246,7 +246,7 @@ internal sealed class AssistTask : AutoCommon
         var pressed = false;
         while (!pressed && Environment.TickCount64 < deadline)
         {
-            if (CancelToken.IsCancellationRequested || plugin.Configuration.DryRun || plugin.Controller.HoldsRetainerWindows || !StillShows(name, item))
+            if (CancelToken.IsCancellationRequested || plugin.Controller.HoldsRetainerWindows || !StillShows(name, item))
             {
                 return false;
             }

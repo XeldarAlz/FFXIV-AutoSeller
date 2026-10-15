@@ -16,7 +16,7 @@ internal sealed class SellRunSession
     private readonly HashSet<PlanRowKey> handled = [];
     private readonly HashSet<ItemKey> replanned = [];
 
-    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal, RunMode mode, ValueBook values)
+    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, RunJournal journal, RunMode mode, ValueBook values)
     {
         Authorization = authorization;
         Input = input;
@@ -41,7 +41,7 @@ internal sealed class SellRunSession
 
     public JournalReview Review { get; }
 
-    public IRunJournal Journal { get; }
+    public RunJournal Journal { get; }
 
     public ListedStock Listed { get; } = new();
 

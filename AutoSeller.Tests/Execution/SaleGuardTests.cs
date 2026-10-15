@@ -22,7 +22,6 @@ public sealed class SaleGuardTests
         (SaleRejection.RulesChanged, () => GuardInput(Reprice()) with { CurrentRules = LoweredFloorRules }),
         (SaleRejection.PricingChanged, () => GuardInput(Reprice()) with { CurrentPricing = WiderStepLimit }),
         (SaleRejection.PlanEditsChanged, () => GuardInput(Reprice()) with { CurrentPlanEdits = EditedPlan }),
-        (SaleRejection.DryRunChanged, () => GuardInput(Reprice()) with { CurrentDryRun = true }),
         (SaleRejection.CapsChanged, () => GuardInput(Reprice()) with { CurrentCaps = RunCaps.Default with { MaxReprices = 0 } }),
         (SaleRejection.RetainerNotAuthorized, () => GuardInput(Reprice() with { RetainerId = StrangerRetainer })),
         (SaleRejection.WrongRetainer, () => GuardInput(Reprice()) with { OpenRetainerId = SecondRetainer }),

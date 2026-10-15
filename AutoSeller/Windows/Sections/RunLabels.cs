@@ -15,23 +15,23 @@ internal static class RunLabels
         _ => Loc.T(L.History.OutcomeFailed),
     };
 
-    public static string Changes(bool dryRun, int repriced, int listed, long listedValue)
+    public static string Changes(int repriced, int listed, long listedValue)
     {
         return string.Concat(
-            Loc.T(dryRun ? L.History.ToReprice : L.History.Repriced, repriced), TextDraw.Separator,
-            Loc.T(dryRun ? L.History.ToList : L.History.Listed, listed), TextDraw.Separator,
+            Loc.T(L.History.Repriced, repriced), TextDraw.Separator,
+            Loc.T(L.History.Listed, listed), TextDraw.Separator,
             Loc.T(L.History.Worth, Formatting.Gil(listedValue)));
     }
 
-    public static string ReturnsAndVendor(bool dryRun, int returned, int vendored, long vendoredValue)
+    public static string ReturnsAndVendor(int returned, int vendored, long vendoredValue)
     {
         if (returned == 0 && vendored == 0)
         {
             return string.Empty;
         }
 
-        var returns = returned > 0 ? Loc.T(dryRun ? L.History.ToReturn : L.History.Returned, returned) : string.Empty;
-        var vendor = vendored > 0 ? Loc.T(dryRun ? L.History.ToVendor : L.History.Vendored, vendored, Formatting.Gil(vendoredValue)) : string.Empty;
+        var returns = returned > 0 ? Loc.T(L.History.Returned, returned) : string.Empty;
+        var vendor = vendored > 0 ? Loc.T(L.History.Vendored, vendored, Formatting.Gil(vendoredValue)) : string.Empty;
         return returns.Length > 0 && vendor.Length > 0
             ? string.Concat(TextDraw.Separator, returns, TextDraw.Separator, vendor)
             : string.Concat(TextDraw.Separator, returns, vendor);

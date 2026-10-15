@@ -188,12 +188,6 @@ internal sealed partial class RetainerDriver
                 var lot = assignment.Lot;
                 if (!SourceContainers.TryGetSource(lot.Row.Container, out var source) || !RunPlanner.ListsIn(list, source))
                 {
-                    if (list == SellListKind.Inventory && source == SlotSource.Saddlebag)
-                    {
-                        Record(RunDecision.LotSkipped(retainer.RetainerId, lot, freeSlots > 0 ? RunSkip.WouldMoveFromSaddlebag : RunSkip.NoFreeSlot), retainer);
-                        freeSlots--;
-                    }
-
                     continue;
                 }
 

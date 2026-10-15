@@ -10,7 +10,6 @@ internal sealed record RunRecord(
     DateTime StartedAtUtc,
     DateTime EndedAtUtc,
     RunState Outcome,
-    bool DryRun,
     uint WorldId,
     int RetainersVisited,
     int RetainersPlanned,

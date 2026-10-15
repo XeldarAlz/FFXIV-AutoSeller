@@ -69,7 +69,7 @@ internal static class DriverHalts
 
     public static DriverHalt ForGuard(SaleRejection rejection) => rejection switch
     {
-        SaleRejection.RulesChanged or SaleRejection.PricingChanged or SaleRejection.PlanEditsChanged or SaleRejection.DryRunChanged or SaleRejection.CapsChanged => DriverHalt.SettingsChanged,
+        SaleRejection.RulesChanged or SaleRejection.PricingChanged or SaleRejection.PlanEditsChanged or SaleRejection.CapsChanged => DriverHalt.SettingsChanged,
         SaleRejection.WrongCharacter => DriverHalt.OtherCharacter,
         SaleRejection.NotOnHomeWorld => DriverHalt.LeftHomeWorld,
         _ => RunReactions.ForGuard(rejection) switch

@@ -436,7 +436,7 @@ public sealed class RunPlanTests
         RetainerSnapshot[] oneFreeSlot = [Market(Alpha, FullBut(1))];
 
         var withSaddlebag = RunPlanner.Build(inputs, oneFreeSlot, Handled(), [], []);
-        var withoutSaddlebag = RunPlanner.Build(RunPlanner.WithoutSaddlebag(inputs, []), oneFreeSlot, Handled(), [], []);
+        var withoutSaddlebag = RunPlanner.Build(RunPlanner.WithoutSaddlebag(inputs), oneFreeSlot, Handled(), [], []);
 
         Assert.Equal(SaddlebagContainer, Assert.Single(withSaddlebag.AssignedTo(Alpha)).Lot.Row.Container);
         Assert.Equal(OreInTheBags.Slot, Assert.Single(withoutSaddlebag.AssignedTo(Alpha)).Lot.Row.Slot);
@@ -444,15 +444,14 @@ public sealed class RunPlanTests
     }
 
     [Fact]
-    public void OnlyTheSaddlebagStacksADryRunWouldMoveStayInTheStock()
+    public void LeavingTheSaddlebagOutKeepsEveryOtherStack()
     {
-        var wouldMove = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Source = SlotSource.Saddlebag };
-        var stays = wouldMove with { Slot = 2 };
-        var inputs = WithSources(OreRule(), SellSources.Default | SellSources.Saddlebag, [], new StockSlot(OreInTheBags, OreFacts, OreReference), new StockSlot(wouldMove, OreFacts, OreReference), new StockSlot(stays, OreFacts, OreReference));
+        var saddlebag = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Source = SlotSource.Saddlebag };
+        var inputs = WithSources(OreRule(), SellSources.Default | SellSources.Saddlebag, [], new StockSlot(OreInTheBags, OreFacts, OreReference), new StockSlot(saddlebag, OreFacts, OreReference), new StockSlot(saddlebag with { Slot = 2 }, OreFacts, OreReference));
 
-        var left = RunPlanner.WithoutSaddlebag(inputs, [wouldMove with { Quantity = 1 }]);
+        var left = RunPlanner.WithoutSaddlebag(inputs);
 
-        Assert.Equal([OreInTheBags, wouldMove], SlotsOf(left.Stock));
+        Assert.Equal([OreInTheBags], SlotsOf(left.Stock));
         Assert.Same(inputs.Rules, left.Rules);
         Assert.Same(inputs.Edits, left.Edits);
     }

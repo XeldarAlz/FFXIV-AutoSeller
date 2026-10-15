@@ -128,11 +128,7 @@ internal sealed class HistoryPage
         TextDraw.At(text.When, new Vector2(textX, top), Styling.TextStrong);
         var badgeMid = top + whenSize.Y * 0.5f;
         var badgeX = textX + whenSize.X + BadgeGap * 2f * scale;
-        badgeX += Badge.DrawLeft(drawList, RunLabels.OutcomeLabel(record.Outcome), RunLabels.OutcomeColor(record.Outcome), badgeX, badgeMid);
-        if (record.DryRun)
-        {
-            Badge.DrawLeft(drawList, Loc.T(L.History.DryRun), Styling.AccentBlue, badgeX + BadgeGap * scale, badgeMid);
-        }
+        Badge.DrawLeft(drawList, RunLabels.OutcomeLabel(record.Outcome), RunLabels.OutcomeColor(record.Outcome), badgeX, badgeMid);
 
         using (Fonts.PushCaption())
         {
@@ -149,8 +145,8 @@ internal sealed class HistoryPage
     {
         return string.Concat(
             Loc.T(L.History.Retainers, record.RetainersVisited, record.RetainersPlanned), TextDraw.Separator,
-            RunLabels.Changes(record.DryRun, record.Repriced, record.Listed, record.ListedValue),
-            RunLabels.ReturnsAndVendor(record.DryRun, record.Returned, record.Vendored, record.VendoredValue), TextDraw.Separator,
+            RunLabels.Changes(record.Repriced, record.Listed, record.ListedValue),
+            RunLabels.ReturnsAndVendor(record.Returned, record.Vendored, record.VendoredValue), TextDraw.Separator,
             Loc.T(L.History.Kept, record.Kept), TextDraw.Separator,
             Loc.T(L.History.Skipped, record.Skipped), TextDraw.Separator,
             Formatting.Elapsed(record.EndedAtUtc - record.StartedAtUtc));

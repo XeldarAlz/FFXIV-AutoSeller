@@ -1,7 +1,8 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Ledger;
 
-namespace AutoSeller.Core.Ledger;
+namespace AutoSeller.Tests.Ledger;
 
 internal sealed class MemoryJournal : IRunJournal
 {

@@ -3,8 +3,7 @@ namespace AutoSeller.Core.Execution.Model;
 internal enum RunWrite : byte
 {
     None,
-    DryRun,
-    Confirmed,
+    Confirmed = 2,
     Rejected,
     Unknown,
 }

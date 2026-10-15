@@ -19,21 +19,11 @@ internal sealed partial class RetainerDriver
     private readonly ListingSlot[] marketAfter = new ListingSlot[RetainerSnapshot.SlotCount];
     private MarketSample before;
 
-    private bool DryRunTurnedOn => !session.Authorization.DryRun && plugin.Configuration.DryRun;
-
-    private bool WriteHeldBack => session.StopRequested || DryRunTurnedOn;
-
     private async Task<Stop> Conclude(RunDecision outcome, Func<SaleWrite> buildWrite, RunRetainer retainer, string itemName)
     {
-        outcome = HeldBackByDryRun(outcome);
         if (!outcome.Clear || outcome.Decision.Action is not (SellAction.RepriceDown or SellAction.RepriceUp or SellAction.List))
         {
             return await RecordAndCancel(outcome, retainer);
-        }
-
-        if (session.Authorization.DryRun)
-        {
-            return await RecordAndCancel(outcome with { Write = RunWrite.DryRun }, retainer);
         }
 
         var written = await WriteAndConfirm(buildWrite(), retainer, itemName);
@@ -71,7 +61,7 @@ internal sealed partial class RetainerDriver
             return new Written(mismatch, RunSkip.WindowMismatch, settled.Halted ? settled : unreadable);
         }
 
-        if (WriteHeldBack)
+        if (session.StopRequested)
         {
             return HeldBack(intent, retainer, "Confirm");
         }
@@ -80,7 +70,7 @@ internal sealed partial class RetainerDriver
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
-            stopped = WriteHeldBack;
+            stopped = session.StopRequested;
             return stopped || PriceWriter.Confirm();
         });
         if (stopped)
@@ -149,17 +139,10 @@ internal sealed partial class RetainerDriver
         return new Written(default, RunSkip.ReadBackUnavailable, stop);
     }
 
-    private RunDecision HeldBackByDryRun(in RunDecision outcome)
-    {
-        return outcome.Clear && DryRunTurnedOn ? outcome with { Guard = SaleRejection.DryRunChanged } : outcome;
-    }
-
     private Written HeldBack(WriteIntent intent, RunRetainer retainer, string moment)
     {
-        var dryRun = DryRunTurnedOn;
-        Diag($"Driver: {(dryRun ? "the dry run was turned on" : "Stop came")} before {moment}; write {intent.WriteId} is cancelled.");
-        var written = NotConfirmed(intent, retainer);
-        return dryRun && !written.Stop.Halted ? written with { Stop = StopForGuard(SaleRejection.DryRunChanged) } : written;
+        Diag($"Driver: Stop came before {moment}; write {intent.WriteId} is cancelled.");
+        return NotConfirmed(intent, retainer);
     }
 
     private Written NotConfirmed(WriteIntent intent, RunRetainer retainer)

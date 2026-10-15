@@ -28,7 +28,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 
     public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
 
-    public bool PostprocessVendoringLeft => plugin.Market.Gates.Allows(MarketGate.ItemMenus) && postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps(), plugin.Configuration.DryRun);
+    public bool PostprocessVendoringLeft => plugin.Market.Gates.Allows(MarketGate.ItemMenus) && postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps());
 
     public RunView View => session is { } live ? new RunView(live, true) : new RunView(lastSession, false);
 

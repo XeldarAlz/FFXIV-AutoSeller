@@ -64,11 +64,11 @@ public sealed class RunHistoryFileTests : IDisposable
     }
 
     [Fact]
-    public void ARunFromTheDryRunReleaseKeepsItsCounts()
+    public void AnOlderRecordKeepsItsCountsAndDropsItsRetiredFields()
     {
         var store = new CheckpointStore<RunHistoryFile>(directory.Path, RunHistoryFile.FileName);
         var stored = $$"""
-            {"Version":1,"Records":[{"RunId":"{{Guid.NewGuid()}}","StartedAtUtc":"2026-10-01T10:00:00Z","EndedAtUtc":"2026-10-01T10:05:00Z","Outcome":{{(int)RunState.Completed}},"DryRun":true,"WorldId":{{HomeWorld}},"RetainersVisited":2,"RetainersPlanned":2,"WouldReprice":3,"WouldList":2,"Kept":4,"Skipped":1,"Decisions":[]}]}
+            {"Version":1,"Records":[{"RunId":"{{Guid.NewGuid()}}","StartedAtUtc":"2026-10-01T10:00:00Z","EndedAtUtc":"2026-10-01T10:05:00Z","Outcome":{{(int)RunState.Completed}},"DryRun":false,"WorldId":{{HomeWorld}},"RetainersVisited":2,"RetainersPlanned":2,"WouldReprice":3,"WouldList":2,"Kept":4,"Skipped":1,"Decisions":[]}]}
             """;
         File.WriteAllText(store.FilePath, stored);
 
@@ -125,7 +125,6 @@ public sealed class RunHistoryFileTests : IDisposable
             Now,
             Now.AddMinutes(minutes),
             RunState.CompletedPartial,
-            true,
             HomeWorld,
             1,
             2,

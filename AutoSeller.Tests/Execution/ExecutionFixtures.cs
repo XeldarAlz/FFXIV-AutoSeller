@@ -50,7 +50,6 @@ internal static class ExecutionFixtures
     public static SellAuthorization Authorization(
         RunCaps? caps = null,
         ImmutableArray<ApprovedPrice>? approvedPrices = null,
-        bool dryRun = false,
         RuleBook? rules = null,
         PricingSettings? pricing = null,
         PlanEdits? planEdits = null)
@@ -64,7 +63,6 @@ internal static class ExecutionFixtures
             pricing ?? StartPricing,
             planEdits ?? PlanEdits.None,
             caps ?? RunCaps.Default,
-            dryRun,
             SellAuthorization.CurrentPolicyVersion,
             approvedPrices ?? [],
             Now,
@@ -86,7 +84,6 @@ internal static class ExecutionFixtures
             CurrentRules = frozen.Rules,
             CurrentPricing = frozen.Pricing,
             CurrentPlanEdits = frozen.PlanEdits,
-            CurrentDryRun = frozen.DryRun,
             CurrentCaps = frozen.Caps,
             OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
             WindowChainReady = true,

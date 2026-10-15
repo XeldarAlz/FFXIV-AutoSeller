@@ -207,18 +207,11 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, MenuChoice choice)
     {
-        outcome = HeldBackByDryRun(outcome);
         if (!outcome.Clear)
         {
             Record(outcome, retainer);
             var closed = await UnwindAboveSellList();
             return closed.Halted ? closed : StopForGuard(outcome.Guard);
-        }
-
-        if (session.Authorization.DryRun)
-        {
-            Record(outcome with { Write = RunWrite.DryRun }, retainer);
-            return await UnwindAboveSellList();
         }
 
         var written = await ChooseAndConfirm(write, retainer, choice);
@@ -249,7 +242,7 @@ internal sealed partial class RetainerDriver
             return new Written(mismatch, RunSkip.WindowMismatch, Settle(intent, mismatch, retainer));
         }
 
-        if (WriteHeldBack)
+        if (session.StopRequested)
         {
             return HeldBack(intent, retainer, "the menu entry was chosen");
         }
@@ -258,7 +251,7 @@ internal sealed partial class RetainerDriver
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
-            stopped = WriteHeldBack;
+            stopped = session.StopRequested;
             return stopped || choice.Choose();
         });
         if (stopped)

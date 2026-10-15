@@ -11,8 +11,8 @@ namespace AutoSeller.Tests.Run;
 
 public sealed class RunGuardTests
 {
-    private static readonly SellAuthorization dryRun = Authorization(dryRun: true);
-    private static readonly RunLiveFacts live = new(Character, HomeWorld, FirstRetainer, true, StartRules, StartPricing, PlanEdits.None, true, RunCaps.Default, false, Now);
+    private static readonly SellAuthorization authorized = Authorization();
+    private static readonly RunLiveFacts live = new(Character, HomeWorld, FirstRetainer, true, StartRules, StartPricing, PlanEdits.None, RunCaps.Default, false, Now);
     private static readonly CompetitorSnapshot competition = new()
     {
         ItemId = Ore,
@@ -34,34 +34,22 @@ public sealed class RunGuardTests
     [InlineData((byte)RunRowKind.Lot, (byte)SellAction.Keep, false)]
     [InlineData((byte)RunRowKind.Lot, (byte)SellAction.Skip, false)]
     [InlineData((byte)RunRowKind.Lot, (byte)SellAction.RepriceDown, false)]
-    public void OnlyAWouldBeWriteOfTheRowsKindIsGuarded(byte kind, byte action, bool guarded)
+    public void OnlyAWriteOfTheRowsKindIsGuarded(byte kind, byte action, bool guarded)
     {
         Assert.Equal(guarded, RunGuard.Applies((RunRowKind)kind, new Decision((SellAction)action, ListedPrice, ListedPrice, DecisionReason.Undercut, Evidence)));
     }
 
     [Fact]
-    public void AnAllowedWouldBeWriteCountsAgainstTheRunCaps()
-    {
-        var values = new ValueBook(dryRun.Caps);
-
-        var verdict = RunGuard.Evaluate(dryRun, live, Row(Reprice()), competition, values, Guid.NewGuid());
-
-        Assert.True(verdict.IsAllowed);
-        Assert.Equal(1, values.Reprices);
-        Assert.False(values.HasPendingWrite);
-    }
-
-    [Fact]
     public void AVendorRowCarriesItsVendorFactsIntoTheGuard()
     {
-        var vendoringOn = Authorization(dryRun: true, rules: RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []));
+        var vendoringOn = Authorization(rules: RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []));
         var vendorLive = LiveFor(vendoringOn) with { Rules = vendoringOn.Rules };
         var junk = new SlotReading(Ore, false, JunkQuantity, 0);
         var row = new GuardedRow(Vendor(), junk, junk, true, 0, VendorUnitPrice, false, VendorRuleMatches: true);
 
-        var allowed = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
-        var noRule = RunGuard.Evaluate(vendoringOn, vendorLive, row with { VendorRuleMatches = false }, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
-        var gear = RunGuard.Evaluate(vendoringOn, vendorLive, row with { IsGear = true }, 0, default, new ValueBook(vendoringOn.Caps), Guid.NewGuid());
+        var allowed = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, new ValueBook(vendoringOn.Caps));
+        var noRule = RunGuard.Evaluate(vendoringOn, vendorLive, row with { VendorRuleMatches = false }, 0, default, new ValueBook(vendoringOn.Caps));
+        var gear = RunGuard.Evaluate(vendoringOn, vendorLive, row with { IsGear = true }, 0, default, new ValueBook(vendoringOn.Caps));
 
         Assert.True(allowed.IsAllowed);
         Assert.Equal(SaleRejection.NoVendorRule, noRule.Rejection);
@@ -69,29 +57,11 @@ public sealed class RunGuardTests
     }
 
     [Fact]
-    public void ADryRunVendorCountsItsValueAgainstTheCap()
+    public void AnAllowedWriteIsLeftToTheWritePathToReserveAndCount()
     {
-        var vendoringOn = Authorization(caps: new RunCaps(80, 100, VendorUnitPrice * JunkQuantity), dryRun: true, rules: RuleBook.Create([], [], ItemIdSet.Empty, VendorSettings.Off with { Enabled = true }, SellSources.Default, []));
-        var vendorLive = LiveFor(vendoringOn) with { Rules = vendoringOn.Rules };
-        var junk = new SlotReading(Ore, false, JunkQuantity, 0);
-        var row = new GuardedRow(Vendor(), junk, junk, true, 0, VendorUnitPrice, false, VendorRuleMatches: true);
-        var values = new ValueBook(vendoringOn.Caps);
+        var values = new ValueBook(authorized.Caps);
 
-        var first = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, values, Guid.NewGuid());
-        var second = RunGuard.Evaluate(vendoringOn, vendorLive, row, 0, default, values, Guid.NewGuid());
-
-        Assert.True(first.IsAllowed);
-        Assert.Equal(VendorUnitPrice * JunkQuantity, values.VendoredValue);
-        Assert.Equal(SaleRejection.VendorValueCapReached, second.Rejection);
-    }
-
-    [Fact]
-    public void AnAllowedRealWriteIsLeftToTheWritePathToReserveAndCount()
-    {
-        var real = Authorization();
-        var values = new ValueBook(real.Caps);
-
-        var verdict = RunGuard.Evaluate(real, LiveFor(real), Row(Reprice()), competition, values, Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, live, Row(Reprice()), competition, values);
 
         Assert.True(verdict.IsAllowed);
         Assert.Equal(0, values.Reprices);
@@ -101,7 +71,7 @@ public sealed class RunGuardTests
     [Fact]
     public void AWindowChainWithSomethingInFrontOfTheSellWindowEndsTheRetainer()
     {
-        var verdict = RunGuard.Evaluate(dryRun, live with { WindowChainReady = false }, Row(Reprice()), competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, live with { WindowChainReady = false }, Row(Reprice()), competition, new ValueBook(authorized.Caps));
 
         Assert.Equal(SaleRejection.WindowChainNotReady, verdict.Rejection);
         Assert.Equal(DriverHalt.GuardEndedRetainer, DriverHalts.ForGuard(verdict.Rejection));
@@ -110,31 +80,34 @@ public sealed class RunGuardTests
     [Fact]
     public void AnUnresolvedWriteInTheJournalStopsTheRunForThePlayer()
     {
-        var verdict = RunGuard.Evaluate(dryRun, live with { JournalBlocksWrites = true }, Row(Reprice()), competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, live with { JournalBlocksWrites = true }, Row(Reprice()), competition, new ValueBook(authorized.Caps));
 
         Assert.Equal(SaleRejection.JournalUnresolved, verdict.Rejection);
         Assert.Equal(DriverHalt.WriteUnresolved, DriverHalts.ForGuard(verdict.Rejection));
     }
 
     [Fact]
-    public void ARefusedWouldBeWriteNamesItsRejectionAndCountsNothing()
+    public void ARefusedWriteNamesItsRejectionAndCountsNothing()
     {
-        var values = new ValueBook(dryRun.Caps);
+        var values = new ValueBook(authorized.Caps);
 
-        var verdict = RunGuard.Evaluate(dryRun, live, Row(Reprice(DecisionFloor - 1)), competition, values, Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, live, Row(Reprice(DecisionFloor - 1)), competition, values);
 
         Assert.Equal(SaleRejection.BelowFloor, verdict.Rejection);
         Assert.Equal(0, values.Reprices);
     }
 
     [Fact]
-    public void TheCapsStopWouldBeWritesAsTheyWouldStopWrites()
+    public void TheCapsStopWritesOnceTheSettledOnesReachThem()
     {
-        var values = new ValueBook(RunCaps.Default with { MaxReprices = 1 });
-        var capped = Authorization(caps: RunCaps.Default with { MaxReprices = 1 }, dryRun: true);
+        var capped = Authorization(caps: RunCaps.Default with { MaxReprices = 1 });
+        var values = new ValueBook(capped.Caps);
 
-        Assert.True(RunGuard.Evaluate(capped, LiveFor(capped), Row(Reprice()), competition, values, Guid.NewGuid()).IsAllowed);
-        Assert.Equal(SaleRejection.RepriceCapReached, RunGuard.Evaluate(capped, LiveFor(capped), Row(Reprice()), competition, values, Guid.NewGuid()).Rejection);
+        Assert.True(RunGuard.Evaluate(capped, LiveFor(capped), Row(Reprice()), competition, values).IsAllowed);
+        var writeId = Guid.NewGuid();
+        Assert.Equal(ValueBookResult.Applied, values.TryReserve(writeId, Reprice()));
+        Assert.Equal(ValueBookResult.Applied, values.Confirm(writeId));
+        Assert.Equal(SaleRejection.RepriceCapReached, RunGuard.Evaluate(capped, LiveFor(capped), Row(Reprice()), competition, values).Rejection);
     }
 
     [Fact]
@@ -142,7 +115,7 @@ public sealed class RunGuardTests
     {
         var changed = live with { Rules = RuleBook.Create([new ItemRule { ItemId = Ore, Floor = RuleFloor + 1 }], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []) };
 
-        var verdict = RunGuard.Evaluate(dryRun, changed, Row(Reprice()), competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, changed, Row(Reprice()), competition, new ValueBook(authorized.Caps));
 
         Assert.Equal(SaleRejection.RulesChanged, verdict.Rejection);
         Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(verdict.Rejection));
@@ -154,13 +127,13 @@ public sealed class RunGuardTests
         var write = Reprice();
         var row = Row(write) with { Observed = new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice + 1) };
 
-        Assert.Equal(SaleRejection.ListingChanged, RunGuard.Evaluate(dryRun, live, row, competition, new ValueBook(dryRun.Caps), Guid.NewGuid()).Rejection);
+        Assert.Equal(SaleRejection.ListingChanged, RunGuard.Evaluate(authorized, live, row, competition, new ValueBook(authorized.Caps)).Rejection);
     }
 
     [Fact]
     public void ABoundaryWithNothingChangedLetsTheRunGoOn()
     {
-        Assert.Equal(DriverHalt.None, RunGuard.CheckBoundary(dryRun, live));
+        Assert.Equal(DriverHalt.None, RunGuard.CheckBoundary(authorized, live));
     }
 
     [Fact]
@@ -168,56 +141,26 @@ public sealed class RunGuardTests
     {
         var otherPricing = new PricingSettings { StepLimitPercent = StepLimitPercent + 1 };
 
-        Assert.Equal(DriverHalt.OtherCharacter, RunGuard.CheckBoundary(dryRun, live with { CharacterContentId = Character + 1 }));
-        Assert.Equal(DriverHalt.LeftHomeWorld, RunGuard.CheckBoundary(dryRun, live with { CurrentWorldId = HomeWorld + 1 }));
-        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(dryRun, live with { Pricing = otherPricing }));
-        Assert.Equal(DriverHalt.DayChanged, RunGuard.CheckBoundary(dryRun, live with { NowUtc = Now.AddDays(1) }));
-    }
-
-    [Fact]
-    public void TurningTheDryRunOnDuringALiveRunEndsItAtTheNextBoundary()
-    {
-        var real = Authorization();
-
-        Assert.Equal(DriverHalt.None, RunGuard.CheckBoundary(real, LiveFor(real)));
-        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(real, LiveFor(real) with { DryRun = true }));
-    }
-
-    [Fact]
-    public void TurningTheDryRunOnDuringALiveRunRefusesTheNextWrite()
-    {
-        var real = Authorization();
-        var values = new ValueBook(real.Caps);
-
-        var verdict = RunGuard.Evaluate(real, LiveFor(real) with { DryRun = true }, Row(Reprice()), competition, values, Guid.NewGuid());
-
-        Assert.Equal(SaleRejection.DryRunChanged, verdict.Rejection);
-        Assert.Equal(RunReaction.EndRun, RunReactions.ForGuard(verdict.Rejection));
-        Assert.Equal(DriverHalt.SettingsChanged, DriverHalts.ForGuard(verdict.Rejection));
-        Assert.False(values.HasPendingWrite);
+        Assert.Equal(DriverHalt.OtherCharacter, RunGuard.CheckBoundary(authorized, live with { CharacterContentId = Character + 1 }));
+        Assert.Equal(DriverHalt.LeftHomeWorld, RunGuard.CheckBoundary(authorized, live with { CurrentWorldId = HomeWorld + 1 }));
+        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(authorized, live with { Pricing = otherPricing }));
+        Assert.Equal(DriverHalt.DayChanged, RunGuard.CheckBoundary(authorized, live with { NowUtc = Now.AddDays(1) }));
     }
 
     [Fact]
     public void ChangedCapsEndTheRunInsteadOfBeingIgnored()
     {
-        var real = Authorization();
-        var noReprices = LiveFor(real) with { Caps = real.Caps with { MaxReprices = 0 } };
+        var noReprices = live with { Caps = authorized.Caps with { MaxReprices = 0 } };
 
-        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(real, noReprices));
-        Assert.Equal(SaleRejection.CapsChanged, RunGuard.Evaluate(real, noReprices, Row(Reprice()), competition, new ValueBook(real.Caps), Guid.NewGuid()).Rejection);
+        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(authorized, noReprices));
+        Assert.Equal(SaleRejection.CapsChanged, RunGuard.Evaluate(authorized, noReprices, Row(Reprice()), competition, new ValueBook(authorized.Caps)).Rejection);
         Assert.Equal(DriverHalt.SettingsChanged, DriverHalts.ForGuard(SaleRejection.CapsChanged));
-    }
-
-    [Fact]
-    public void TurningTheDryRunOffDuringADryRunEndsItToo()
-    {
-        Assert.Equal(DriverHalt.SettingsChanged, RunGuard.CheckBoundary(dryRun, live with { DryRun = false }));
     }
 
     [Fact]
     public void AnItemAutoRetainerProtectsIsRefusedRightBeforeTheWrite()
     {
-        var verdict = RunGuard.Evaluate(dryRun, live, Row(Reprice()) with { Protected = true }, competition, new ValueBook(dryRun.Caps), Guid.NewGuid());
+        var verdict = RunGuard.Evaluate(authorized, live, Row(Reprice()) with { Protected = true }, competition, new ValueBook(authorized.Caps));
 
         Assert.Equal(SaleRejection.ItemProtected, verdict.Rejection);
         Assert.Equal(RunReaction.SkipItem, RunReactions.ForGuard(verdict.Rejection));
@@ -227,9 +170,9 @@ public sealed class RunGuardTests
     [Fact]
     public void OnlyTheAuthorizedCharacterIsTheSameCharacter()
     {
-        Assert.True(RunGuard.SameCharacter(dryRun, Character));
-        Assert.False(RunGuard.SameCharacter(dryRun, Character + 1));
-        Assert.False(RunGuard.SameCharacter(dryRun, 0));
+        Assert.True(RunGuard.SameCharacter(authorized, Character));
+        Assert.False(RunGuard.SameCharacter(authorized, Character + 1));
+        Assert.False(RunGuard.SameCharacter(authorized, 0));
     }
 
     [Fact]
@@ -238,10 +181,10 @@ public sealed class RunGuardTests
         var first = new RunRetainer(FirstRetainer, "First", 1, 0);
         var second = new RunRetainer(SecondRetainer, "Second", 2, 0);
         var stranger = new RunRetainer(StrangerRetainer, "Stranger", 3, 0);
-        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, [SecondRetainer], StartRules, StartPricing, PlanEdits.None, RunCaps.Default, true, SellAuthorization.CurrentPolicyVersion, [], Now, out var single);
+        var problem = SellAuthorization.TryCreate(RunId, Character, HomeWorld, [SecondRetainer], StartRules, StartPricing, PlanEdits.None, RunCaps.Default, SellAuthorization.CurrentPolicyVersion, [], Now, out var single);
 
         Assert.Equal(AuthorizationProblem.None, problem);
-        Assert.Equal([first, second], RunPlanner.Visiting([first, stranger, second], dryRun).AsSpan().ToArray());
+        Assert.Equal([first, second], RunPlanner.Visiting([first, stranger, second], authorized).AsSpan().ToArray());
         Assert.Equal([second], RunPlanner.Visiting([first, stranger, second], single!).AsSpan().ToArray());
     }
 
@@ -252,16 +195,16 @@ public sealed class RunGuardTests
 
         Assert.Equal(RunGuard.DayOf(reset), RunGuard.DayOf(reset.AddHours(23.9)));
         Assert.Equal(RunGuard.DayOf(reset) - 1, RunGuard.DayOf(reset.AddTicks(-1)));
-        Assert.Equal(DriverHalt.None, RunGuard.CheckBoundary(dryRun, live with { NowUtc = Now.AddHours(2.9) }));
-        Assert.Equal(DriverHalt.DayChanged, RunGuard.CheckBoundary(dryRun, live with { NowUtc = Now.AddHours(3) }));
+        Assert.Equal(DriverHalt.None, RunGuard.CheckBoundary(authorized, live with { NowUtc = Now.AddHours(2.9) }));
+        Assert.Equal(DriverHalt.DayChanged, RunGuard.CheckBoundary(authorized, live with { NowUtc = Now.AddHours(3) }));
     }
 
     private static RunLiveFacts LiveFor(SellAuthorization authorization)
     {
-        return live with { DryRun = authorization.DryRun, Caps = authorization.Caps };
+        return live with { Caps = authorization.Caps };
     }
 
-        private static GuardedRow Row(SaleWrite write)
+    private static GuardedRow Row(SaleWrite write)
     {
         var reading = new SlotReading(write.ItemId, write.IsHq, write.Quantity, write.OldPrice);
         return new GuardedRow(write, reading, reading, true, RuleFloor, VendorUnitPrice, false);

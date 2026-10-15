@@ -139,7 +139,6 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         {
             AssistOutcome.Typed => Loc.T(L.Assist.CardTyped, price),
             AssistOutcome.AlreadyShown => Loc.T(L.Assist.CardAlreadyShown, price),
-            AssistOutcome.DryRun => Loc.T(L.Assist.CardDryRun, price),
             AssistOutcome.BelowFloor => Loc.T(L.Assist.CardBelowFloor, price),
             _ => suggestion.Price > 0 ? string.Concat(Loc.T(L.Assist.CardNotTyped), TextDraw.Separator, Loc.T(L.Plan.TipProposed, price)) : Loc.T(L.Assist.CardNotTyped),
         }, Styling.TextStrong);

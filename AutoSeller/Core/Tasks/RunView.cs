@@ -13,8 +13,6 @@ internal readonly struct RunView(SellRunSession? session, bool live)
 
     public Guid RunId => session?.Authorization.RunId ?? Guid.Empty;
 
-    public bool DryRun => session?.Authorization.DryRun ?? false;
-
     public int Revision => session?.Revision ?? 0;
 
     public RunState State => session?.State ?? RunState.Idle;

@@ -43,7 +43,6 @@ internal sealed class RunningPanel
     private string retainers = string.Empty;
     private string repriced = string.Empty;
     private string listed = string.Empty;
-    private bool dryRun;
     private string kept = string.Empty;
     private string elapsed = string.Empty;
 
@@ -55,7 +54,7 @@ internal sealed class RunningPanel
         var run = controller.View;
         Refresh(plugin.GameItems, run);
         var (accent, accentSoft, label) = Palette(controller);
-        DrawHeaderStrip(accent, accentSoft, controller.Paused, run.DryRun);
+        DrawHeaderStrip(accent, accentSoft, controller.Paused);
         Styling.VSpace(6f);
         DrawHeroCard(controller, accent, accentSoft, label);
         if (itemName.Length > 0)
@@ -68,7 +67,7 @@ internal sealed class RunningPanel
         DrawTiles();
     }
 
-    private void DrawHeaderStrip(Vector4 accent, Vector4 accentSoft, bool paused, bool dryRun)
+    private void DrawHeaderStrip(Vector4 accent, Vector4 accentSoft, bool paused)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -84,12 +83,6 @@ internal sealed class RunningPanel
         var statusX = origin.X + radius * 2f + 12f * scale;
         TextDraw.SmallCaps(status, new Vector2(statusX, midY - statusSize.Y * 0.5f), Styling.TextSecondary);
         var statusEnd = statusX + statusSize.X;
-        if (dryRun)
-        {
-            statusEnd += HeaderFooterGap * scale * 0.5f;
-            statusEnd += Badge.DrawLeft(drawList, Loc.T(L.Plan.DryRun), Styling.AccentBlue, statusEnd, midY);
-        }
-
         using (Fonts.PushCaption())
         {
             var footerLeft = statusEnd + HeaderFooterGap * scale;
@@ -210,9 +203,9 @@ internal sealed class RunningPanel
         var tileWidth = (ImGui.GetContentRegionAvail().X - gap * (TileCount - 1)) / TileCount;
         StatTile.Draw(Loc.T(L.Plan.RunTileRetainers), retainers, null, Styling.AccentNebula, tileWidth);
         ImGui.SameLine(0f, gap);
-        StatTile.Draw(Loc.T(dryRun ? L.Plan.DoneReprice : L.Plan.DoneRepriced), repriced, null, Styling.AccentBlue, tileWidth);
+        StatTile.Draw(Loc.T(L.Plan.DoneRepriced), repriced, null, Styling.AccentBlue, tileWidth);
         ImGui.SameLine(0f, gap);
-        StatTile.Draw(Loc.T(dryRun ? L.Plan.DoneList : L.Plan.DoneListed), listed, null, Styling.AccentGlow, tileWidth);
+        StatTile.Draw(Loc.T(L.Plan.DoneListed), listed, null, Styling.AccentGlow, tileWidth);
         ImGui.SameLine(0f, gap);
         StatTile.Draw(Loc.T(L.Plan.RunTileKept), kept, null, Styling.TextDim, tileWidth);
         ImGui.SameLine(0f, gap);
@@ -243,7 +236,6 @@ internal sealed class RunningPanel
             : string.Empty;
         var tally = run.Tally;
         retainers = string.Concat(PlanLabels.Count(run.Settled), " / ", PlanLabels.Count(all.Length));
-        dryRun = run.DryRun;
         repriced = PlanLabels.Count(tally.Repriced);
         listed = PlanLabels.Count(tally.Listed);
         kept = PlanLabels.Count(tally.Kept + tally.Skipped);
@@ -272,7 +264,7 @@ internal sealed class RunningPanel
 
         var price = latest.Decision.Evidence.CompetitorPrice;
         competitor = price > 0 ? Loc.T(L.Plan.RunCompetitor, Formatting.Gil(price)) : string.Empty;
-        decision = PlanLabels.Done(latest, run.DryRun);
+        decision = PlanLabels.Done(latest);
         decisionColor = PlanLabels.DoneColor(latest);
         reason = PlanLabels.DoneReason(latest);
     }

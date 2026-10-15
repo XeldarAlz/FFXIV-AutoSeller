@@ -31,7 +31,7 @@ internal sealed class RetainerListButton(Plugin plugin) : AddonOverlay("Auto Sel
 
     protected override void DrawOverlay()
     {
-        var help = Loc.T(plugin.Configuration.DryRun ? L.Buttons.RunAllHelpDryRun : L.Buttons.RunAllHelpLive);
+        var help = Loc.T(L.Buttons.RunAllHelp);
         if (PillButton.Draw("##asell_overlay_run_all", Loc.T(L.Buttons.RunAll), Styling.AccentGlow, PillButton.Emphasis.Filled, Icon, true, ButtonHeight, help))
         {
             RunLog.Info("Buttons: Run all retainers pressed on the retainer list.");

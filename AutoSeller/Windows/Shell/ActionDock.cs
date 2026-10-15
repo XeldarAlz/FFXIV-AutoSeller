@@ -1,7 +1,6 @@
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Tasks;
 using AutoSeller.Windows.Components;
-using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using System.Numerics;
@@ -61,22 +60,10 @@ internal static class ActionDock
 
     private static void DrawStart(Plugin plugin, float innerWidth, float height)
     {
-        var configuration = plugin.Configuration;
-        if (DryRunControl.Confirming)
-        {
-            DryRunControl.DrawConfirmation(configuration, innerWidth, height);
-            return;
-        }
-
-        var readiness = RunReadiness.Evaluate(configuration.HasRules(), plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy);
-        var gap = ButtonGap * ImGuiHelpers.GlobalScale;
-        var tileWidth = DryRunControl.TileWidth(innerWidth);
-        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth - tileWidth - gap))
+        var readiness = RunReadiness.Evaluate(plugin.Configuration.HasRules(), plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy);
+        if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth))
         {
             plugin.Controller.Start();
         }
-
-        ImGui.SameLine(0f, gap);
-        DryRunControl.DrawTile(configuration, tileWidth, height);
     }
 }

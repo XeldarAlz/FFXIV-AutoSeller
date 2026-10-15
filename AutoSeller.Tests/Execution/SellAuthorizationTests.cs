@@ -126,7 +126,7 @@ public sealed class SellAuthorizationTests
             [SecondRetainer]);
         var pricing = new PricingSettings { UndercutUnit = UndercutUnit.Percent, RepriceCooldown = TimeSpan.FromHours(3), BelowFloorListing = BelowFloorListing.ReturnAfterDelay };
         var edits = PlanEdits.Restore([PlanEdit.Price(ListingRow, 700, Now), PlanEdit.Exclude(ListingRow with { Slot = MarketSlot + 1 }, Now)]);
-        var authorization = Authorization(new RunCaps(10, 20, 3_000), [FirstApproval], dryRun: true, rules, pricing, edits);
+        var authorization = Authorization(new RunCaps(10, 20, 3_000), [FirstApproval], rules, pricing, edits);
 
         var line = JsonSerializer.Serialize<JournalEvent>(authorization.ToJournalEvent(1, Now), RunJournal.SerializerOptions);
         var recorded = Assert.IsType<RunAuthorized>(JsonSerializer.Deserialize<JournalEvent>(line, RunJournal.SerializerOptions));
@@ -155,7 +155,6 @@ public sealed class SellAuthorizationTests
         Assert.Equal(authorization.Caps, restored.Caps);
         Assert.Equal(authorization.PolicyVersion, restored.PolicyVersion);
         Assert.Equal(authorization.CreatedAtUtc, restored.CreatedAtUtc);
-        Assert.True(restored.DryRun);
     }
 
     [Fact]
@@ -193,7 +192,6 @@ public sealed class SellAuthorizationTests
             StartPricing,
             PlanEdits.None,
             caps ?? RunCaps.Default,
-            false,
             SellAuthorization.CurrentPolicyVersion,
             approvedPrices ?? [],
             Now,

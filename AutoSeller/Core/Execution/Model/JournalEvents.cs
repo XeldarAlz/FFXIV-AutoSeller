@@ -38,8 +38,6 @@ internal sealed record RunAuthorized : JournalEvent
 
     public required RunCaps Caps { get; init; }
 
-    public required bool DryRun { get; init; }
-
     public required int PolicyVersion { get; init; }
 
     public required ImmutableArray<ApprovedPrice> ApprovedPrices { get; init; }

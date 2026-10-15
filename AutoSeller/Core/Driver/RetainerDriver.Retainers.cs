@@ -87,7 +87,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkHandedOverRetainer()
     {
         engaged = true;
-        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs, []);
+        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs);
         const int index = 0;
         var visit = await VisitHandedOverRetainer(index);
         if (CancelToken.IsCancellationRequested)

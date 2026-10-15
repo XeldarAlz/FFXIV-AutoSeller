@@ -99,12 +99,12 @@ public sealed class RunOutcomeTests
     }
 
     [Fact]
-    public void AConfirmedOrDryWriteCountsWithItsValueAtTheNewPrice()
+    public void AConfirmedWriteCountsWithItsValueAtTheNewPrice()
     {
         RunDecision[] decisions =
         [
             RunDecision.ForListing(Alpha, OreListing(), repriceDown) with { Write = RunWrite.Confirmed },
-            RunDecision.ForLot(Beta, lot, list) with { Write = RunWrite.DryRun },
+            RunDecision.ForLot(Beta, lot, list) with { Write = RunWrite.Confirmed },
         ];
 
         Assert.Equal(new RunTally(1, 1, 0, 0, (repriceDown.Price + (long)list.Price) * LotQuantity), RunTally.Of(decisions));

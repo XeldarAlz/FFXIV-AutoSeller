@@ -30,7 +30,7 @@ internal static class Refusals
         SaleRejection.ItemMismatch or SaleRejection.QualityMismatch or SaleRejection.QuantityMismatch or SaleRejection.ListingChanged => RefusalKind.Changed,
         SaleRejection.NoVendorRule or SaleRejection.VendorHighQuality or SaleRejection.VendorGear or SaleRejection.VendorOnSellList => RefusalKind.VendorRules,
         SaleRejection.ItemProtected or SaleRejection.VendorProtected => RefusalKind.Protected,
-        SaleRejection.RulesChanged or SaleRejection.PricingChanged or SaleRejection.PlanEditsChanged or SaleRejection.DryRunChanged or SaleRejection.CapsChanged => RefusalKind.SettingsChanged,
+        SaleRejection.RulesChanged or SaleRejection.PricingChanged or SaleRejection.PlanEditsChanged or SaleRejection.CapsChanged => RefusalKind.SettingsChanged,
         _ => RefusalKind.Safety,
     };
 

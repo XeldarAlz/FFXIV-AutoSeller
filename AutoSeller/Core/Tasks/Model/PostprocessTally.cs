@@ -5,24 +5,22 @@ namespace AutoSeller.Core.Tasks.Model;
 internal sealed class PostprocessTally
 {
     private ValueState carried;
-    private bool carriedDryRun;
 
     public ValueState Carried => carried;
 
-    public ValueBook BookFor(RunCaps caps, bool dryRun)
+    public ValueBook BookFor(RunCaps caps)
     {
-        return ValueBook.Restore(caps, CarriedFor(dryRun), default, 0, []);
+        return ValueBook.Restore(caps, carried, default, 0, []);
     }
 
-    public bool VendoringLeft(RunCaps caps, bool dryRun)
+    public bool VendoringLeft(RunCaps caps)
     {
-        return CarriedFor(dryRun).VendoredValue < caps.MaxVendoredValue;
+        return carried.VendoredValue < caps.MaxVendoredValue;
     }
 
-    public void Keep(ValueBook values, bool dryRun)
+    public void Keep(ValueBook values)
     {
         carried = values.Snapshot() with { PendingWriteId = Guid.Empty };
-        carriedDryRun = dryRun;
     }
 
     public bool Forget()
@@ -30,10 +28,5 @@ internal sealed class PostprocessTally
         var hadTally = carried != default;
         carried = default;
         return hadTally;
-    }
-
-    private ValueState CarriedFor(bool dryRun)
-    {
-        return dryRun == carriedDryRun ? carried : default;
     }
 }

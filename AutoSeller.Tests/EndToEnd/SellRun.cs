@@ -1,12 +1,12 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
-using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
+using AutoSeller.Tests.Ledger;
 using static AutoSeller.Tests.EndToEnd.RunWorld;
 
 namespace AutoSeller.Tests.EndToEnd;
@@ -81,7 +81,6 @@ internal sealed class SellRun
             pricing,
             Edits,
             RunCaps.Default,
-            false,
             SellAuthorization.CurrentPolicyVersion,
             approved,
             Now,
@@ -188,7 +187,6 @@ internal sealed class SellRun
             CurrentRules = LiveRules(),
             CurrentPricing = pricing,
             CurrentPlanEdits = Edits,
-            CurrentDryRun = Authorization.DryRun,
             CurrentCaps = Authorization.Caps,
             OpenRetainerId = write.RetainerId,
             WindowChainReady = true,

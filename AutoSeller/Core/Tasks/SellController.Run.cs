@@ -362,7 +362,7 @@ internal sealed partial class SellController
         var authorization = active.Authorization;
         if (active.Mode == RunMode.Postprocess)
         {
-            postprocessTally.Keep(active.Values, authorization.DryRun);
+            postprocessTally.Keep(active.Values);
         }
 
         plugin.Suppression.Release(authorization.RunId);
@@ -372,25 +372,21 @@ internal sealed partial class SellController
             RunLog.Warning($"The journal refused the end of run {authorization.RunId}: {active.Journal.LastError}");
         }
 
-        if (!authorization.DryRun)
-        {
-            plugin.Ledger.Invalidate();
-        }
-
+        plugin.Ledger.Invalidate();
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);
         RunLog.Info(
-            $"Run {authorization.RunId} ended {active.State}{(authorization.DryRun ? " (dry run)" : string.Empty)}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
-            $"{tally.Repriced} {(authorization.DryRun ? "would reprice" : "repriced")}, {tally.Listed} {(authorization.DryRun ? "would list" : "listed")} worth {tally.ListedValue} gil, " +
-            $"{tally.Returned} {(authorization.DryRun ? "would return" : "returned")}, {tally.Vendored} {(authorization.DryRun ? "would vendor" : "vendored")} for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
+            $"Run {authorization.RunId} ended {active.State}: {active.Visits.Visited} of {active.Visits.Count} retainer(s) visited, {active.Visits.Skipped} skipped; " +
+            $"{tally.Repriced} repriced, {tally.Listed} listed worth {tally.ListedValue} gil, " +
+            $"{tally.Returned} returned, {tally.Vendored} vendored for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped, in {endedAtUtc - authorization.CreatedAtUtc:hh\\:mm\\:ss}.");
     }
 
     private static void Announce(SellRunSession active, in RunTally tally)
     {
         var message = active.State switch
         {
-            RunState.Completed or RunState.CompletedPartial => Loc.T(active.Authorization.DryRun ? L.Run.StatusDone : L.Run.StatusDoneLive, tally.Repriced, tally.Listed, tally.Kept, tally.Skipped),
+            RunState.Completed or RunState.CompletedPartial => Loc.T(L.Run.StatusDone, tally.Repriced, tally.Listed, tally.Kept, tally.Skipped),
             RunState.NeedsPlayer => Loc.T(L.Run.StatusNeedsPlayer, Describe(active.NeedsPlayer)),
             RunState.Failed => Loc.T(L.Run.StatusFailed, active.Failure),
             _ => Loc.T(L.Run.StatusStopped),
@@ -424,7 +420,6 @@ internal sealed partial class SellController
             authorization.CreatedAtUtc,
             endedAtUtc,
             active.State,
-            authorization.DryRun,
             authorization.HomeWorldId,
             active.Visits.Visited,
             active.Visits.Count,
