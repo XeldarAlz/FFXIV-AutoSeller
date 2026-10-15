@@ -79,6 +79,11 @@ internal sealed class AssistTask : AutoCommon
                 suggestion = suggestion with { Outcome = AssistOutcome.Kept };
             }
 
+            if (typed)
+            {
+                host.ExpectReprice(AssistReprice.For(plugin.Retainers.TryGetOpenRetainer(out var open) ? open.RetainerId : 0, target, suggestion));
+            }
+
             Show(AssistStatus.Decided, name, suggestion, decision, cooldownLeft);
             Report(name, target, decision, suggestion);
         }
