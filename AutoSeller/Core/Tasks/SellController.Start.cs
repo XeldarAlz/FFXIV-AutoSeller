@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
+using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Planning.Model;
@@ -106,7 +107,11 @@ internal sealed partial class SellController
         var configuration = plugin.Configuration;
         var rules = configuration.BuildRuleBook();
         var ledger = plugin.Ledger;
-        ledger.Invalidate();
+        if (ledger.ReadError is not null)
+        {
+            ledger.Invalidate();
+        }
+
         if (ledger.ReadError is { } readError)
         {
             RunLog.Warning($"The journal could not be read: {readError}");
@@ -192,6 +197,11 @@ internal sealed partial class SellController
             return Refuse(mode, StartBlock.NotAuthorized, problem.ToString());
         }
 
+        if (!dryRun)
+        {
+            RotateJournal(ledger, nowUtc);
+        }
+
         var caps = authorization!.Caps;
         var values = mode == RunMode.Postprocess ? postprocessTally.BookFor(caps, dryRun) : new ValueBook(caps);
         var active = new SellRunSession(authorization, input, ledger.Review, ledger.JournalFor(dryRun), mode, values);
@@ -201,13 +211,17 @@ internal sealed partial class SellController
         }
 
         plugin.Market.Tracker.ClearReuse();
-        if (!active.Journal.TryAppend(authorization.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
+        var appended = active.Journal.TryAppend(authorization.ToJournalEvent(active.Journal.NextSequence, nowUtc));
+        if (!dryRun)
         {
             ledger.Invalidate();
+        }
+
+        if (!appended)
+        {
             return Refuse(mode, StartBlock.NotAuthorized, $"the journal refused the run's authorization: {active.Journal.LastError}");
         }
 
-        ledger.Invalidate();
         var items = PlanStock.ItemsToPrice(input.Stock.AsSpan(), markets);
         RunLog.Info($"Run: reference prices for {items.Length} item(s): {plugin.References.Fetch(items.AsSpan())}.");
         session = active;
@@ -224,6 +238,21 @@ internal sealed partial class SellController
 
         Launch(active);
         return StartBlock.None;
+    }
+
+    private static void RotateJournal(SellLedger ledger, DateTime nowUtc)
+    {
+        var rotation = ledger.Rotate(nowUtc);
+        if (!rotation.Succeeded)
+        {
+            RunLog.Warning($"Journal: moving finished runs to the archive before the run failed: {rotation.Error}.");
+            return;
+        }
+
+        if (rotation.ArchivedRuns > 0)
+        {
+            RunLog.Info($"Journal: {rotation.ArchivedRuns} finished run(s) moved to {rotation.ArchivePath} before the run; {rotation.KeptRuns} kept.");
+        }
     }
 
     private static StartBlock Refuse(RunMode mode, StartBlock block, string detail)

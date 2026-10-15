@@ -338,7 +338,11 @@ internal sealed partial class SellController
             RunLog.Warning($"The journal refused the end of run {authorization.RunId}: {active.Journal.LastError}");
         }
 
-        plugin.Ledger.Invalidate();
+        if (!authorization.DryRun)
+        {
+            plugin.Ledger.Invalidate();
+        }
+
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);
