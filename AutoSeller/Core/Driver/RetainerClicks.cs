@@ -69,9 +69,10 @@ internal static unsafe class RetainerClicks
     public static readonly string PromptAddon = ChainWindows.NameOf(ChainWindow.SelectYesno);
     public static readonly string SaleHistoryAddon = ChainWindows.NameOf(ChainWindow.RetainerHistory);
 
-    private static readonly string[] inventoryAddons = ["InventoryRetainerLarge", "InventoryRetainer", "InventoryExpansion", "InventoryLarge", "Inventory"];
+    public static readonly string[] RetainerInventoryAddons = ["InventoryRetainerLarge", "InventoryRetainer"];
+
+    private static readonly string[] inventoryAddons = [.. RetainerInventoryAddons, "InventoryExpansion", "InventoryLarge", "Inventory"];
     private static readonly string[] saddlebagAddons = [SaddlebagAddon];
-    private static readonly string[] playerInventoryAddons = ["InventoryExpansion", "InventoryLarge", "Inventory"];
 
     private static uint reportedOwner;
     private static ushort reportedSellList;
@@ -178,28 +179,17 @@ internal static unsafe class RetainerClicks
             return false;
         }
 
-        for (var index = 0; index < playerInventoryAddons.Length; index++)
+        var inventory = AddonMasterCombined.ICombinedInventory.Get();
+        if (inventory is null)
         {
-            if (!NpcInteraction.TryGetReadyAddon(playerInventoryAddons[index], out var inventory))
-            {
-                continue;
-            }
-
-            RunLog.Info($"Retainer: opening the armoury chest from the {playerInventoryAddons[index]} window.");
-            ArmouryChestButtonOf(index, inventory).OpenArmoryChest();
-            return true;
+            RunLog.Info("Retainer: no inventory window is open to open the armoury chest from.");
+            return false;
         }
 
-        RunLog.Info("Retainer: no inventory window is open to open the armoury chest from.");
-        return false;
+        RunLog.Info($"Retainer: opening the armoury chest from the {inventory.GetType().Name} window.");
+        inventory.OpenArmoryChest();
+        return true;
     }
-
-    private static AddonMasterCombined.ICombinedInventory ArmouryChestButtonOf(int addonIndex, AtkUnitBase* inventory) => addonIndex switch
-    {
-        0 => new AddonMaster.InventoryExpansion(inventory),
-        1 => new AddonMaster.InventoryLarge(inventory),
-        _ => new AddonMaster.Inventory(inventory),
-    };
 
     private static bool OpenItemMenu(uint container, ushort slot, string[] owners)
     {

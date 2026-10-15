@@ -16,7 +16,7 @@ internal static unsafe class RetainerReads
     private const int AskingPriceValue = 5;
     private const int QuantityValue = 8;
 
-    private static readonly string[] retainerInventoryWindows = ["InventoryRetainerLarge", "InventoryRetainer", "RetainerGrid0", "RetainerGrid"];
+    private static readonly string[] retainerInventoryWindows = [.. RetainerClicks.RetainerInventoryAddons, "RetainerGrid0", "RetainerGrid"];
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
     private static string reportedInventoryWindows = string.Empty;
