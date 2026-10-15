@@ -502,6 +502,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLoadedInGame()
     {
+        Sales.Prepare(Svc.PlayerState.ContentId);
         ShowConfigurationNotice();
         if (!Configuration.AutoShowOnLogin)
         {

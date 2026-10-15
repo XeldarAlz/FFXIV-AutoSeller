@@ -31,6 +31,17 @@ public sealed class SaleHistoryEntriesTests
     }
 
     [Fact]
+    public void OnlyABatchWithASaleHistoryEntryNeedsTheKnownEntries()
+    {
+        var notice = Notice(Morning, Morning.AddDays(-1), DarksteelOre, 10, 200, 1_900);
+        var diff = Diff(Morning.AddDays(-1), Morning, DarksteelOre, 10, 200);
+
+        Assert.False(SaleHistoryEntries.HoldsHistory([notice, diff]));
+        Assert.True(SaleHistoryEntries.HoldsHistory([notice, History(Morning, DarksteelOre, 10, 200)]));
+        Assert.False(SaleHistoryEntries.HoldsHistory([]));
+    }
+
+    [Fact]
     public void RememberedFileEntriesAreNotAppendedAgain()
     {
         var known = new HashSet<SaleHistoryEntry>();

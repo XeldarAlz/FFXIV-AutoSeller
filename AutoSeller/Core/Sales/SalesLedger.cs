@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Retainers.Model;
@@ -13,14 +14,20 @@ namespace AutoSeller.Core.Sales;
 internal sealed class SalesLedger
 {
     private const long ReloadMs = 60_000;
+    private const int FlushWaitMs = 5_000;
+
+    private static readonly HashSet<SaleHistoryEntry> noHistory = [];
 
     private readonly string directoryPath;
     private readonly Dictionary<ulong, HashSet<SaleHistoryEntry>> knownHistory = [];
+    private readonly Dictionary<ulong, Task<SalesReadResult>> warming = [];
+    private readonly Lock unwrittenLock = new();
     private readonly List<UnwrittenSales> unwritten = [];
     private readonly StringBuilder line = new();
     private Task<LoadedSales>? loading;
+    private Task writes = Task.CompletedTask;
     private long loadedAtMs = long.MinValue;
-    private bool dirty = true;
+    private volatile bool dirty = true;
     private string? reportedReadError;
 
     public SalesLedger(string configDirectory)
@@ -34,6 +41,17 @@ internal sealed class SalesLedger
 
     public bool Loading => Revision == 0;
 
+    public void Prepare(ulong characterContentId)
+    {
+        if (characterContentId == 0 || knownHistory.ContainsKey(characterContentId) || warming.ContainsKey(characterContentId))
+        {
+            return;
+        }
+
+        var file = new SalesFile(directoryPath, characterContentId);
+        warming[characterContentId] = Task.Run(file.Read);
+    }
+
     public int Record(ulong characterContentId, ReadOnlySpan<SaleRecord> sales)
     {
         if (characterContentId == 0 || sales.IsEmpty)
@@ -41,23 +59,16 @@ internal sealed class SalesLedger
             return 0;
         }
 
-        WriteUnwritten();
-        var file = new SalesFile(directoryPath, characterContentId);
-        var fresh = SaleHistoryEntries.Unseen(sales, KnownHistoryOf(characterContentId, file));
+        RetryUnwritten();
+        var known = SaleHistoryEntries.HoldsHistory(sales) ? KnownHistoryOf(characterContentId) : noHistory;
+        var fresh = SaleHistoryEntries.Unseen(sales, known);
         if (fresh.IsEmpty)
         {
             return 0;
         }
 
         Report(fresh.AsSpan());
-        if (!file.TryAppend(fresh.AsSpan()))
-        {
-            unwritten.Add(new UnwrittenSales(characterContentId, fresh));
-            RunLog.Warning($"Sales: {fresh.Length} sale(s) could not be written to {file.FilePath} yet ({file.LastError}); they are written again shortly.");
-            return fresh.Length;
-        }
-
-        dirty = true;
+        Write(new UnwrittenSales(characterContentId, fresh), false);
         return fresh.Length;
     }
 
@@ -74,7 +85,7 @@ internal sealed class SalesLedger
             return;
         }
 
-        WriteUnwritten();
+        RetryUnwritten();
         var now = Environment.TickCount64;
         if (!dirty && now - loadedAtMs < ReloadMs)
         {
@@ -124,31 +135,103 @@ internal sealed class SalesLedger
 
     public void Flush()
     {
-        WriteUnwritten();
-        for (var index = 0; index < unwritten.Count; index++)
+        try
         {
-            RunLog.Error($"Sales: {unwritten[index].Sales.Length} sale(s) of character {unwritten[index].CharacterContentId} could not be written before unloading.");
+            if (!writes.Wait(FlushWaitMs))
+            {
+                RunLog.Warning($"Sales: the sales were still being written after {FlushWaitMs} ms at unload.");
+            }
+        }
+        catch (AggregateException exception)
+        {
+            RunLog.Warning(exception, "Sales: writing the sales failed at unload");
+        }
+
+        var left = TakeUnwritten();
+        for (var index = 0; index < left.Length; index++)
+        {
+            var pending = left[index];
+            if (!Append(directoryPath, pending, out var error))
+            {
+                RunLog.Error($"Sales: {pending.Sales.Length} sale(s) of character {pending.CharacterContentId} could not be written before unloading ({error}).");
+            }
         }
     }
 
-    private void WriteUnwritten()
+    private void RetryUnwritten()
     {
-        for (var index = unwritten.Count - 1; index >= 0; index--)
+        if (!writes.IsCompleted)
         {
-            var pending = unwritten[index];
-            var file = new SalesFile(directoryPath, pending.CharacterContentId);
-            if (!file.TryAppend(pending.Sales.AsSpan()))
+            return;
+        }
+
+        var retry = TakeUnwritten();
+        for (var index = 0; index < retry.Length; index++)
+        {
+            Write(retry[index], true);
+        }
+    }
+
+    private UnwrittenSales[] TakeUnwritten()
+    {
+        lock (unwrittenLock)
+        {
+            if (unwritten.Count == 0)
             {
-                continue;
+                return [];
             }
 
-            unwritten.RemoveAt(index);
-            dirty = true;
-            RunLog.Info($"Sales: {pending.Sales.Length} sale(s) written to {file.FilePath} on a later try.");
+            var taken = unwritten.ToArray();
+            unwritten.Clear();
+            return taken;
         }
     }
 
-    private HashSet<SaleHistoryEntry> KnownHistoryOf(ulong characterContentId, SalesFile file)
+    private void Write(UnwrittenSales pending, bool retry)
+    {
+        var directory = directoryPath;
+        writes = writes.ContinueWith(_ => WriteOrKeep(directory, pending, retry), TaskScheduler.Default);
+    }
+
+    private void WriteOrKeep(string directory, UnwrittenSales pending, bool retry)
+    {
+        if (Append(directory, pending, out var error))
+        {
+            if (retry)
+            {
+                RunLog.Info($"Sales: {pending.Sales.Length} sale(s) of character {pending.CharacterContentId} written on a later try.");
+            }
+
+            return;
+        }
+
+        lock (unwrittenLock)
+        {
+            unwritten.Add(pending);
+        }
+
+        if (!retry)
+        {
+            RunLog.Warning($"Sales: {pending.Sales.Length} sale(s) of character {pending.CharacterContentId} could not be written yet ({error}); they are written again shortly.");
+        }
+    }
+
+    private bool Append(string directory, UnwrittenSales pending, out string? error)
+    {
+        var file = new SalesFile(directory, pending.CharacterContentId);
+        if (!file.TryAppend(pending.Sales.AsSpan()))
+        {
+            error = $"{file.FilePath}: {file.LastError}";
+            return false;
+        }
+
+        error = null;
+
+        dirty = true;
+        return true;
+    }
+
+    private HashSet<SaleHistoryEntry> KnownHistoryOf(ulong characterContentId)
     {
         if (knownHistory.TryGetValue(characterContentId, out var known))
         {
@@ -156,7 +239,8 @@ internal sealed class SalesLedger
         }
 
         known = [];
-        var read = file.Read();
+        var file = new SalesFile(directoryPath, characterContentId);
+        var read = warming.Remove(characterContentId, out var warm) && warm.IsCompletedSuccessfully ? warm.Result : file.Read();
         if (read.Failed)
         {
             RunLog.Warning($"Sales: {file.FilePath} could not be read before writing to it: {read.Error}; a sale history entry already in it may be written again.");
