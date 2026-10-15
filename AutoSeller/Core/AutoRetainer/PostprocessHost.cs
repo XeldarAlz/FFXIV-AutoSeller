@@ -150,7 +150,7 @@ internal sealed class PostprocessHost : IDisposable
 
     private int PlannedWork(ulong retainerId)
     {
-        if (plugin.Plan.Capture(DateTime.UtcNow, true) is not { } input)
+        if (plugin.Plan.Capture(DateTime.UtcNow, false) is not { } input)
         {
             return 0;
         }
