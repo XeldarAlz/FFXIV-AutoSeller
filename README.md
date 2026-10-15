@@ -26,7 +26,7 @@ Nothing is sold unless a rule you wrote allows it, no price goes below its floor
 
 ## Features
 
-- **Sell page**: one plan across all your retainers' slots: what is repriced, what is listed where, what is sold to a vendor, at what price and why ("Undercut by 1 seller", "Already lowest", "Bait listing ignored", "Below floor, kept", "Price war, paused"). Retainer tiles show listings in use, gil and the last visit, totals show what the run will change, and a drop over the step limit waits for your approval. Before Start you can leave a row out, move a lot to another retainer or set its price, and choose whether the run visits only the retainers that need it.
+- **Sell page**: one plan across all your retainers' slots: what is repriced, what is listed where, what is sold to a vendor, at what price and why ("Undercuts the lowest seller", "Already lowest", "1 bait listing ignored", "Below floor, kept", "Price war, paused"). Retainer tiles show listings in use, gil and the last visit, totals show what the run will change, and a drop over the step limit waits for your approval. Before Start you can leave a row out, move a lot to another retainer or set its price, and choose whether the run visits only the retainers that need it.
 - **Guarded pricing**: Undercut or Match mode against listings of the same quality only. Your own retainers and your alts are never undercut, bait listings are ignored, the reference price comes from real sales, the floor never goes below vendor value, and a maximum drop per reprice, a cooldown and price-war detection keep a race to the bottom in check.
 - **Rules**: a sell list with a floor, ceiling, fixed price, lot size, bag keep count, listings to keep up and preferred retainer per item, plus category rules with a minimum value and vendor rules that stay off until you turn them on. Items on the never-sell list, in a gear set, equipped or protected in AutoRetainer are never sold, and the Rules page shows which matched items in your bags are blocked and why. Rules can be exported and imported as JSON, without any retainer names or ids.
 - **Sources**: your bags and crystals, and when you opt in, a retainer's own inventory (listed through that retainer's own sell list), the saddlebag (stacks planned for a retainer are moved to your bags before the bell, while they have room) and the armoury chest (never items in a gear set).
@@ -94,14 +94,14 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell log` | Open the Console page |
 | `/asell changelog` | Open the Changelog page |
 | `/asell about` | Open the About page |
-| `/asell start` | Open the Sell page and start a run of the current plan |
+| `/asell start` | Open the Sell page and start a run of the current plan; when it cannot start, the chat says why |
 | `/asell stop` | Stop the run |
 | `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
 | `/asell help` | List these commands in the chat |
 | `/asell target` | Log the targeted NPC's BaseId (debug helper) |
 | `/asell look <item id>` | Compare market prices for one item once and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices). With the default send path it needs that item's sell window open at a retainer; with `proxy` it needs a summoning bell or an open market board |
 | `/asell mbstatus` | Write the market checks, the search state, the age of the Universalis reference data and, with a retainer's sell list open, that retainer's listings to the Console (debug helper) |
-| `/asell sendpath compare\|proxy` | Send market searches through the sell window's Compare prices button (`compare`, the default) or the item search proxy (`proxy`); without an argument it says which one is in use (debug helper) |
+| `/asell sendpath compare\|proxy` | Send `/asell look` searches through the sell window's Compare prices button (`compare`, the default) or the item search proxy (`proxy`); runs and Assist always use the sell window. Without an argument it says which one is in use (debug helper) |
 | `/asell historypath window\|packet` | Read a retainer's sale history from its Sale History window (`window`, the default) or from the data the game receives for it (`packet`, which reads the window until its handler is found in game); without an argument it says which one is in use (debug helper) |
 
 ## Known limits
@@ -113,6 +113,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 - **Selling only.** Desynthesis, Grand Company turn-ins, coffers and venture rewards are left to the plugins that already do them, such as AutoRetainer, Deliveroo and Auto GC Supply.
 - **No direct market writes.** Some repricers write prices straight into the game's memory. Auto Seller never does: every price goes through the sell window, so it can be checked before Confirm and read back after.
 - **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer, and no chat, toast or Discord alert when a listing is undercut yet.
+- **Fixed pacing.** Market searches and window steps keep a fixed safe pace with random jitter; only the delays before moving off and casting a teleport can be changed, under Settings, Humanizer.
 - **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
 - **Not yet run in game.** No part of 1.0.0.0 has run on a live client yet. The writes (typing the price and quantity in the sell window, the Adjust Price, Return to Retainer and Have Retainer Sell Items menus, saddlebag moves and Marketbuddy's lock), the reads (the Sale History window's layout and prices, sale notice values, gear set membership, which gil a vendor sale lands in, how soon listings fill in) and the AutoRetainer post-process over real ventures follow the game data and other tools so far. Each step logs what it did to the Console. Keep the dry run on for your first runs.
 

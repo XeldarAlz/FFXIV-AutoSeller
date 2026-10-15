@@ -28,6 +28,13 @@ internal sealed partial class LogPage
     private int builtVersion = -1;
     private RunLogFilter builtFilter;
 
+    private readonly CachedText[] levelCountTexts = new CachedText[RunLog.LevelCount];
+    private CachedText entriesText;
+    private CachedText copyFilteredText;
+    private string? sourceLabel;
+    private string? sourceLabelFor;
+    private LanguageInfo? sourceLabelLanguage;
+
     private int levelMask = RunLogFilter.AllLevels;
     private string search = string.Empty;
     private string? source;
@@ -45,7 +52,7 @@ internal sealed partial class LogPage
     {
         RunLog.MarkSeen();
         Refresh();
-        PageHeader.Draw(Loc.T(L.Log.Title), Loc.Plural(L.Log.Entries, bufferedCount));
+        PageHeader.Draw(Loc.T(L.Log.Title), entriesText.Get(bufferedCount, static count => Loc.Plural(L.Log.Entries, (int)count)));
 
         DrawToolbar();
         Styling.VSpace(ToolbarGap);
@@ -96,7 +103,7 @@ internal sealed partial class LogPage
         var now = Environment.TickCount64;
 
         var copyLabel = now - copiedAtMs < NoticeMs ? Loc.T(L.Log.Copied)
-            : builtFilter.IsNarrowed ? Loc.Plural(L.Log.CopyFiltered, viewCount)
+            : builtFilter.IsNarrowed ? copyFilteredText.Get(viewCount, static count => Loc.Plural(L.Log.CopyFiltered, (int)count))
             : Loc.T(L.Log.CopyAll);
         var clearArmed = now - clearArmedAtMs < ClearConfirmMs;
         var clearLabel = Loc.T(clearArmed ? L.Log.ConfirmClear : L.Log.Clear);
@@ -154,7 +161,7 @@ internal sealed partial class LogPage
         {
             var level = chipLevels[index];
             var label = Loc.T(chipLabels[index]);
-            var count = levelTotals[(int)level].ToString(Loc.Culture);
+            var count = levelCountTexts[(int)level].Get(levelTotals[(int)level], static total => total.ToString(Loc.Culture));
             var chipWidth = FilterChip.Width(label, count);
             WrapIfNeeded(ref x, ref y, chipWidth, origin.X, width, height, gap);
 
@@ -169,7 +176,7 @@ internal sealed partial class LogPage
 
         if (source is not null)
         {
-            var label = Loc.T(L.Log.SourceChip, source);
+            var label = SourceLabel(source);
             var chipWidth = FilterChip.Width(label, null, FontAwesomeIcon.Times);
             WrapIfNeeded(ref x, ref y, chipWidth, origin.X, width, height, gap);
 
@@ -183,6 +190,18 @@ internal sealed partial class LogPage
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, y - origin.Y + height));
+    }
+
+    private string SourceLabel(string shown)
+    {
+        if (sourceLabel is null || !string.Equals(sourceLabelFor, shown, StringComparison.Ordinal) || !ReferenceEquals(sourceLabelLanguage, Loc.Current))
+        {
+            sourceLabel = Loc.T(L.Log.SourceChip, shown);
+            sourceLabelFor = shown;
+            sourceLabelLanguage = Loc.Current;
+        }
+
+        return sourceLabel;
     }
 
     private static void WrapIfNeeded(ref float x, ref float y, float itemWidth, float left, float width, float height, float gap)

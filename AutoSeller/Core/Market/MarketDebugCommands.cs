@@ -57,7 +57,7 @@ internal static class MarketDebugCommands
         }
 
         var name = MarketLookTask.NameOf(item.Name, itemId);
-        var refusal = plugin.Market.Tracker.Preflight(itemId);
+        var refusal = plugin.Market.Tracker.Preflight(itemId, plugin.Configuration.SearchSendPath);
         if (refusal != SendRefusal.None)
         {
             RunLog.Info($"Look: item {itemId} not searched through {plugin.Configuration.SearchSendPath}: {refusal}.");

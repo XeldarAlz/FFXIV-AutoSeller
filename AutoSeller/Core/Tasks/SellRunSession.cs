@@ -16,7 +16,7 @@ internal sealed class SellRunSession
     private readonly HashSet<PlanRowKey> handled = [];
     private readonly HashSet<ItemKey> replanned = [];
 
-    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal, RunMode mode)
+    public SellRunSession(SellAuthorization authorization, PlanInput input, JournalReview review, IRunJournal journal, RunMode mode, ValueBook values)
     {
         Authorization = authorization;
         Input = input;
@@ -26,7 +26,7 @@ internal sealed class SellRunSession
         Mode = mode;
         Retainers = RunPlanner.Visiting(PlanInputs.Retainers, authorization);
         Visits = new RetainerVisits(Retainers.Length);
-        Values = new ValueBook(authorization.Caps);
+        Values = values;
     }
 
     public SellAuthorization Authorization { get; }

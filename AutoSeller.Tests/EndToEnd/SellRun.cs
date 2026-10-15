@@ -188,6 +188,8 @@ internal sealed class SellRun
             CurrentRules = LiveRules(),
             CurrentPricing = pricing,
             CurrentPlanEdits = Edits,
+            CurrentDryRun = Authorization.DryRun,
+            CurrentCaps = Authorization.Caps,
             OpenRetainerId = write.RetainerId,
             WindowChainReady = true,
             SearchGeneration = competition.Generation,

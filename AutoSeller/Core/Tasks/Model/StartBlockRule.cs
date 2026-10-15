@@ -24,6 +24,7 @@ internal enum StartBlock : byte
     NothingNeedsAVisit,
     SellListNotOpen,
     RetainerNotEnabled,
+    SetupNeeded,
 }
 
 internal readonly record struct StartFacts(
@@ -40,7 +41,8 @@ internal readonly record struct StartFacts(
     bool CompatibilityGatesOpen,
     bool HasRules,
     bool HasEnabledRetainers,
-    bool Settling);
+    bool Settling,
+    bool RequiredPluginsInstalled);
 
 internal static class StartBlockRule
 {
@@ -74,6 +76,11 @@ internal static class StartBlockRule
         if (facts.Trading)
         {
             return StartBlock.Trading;
+        }
+
+        if (facts.Mode.TravelsToBell() && !facts.RequiredPluginsInstalled)
+        {
+            return StartBlock.SetupNeeded;
         }
 
         if (facts.Mode.StartedByPlayer() && facts.AutoRetainer.Busy)

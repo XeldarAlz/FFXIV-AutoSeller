@@ -34,6 +34,10 @@ internal readonly record struct SaleGuardInput
 
     public required PlanEdits CurrentPlanEdits { get; init; }
 
+    public required bool CurrentDryRun { get; init; }
+
+    public required RunCaps CurrentCaps { get; init; }
+
     public required ulong OpenRetainerId { get; init; }
 
     public required bool WindowChainReady { get; init; }

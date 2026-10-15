@@ -33,6 +33,7 @@ using ECommons.DalamudServices;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using ClibServices = clib.Services.Svc;
 
 namespace AutoSeller;
 
@@ -114,7 +115,7 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(History.Dispose);
             Items = new ItemCatalog();
             GameItems = new GameItems();
-            Market = new MarketServices(Configuration, GameItems);
+            Market = new MarketServices(GameItems);
             completed.Push(Market.Dispose);
             Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);
@@ -201,6 +202,7 @@ public sealed class Plugin : IDalamudPlugin
         Controller.Shutdown();
         sellNowButton.Dispose();
         Assist.Dispose();
+        ClibServices.Automation.Stop();
         Postprocess.Dispose();
         Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
@@ -293,6 +295,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         else if (trimmed.Equals(StartSubcommand, StringComparison.OrdinalIgnoreCase))
         {
+            appWindow.Show(AppWindow.Page.Sell);
             Controller.Start();
         }
         else if (trimmed.Equals(StopSubcommand, StringComparison.OrdinalIgnoreCase))
@@ -500,6 +503,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLoadedInGame()
     {
+        Sales.Prepare(Svc.PlayerState.ContentId);
         ShowConfigurationNotice();
         if (!Configuration.AutoShowOnLogin)
         {

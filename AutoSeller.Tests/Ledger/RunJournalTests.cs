@@ -276,20 +276,36 @@ public sealed class RunJournalTests : IDisposable
     }
 
     [Fact]
-    public void RotationNeverOverwritesAnEarlierArchive()
+    public void RotationAddsToTheDaysArchiveWithoutLosingAnEarlierRun()
+    {
+        var secondRun = Guid.NewGuid();
+        var journal = new RunJournal(directory.Path);
+        new JournalWriter(journal).Authorize().Ended(RunState.Stopped);
+        var first = journal.Rotate(Now);
+        new JournalWriter(journal, secondRun).Authorize().Ended(RunState.Stopped);
+        var second = journal.Rotate(Now.AddHours(1));
+
+        Assert.True(first.Succeeded);
+        Assert.True(second.Succeeded);
+        Assert.Equal(first.ArchivePath, second.ArchivePath);
+        var archived = RunJournal.ReadFile(first.ArchivePath!).Entries;
+        Assert.Equal(RunState.Stopped, JournalReplayer.Replay(archived, RunId).RecoveredState);
+        Assert.Equal(RunState.Stopped, JournalReplayer.Replay(archived, secondRun).RecoveredState);
+        Assert.Empty(File.ReadAllLines(journal.FilePath));
+    }
+
+    [Fact]
+    public void ANewDayStartsItsOwnArchive()
     {
         var journal = new RunJournal(directory.Path);
         new JournalWriter(journal).Authorize().Ended(RunState.Stopped);
         var first = journal.Rotate(Now);
         new JournalWriter(journal, Guid.NewGuid()).Authorize().Ended(RunState.Stopped);
-        var second = journal.Rotate(Now);
+        var second = journal.Rotate(Now.AddDays(1));
 
-        Assert.True(first.Succeeded);
-        Assert.True(second.Succeeded);
         Assert.NotEqual(first.ArchivePath, second.ArchivePath);
         Assert.True(File.Exists(first.ArchivePath));
         Assert.True(File.Exists(second.ArchivePath));
-        Assert.Empty(File.ReadAllLines(journal.FilePath));
     }
 
     [Fact]

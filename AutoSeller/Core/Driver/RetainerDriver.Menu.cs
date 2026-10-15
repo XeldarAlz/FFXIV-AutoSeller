@@ -3,6 +3,7 @@ using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Market.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
@@ -14,6 +15,7 @@ namespace AutoSeller.Core.Driver;
 internal sealed partial class RetainerDriver
 {
     private readonly List<PendingReturn> returns = [];
+    private bool itemMenusReported;
 
     private async Task<Stop> QueueReturn(RunDecision outcome, SaleWrite write, ListingSlot listing)
     {
@@ -99,7 +101,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)
     {
         var authorization = session.Authorization;
-        if (!authorization.Rules.Vendor.Enabled)
+        if (!authorization.Rules.Vendor.Enabled || !ItemMenusOpen("vendoring"))
         {
             return Stop.None;
         }
@@ -173,6 +175,23 @@ internal sealed partial class RetainerDriver
             new MenuChoice(() => RetainerClicks.ItemMenuShows(slot.Container, slot.Slot), () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring));
     }
 
+    private bool ItemMenusOpen(string feature)
+    {
+        var gates = plugin.Market.Gates;
+        if (gates.Allows(MarketGate.ItemMenus))
+        {
+            return true;
+        }
+
+        if (!itemMenusReported)
+        {
+            itemMenusReported = true;
+            Warn($"Driver: {feature} is off for this run because the {gates.FailureOf(MarketGate.ItemMenus)} check failed; the game's item menu cannot be opened safely.");
+        }
+
+        return false;
+    }
+
     private bool TryReadStackSlot(in SlotFacts slot, out SlotReading observed)
     {
         var read = BagReader.TryReadSlot(slot.Container, slot.Slot, out var held, out var quantity);
@@ -188,6 +207,7 @@ internal sealed partial class RetainerDriver
 
     private async Task<Stop> ConcludeThroughMenu(RunDecision outcome, SaleWrite write, RunRetainer retainer, MenuChoice choice)
     {
+        outcome = HeldBackByDryRun(outcome);
         if (!outcome.Clear)
         {
             Record(outcome, retainer);
@@ -229,22 +249,26 @@ internal sealed partial class RetainerDriver
             return new Written(mismatch, RunSkip.WindowMismatch, Settle(intent, mismatch, retainer));
         }
 
-        if (session.StopRequested)
+        if (WriteHeldBack)
         {
-            Diag($"Driver: Stop came before the menu entry was chosen; write {intent.WriteId} is cancelled.");
-            return NotConfirmed(intent, retainer);
+            return HeldBack(intent, retainer, "the menu entry was chosen");
         }
 
         session.Enter(choice.Pressing);
         var stopped = false;
         var pressed = await ClickOnce(() =>
         {
-            stopped = session.StopRequested;
+            stopped = WriteHeldBack;
             return stopped || choice.Choose();
         });
-        if (stopped || !pressed)
+        if (stopped)
         {
-            Warn($"Driver: the menu entry for write {intent.WriteId} was not chosen ({(stopped ? "Stop came first" : "it could not be pressed")}); it is cancelled.");
+            return HeldBack(intent, retainer, "the menu entry could be chosen");
+        }
+
+        if (!pressed)
+        {
+            Warn($"Driver: the menu entry for write {intent.WriteId} could not be pressed; it is cancelled.");
             return NotConfirmed(intent, retainer);
         }
 

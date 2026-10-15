@@ -86,6 +86,8 @@ internal static class ExecutionFixtures
             CurrentRules = frozen.Rules,
             CurrentPricing = frozen.Pricing,
             CurrentPlanEdits = frozen.PlanEdits,
+            CurrentDryRun = frozen.DryRun,
+            CurrentCaps = frozen.Caps,
             OpenRetainerId = write.Kind == WriteKind.Move ? 0 : write.RetainerId,
             WindowChainReady = true,
             SearchGeneration = SearchGeneration,

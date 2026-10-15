@@ -1,3 +1,5 @@
+using AutoSeller.Core.Driver;
+using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ipc;
 using AutoSeller.Core.Localization;
@@ -75,6 +77,38 @@ internal sealed partial class SellController
         EndNow(active, "stopped by the player");
     }
 
+    public void StopForAlert()
+    {
+        if (session is not null)
+        {
+            Stop();
+            return;
+        }
+
+        var automation = ClibServices.Automation;
+        if (!automation.Running)
+        {
+            return;
+        }
+
+        RunLog.Info("GM alert: no run is going, so the running Assist or market look task is cancelled.");
+        automation.Stop();
+    }
+
+    public void Shutdown()
+    {
+        var held = HoldsRetainerWindows;
+        var mode = (session ?? lastSession)?.Mode;
+        Interrupt();
+        if (!held || mode == RunMode.Postprocess)
+        {
+            return;
+        }
+
+        var open = RetainerWindows.CloseOwnedNow(mode == RunMode.OpenSellList ? RetainerWindows.AboveSellList : ChainUnwind.Owned);
+        RunLog.Info($"Unloading while the run held the retainer windows; {(open == ChainWindow.None ? "none of its windows was open" : $"{open} closed at once")}.");
+    }
+
     public void Interrupt()
     {
         if (session is not { } active)
@@ -127,7 +161,7 @@ internal sealed partial class SellController
         }
 
         var writing = RunReactions.ForInterruption(active.State) != InterruptHandling.Immediate;
-        if (currentTask is { HoldsWindows: true } && (reason == PauseReason.Manual || writing))
+        if (currentTask is { } task && HoldRules.DefersPause(reason == PauseReason.Manual, task.HoldsWindows, writing))
         {
             if (!active.PauseRequested)
             {
@@ -171,6 +205,7 @@ internal sealed partial class SellController
     private void Launch(SellRunSession active)
     {
         active.Relaunch();
+        deferredPause = PauseReason.None;
         try
         {
             var task = new SellRunTask(active, plugin, () => Settling);
@@ -235,12 +270,28 @@ internal sealed partial class SellController
             active.Fail(Loc.T(L.Run.FailedFault), true);
         }
 
-        if (active.State == RunState.Failed && active.FailureRestartable && active.Mode == RunMode.Standalone && TryAutoResumeAfterFault(active))
+        if (active.State == RunState.Failed)
         {
-            return;
+            switch (HoldRules.AfterFault(active.Mode, active.FailureRestartable, active.StopRequested, active.PauseRequested))
+            {
+                case FaultFollowUp.Pause:
+                    PauseAfterFault(active);
+                    return;
+                case FaultFollowUp.Restart when TryAutoResumeAfterFault(active):
+                    return;
+            }
         }
 
         Settle(active);
+    }
+
+    private void PauseAfterFault(SellRunSession active)
+    {
+        active.ClearFault();
+        PauseReason = deferredPause != PauseReason.None ? deferredPause : PauseReason.Manual;
+        deferredPause = PauseReason.None;
+        active.Enter(RunState.Paused);
+        RunLog.Info($"Run task ended on an unexpected fault while a pause was waiting; the run pauses ({PauseReason}) instead of restarting, and Resume reads the game again.");
     }
 
     private bool TryAutoResumeAfterFault(SellRunSession active)
@@ -309,6 +360,11 @@ internal sealed partial class SellController
         }
 
         var authorization = active.Authorization;
+        if (active.Mode == RunMode.Postprocess)
+        {
+            postprocessTally.Keep(active.Values, authorization.DryRun);
+        }
+
         plugin.Suppression.Release(authorization.RunId);
         var endedAtUtc = active.EndedAtUtc;
         if (!active.Journal.TryAppend(new RunEnded { Sequence = active.Journal.NextSequence, RunId = authorization.RunId, AtUtc = endedAtUtc, FinalState = active.State }))
@@ -316,7 +372,11 @@ internal sealed partial class SellController
             RunLog.Warning($"The journal refused the end of run {authorization.RunId}: {active.Journal.LastError}");
         }
 
-        plugin.Ledger.Invalidate();
+        if (!authorization.DryRun)
+        {
+            plugin.Ledger.Invalidate();
+        }
+
         var tally = active.Tally;
         Announce(active, tally);
         Record(active, tally, endedAtUtc);

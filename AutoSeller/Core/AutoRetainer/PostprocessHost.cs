@@ -150,12 +150,12 @@ internal sealed class PostprocessHost : IDisposable
 
     private int PlannedWork(ulong retainerId)
     {
-        if (plugin.Plan.Capture(DateTime.UtcNow, true) is not { } input)
+        if (plugin.Plan.Capture(DateTime.UtcNow, false) is not { } input)
         {
             return 0;
         }
 
-        return PostprocessWork.Count(SellPlanner.Build(input, CancellationToken.None), retainerId);
+        return PostprocessWork.Count(SellPlanner.Build(input, CancellationToken.None), retainerId, controller.PostprocessVendoringLeft);
     }
 
     private void OnReadyForPostprocess(string pluginName, string retainerName)
@@ -195,6 +195,7 @@ internal sealed class PostprocessHost : IDisposable
         if (atBell && !atBellNow)
         {
             handshake.LeftBell();
+            controller.EndPostprocessVisit("the bell was left");
         }
 
         atBell = atBellNow;
@@ -249,6 +250,7 @@ internal sealed class PostprocessHost : IDisposable
     private void OnLogout(int type, int code)
     {
         handshake.LeftBell();
+        controller.EndPostprocessVisit("the character logged out");
         HandBack("the character logged out");
     }
 

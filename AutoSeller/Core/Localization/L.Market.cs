@@ -31,8 +31,8 @@ internal static partial class L
         public static readonly LocString StatusSummary = new("market.status.summary", "Market: reading listings {0}, reading the retainer market {1}, writing prices {2}. The Console has the details.");
         public static readonly LocString StatusOn = new("market.status.on", "on");
         public static readonly LocString StatusOff = new("market.status.off", "off");
-        public static readonly LocString SendPathUsage = new("market.sendPath.usage", "Usage: /asell sendpath compare | proxy. Market searches currently go through {0}.");
-        public static readonly LocString SendPathSet = new("market.sendPath.set", "Market searches now go through {0}.");
+        public static readonly LocString SendPathUsage = new("market.sendPath.usage", "Usage: /asell sendpath compare | proxy. /asell look searches currently go through {0}; runs and Assist always use the sell window.");
+        public static readonly LocString SendPathSet = new("market.sendPath.set", "/asell look searches now go through {0}; runs and Assist always use the sell window.");
         public static readonly LocString SendPathComparePrices = new("market.sendPath.comparePrices", "the Compare prices button of the sell window");
         public static readonly LocString SendPathSearchProxy = new("market.sendPath.searchProxy", "the item search proxy, at a summoning bell or a market board");
         public static readonly LocString HistoryPathUsage = new("market.historyPath.usage", "Usage: /asell historypath window | packet. Retainer sale histories are currently read from {0}.");

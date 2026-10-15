@@ -35,6 +35,8 @@ internal enum SaleRejection : byte
     VendorProtected,
     VendorOnSellList,
     ItemProtected,
+    DryRunChanged,
+    CapsChanged,
 }
 
 internal readonly record struct SaleVerdict(SaleRejection Rejection, uint Floor)

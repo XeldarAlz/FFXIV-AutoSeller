@@ -1,5 +1,6 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Text.ReadOnly;
+using System.Globalization;
 using System.Text;
 
 namespace AutoSeller.Core.Driver;
@@ -8,9 +9,9 @@ internal static unsafe class AtkValueReads
 {
     public const int UnreadableInteger = -1;
 
-    private const int MaxDescribedValues = 64;
-
-    public static bool IsInteger(in AtkValue value) => value.Type is AtkValueType.Int or AtkValueType.UInt;
+    private const int MaxHashedTextBytes = 4096;
+    private const ulong FnvOffset = 14695981039346656037;
+    private const ulong FnvPrime = 1099511628211;
 
     public static int Integer(in AtkValue value) => value.Type switch
     {
@@ -26,30 +27,55 @@ internal static unsafe class AtkValueReads
     public static string Text(in AtkValue value)
         => IsText(value) ? new ReadOnlySeStringSpan(value.String.Value).ExtractText() : string.Empty;
 
-    public static string Describe(AtkUnitBase* unit)
+    public static long Signature(in AtkValue value)
     {
-        if (unit->AtkValues == null)
+        if (IsText(value))
         {
-            return "no values";
+            return (long)TextHash(value.String.Value);
         }
 
-        var valueCount = Math.Min((int)unit->AtkValuesCount, MaxDescribedValues);
-        var builder = new StringBuilder();
-        builder.Append($"{unit->AtkValuesCount} values");
-        for (var valueIndex = 0; valueIndex < valueCount; valueIndex++)
+        return value.Type switch
         {
-            ref readonly var value = ref unit->AtkValues[valueIndex];
-            builder.Append($"; [{valueIndex}] {value.Type}");
-            if (IsText(value))
-            {
-                builder.Append($" '{Text(value)}'");
-            }
-            else if (value.Type is AtkValueType.Int or AtkValueType.UInt or AtkValueType.Bool)
-            {
-                builder.Append($" {Integer(value)}");
-            }
+            AtkValueType.Int64 => value.Int64,
+            AtkValueType.UInt64 => (long)value.UInt64,
+            AtkValueType.Float => BitConverter.SingleToInt32Bits(value.Float),
+            _ => Integer(value),
+        };
+    }
+
+    public static void Append(StringBuilder builder, in AtkValue value)
+    {
+        if (IsText(value))
+        {
+            builder.Append(" '").Append(Text(value)).Append('\'');
+            return;
         }
 
-        return builder.ToString();
+        switch (value.Type)
+        {
+            case AtkValueType.Int64:
+                builder.Append(' ').Append(value.Int64);
+                return;
+            case AtkValueType.UInt64:
+                builder.Append(' ').Append(value.UInt64);
+                return;
+            case AtkValueType.Float:
+                builder.Append(' ').Append(value.Float.ToString(CultureInfo.InvariantCulture));
+                return;
+            default:
+                builder.Append(' ').Append(Integer(value));
+                return;
+        }
+    }
+
+    private static ulong TextHash(byte* text)
+    {
+        var hash = FnvOffset;
+        for (var index = 0; index < MaxHashedTextBytes && text[index] != 0; index++)
+        {
+            hash = (hash ^ text[index]) * FnvPrime;
+        }
+
+        return hash;
     }
 }

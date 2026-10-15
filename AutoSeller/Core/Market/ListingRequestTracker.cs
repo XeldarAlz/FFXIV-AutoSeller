@@ -38,7 +38,6 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
     private static readonly string SellWindowAddon = ChainWindows.NameOf(ChainWindow.RetainerSell);
     private static readonly string ResultWindowAddon = ChainWindows.NameOf(ChainWindow.ItemSearchResult);
 
-    private readonly Configuration configuration;
     private readonly GameItems gameItems;
     private readonly ListingRequestMachine machine = new();
     private readonly SearchReuse reuse = new();
@@ -78,9 +77,8 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         Refused = 2,
     }
 
-    public ListingRequestTracker(Configuration configuration, GameItems gameItems)
+    public ListingRequestTracker(GameItems gameItems)
     {
-        this.configuration = configuration;
         this.gameItems = gameItems;
         requestResultHook = MarketHooks.FromAddress<InfoProxyItemSearch.Delegates.ProcessRequestResult>(
             InfoProxyItemSearch.Addresses.ProcessRequestResult.Value,
@@ -135,9 +133,9 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         endRequestHook?.Dispose();
     }
 
-    public SendRefusal Preflight(uint itemId)
+    public SendRefusal Preflight(uint itemId, SearchSendPath path)
     {
-        if (configuration.SearchSendPath == SearchSendPath.SearchProxy)
+        if (path == SearchSendPath.SearchProxy)
         {
             return SendPathChoice.ProxyAllowed(AtSummoningBell, MarketBoardOpen) ? SendRefusal.None : SendRefusal.NotAtMarket;
         }
@@ -156,7 +154,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         return SellWindowHolds(sellWindow, itemId) ? SendRefusal.None : SendRefusal.OtherItem;
     }
 
-    public ListingRequestState Request(ItemKey item, bool allowReuse)
+    public ListingRequestState Request(ItemKey item, bool allowReuse, SearchSendPath path)
     {
         requested = item;
         snapshot = null;
@@ -177,7 +175,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         }
 
         outcome = RequestOutcome.Machine;
-        searchPath = configuration.SearchSendPath;
+        searchPath = path;
         machine.Begin(item.ItemId, DrawJitterMs());
         RunLog.Info($"Market: search for item {item.ItemId} {QualityLabel.Of(item.IsHq)} queued through {searchPath}; it goes out in {NextSendInMs} ms.");
         return Poll();

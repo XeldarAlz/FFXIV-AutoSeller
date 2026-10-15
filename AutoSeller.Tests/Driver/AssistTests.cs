@@ -14,6 +14,7 @@ public sealed class AssistTests
     private const string OtherName = "Cobalt Ore";
     private const uint ShownPrice = 1_200;
     private const uint Floor = 600;
+    private const ulong Retainer = 501;
 
     private static readonly ListingSlot listed = new(4, ItemId, false, 20, ShownPrice);
 
@@ -78,6 +79,17 @@ public sealed class AssistTests
 
         Assert.Equal(listed, AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates, AssistOrigin.AdjustPrice(0)).Listing);
         Assert.Equal(listed, AssistTargets.Find(Shown(OreName, 20, ShownPrice), candidates, AssistOrigin.AdjustPrice(SellListRows.NoRow)).Listing);
+    }
+
+    [Fact]
+    public void AnAdjustPriceWindowNoListingMatchesIsNeverTakenForANewLot()
+    {
+        AssistCandidate[] candidates = [AssistCandidate.Held(Normal, OreName)];
+        var shown = Shown(OreName, 20, ShownPrice);
+
+        Assert.False(AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(0)).Found);
+        Assert.False(AssistTargets.Find(shown, candidates, AssistOrigin.AdjustPrice(SellListRows.NoRow)).Found);
+        Assert.Equal(AssistSubject.NewLot, AssistTargets.Find(shown, candidates, AssistOrigin.Unknown).Subject);
     }
 
     [Fact]
@@ -155,6 +167,44 @@ public sealed class AssistTests
 
             Assert.True(!suggestion.Types || suggestion.Price >= Floor, $"typed {suggestion.Price} against a lowest seller at {lowest}");
         }
+    }
+
+    [Fact]
+    public void ATypedListingPriceIsExpectedAsAReprice()
+    {
+        var target = new AssistTarget(AssistSubject.Listing, Normal, listed);
+        var typed = new AssistSuggestion(AssistOutcome.Typed, ShownPrice - 100, Floor);
+
+        var expected = AssistReprice.For(Retainer, target, typed);
+
+        Assert.True(expected.IsSet);
+        Assert.Equal(new RepriceKey(Retainer, listed.Slot, Normal), expected.Key);
+        Assert.Equal(ShownPrice - 100, expected.TypedPrice);
+    }
+
+    [Fact]
+    public void OnlyATypedPriceForAListingIsExpectedAsAReprice()
+    {
+        var target = new AssistTarget(AssistSubject.Listing, Normal, listed);
+        var typed = new AssistSuggestion(AssistOutcome.Typed, ShownPrice - 100, Floor);
+
+        Assert.False(AssistReprice.For(Retainer, target with { Subject = AssistSubject.NewLot }, typed).IsSet);
+        Assert.False(AssistReprice.For(Retainer, target, typed with { Outcome = AssistOutcome.DryRun }).IsSet);
+        Assert.False(AssistReprice.For(Retainer, target, typed with { Price = ShownPrice }).IsSet);
+        Assert.False(AssistReprice.For(0, target, typed).IsSet);
+    }
+
+    [Fact]
+    public void AnAssistRepriceLandsOnlyWhenItsSlotShowsTheTypedPrice()
+    {
+        var expected = AssistReprice.For(Retainer, new AssistTarget(AssistSubject.Listing, Normal, listed), new AssistSuggestion(AssistOutcome.Typed, ShownPrice - 100, Floor));
+        var other = new ListingSlot(1, OtherItemId, false, 3, 50);
+
+        Assert.True(expected.LandedIn([other, listed with { UnitPrice = ShownPrice - 100 }]));
+        Assert.False(expected.LandedIn([other, listed]));
+        Assert.False(expected.LandedIn([listed with { UnitPrice = ShownPrice - 50 }]));
+        Assert.False(expected.LandedIn([listed with { Slot = 5, UnitPrice = ShownPrice - 100 }]));
+        Assert.False(expected.LandedIn([]));
     }
 
     [Fact]

@@ -50,6 +50,7 @@ internal sealed partial class LogPage
     private float lastScrollMax;
     private long detachedTail;
     private int newWhileDetached;
+    private CachedText jumpText;
     private int pendingScrollIndex = -1;
     private int contextIndex = -1;
     private float sourceColumn;
@@ -345,9 +346,9 @@ internal sealed partial class LogPage
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        var label = newWhileDetached > 0
-            ? string.Concat(Loc.T(L.Log.JumpLatest), " · ", Loc.Plural(L.Log.NewLines, newWhileDetached))
-            : Loc.T(L.Log.JumpLatest);
+        var label = jumpText.Get(newWhileDetached, static fresh => fresh > 0
+            ? string.Concat(Loc.T(L.Log.JumpLatest), " · ", Loc.Plural(L.Log.NewLines, (int)fresh))
+            : Loc.T(L.Log.JumpLatest));
         var pillWidth = PillButton.Width(label, FontAwesomeIcon.ArrowDown);
         var pillHeight = Layout.ActionPillHeight * scale;
         var windowTop = ImGui.GetWindowPos().Y;

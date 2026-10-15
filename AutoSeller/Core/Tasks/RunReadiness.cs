@@ -9,13 +9,14 @@ internal enum Readiness : byte
     Ready,
     SetupNeeded,
     LoggedOut,
+    NoRules,
     JournalBlocks,
     AutoRetainerBusy,
 }
 
 internal static class RunReadiness
 {
-    public static Readiness Evaluate(bool journalBlocks, bool autoRetainerBusy)
+    public static Readiness Evaluate(bool hasRules, bool journalBlocks, bool autoRetainerBusy)
     {
         if (!ExternalPlugins.AllRequiredInstalled())
         {
@@ -25,6 +26,11 @@ internal static class RunReadiness
         if (!Svc.ClientState.IsLoggedIn || Svc.Objects.LocalPlayer is null)
         {
             return Readiness.LoggedOut;
+        }
+
+        if (!hasRules)
+        {
+            return Readiness.NoRules;
         }
 
         if (journalBlocks)
@@ -39,6 +45,7 @@ internal static class RunReadiness
     {
         Readiness.SetupNeeded => Loc.T(L.Dock.ReasonInstall),
         Readiness.LoggedOut => Loc.T(L.Dock.ReasonLoggedOut),
+        Readiness.NoRules => Loc.T(L.Run.BlockNoRules),
         Readiness.JournalBlocks => Loc.T(L.Dock.ReasonJournal),
         Readiness.AutoRetainerBusy => Loc.T(L.Run.BlockAutoRetainerBusy),
         _ => string.Empty,

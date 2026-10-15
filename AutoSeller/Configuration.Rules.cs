@@ -29,6 +29,8 @@ public sealed partial class Configuration
         SaveDebounced();
     }
 
+    internal bool HasRules() => SellList.Count > 0 || CategoryRules.Count > 0;
+
     internal RuleBook BuildRuleBook() => RuleBookBuilder.Build(new RuleChoices(
         SellList,
         CategoryRules,

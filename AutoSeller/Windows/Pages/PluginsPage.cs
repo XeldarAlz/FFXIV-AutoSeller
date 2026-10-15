@@ -15,6 +15,8 @@ internal sealed class PluginsPage
     private const float DiscRadius = 17f;
     private const float InstallButtonHeight = 30f;
 
+    private CachedText statusText;
+
     public void Draw(Plugin plugin)
     {
         var plugins = ExternalPlugins.All;
@@ -27,7 +29,7 @@ internal sealed class PluginsPage
             }
         }
 
-        var status = missing == 0 ? Loc.T(L.Plugins.AllInstalled) : Loc.Plural(L.Plugins.Missing, missing);
+        var status = statusText.Get(missing, static count => count == 0 ? Loc.T(L.Plugins.AllInstalled) : Loc.Plural(L.Plugins.Missing, (int)count));
         PageHeader.Draw(Loc.T(L.Plugins.Title), status, missing == 0 ? Styling.AccentMint : Styling.AccentRose);
 
         for (var index = 0; index < plugins.Count; index++)

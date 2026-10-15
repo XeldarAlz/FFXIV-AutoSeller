@@ -38,7 +38,7 @@ internal static class ReadyState
                 : new Info(Kind.Running, Styling.AccentBlue, Styling.AccentBlueSoft);
         }
 
-        return RunReadiness.Evaluate(plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy) switch
+        return RunReadiness.Evaluate(plugin.Configuration.HasRules(), plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy) switch
         {
             Readiness.Ready => new Info(Kind.Ready, Styling.AccentMint, Styling.AccentMintSoft),
             Readiness.SetupNeeded => new Info(Kind.SetupNeeded, Styling.AccentRose, Styling.AccentRoseSoft),

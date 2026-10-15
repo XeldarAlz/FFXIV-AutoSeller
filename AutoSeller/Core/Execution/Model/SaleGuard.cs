@@ -124,8 +124,18 @@ internal static class SaleGuard
         return input.JournalBlocksWrites ? SaleRejection.JournalUnresolved : SaleRejection.None;
     }
 
-    public static SaleRejection CheckFrozenSettings(SellAuthorization authorization, RuleBook currentRules, PricingSettings currentPricing, PlanEdits currentPlanEdits)
+    public static SaleRejection CheckFrozenSettings(SellAuthorization authorization, RuleBook currentRules, PricingSettings currentPricing, PlanEdits currentPlanEdits, bool currentDryRun, RunCaps currentCaps)
     {
+        if (currentDryRun != authorization.DryRun)
+        {
+            return SaleRejection.DryRunChanged;
+        }
+
+        if (currentCaps != authorization.Caps)
+        {
+            return SaleRejection.CapsChanged;
+        }
+
         if (Fingerprint.OfRuleBook(currentRules) != authorization.RulesHash)
         {
             return SaleRejection.RulesChanged;
@@ -141,7 +151,7 @@ internal static class SaleGuard
 
     private static SaleRejection CheckFrozenSettings(in SaleGuardInput input)
     {
-        return CheckFrozenSettings(input.Authorization, input.CurrentRules, input.CurrentPricing, input.CurrentPlanEdits);
+        return CheckFrozenSettings(input.Authorization, input.CurrentRules, input.CurrentPricing, input.CurrentPlanEdits, input.CurrentDryRun, input.CurrentCaps);
     }
 
     private static SaleRejection CheckIdentity(in SaleGuardInput input)

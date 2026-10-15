@@ -14,14 +14,7 @@ internal static class SettingsControls
     public const float RowComboWidth = 170f;
     public const float RowStepperWidth = 150f;
 
-    private const float RangeDragWidth = 62f;
-    private const float RangeDashSlot = 14f;
-    private const float RangeDragSpeed = 0.25f;
-
     private static readonly string[] languageLabels = BuildLanguageLabels();
-
-    public static float RangeInlineWidth()
-        => RangeDragWidth * 2f + RangeDashSlot;
 
     public static bool Toggle(string id, bool current, out bool value)
     {
@@ -35,27 +28,27 @@ internal static class SettingsControls
         return Stepper.Draw(id, ref value, step, minimum, maximum, format, width);
     }
 
-    public static void DrawToggle(Configuration cfg, Func<bool> getter, Action<bool> setter, string id)
+    public static void DrawToggle(Configuration configuration, Func<Configuration, bool> getter, Action<Configuration, bool> setter, string id)
     {
-        var value = getter();
+        var value = getter(configuration);
         if (ToggleSwitch.Draw(id, ref value))
         {
-            setter(value);
-            cfg.SaveDebounced();
+            setter(configuration, value);
+            configuration.SaveDebounced();
         }
     }
 
-    public static void DrawIntSlider(Configuration cfg, string id, Func<int> getter, Action<int> setter,
+    public static void DrawIntSlider(Configuration configuration, string id, Func<Configuration, int> getter, Action<Configuration, int> setter,
         int minimum, int maximum, string format = "%d", float width = RowSliderWidth)
     {
-        var value = getter();
+        var value = getter(configuration);
         ImGui.SetNextItemWidth(width * ImGuiHelpers.GlobalScale);
         using (PushFrameColors())
         {
             if (ImGui.SliderInt(id, ref value, minimum, maximum, format))
             {
-                setter(Math.Clamp(value, minimum, maximum));
-                cfg.SaveDebounced();
+                setter(configuration, Math.Clamp(value, minimum, maximum));
+                configuration.SaveDebounced();
             }
         }
     }
@@ -102,54 +95,6 @@ internal static class SettingsControls
     public static bool DrawSearchableCombo(string id, string[] labels, ref int selectedIndex,
         float width, string? hint = null)
         => Dropdown.Draw(id, labels, ref selectedIndex, width, width, true, hint);
-
-    public static void DrawRangeInline(Configuration cfg, string minId, string maxId,
-        Func<int> getMin, Action<int> setMin, Func<int> getMax, Action<int> setMax,
-        int maxValue, int minValue = 0, string format = "%d s")
-    {
-        using var colors = PushFrameColors();
-
-        DrawRangeBound(cfg, minId, getMin, setMin, minValue, maxValue, format,
-            onChanged: value => { if (value > getMax()) setMax(value); });
-
-        DrawRangeDash();
-
-        DrawRangeBound(cfg, maxId, getMax, setMax, minValue, maxValue, format,
-            onChanged: value => { if (value < getMin()) setMin(value); });
-    }
-
-    private static void DrawRangeBound(Configuration cfg, string id, Func<int> getter, Action<int> setter,
-        int minValue, int maxValue, string format, Action<int> onChanged)
-    {
-        var value = getter();
-        ImGui.SetNextItemWidth(RangeDragWidth * ImGuiHelpers.GlobalScale);
-        if (!ImGui.DragInt(id, ref value, RangeDragSpeed, minValue, maxValue, format))
-        {
-            return;
-        }
-
-        value = Math.Clamp(value, minValue, maxValue);
-        setter(value);
-        onChanged(value);
-        cfg.SaveDebounced();
-    }
-
-    private static void DrawRangeDash()
-    {
-        var dashSlot = RangeDashSlot * ImGuiHelpers.GlobalScale;
-
-        ImGui.SameLine(0f, 0f);
-        var slotOrigin = ImGui.GetCursorScreenPos();
-        var dashSize = ImGui.CalcTextSize("-");
-        ImGui.SetCursorScreenPos(slotOrigin + new Vector2((dashSlot - dashSize.X) * 0.5f, (ImGui.GetFrameHeight() - dashSize.Y) * 0.5f));
-        using (ImRaii.PushColor(ImGuiCol.Text, Styling.TextMuted))
-        {
-            ImGui.TextUnformatted("-");
-        }
-
-        ImGui.SameLine(0f, 0f);
-        ImGui.SetCursorScreenPos(slotOrigin with { X = slotOrigin.X + dashSlot });
-    }
 
     public static IDisposable PushFrameColors()
         => ImRaii.PushColor(ImGuiCol.SliderGrab, Styling.AccentGlow)

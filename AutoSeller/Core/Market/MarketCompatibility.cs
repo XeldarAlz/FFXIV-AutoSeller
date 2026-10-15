@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using AutoSeller.Core.Market.Model;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace AutoSeller.Core.Market;
@@ -27,6 +28,8 @@ internal static unsafe class MarketCompatibility
             new("RetainerManager address", RetainerManager.Addresses.Instance.Value != 0, MarketGate.ReadRetainerMarket),
             new("GetActiveRetainer address", RetainerManager.Addresses.GetActiveRetainer.Value != 0, MarketGate.ReadRetainerMarket),
             new("InventoryManager address", InventoryManager.Addresses.Instance.Value != 0, MarketGate.ReadRetainerMarket),
+            new("GetInventoryContainer address", InventoryManager.Addresses.GetInventoryContainer.Value != 0, MarketGate.ReadRetainerMarket),
+            new("OpenForItemSlot address", AgentInventoryContext.Addresses.OpenForItemSlot.Value != 0, MarketGate.ItemMenus),
         ];
 
         return MarketGateReport.Evaluate(checks);

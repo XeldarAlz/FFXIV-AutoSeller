@@ -19,7 +19,8 @@ internal static class GeneralSettings
         SettingsRow.Draw(Loc.T(L.Settings.Language),
             Loc.T(L.Settings.LanguageHelp),
             SettingsControls.RowComboWidth,
-            () => SettingsControls.DrawLanguageCombo(configuration));
+            configuration,
+            static configuration => SettingsControls.DrawLanguageCombo(configuration));
     }
 
     private static void DrawWindowGroup(Configuration configuration)
@@ -29,7 +30,8 @@ internal static class GeneralSettings
         SettingsRow.Draw(Loc.T(L.Settings.OpenOnLogin),
             Loc.T(L.Settings.OpenOnLoginHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.AutoShowOnLogin, value => configuration.AutoShowOnLogin = value, "##asell_general_autoshow"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.AutoShowOnLogin, static (configuration, value) => configuration.AutoShowOnLogin = value, "##asell_general_autoshow"),
             SettingsRow.ToggleHeight);
     }
 
@@ -40,13 +42,15 @@ internal static class GeneralSettings
         SettingsRow.Draw(Loc.T(L.Settings.AutoPause),
             Loc.T(L.Settings.AutoPauseHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.AutoPauseInContent, value => configuration.AutoPauseInContent = value, "##asell_general_autopause"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.AutoPauseInContent, static (configuration, value) => configuration.AutoPauseInContent = value, "##asell_general_autopause"),
             SettingsRow.ToggleHeight);
 
         SettingsRow.Draw(Loc.T(L.Settings.PauseTyping),
             Loc.T(L.Settings.PauseTypingHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.PauseWhileTyping, value => configuration.PauseWhileTyping = value, "##asell_general_pausetyping"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.PauseWhileTyping, static (configuration, value) => configuration.PauseWhileTyping = value, "##asell_general_pausetyping"),
             SettingsRow.ToggleHeight);
     }
 }

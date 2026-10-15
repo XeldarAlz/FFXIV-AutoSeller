@@ -23,10 +23,8 @@ internal static unsafe class NpcInteraction
     private const string SelectStringAddon = "SelectString";
     private const string SelectYesnoAddon = "SelectYesno";
     private const string TalkAddon = "Talk";
-    private const string SelectStringThrottleKey = "AutoSeller.Npc.SelectString";
     private const string SelectYesnoThrottleKey = "AutoSeller.Npc.SelectYesno";
     private const string TalkThrottleKey = "AutoSeller.Npc.Talk";
-    private const string CallbackThrottleKey = "AutoSeller.Npc.Callback";
     private const string CloseThrottleKey = "AutoSeller.Npc.Close";
 
     private static readonly BlockingFlag[] blockingFlags =
@@ -139,9 +137,6 @@ internal static unsafe class NpcInteraction
 
     public static bool DialogAddonOpen() => TalkOpen() || SelectYesnoOpen() || SelectStringOpen();
 
-    public static int SelectStringEntryCount()
-        => TryGetReadyAddon(SelectStringAddon, out var addon) ? new AddonMaster.SelectString(addon).EntryCount : 0;
-
     public static string SelectStringEntryText(int entryIndex)
     {
         if (!TryGetReadyAddon(SelectStringAddon, out var addon))
@@ -170,23 +165,6 @@ internal static unsafe class NpcInteraction
         }
 
         return NoEntry;
-    }
-
-    public static bool SelectEntry(int entryIndex)
-    {
-        if (!TryGetReadyAddon(SelectStringAddon, out var addon) || entryIndex < 0 || entryIndex >= new AddonMaster.SelectString(addon).EntryCount)
-        {
-            return false;
-        }
-
-        if (!EzThrottler.Throttle(SelectStringThrottleKey, AddonInteractThrottleMs))
-        {
-            return false;
-        }
-
-        RunLog.Debug($"SelectString: choosing entry {entryIndex}");
-        Callback.Fire(addon, true, entryIndex);
-        return true;
     }
 
     public static string[] SelectStringEntries()
@@ -232,12 +210,6 @@ internal static unsafe class NpcInteraction
         return true;
     }
 
-    public static bool SelectLastEntry()
-    {
-        var entryCount = SelectStringEntryCount();
-        return entryCount > 0 && SelectEntry(entryCount - 1);
-    }
-
     public static string SelectYesnoText()
         => TryGetReadyAddon(SelectYesnoAddon, out var addon) ? new AddonMaster.SelectYesno(addon).Text : string.Empty;
 
@@ -260,18 +232,6 @@ internal static unsafe class NpcInteraction
         }
 
         new AddonMaster.Talk(addon).Click();
-        return true;
-    }
-
-    public static bool FireCallback(string addonName, int value)
-    {
-        if (!TryGetReadyAddon(addonName, out var addon) || !EzThrottler.Throttle(CallbackThrottleKey, AddonInteractThrottleMs))
-        {
-            return false;
-        }
-
-        RunLog.Debug($"{addonName}: firing callback {value}");
-        Callback.Fire(addon, true, value);
         return true;
     }
 

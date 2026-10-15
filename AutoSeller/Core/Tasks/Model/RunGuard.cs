@@ -15,6 +15,8 @@ internal readonly record struct RunLiveFacts(
     RuleBook Rules,
     PricingSettings Pricing,
     PlanEdits PlanEdits,
+    bool DryRun,
+    RunCaps Caps,
     bool JournalBlocksWrites,
     DateTime NowUtc);
 
@@ -56,6 +58,8 @@ internal static class RunGuard
             CurrentRules = live.Rules,
             CurrentPricing = live.Pricing,
             CurrentPlanEdits = live.PlanEdits,
+            CurrentDryRun = live.DryRun,
+            CurrentCaps = live.Caps,
             OpenRetainerId = live.OpenRetainerId,
             WindowChainReady = live.WindowChainReady,
             SearchGeneration = searchGeneration,
@@ -99,7 +103,7 @@ internal static class RunGuard
             return DriverHalt.LeftHomeWorld;
         }
 
-        if (SaleGuard.CheckFrozenSettings(authorization, live.Rules, live.Pricing, live.PlanEdits) != SaleRejection.None)
+        if (SaleGuard.CheckFrozenSettings(authorization, live.Rules, live.Pricing, live.PlanEdits, live.DryRun, live.Caps) != SaleRejection.None)
         {
             return DriverHalt.SettingsChanged;
         }

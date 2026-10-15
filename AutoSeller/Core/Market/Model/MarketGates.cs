@@ -9,7 +9,8 @@ internal enum MarketGate : byte
     ReadListings = 1 << 0,
     ReadRetainerMarket = 1 << 1,
     WritePrices = 1 << 2,
-    All = ReadListings | ReadRetainerMarket | WritePrices,
+    ItemMenus = 1 << 3,
+    All = ReadListings | ReadRetainerMarket | WritePrices | ItemMenus,
 }
 
 internal readonly record struct MarketCheck(string Name, bool Passed, MarketGate Needs);
@@ -51,9 +52,23 @@ internal sealed class MarketGateReport
         return gate != MarketGate.None && (Open & gate) == gate;
     }
 
+    public string FailureOf(MarketGate gate)
+    {
+        for (var index = 0; index < Checks.Length; index++)
+        {
+            var check = Checks[index];
+            if (!check.Passed && (check.Needs & gate) != MarketGate.None)
+            {
+                return check.Name;
+            }
+        }
+
+        return string.Empty;
+    }
+
     public string Describe()
     {
-        return $"reading listings {OnOff(MarketGate.ReadListings)}, reading the retainer market {OnOff(MarketGate.ReadRetainerMarket)}, writing prices {OnOff(MarketGate.WritePrices)}";
+        return $"reading listings {OnOff(MarketGate.ReadListings)}, reading the retainer market {OnOff(MarketGate.ReadRetainerMarket)}, writing prices {OnOff(MarketGate.WritePrices)}, item menus {OnOff(MarketGate.ItemMenus)}";
     }
 
     private string OnOff(MarketGate gate)

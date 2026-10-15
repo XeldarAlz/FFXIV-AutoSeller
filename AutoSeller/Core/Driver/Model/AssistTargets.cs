@@ -53,13 +53,10 @@ internal static class AssistTargets
             return HeldShown(shown, candidates);
         }
 
-        if (origin.Opening == AssistOpening.AdjustPrice && origin.Row != SellListRows.NoRow)
+        if (origin.Opening == AssistOpening.AdjustPrice)
         {
-            var atRow = ListingShown(shown, candidates, origin.Row);
-            if (atRow.Found)
-            {
-                return atRow;
-            }
+            var atRow = origin.Row == SellListRows.NoRow ? default : ListingShown(shown, candidates, origin.Row);
+            return atRow.Found ? atRow : ListingShown(shown, candidates, SellListRows.NoRow);
         }
 
         var listing = ListingShown(shown, candidates, SellListRows.NoRow);

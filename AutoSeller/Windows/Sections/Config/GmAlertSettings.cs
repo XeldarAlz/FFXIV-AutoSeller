@@ -35,25 +35,29 @@ internal static class GmAlertSettings
         SettingsRow.Draw(Loc.T(L.Safety.GmStopRun),
             Loc.T(L.Safety.GmStopRunHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.GmAlertStopRun, value => configuration.GmAlertStopRun = value, "##asell_gm_stop"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.GmAlertStopRun, static (configuration, value) => configuration.GmAlertStopRun = value, "##asell_gm_stop"),
             SettingsRow.ToggleHeight);
 
         SettingsRow.Draw(Loc.T(L.Safety.GmToast),
             Loc.T(L.Safety.GmToastHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.GmAlertToast, value => configuration.GmAlertToast = value, "##asell_gm_toast"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.GmAlertToast, static (configuration, value) => configuration.GmAlertToast = value, "##asell_gm_toast"),
             SettingsRow.ToggleHeight);
 
         SettingsRow.Draw(Loc.T(L.Safety.GmChat),
             Loc.T(L.Safety.GmChatHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.GmAlertChat, value => configuration.GmAlertChat = value, "##asell_gm_chat"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.GmAlertChat, static (configuration, value) => configuration.GmAlertChat = value, "##asell_gm_chat"),
             SettingsRow.ToggleHeight);
 
         SettingsRow.Draw(Loc.T(L.Safety.GmSound),
             Loc.T(L.Safety.GmSoundHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.GmAlertSound, value => configuration.GmAlertSound = value, "##asell_gm_sound"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.GmAlertSound, static (configuration, value) => configuration.GmAlertSound = value, "##asell_gm_sound"),
             SettingsRow.ToggleHeight);
 
         using var beep = Motion.PushSection("##asell_gm_beep", configuration.GmAlertSound);
@@ -70,25 +74,28 @@ internal static class GmAlertSettings
         SettingsRow.Draw(Loc.T(L.Safety.BeepCount),
             Loc.T(L.Safety.BeepCountHelp),
             SettingsControls.RowSliderWidth,
-            () => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_count",
-                () => configuration.GmAlertBeepCount, value => configuration.GmAlertBeepCount = value,
+            configuration,
+            static configuration => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_count",
+                static configuration => configuration.GmAlertBeepCount, static (configuration, value) => configuration.GmAlertBeepCount = value,
                 BeepCountMin, BeepCountMax, Loc.T(L.Safety.BeepCountFormat)));
 
         SettingsRow.Draw(Loc.T(L.Safety.BeepLength),
             Loc.T(L.Safety.BeepLengthHelp),
             SettingsControls.RowSliderWidth,
-            () => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_length",
-                () => configuration.GmAlertBeepDurationMs, value => configuration.GmAlertBeepDurationMs = value,
+            configuration,
+            static configuration => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_length",
+                static configuration => configuration.GmAlertBeepDurationMs, static (configuration, value) => configuration.GmAlertBeepDurationMs = value,
                 BeepLengthMinMs, BeepLengthMaxMs, Loc.T(L.Safety.BeepLengthFormat)));
 
         SettingsRow.Draw(Loc.T(L.Safety.BeepPitch),
             Loc.T(L.Safety.BeepPitchHelp),
             SettingsControls.RowSliderWidth,
-            () => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_pitch",
-                () => configuration.GmAlertBeepFrequencyHz, value => configuration.GmAlertBeepFrequencyHz = value,
+            configuration,
+            static configuration => SettingsControls.DrawIntSlider(configuration, "##asell_gm_beep_pitch",
+                static configuration => configuration.GmAlertBeepFrequencyHz, static (configuration, value) => configuration.GmAlertBeepFrequencyHz = value,
                 BeepPitchMinHz, BeepPitchMaxHz, Loc.T(L.Safety.BeepPitchFormat)));
 
-        SettingsRow.DrawBlock(Loc.T(L.Safety.Test), null, () => DrawBeepPreview(configuration));
+        SettingsRow.DrawBlock(Loc.T(L.Safety.Test), null, configuration, static configuration => DrawBeepPreview(configuration));
     }
 
     private static void DrawBeepPreview(Configuration configuration)
@@ -113,12 +120,14 @@ internal static class GmAlertSettings
 
         SettingsRow.DrawBlock(Loc.T(L.Safety.GmCommands),
             Loc.T(L.Safety.GmCommandsHelp),
-            () => DrawCommandList(configuration));
+            configuration,
+            static configuration => DrawCommandList(configuration));
 
         SettingsRow.Draw(Loc.T(L.Safety.GmKill),
             Loc.T(L.Safety.GmKillHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.GmAlertKillGame, value => configuration.GmAlertKillGame = value, "##asell_gm_kill"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.GmAlertKillGame, static (configuration, value) => configuration.GmAlertKillGame = value, "##asell_gm_kill"),
             SettingsRow.ToggleHeight);
     }
 

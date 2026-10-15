@@ -16,6 +16,7 @@ internal sealed class RunJournal : IRunJournal
     private const string SetAsideMarker = ".set-aside";
     private const string ArchiveExtension = ".jsonl";
     private const string ArchiveStampFormat = "yyyyMMdd-HHmmss";
+    private const string ArchiveDayFormat = "yyyyMMdd";
     private const string BackupSuffix = ".bak";
 
     public static readonly JsonSerializerOptions SerializerOptions = new()
@@ -162,8 +163,8 @@ internal sealed class RunJournal : IRunJournal
         string? archivePath = null;
         if (archivedLines > 0)
         {
-            archivePath = UniquePath(nowUtc, string.Empty);
-            if (!DurableFile.TryReplace(archivePath, archived.WrittenSpan, null, out error))
+            archivePath = DayArchivePath(nowUtc);
+            if (!DurableFile.TryAppendLines(DirectoryPath, archivePath, archived.WrittenSpan, out error))
             {
                 return JournalRotation.Failure(error ?? "the archive could not be written");
             }
@@ -171,11 +172,6 @@ internal sealed class RunJournal : IRunJournal
 
         if (!DurableFile.TryReplace(FilePath, kept.WrittenSpan, FilePath + BackupSuffix, out error))
         {
-            if (archivePath is not null)
-            {
-                DurableFile.TryDelete(archivePath);
-            }
-
             return JournalRotation.Failure(error ?? "the journal could not be rewritten");
         }
 
@@ -284,6 +280,11 @@ internal sealed class RunJournal : IRunJournal
         }
 
         return finished;
+    }
+
+    private string DayArchivePath(DateTime nowUtc)
+    {
+        return Path.Combine(DirectoryPath, ArchivePrefix + nowUtc.ToString(ArchiveDayFormat, CultureInfo.InvariantCulture) + ArchiveExtension);
     }
 
     private string UniquePath(DateTime nowUtc, string marker)

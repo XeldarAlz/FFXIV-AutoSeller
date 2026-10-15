@@ -23,6 +23,19 @@ internal static class SaleHistoryEntries
         }
     }
 
+    public static bool HoldsHistory(ReadOnlySpan<SaleRecord> sales)
+    {
+        for (var index = 0; index < sales.Length; index++)
+        {
+            if (sales[index].Source == SaleSource.History)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static ImmutableArray<SaleRecord> Unseen(ReadOnlySpan<SaleRecord> incoming, HashSet<SaleHistoryEntry> known)
     {
         var unseen = ImmutableArray.CreateBuilder<SaleRecord>(incoming.Length);

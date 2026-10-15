@@ -233,6 +233,8 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             configuration.BuildRuleBook(),
             configuration.BuildPricingSettings(),
             plugin.Characters.Current?.PlanEdits ?? PlanEdits.None,
+            configuration.DryRun,
+            configuration.BuildRunCaps(),
             session.Review.BlocksWrites,
             nowUtc);
     }

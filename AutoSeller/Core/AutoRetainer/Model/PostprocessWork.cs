@@ -9,7 +9,7 @@ internal static class PostprocessWork
 {
     public const int MarketToRead = 1;
 
-    public static int Count(SellPlan plan, ulong retainerId)
+    public static int Count(SellPlan plan, ulong retainerId, bool vendoringLeft = true)
     {
         var unread = plan.Input.MarketOf(retainerId) is null;
         var rows = plan.Rows;
@@ -24,7 +24,7 @@ internal static class PostprocessWork
 
             if (row.Kind == RunRowKind.Vendor)
             {
-                count += row.Decision.Action == SellAction.Vendor ? 1 : 0;
+                count += vendoringLeft && row.Decision.Action == SellAction.Vendor ? 1 : 0;
                 continue;
             }
 
