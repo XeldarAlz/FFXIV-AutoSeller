@@ -155,6 +155,42 @@ internal static class RunPlanner
         return With(inputs, restocked.ToImmutable(), inputs.FreeBagSlots);
     }
 
+    public static RunPlanInputs ListableFrom(RunPlanInputs inputs, SellListKind list)
+    {
+        var stock = inputs.Stock;
+        var listable = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
+        for (var index = 0; index < stock.Length; index++)
+        {
+            if (ListsIn(list, stock[index].Slot.Source))
+            {
+                listable.Add(stock[index]);
+            }
+        }
+
+        return With(inputs, listable.ToImmutable(), inputs.FreeBagSlots);
+    }
+
+    public static RunPlanInputs WithoutSaddlebag(RunPlanInputs inputs, ReadOnlySpan<SlotFacts> kept)
+    {
+        var stock = inputs.Stock;
+        var left = ImmutableArray.CreateBuilder<StockSlot>(stock.Length);
+        for (var index = 0; index < stock.Length; index++)
+        {
+            var slot = stock[index].Slot;
+            if (slot.Source != SlotSource.Saddlebag || Holds(kept, slot))
+            {
+                left.Add(stock[index]);
+            }
+        }
+
+        return With(inputs, left.ToImmutable(), inputs.FreeBagSlots);
+    }
+
+    public static bool SameStack(in SlotFacts left, in SlotFacts right)
+    {
+        return left.RetainerId == right.RetainerId && left.Container == right.Container && left.Slot == right.Slot && left.Key == right.Key;
+    }
+
     public static bool IsPageOf(in SlotFacts slot, ulong retainerId)
     {
         return slot.Source == SlotSource.RetainerPage && slot.RetainerId == retainerId;
@@ -225,6 +261,19 @@ internal static class RunPlanner
         }
 
         return null;
+    }
+
+    private static bool Holds(ReadOnlySpan<SlotFacts> stacks, in SlotFacts slot)
+    {
+        for (var index = 0; index < stacks.Length; index++)
+        {
+            if (SameStack(stacks[index], slot))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static RunPlanInputs With(RunPlanInputs inputs, ImmutableArray<StockSlot> stock, int freeBagSlots)

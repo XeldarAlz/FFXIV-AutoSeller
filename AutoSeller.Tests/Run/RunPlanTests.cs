@@ -428,6 +428,88 @@ public sealed class RunPlanTests
         Assert.DoesNotContain(plan.Allocation.Assignments, assignment => assignment.Lot.Row.Container == SaddlebagContainer);
     }
 
+    [Fact]
+    public void AJobThatCannotMoveSaddlebagStacksGivesTheirSlotToTheNextListableLot()
+    {
+        var saddlebag = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Quantity = LotQuantity * 2, Source = SlotSource.Saddlebag };
+        var inputs = WithSources(OreRule(listingsToKeepUp: 3), SellSources.Default | SellSources.Saddlebag, [], new StockSlot(OreInTheBags, OreFacts, OreReference), new StockSlot(saddlebag, OreFacts, OreReference));
+        RetainerSnapshot[] oneFreeSlot = [Market(Alpha, FullBut(1))];
+
+        var withSaddlebag = RunPlanner.Build(inputs, oneFreeSlot, Handled(), [], []);
+        var withoutSaddlebag = RunPlanner.Build(RunPlanner.WithoutSaddlebag(inputs, []), oneFreeSlot, Handled(), [], []);
+
+        Assert.Equal(SaddlebagContainer, Assert.Single(withSaddlebag.AssignedTo(Alpha)).Lot.Row.Container);
+        Assert.Equal(OreInTheBags.Slot, Assert.Single(withoutSaddlebag.AssignedTo(Alpha)).Lot.Row.Slot);
+        Assert.Equal(BagContainer, withoutSaddlebag.AssignedTo(Alpha)[0].Lot.Row.Container);
+    }
+
+    [Fact]
+    public void OnlyTheSaddlebagStacksADryRunWouldMoveStayInTheStock()
+    {
+        var wouldMove = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Source = SlotSource.Saddlebag };
+        var stays = wouldMove with { Slot = 2 };
+        var inputs = WithSources(OreRule(), SellSources.Default | SellSources.Saddlebag, [], new StockSlot(OreInTheBags, OreFacts, OreReference), new StockSlot(wouldMove, OreFacts, OreReference), new StockSlot(stays, OreFacts, OreReference));
+
+        var left = RunPlanner.WithoutSaddlebag(inputs, [wouldMove with { Quantity = 1 }]);
+
+        Assert.Equal([OreInTheBags, wouldMove], SlotsOf(left.Stock));
+        Assert.Same(inputs.Rules, left.Rules);
+        Assert.Same(inputs.Edits, left.Edits);
+    }
+
+    [Fact]
+    public void AnOpenSellListKeepsOnlyTheStacksItCanList()
+    {
+        var crystal = OreInTheBags with { Container = SourceContainers.Crystals, Slot = 1, Source = SlotSource.Crystals };
+        var armoury = OreInTheBags with { Container = ArmouryContainer, Slot = 1, Source = SlotSource.Armoury };
+        var saddlebag = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Source = SlotSource.Saddlebag };
+        var page = OreInTheBags with { RetainerId = Alpha, Container = RetainerPage, Slot = 2, Source = SlotSource.RetainerPage };
+        var inputs = WithSources(OreRule(), SellSources.Default | SellSources.Armoury | SellSources.Saddlebag | SellSources.RetainerPages, [Alpha], Stocked(OreInTheBags, crystal, armoury, saddlebag, page));
+
+        Assert.Equal([OreInTheBags, crystal, armoury], SlotsOf(RunPlanner.ListableFrom(inputs, SellListKind.Inventory).Stock));
+        Assert.Equal([page], SlotsOf(RunPlanner.ListableFrom(inputs, SellListKind.RetainerInventory).Stock));
+    }
+
+    [Theory]
+    [InlineData((byte)SellListKind.Inventory, 2, 0)]
+    [InlineData((byte)SellListKind.RetainerInventory, 0, 1)]
+    public void EachSellListCountsOnlyTheLotsItCanList(byte list, int alphaLots, int betaLots)
+    {
+        var armoury = OreInTheBags with { Container = ArmouryContainer, Slot = 1, Source = SlotSource.Armoury };
+        var saddlebag = OreInTheBags with { Container = SaddlebagContainer, Slot = 1, Source = SlotSource.Saddlebag };
+        var betaPage = OreInTheBags with { RetainerId = Beta, Container = RetainerPage, Slot = 2, Source = SlotSource.RetainerPage };
+        var rule = OreRule(listingsToKeepUp: 4);
+        rule.PreferredRetainerId = Alpha;
+        var inputs = WithSources(rule, SellSources.Default | SellSources.Armoury | SellSources.Saddlebag | SellSources.RetainerPages, [Beta], Stocked(OreInTheBags, armoury, saddlebag, betaPage));
+
+        var plan = RunPlanner.Build(inputs, [Market(Alpha), Market(Beta)], Handled(), [], []);
+
+        Assert.Equal(3, plan.AssignedTo(Alpha).Length);
+        Assert.Equal(alphaLots, plan.CountFor(Alpha, (SellListKind)list));
+        Assert.Equal(betaLots, plan.CountFor(Beta, (SellListKind)list));
+    }
+
+    [Theory]
+    [InlineData((byte)RunMode.Standalone, true, true)]
+    [InlineData((byte)RunMode.Postprocess, false, false)]
+    [InlineData((byte)RunMode.OpenSellList, false, true)]
+    public void OnlyAStandaloneRunTravelsToTheBell(byte mode, bool travels, bool startedByPlayer)
+    {
+        Assert.Equal(travels, ((RunMode)mode).TravelsToBell());
+        Assert.Equal(startedByPlayer, ((RunMode)mode).StartedByPlayer());
+    }
+
+    private static StockSlot[] Stocked(params SlotFacts[] slots)
+    {
+        var stock = new StockSlot[slots.Length];
+        for (var index = 0; index < slots.Length; index++)
+        {
+            stock[index] = new StockSlot(slots[index], OreFacts, OreReference);
+        }
+
+        return stock;
+    }
+
     private static SlotFacts[] SlotsOf(ImmutableArray<StockSlot> stock)
     {
         var slots = new SlotFacts[stock.Length];
