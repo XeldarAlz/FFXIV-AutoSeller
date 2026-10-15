@@ -46,7 +46,7 @@ internal static class PlanLabels
 
         if (decision.Refused)
         {
-            return Loc.T(L.Plan.DoneRefused);
+            return Loc.T(Refusals.IsLimit(Refusals.Of(decision.Guard)) ? L.Plan.DoneSkipped : L.Plan.DoneRefused);
         }
 
         if (decision.Failed)
@@ -82,7 +82,12 @@ internal static class PlanLabels
             return decision.Rejection == WriteRejection.Cancelled ? Styling.TextMuted : Styling.AccentRose;
         }
 
-        return decision.Refused ? Styling.AccentRose : ActionColor(decision.Decision.Action);
+        if (decision.Refused)
+        {
+            return Refusals.IsLimit(Refusals.Of(decision.Guard)) ? Styling.TextMuted : Styling.AccentRose;
+        }
+
+        return ActionColor(decision.Decision.Action);
     }
 
     public static string DoneReason(in RunDecision decision)
@@ -99,7 +104,7 @@ internal static class PlanLabels
 
         if (decision.Refused)
         {
-            return Loc.T(decision.Guard == SaleRejection.ItemProtected ? L.Rules.ReasonProtected : L.Plan.SkipRefused);
+            return Loc.T(Refusal(Refusals.Of(decision.Guard)));
         }
 
         return WithBait(Reason(decision.Decision.Reason, TimeSpan.Zero), decision.Decision.Evidence);
@@ -212,6 +217,22 @@ internal static class PlanLabels
         var name = items.Get(itemId).Name;
         return name.Length > 0 ? name : Loc.T(L.Rules.ItemFallback, itemId.ToString(CultureInfo.InvariantCulture));
     }
+
+    private static LocString Refusal(RefusalKind kind) => kind switch
+    {
+        RefusalKind.RepriceLimit => L.Plan.RefusedRepriceCap,
+        RefusalKind.ListingLimit => L.Plan.RefusedListingCap,
+        RefusalKind.VendorLimit => L.Plan.RefusedVendorCap,
+        RefusalKind.BelowFloor => L.Plan.ReasonBelowFloorKept,
+        RefusalKind.OverStepLimit => L.Plan.ReasonOverStepLimit,
+        RefusalKind.NotEligible => L.Plan.ReasonNotEligible,
+        RefusalKind.PriceUnchanged => L.Plan.RefusedPriceUnchanged,
+        RefusalKind.Changed => L.Plan.RefusedChanged,
+        RefusalKind.VendorRules => L.Plan.RefusedVendorRules,
+        RefusalKind.Protected => L.Rules.ReasonProtected,
+        RefusalKind.SettingsChanged => L.Plan.RefusedSettingsChanged,
+        _ => L.Plan.SkipRefused,
+    };
 
     private static LocString Failed(in RunDecision decision)
     {

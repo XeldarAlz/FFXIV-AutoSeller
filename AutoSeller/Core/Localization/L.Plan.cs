@@ -126,6 +126,13 @@ internal static partial class L
         public static readonly LocString SkipReadBackUnavailable = new("plan.skip.readBackUnavailable", "The listings or the bag slot could not be read before the change, so nothing was typed");
         public static readonly LocString SkipWouldMoveFromSaddlebag = new("plan.skip.wouldMoveFromSaddlebag", "Would be moved from the saddlebag to your bags first; a dry run moves nothing");
         public static readonly LocString SkipRefused = new("plan.skip.refused", "A safety check refused it; the Console has the details");
+        public static readonly LocString RefusedRepriceCap = new("plan.refused.repriceCap", "Reprices per run reached");
+        public static readonly LocString RefusedListingCap = new("plan.refused.listingCap", "New listings per run reached");
+        public static readonly LocString RefusedVendorCap = new("plan.refused.vendorCap", "Vendored value per run reached");
+        public static readonly LocString RefusedPriceUnchanged = new("plan.refused.priceUnchanged", "The new price is the current one");
+        public static readonly LocString RefusedChanged = new("plan.refused.changed", "It changed since the plan was made");
+        public static readonly LocString RefusedVendorRules = new("plan.refused.vendorRules", "The vendoring rules no longer allow it");
+        public static readonly LocString RefusedSettingsChanged = new("plan.refused.settingsChanged", "Settings changed during the run");
 
         public static readonly LocString BadgeExcluded = new("plan.badge.excluded", "Left out");
         public static readonly LocString BadgeMoved = new("plan.badge.moved", "Moved");
