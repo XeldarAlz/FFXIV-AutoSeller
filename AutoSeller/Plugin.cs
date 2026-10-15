@@ -295,6 +295,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         else if (trimmed.Equals(StartSubcommand, StringComparison.OrdinalIgnoreCase))
         {
+            appWindow.Show(AppWindow.Page.Sell);
             Controller.Start();
         }
         else if (trimmed.Equals(StopSubcommand, StringComparison.OrdinalIgnoreCase))

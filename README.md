@@ -94,7 +94,7 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell log` | Open the Console page |
 | `/asell changelog` | Open the Changelog page |
 | `/asell about` | Open the About page |
-| `/asell start` | Open the Sell page and start a run of the current plan |
+| `/asell start` | Open the Sell page and start a run of the current plan; when it cannot start, the chat says why |
 | `/asell stop` | Stop the run |
 | `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
 | `/asell help` | List these commands in the chat |
