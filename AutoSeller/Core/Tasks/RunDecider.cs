@@ -69,7 +69,7 @@ internal sealed class RunDecider(Plugin plugin, SellRunSession session)
             Rule = PricingRule.For(Authorization.Rules, lot.Item, out _),
             Settings = Authorization.Pricing,
             OwnSellers = plugin.OwnSellers.Current(),
-            Override = Authorization.OverrideForLot(lot.Row),
+            Override = PriceOverrides.ForLot(session.PlanInputs.Edits, lot.Row),
             NowUtc = nowUtc,
         });
     }

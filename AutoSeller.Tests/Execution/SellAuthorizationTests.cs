@@ -165,7 +165,7 @@ public sealed class SellAuthorizationTests
 
         Assert.Equal(AuthorizationProblem.None, SellAuthorization.TryRestore(recorded, out var restored));
         Assert.Empty(restored!.PlanEdits.Items);
-        Assert.Equal(PriceOverride.None, restored.OverrideForLot(ListingRow));
+        Assert.Equal(PriceOverride.None, PriceOverrides.ForLot(restored.PlanEdits, ListingRow));
     }
 
     [Fact]

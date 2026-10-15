@@ -166,7 +166,7 @@ internal sealed class SellRun
             Rule = eligibility.SellRule ?? default,
             Settings = Authorization.Pricing,
             OwnSellers = ownSellers,
-            Override = Authorization.OverrideForLot(assignment.Lot.Row),
+            Override = PriceOverrides.ForLot(Authorization.PlanEdits, assignment.Lot.Row),
             NowUtc = Now,
         });
     }

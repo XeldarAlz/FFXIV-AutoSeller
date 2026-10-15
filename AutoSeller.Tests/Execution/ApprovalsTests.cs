@@ -79,7 +79,7 @@ public sealed class ApprovalsTests
         var authorization = Authorization(planEdits: edits, approvedPrices: Approvals.Collect(edits, [Market(Listed)], Enabled, []));
 
         Assert.Empty(authorization.ApprovedPrices);
-        Assert.Equal(PriceOverride.SetByPlayer(ApprovedDrop), authorization.OverrideForLot(lotRow));
+        Assert.Equal(PriceOverride.SetByPlayer(ApprovedDrop), PriceOverrides.ForLot(authorization.PlanEdits, lotRow));
         Assert.Equal(PriceOverride.None, authorization.OverrideForListing(FirstRetainer, Listed));
     }
 

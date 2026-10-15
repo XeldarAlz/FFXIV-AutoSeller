@@ -16,7 +16,7 @@ internal sealed partial class RetainerDriver
     private const int SaddlebagOpenMs = 5_000;
     private const int SideWindowCloseMs = 5_000;
 
-    private readonly List<ItemKey> movedItems = [];
+    private readonly List<SlotFacts> movedStacks = [];
     private readonly List<SlotFacts> dryRunMoves = [];
     private int movesPlanned;
     private int movesConfirmed;
@@ -160,7 +160,7 @@ internal sealed partial class RetainerDriver
             return await UnwindAboveSellList();
         }
 
-        movedItems.Add(slot.Key);
+        movedStacks.Add(slot);
         var written = await ChooseAndConfirm(write, retainer, new MenuChoice(() => RetainerClicks.ItemMenuShows(slot.Container, slot.Slot), () => RetainerClicks.ChooseRemoveFromSaddlebag(entry), RunState.MovingFromSaddlebag));
         if (written.Settlement.Write == RunWrite.Confirmed)
         {
@@ -173,21 +173,23 @@ internal sealed partial class RetainerDriver
 
     private void RestockMovedItems()
     {
-        if (movedItems.Count == 0)
+        if (movedStacks.Count == 0)
         {
             return;
         }
 
         var rules = session.PlanInputs.Rules;
         var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        for (var index = 0; index < movedItems.Count; index++)
+        var moved = CollectionsMarshal.AsSpan(movedStacks);
+        var editsBefore = session.PlanInputs.Edits.Items.Length;
+        var restocked = SaddlebagMoves.Restock(session.PlanInputs, moved, read.Slots.AsSpan(), read.FreeBagSlots, read.Coverage);
+        for (var index = 0; index < moved.Length; index++)
         {
-            var item = movedItems[index];
-            session.Replan(item, RunPlanner.Replan(session.PlanInputs, item, read.Slots.AsSpan(), read.FreeBagSlots, read.Coverage));
+            session.Replan(moved[index].Key, restocked);
         }
 
-        Diag($"Driver: {movedItems.Count} item(s) moved from the saddlebag were read again from the bags; {read.FreeBagSlots} bag slot(s) are free.");
-        movedItems.Clear();
+        Diag($"Driver: {moved.Length} stack(s) moved from the saddlebag were read again from the bags, {restocked.Edits.Items.Length - editsBefore} plan edit(s) carried to their bag slots; {read.FreeBagSlots} bag slot(s) are free.");
+        movedStacks.Clear();
     }
 
     private RunRetainer RetainerOf(ulong retainerId)
