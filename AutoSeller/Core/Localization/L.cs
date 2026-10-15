@@ -82,6 +82,8 @@ internal static partial class L
         public static readonly LocString StatusSaleHistory = new("run.status.saleHistory", "{0}: reading the sale history");
         public static readonly LocString StatusReturning = new("run.status.returning", "{0}: returning {1} to the retainer");
         public static readonly LocString StatusVendoring = new("run.status.vendoring", "{0}: having the retainer sell {1} to a vendor");
+        public static readonly LocPlural StatusSaddlebag = new("run.status.saddlebag", "Moving {0} stack from the saddlebag to your bags", "Moving {0} stacks from the saddlebag to your bags");
+        public static readonly LocString StatusRetainerPass = new("run.status.retainerPass", "{0}: selling from the retainer's own inventory");
         public static readonly LocString StatusLeaving = new("run.status.leaving", "{0}: closing the sell list");
         public static readonly LocString StatusClosing = new("run.status.closing", "Closing the retainer list");
         public static readonly LocString StatusPostprocess = new("run.status.postprocess", "{0}: selling for AutoRetainer");
@@ -110,6 +112,8 @@ internal static partial class L
         public static readonly LocString BlockNoRules = new("run.block.noRules", "Add an item to the sell list or a category rule on the Rules page first.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
         public static readonly LocString BlockAuthorization = new("run.block.authorization", "The run could not be authorized. The Console has the details.");
+        public static readonly LocString BlockSellListNotOpen = new("run.block.sellListNotOpen", "Open a retainer's sell list first.");
+        public static readonly LocString BlockRetainerNotEnabled = new("run.block.retainerNotEnabled", "This retainer is not enabled on the Sell page.");
         public static readonly LocString BlockNothingNeeded = new("run.block.nothingNeeded", "No enabled retainer needs a visit: none has an undercut listing, a lot to list or a listing to return. Turn off Only retainers that need it on the Sell page to visit them all.");
         public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room and press Start again");
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");

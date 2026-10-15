@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Ledger;
 using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Shared;
@@ -136,6 +137,13 @@ internal sealed class SellRunSession
         PlanInputs = inputs;
         RunPlanner.ForgetLots(handled, item);
         Listed.Forget(item);
+    }
+
+    public void RestockRetainerPages(ulong retainerId, RunPlanInputs inputs)
+    {
+        PlanInputs = inputs;
+        handled.RemoveWhere(row => !row.IsListing && row.RetainerId == retainerId && SourceContainers.IsRetainerPage(row.Container));
+        Listed.ForgetRetainerPages(retainerId);
     }
 
     public void HoldAtBoundary(PauseReason reason)

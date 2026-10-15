@@ -2,8 +2,10 @@ using AutoSeller.Core.Allocation.Model;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Market.Model;
+using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
@@ -17,6 +19,9 @@ internal sealed partial class RetainerDriver
 {
     private const int ContextMenuOpenMs = 3_000;
     private const int SellWindowOpenMs = 5_000;
+    private const int ArmouryBoardOpenMs = 5_000;
+
+    private bool armouryBoardOpened;
 
     private async Task<Stop> WorkListings(int retainerIndex, RunRetainer retainer, RetainerSnapshot market)
     {
@@ -145,16 +150,33 @@ internal sealed partial class RetainerDriver
         return await UnwindAboveSellList();
     }
 
-    private async Task<Stop> WorkLots(int retainerIndex, RunRetainer retainer, RetainerSnapshot market)
+    private RunPlan BuildPlan()
+    {
+        return RunPlanner.Build(session.PlanInputs, plugin.Characters.Current?.SnapshotArray() ?? [], session.Handled, session.Visits.SettledIdsOf(session.Retainers.AsSpan()), session.Listed.Lots);
+    }
+
+    private async Task<Stop> WorkLots(int retainerIndex, RunRetainer retainer, RetainerSnapshot market, SellListKind list)
+    {
+        try
+        {
+            return await ListLots(retainerIndex, retainer, market, list);
+        }
+        finally
+        {
+            await CloseArmouryBoard();
+        }
+    }
+
+    private async Task<Stop> ListLots(int retainerIndex, RunRetainer retainer, RetainerSnapshot market, SellListKind list)
     {
         var freeSlots = market.FreeSlots;
         var replanning = true;
         while (replanning)
         {
             replanning = false;
-            var plan = RunPlanner.Build(session.PlanInputs, plugin.Characters.Current?.SnapshotArray() ?? [], session.Handled, session.Visits.SettledIdsOf(session.Retainers.AsSpan()), session.Listed.Lots);
+            var plan = BuildPlan();
             var assigned = plan.AssignedTo(retainer.RetainerId);
-            Diag($"Driver: {plan.Lots.Lots.Length} lot(s) planned, {plan.Allocation.Assignments.Length} placed, {plan.Allocation.Overflow.Length} left over; {assigned.Length} for {retainer.Name}, which has {freeSlots} free slot(s).");
+            Diag($"Driver: {plan.Lots.Lots.Length} lot(s) planned, {plan.Allocation.Assignments.Length} placed, {plan.Allocation.Overflow.Length} left over; {assigned.Length} for {retainer.Name}, {plan.CountFor(retainer.RetainerId, list)} of them from the {list} sell list, which has {freeSlots} free slot(s).");
             for (var index = 0; index < assigned.Length; index++)
             {
                 if (CancelToken.IsCancellationRequested || StopsAtBoundary())
@@ -164,6 +186,17 @@ internal sealed partial class RetainerDriver
 
                 var assignment = assigned[index];
                 var lot = assignment.Lot;
+                if (!SourceContainers.TryGetSource(lot.Row.Container, out var source) || !RunPlanner.ListsIn(list, source))
+                {
+                    if (list == SellListKind.Inventory && source == SlotSource.Saddlebag)
+                    {
+                        Record(RunDecision.LotSkipped(retainer.RetainerId, lot, freeSlots > 0 ? RunSkip.WouldMoveFromSaddlebag : RunSkip.NoFreeSlot), retainer);
+                        freeSlots--;
+                    }
+
+                    continue;
+                }
+
                 if (freeSlots <= 0)
                 {
                     Record(RunDecision.LotSkipped(retainer.RetainerId, lot, RunSkip.NoFreeSlot), retainer);
@@ -176,7 +209,7 @@ internal sealed partial class RetainerDriver
                 LotStep step;
                 try
                 {
-                    step = await CheckLot(retainer, assignment);
+                    step = await CheckLot(retainer, assignment, source);
                 }
                 finally
                 {
@@ -205,7 +238,7 @@ internal sealed partial class RetainerDriver
         return Stop.None;
     }
 
-    private async Task<LotStep> CheckLot(RunRetainer retainer, LotAssignment assignment)
+    private async Task<LotStep> CheckLot(RunRetainer retainer, LotAssignment assignment, SlotSource source)
     {
         var lot = assignment.Lot;
         var row = lot.Row;
@@ -220,6 +253,11 @@ internal sealed partial class RetainerDriver
 
             Record(RunDecision.LotSkipped(retainer.RetainerId, lot, RunSkip.SlotChanged), retainer);
             return LotStep.Done(Stop.None);
+        }
+
+        if (source == SlotSource.Armoury)
+        {
+            await OpenArmouryBoard();
         }
 
         var attempt = 0;
@@ -272,6 +310,55 @@ internal sealed partial class RetainerDriver
         return LotStep.Done(await Conclude(outcome, () => SaleWrite.ForLot(assignment, decided.Decision), retainer, name));
     }
 
+    private async Task OpenArmouryBoard()
+    {
+        if (RetainerClicks.IsReady(RetainerClicks.ArmouryBoardAddon))
+        {
+            return;
+        }
+
+        if (!await ClickOnce(RetainerClicks.OpenArmouryChest))
+        {
+            Warn("Driver: the armoury chest could not be opened from an inventory window; the sell window is opened for the armoury slot without it.");
+            return;
+        }
+
+        armouryBoardOpened = await WaitUntilTimed(static () => RetainerClicks.IsReady(RetainerClicks.ArmouryBoardAddon), ArmouryBoardOpenMs, "driver-armoury-board", StepPollFrames);
+        Diag($"Driver: the armoury chest {(armouryBoardOpened ? "is open" : $"did not open within {ArmouryBoardOpenMs} ms")} for an armoury lot.");
+    }
+
+    private async Task CloseArmouryBoard()
+    {
+        if (!armouryBoardOpened)
+        {
+            return;
+        }
+
+        armouryBoardOpened = false;
+        await RetainerWindows.Close(RetainerClicks.ArmouryBoardAddon, SideWindowCloseMs, unloaded);
+    }
+
+    private bool RefreshRetainerPages(RunRetainer retainer)
+    {
+        var rules = session.PlanInputs.Rules;
+        if (!rules.SellsFromRetainer(retainer.RetainerId))
+        {
+            return false;
+        }
+
+        var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
+        if (read.Coverage.RetainerPagesOf != retainer.RetainerId)
+        {
+            Diag($"Driver: the inventory of {retainer.Name} is not loaded yet (pages read for retainer {read.Coverage.RetainerPagesOf}).");
+            return false;
+        }
+
+        var pages = PlanStock.Priced(plugin.Plan.StockOf(read.Slots.AsSpan()), plugin.References.Latest, session.Authorization.HomeWorldId, DateTime.UtcNow);
+        session.RestockRetainerPages(retainer.RetainerId, RunPlanner.WithRetainerPages(session.PlanInputs, retainer.RetainerId, pages.AsSpan()));
+        Diag($"Driver: the inventory of {retainer.Name} was read into the run's stock.");
+        return true;
+    }
+
     private bool TryReadLotSlot(in StockSlot stock, PlanRowKey row, out SlotReading observed)
     {
         var read = BagReader.TryReadSlot(row.Container, row.Slot, out var held, out var quantity);
@@ -294,7 +381,7 @@ internal sealed partial class RetainerDriver
 
         var rules = session.PlanInputs.Rules;
         var read = plugin.Bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        session.Replan(item, RunPlanner.Replan(session.PlanInputs, item, read.Slots.AsSpan(), read.FreeBagSlots));
+        session.Replan(item, RunPlanner.Replan(session.PlanInputs, item, read.Slots.AsSpan(), read.FreeBagSlots, read.Coverage));
         Diag($"Driver: item {item.ItemId} {QualityLabel.Of(item.IsHq)} moved since the plan; its stacks were read again and the lots are planned once more.");
         return true;
     }

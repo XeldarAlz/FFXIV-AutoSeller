@@ -87,6 +87,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkHandedOverRetainer()
     {
         engaged = true;
+        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs, []);
         const int index = 0;
         var visit = await VisitHandedOverRetainer(index);
         if (CancelToken.IsCancellationRequested)
@@ -110,6 +111,79 @@ internal sealed partial class RetainerDriver
             default:
                 return visit.Stop;
         }
+    }
+
+    private async Task<Stop> WorkOpenSellList()
+    {
+        engaged = true;
+        const int index = 0;
+        var retainer = session.Retainers[index];
+        session.WorkOn(index, default);
+        var visit = await VisitOpenSellList(index, retainer);
+        if (CancelToken.IsCancellationRequested)
+        {
+            return Stop.None;
+        }
+
+        switch (DriverHalts.ReactionTo(visit.Stop.Reason))
+        {
+            case RunReaction.Continue:
+                if (visit.Finished)
+                {
+                    session.Visits.MarkVisited(index);
+                }
+
+                return Stop.None;
+            case RunReaction.EndRetainer:
+                session.Visits.MarkSkipped(index, visit.Stop.Reason);
+                Warn($"Driver: {retainer.Name} skipped ({visit.Stop.Reason}): {visit.Stop.Detail}");
+                return await UnwindAboveSellList();
+            default:
+                return visit.Stop;
+        }
+    }
+
+    private async Task<Visit> VisitOpenSellList(int index, RunRetainer retainer)
+    {
+        if (!RetainerClicks.IsReady(RetainerClicks.SellListAddon) || !OpenRetainerIs(retainer.RetainerId))
+        {
+            return new Visit(new Stop(DriverHalt.SellListDidNotOpen, $"the sell list of {retainer.Name} is no longer open; the windows are {UnexpectedAddons.View().Visible}"), false);
+        }
+
+        RetainerReads.ReportSellListKind();
+        var list = RetainerReads.ShownSellListKind();
+        session.PlanInputs = RunPlanner.ListableFrom(session.PlanInputs, list);
+        Diag($"Driver: working the open {list} sell list of {retainer.Name}, with the {session.PlanInputs.Stock.Length} stack(s) it can list; it stays open at the end.");
+        if (list == SellListKind.RetainerInventory)
+        {
+            RefreshRetainerPages(retainer);
+        }
+
+        session.Show(RunState.ReadingMarket, Loc.T(L.Run.StatusReadingMarket, retainer.Name));
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Visit(new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read"), false);
+        }
+
+        returns.Clear();
+        var stop = await WorkListings(index, retainer, market);
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkLots(index, retainer, market, list);
+        }
+
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkReturns(index, retainer);
+        }
+
+        if (KeepsWorking(stop) && list == SellListKind.Inventory)
+        {
+            stop = await WorkVendoring(index, retainer);
+        }
+
+        return new Visit(stop, !stop.Halted && !session.PausedAtBoundary);
     }
 
     private async Task<Visit> VisitHandedOverRetainer(int index)
@@ -149,7 +223,8 @@ internal sealed partial class RetainerDriver
             return stop;
         }
 
-        stop = await OpenSellList(retainer);
+        var pagesRead = RefreshRetainerPages(retainer);
+        stop = await OpenSellList(retainer, SellListKind.Inventory);
         if (stop.Halted)
         {
             return stop;
@@ -165,7 +240,7 @@ internal sealed partial class RetainerDriver
         stop = await WorkListings(index, retainer, market);
         if (KeepsWorking(stop))
         {
-            stop = await WorkLots(index, retainer, market);
+            stop = await WorkLots(index, retainer, market, SellListKind.Inventory);
         }
 
         if (KeepsWorking(stop))
@@ -178,7 +253,44 @@ internal sealed partial class RetainerDriver
             stop = await WorkVendoring(index, retainer);
         }
 
+        if (KeepsWorking(stop))
+        {
+            stop = await WorkRetainerInventory(index, retainer, pagesRead);
+        }
+
         return stop;
+    }
+
+    private async Task<Stop> WorkRetainerInventory(int index, RunRetainer retainer, bool pagesRead)
+    {
+        var pageLots = pagesRead ? BuildPlan().CountFor(retainer.RetainerId, SellListKind.RetainerInventory) : 0;
+        if (!RunPlanner.NeedsRetainerPass(session.PlanInputs.Rules.SellsFromRetainer(retainer.RetainerId), pagesRead, pageLots))
+        {
+            return Stop.None;
+        }
+
+        session.Show(RunState.RetainerInventoryPass, Loc.T(L.Run.StatusRetainerPass, retainer.Name));
+        Diag($"Driver: {retainer.Name} sells from its own inventory; {(pagesRead ? $"{pageLots} lot(s) are planned from it" : "its pages are read once its sell list is open")}.");
+        var stop = await CloseSellListToMenu(retainer);
+        if (stop.Halted || CancelToken.IsCancellationRequested)
+        {
+            return stop;
+        }
+
+        stop = await OpenSellList(retainer, SellListKind.RetainerInventory);
+        if (stop.Halted)
+        {
+            return stop;
+        }
+
+        RefreshRetainerPages(retainer);
+        var market = await ReadMarket(retainer);
+        if (market is null)
+        {
+            return new Stop(DriverHalt.MarketNotRead, $"the market of {retainer.Name} was not read for its own inventory");
+        }
+
+        return await WorkLots(index, retainer, market, SellListKind.RetainerInventory);
     }
 
     private bool KeepsWorking(in Stop stop)
@@ -186,15 +298,15 @@ internal sealed partial class RetainerDriver
         return !stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested;
     }
 
-    private async Task<Stop> OpenSellList(RunRetainer retainer)
+    private async Task<Stop> OpenSellList(RunRetainer retainer, SellListKind list)
     {
         session.Enter(RunState.OpeningSellList);
         var entries = NpcInteraction.SelectStringEntries();
-        var sellText = RetainerMenuText.SellFromInventory();
+        var sellText = list == SellListKind.RetainerInventory ? RetainerMenuText.SellFromRetainer() : RetainerMenuText.SellFromInventory();
         ReportMenu(entries);
         if (!sellText.IsKnown)
         {
-            return new Stop(DriverHalt.MenuTextUnavailable, $"Addon row {RetainerMenuText.SellFromInventoryRow} could not be read");
+            return new Stop(DriverHalt.MenuTextUnavailable, $"Addon row {(list == SellListKind.RetainerInventory ? RetainerMenuText.SellFromRetainerRow : RetainerMenuText.SellFromInventoryRow)} could not be read");
         }
 
         var entry = sellText.FirstMatchIn(entries);
@@ -204,7 +316,8 @@ internal sealed partial class RetainerDriver
         }
 
         var opened = await Step(ChainStep.Opens(ChainWindow.RetainerSellList, SellListOpenMs, RetainerBackdrop), () => RetainerClicks.OpenSellList(entry, sellText));
-        return Failed(opened, DriverHalt.SellListDidNotOpen, $"the sell list of {retainer.Name} did not open");
+        RetainerReads.ReportSellListKind();
+        return Failed(opened, DriverHalt.SellListDidNotOpen, $"the {list} sell list of {retainer.Name} did not open");
     }
 
     private static void ReportMenu(ReadOnlySpan<string> entries)

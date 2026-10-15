@@ -5,6 +5,7 @@ using AutoSeller.Core.Characters;
 using AutoSeller.Core.Characters.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Items;
 using AutoSeller.Core.Planning.Model;
 using AutoSeller.Core.Pricing;
@@ -86,13 +87,6 @@ internal sealed partial class PlanBuilder : IDisposable
 
         var rules = configuration.BuildRuleBook();
         var read = bags.Read(rules.Sources, rules.InventoryRetainerIds);
-        var stock = ImmutableArray.CreateBuilder<StockSlot>(read.Slots.Length);
-        for (var index = 0; index < read.Slots.Length; index++)
-        {
-            var slot = read.Slots[index];
-            stock.Add(new StockSlot(slot, items.FactsOf(slot.ItemId), 0));
-        }
-
         var markets = data.SnapshotArray();
         ownSellers.ReadAlts(readAltsNow);
         return new PlanInput
@@ -101,9 +95,9 @@ internal sealed partial class PlanBuilder : IDisposable
             CharacterContentId = data.ContentId,
             HomeWorldId = Svc.PlayerState.HomeWorld.RowId,
             NowUtc = nowUtc,
-            Stock = stock.MoveToImmutable(),
+            Stock = StockOf(read.Slots.AsSpan()),
             FreeBagSlots = read.FreeBagSlots,
-            BagsComplete = read.ListableComplete,
+            Coverage = read.Coverage,
             Rules = rules,
             Pricing = configuration.BuildPricingSettings(),
             Edits = data.PlanEdits,
@@ -118,6 +112,17 @@ internal sealed partial class PlanBuilder : IDisposable
             OwnSellers = ownSellers.Current(),
             References = references.Latest,
         };
+    }
+
+    public ImmutableArray<StockSlot> StockOf(ReadOnlySpan<SlotFacts> slots)
+    {
+        var stock = ImmutableArray.CreateBuilder<StockSlot>(slots.Length);
+        for (var index = 0; index < slots.Length; index++)
+        {
+            stock.Add(new StockSlot(slots[index], items.FactsOf(slots[index].ItemId), 0));
+        }
+
+        return stock.MoveToImmutable();
     }
 
     private void OnInventoryChanged(IReadOnlyCollection<InventoryEventArgs> events)
@@ -254,19 +259,19 @@ internal sealed partial class PlanBuilder : IDisposable
     private void Adopted(SellPlan plan)
     {
         var totals = plan.Totals;
-        planLog.Report($"Plan: {plan.Rows.Length} row(s) over {plan.Groups.Length} group(s), {totals.ListingsToChange} listing(s) to change, {totals.NewListings} new listing(s), {totals.AwaitingApproval} awaiting approval, {totals.Searches} search(es), about {totals.RunTime:hh\\:mm\\:ss}; {plan.Input.Markets.Length} retainer market(s) known, Universalis generation {plan.Input.References?.Generation ?? 0}, bags read in full {plan.Input.BagsComplete}.");
+        planLog.Report($"Plan: {plan.Rows.Length} row(s) over {plan.Groups.Length} group(s), {totals.ListingsToChange} listing(s) to change, {totals.NewListings} new listing(s), {totals.AwaitingApproval} awaiting approval, {totals.Searches} search(es), about {totals.RunTime:hh\\:mm\\:ss}; {plan.Input.Markets.Length} retainer market(s) known, Universalis generation {plan.Input.References?.Generation ?? 0}, {UnreadCount(plan.Input.Coverage)} container(s) not read, retainer pages of {plan.Input.Coverage.RetainerPagesOf}.");
         RefreshEdits(plan);
         FetchMissingReferences(plan);
     }
 
     private void RefreshEdits(SellPlan plan)
     {
-        if (runInput() is not null || !plan.Input.BagsComplete || characters.Current is not { } data || data.ContentId != plan.Input.CharacterContentId)
+        if (runInput() is not null || characters.Current is not { } data || data.ContentId != plan.Input.CharacterContentId)
         {
             return;
         }
 
-        var refreshed = data.PlanEdits.Refresh(plan.EditTargets.AsSpan());
+        var refreshed = data.PlanEdits.Refresh(plan.EditTargets.AsSpan(), plan.Input.Coverage);
         if (ReferenceEquals(refreshed, data.PlanEdits))
         {
             return;
@@ -307,6 +312,11 @@ internal sealed partial class PlanBuilder : IDisposable
         }
 
         return missing.ToImmutable();
+    }
+
+    private static int UnreadCount(in StockCoverage coverage)
+    {
+        return coverage.UnreadContainers.IsDefault ? 0 : coverage.UnreadContainers.Length;
     }
 
     private void CancelPlanning()

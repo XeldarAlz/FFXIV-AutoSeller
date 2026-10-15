@@ -74,6 +74,18 @@ public sealed class StartBlockRuleTests
     }
 
     [Fact]
+    public void ABusyAutoRetainerBlocksTheSellListButtonToo()
+    {
+        var facts = ready with { Mode = RunMode.OpenSellList };
+
+        Assert.Equal(StartBlock.None, StartBlockRule.Evaluate(facts));
+        Assert.Equal(StartBlock.AutoRetainerBusy, StartBlockRule.Evaluate(facts with { AutoRetainer = busy }));
+        Assert.True(RunMode.OpenSellList.StartedByPlayer());
+        Assert.True(RunMode.Standalone.StartedByPlayer());
+        Assert.False(RunMode.Postprocess.StartedByPlayer());
+    }
+
+    [Fact]
     public void AnOutdatedAutoRetainerThatIsBusyStillBlocksAStandaloneRun()
     {
         var facts = ready with { AutoRetainer = new AutoRetainerStatus(AutoRetainerState.Outdated, Busy: true) };

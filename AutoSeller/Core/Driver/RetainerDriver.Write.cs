@@ -290,7 +290,7 @@ internal sealed partial class RetainerDriver
                 break;
             case WriteKind.List:
                 plugin.Market.Tracker.NoteOwnListing(item, write.RetainerId);
-                session.Listed.Add(write.Container, write.Slot, item, write.Quantity);
+                session.Listed.Add(write.RetainerId, write.Container, write.Slot, item, write.Quantity);
                 break;
         }
 

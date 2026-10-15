@@ -170,11 +170,6 @@ internal sealed class SellAuthorization
         return found;
     }
 
-    public PriceOverride OverrideForLot(PlanRowKey row)
-    {
-        return PriceOverrides.ForLot(PlanEdits, row);
-    }
-
     public PriceOverride OverrideForListing(ulong retainerId, in ListingSlot listing)
     {
         return PriceOverrides.ForListing(ApprovedPrices.AsSpan(), PlanEdits, retainerId, listing);

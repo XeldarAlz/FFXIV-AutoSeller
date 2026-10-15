@@ -2,6 +2,7 @@ using AutoSeller.Core;
 using AutoSeller.Core.AutoRetainer;
 using AutoSeller.Core.Characters;
 using AutoSeller.Core.Debug;
+using AutoSeller.Core.Driver;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Items;
@@ -73,6 +74,7 @@ public sealed class Plugin : IDalamudPlugin
     internal SalesLedger Sales { get; }
     internal SaleHistoryReader SaleHistory { get; }
     internal UndercutWatchService UndercutWatch { get; }
+    internal AssistHost Assist { get; }
 
     private readonly DutyWatcher dutyWatcher;
     private readonly GmAlertWatcher gmAlertWatcher;
@@ -141,6 +143,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(Postprocess.Dispose);
             sellNowButton = new SellNowButton(Configuration, AutoRetainer, Postprocess, Controller);
             completed.Push(sellNowButton.Dispose);
+            Assist = new AssistHost(this);
+            completed.Push(Assist.Dispose);
             dutyWatcher = new DutyWatcher();
             completed.Push(dutyWatcher.Dispose);
             gmAlertWatcher = new GmAlertWatcher();
@@ -153,6 +157,9 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(appWindow.Dispose);
             WindowSystem.AddWindow(appWindow);
             completed.Push(WindowSystem.RemoveAllWindows);
+            WindowSystem.AddWindow(new AssistCard(this, Assist));
+            WindowSystem.AddWindow(new RetainerListButton(this));
+            WindowSystem.AddWindow(new SellListButton(this));
 
             primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
             aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
@@ -192,6 +199,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         Controller.Shutdown();
         sellNowButton.Dispose();
+        Assist.Dispose();
         Postprocess.Dispose();
         Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;

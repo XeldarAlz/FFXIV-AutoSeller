@@ -16,6 +16,7 @@ internal static class RetainerMenuText
     public const uint ReturnToRetainerRow = 958;
     public const uint ReturnToRetainerAlternateRow = 6_954;
     public const uint HaveRetainerSellRow = 5_480;
+    public const uint RemoveFromSaddlebagRow = 888;
 
     private static readonly LanguageCachedText<PromptText> sellFromInventory = new(language => Read(language, SellFromInventoryRow));
     private static readonly LanguageCachedText<PromptText> sellFromRetainer = new(language => Read(language, SellFromRetainerRow));
@@ -26,6 +27,7 @@ internal static class RetainerMenuText
     private static readonly LanguageCachedText<PromptText> returnToRetainer = new(language => Read(language, ReturnToRetainerRow));
     private static readonly LanguageCachedText<PromptText> returnToRetainerAlternate = new(language => Read(language, ReturnToRetainerAlternateRow));
     private static readonly LanguageCachedText<PromptText> haveRetainerSell = new(language => Read(language, HaveRetainerSellRow));
+    private static readonly LanguageCachedText<PromptText> removeFromSaddlebag = new(language => Read(language, RemoveFromSaddlebagRow));
     private static readonly LanguageCachedText<PromptText> gilLimit = new(language => Read(language, RetainerChain.GilLimitPromptRow));
     private static readonly LanguageCachedText<PromptText> gilLimitAlternate = new(language => Read(language, RetainerChain.GilLimitPromptAlternateRow));
 
@@ -43,6 +45,8 @@ internal static class RetainerMenuText
 
     public static int FindHaveRetainerSell(ReadOnlySpan<string> entries) => Find(entries, IsHaveRetainerSell);
 
+    public static int FindRemoveFromSaddlebag(ReadOnlySpan<string> entries) => Find(entries, IsRemoveFromSaddlebag);
+
     public static bool IsAdjustPrice(string shown)
     {
         return adjustPrice.Get().Matches(shown) || adjustPriceAlternate.Get().Matches(shown);
@@ -56,6 +60,11 @@ internal static class RetainerMenuText
     public static bool IsHaveRetainerSell(string shown)
     {
         return haveRetainerSell.Get().Matches(shown);
+    }
+
+    public static bool IsRemoveFromSaddlebag(string shown)
+    {
+        return removeFromSaddlebag.Get().Matches(shown);
     }
 
     private static int Find(ReadOnlySpan<string> entries, Func<string, bool> matches)

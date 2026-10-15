@@ -17,6 +17,13 @@ internal static partial class L
         public static readonly LocString ListFacts = new("journal.listFacts", "{0} x{1} on {2}, {3}");
         public static readonly LocString RepriceFacts = new("journal.repriceFacts", "{0} x{1} on {2}, from {3} to {4}, {5}");
         public static readonly LocString VendorFacts = new("journal.vendorFacts", "{0} x{1} sold through {2}, {3}");
+        public static readonly LocString MoveTitle = new("journal.moveTitle", "Did this stack move from the saddlebag to your bags?");
+        public static readonly LocString MoveFacts = new("journal.moveFacts", "{0} x{1} for {2}, {3}");
+        public static readonly LocString MoveBody = new("journal.moveBody", "A run could not confirm this move from the saddlebag, so nothing more is written until you answer. If you are not sure, look in your bags and your saddlebag.");
+        public static readonly LocString MoveHintApplied = new("journal.moveHintApplied", "Your bags now hold the stack.");
+        public static readonly LocString MoveHintNotApplied = new("journal.moveHintNotApplied", "Your bags hold no more of it than before.");
+        public static readonly LocString MoveHintUnclear = new("journal.moveHintUnclear", "Your bags changed by another amount, so they cannot tell.");
+        public static readonly LocString MoveHintNoRead = new("journal.moveHintNoRead", "Your bags could not be read to suggest the answer.");
         public static readonly LocString HintApplied = new("journal.hintApplied", "A later read of {0} shows the change went through.");
         public static readonly LocString HintNotApplied = new("journal.hintNotApplied", "A later read of {0} shows no change.");
         public static readonly LocString HintUnclear = new("journal.hintUnclear", "A later read of {0} cannot tell.");

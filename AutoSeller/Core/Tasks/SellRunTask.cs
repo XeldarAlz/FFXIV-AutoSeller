@@ -48,12 +48,43 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
         }
 
         await ReadReferences();
-        if (CancelToken.IsCancellationRequested || (session.Mode == RunMode.Standalone && !await ReachBell()))
+        if (CancelToken.IsCancellationRequested || (session.Mode == RunMode.Standalone && (!await MoveFromSaddlebag() || !await ReachBell())))
         {
             return;
         }
 
         await RunDriver();
+    }
+
+    private async Task<bool> MoveFromSaddlebag()
+    {
+        if ((session.PlanInputs.Rules.Sources & SellSources.Saddlebag) == 0)
+        {
+            return true;
+        }
+
+        var mover = new RetainerDriver(session, decider, plugin, DriverPhase.Saddlebag);
+        driver = mover;
+        if (!await RunCancellableDriver(mover))
+        {
+            await AwaitCleanup(mover);
+        }
+
+        if (CancelToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        switch (mover.Outcome)
+        {
+            case DriverOutcome.Completed:
+                return true;
+            case DriverOutcome.Halted:
+                Halt(mover.Halt);
+                return false;
+            default:
+                return false;
+        }
     }
 
     private async Task<bool> AwaitEarlierSettle()
@@ -136,7 +167,7 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
 
     private async Task RunDriver()
     {
-        var retainerDriver = new RetainerDriver(session, decider, plugin);
+        var retainerDriver = new RetainerDriver(session, decider, plugin, DriverPhase.Retainers);
         driver = retainerDriver;
         var finished = await RunCancellableDriver(retainerDriver);
         if (!finished)
@@ -200,8 +231,10 @@ internal sealed class SellRunTask(SellRunSession session, Plugin plugin, Func<bo
             case RunReaction.EndRun:
                 session.Fail(FailureOf(halt), halt == DriverHalt.Fault);
                 return;
-            case RunReaction.PauseRun when session.Mode == RunMode.Postprocess:
-                Diag($"Run: {halt}; the retainer windows are closed and the retainer goes back to AutoRetainer.");
+            case RunReaction.PauseRun when !session.Mode.TravelsToBell():
+                Diag(session.Mode == RunMode.Postprocess
+                    ? $"Run: {halt}; the retainer windows are closed and the retainer goes back to AutoRetainer."
+                    : $"Run: {halt}; the windows above the sell list are closed and the job ends.");
                 session.Conclude(RunState.Stopped);
                 return;
             case RunReaction.PauseRun:

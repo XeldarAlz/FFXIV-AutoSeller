@@ -142,7 +142,7 @@ internal sealed partial class RetainerDriver
         }
 
         var planned = RunDecision.ForVendor(retainer.RetainerId, verdict, stock.Item.VendorPrice);
-        if (!TryReadVendorSlot(slot, out _))
+        if (!TryReadStackSlot(slot, out _))
         {
             Record(planned with { Skip = RunSkip.SlotChanged }, retainer);
             return Stop.None;
@@ -164,7 +164,7 @@ internal sealed partial class RetainerDriver
 
         session.Enter(RunState.Guarding);
         var write = SaleWrite.ForVendor(retainer.RetainerId, slot, stock.Item.VendorPrice);
-        var observed = TryReadVendorSlot(slot, out var reading) ? reading : default;
+        var observed = TryReadStackSlot(slot, out var reading) ? reading : default;
         var guard = decider.GuardVendor(stock, observed, write, DateTime.UtcNow);
         return await ConcludeThroughMenu(
             planned with { Guard = guard.Rejection },
@@ -173,7 +173,7 @@ internal sealed partial class RetainerDriver
             new MenuChoice(() => RetainerClicks.ItemMenuShows(slot.Container, slot.Slot), () => RetainerClicks.ChooseHaveRetainerSell(entry), RunState.Vendoring));
     }
 
-    private bool TryReadVendorSlot(in SlotFacts slot, out SlotReading observed)
+    private bool TryReadStackSlot(in SlotFacts slot, out SlotReading observed)
     {
         var read = BagReader.TryReadSlot(slot.Container, slot.Slot, out var held, out var quantity);
         observed = new SlotReading(held.ItemId, held.IsHq, quantity, 0);
@@ -182,7 +182,7 @@ internal sealed partial class RetainerDriver
             return true;
         }
 
-        Diag($"Driver: container {slot.Container} slot {slot.Slot} now holds item {held.ItemId} {QualityLabel.Of(held.IsHq)} x{quantity} (read {read}); vendoring expects item {slot.ItemId} x{slot.Quantity}.");
+        Diag($"Driver: container {slot.Container} slot {slot.Slot} now holds item {held.ItemId} {QualityLabel.Of(held.IsHq)} x{quantity} (read {read}); the plan expects item {slot.ItemId} x{slot.Quantity}.");
         return false;
     }
 

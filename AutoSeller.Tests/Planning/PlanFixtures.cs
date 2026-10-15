@@ -30,7 +30,6 @@ internal static class PlanFixtures
             NowUtc = Now,
             Stock = [.. stock],
             FreeBagSlots = FreeBagSlots,
-            BagsComplete = true,
             Rules = RuleBook.Create(sellList, [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default, []),
             Pricing = new PricingSettings(),
             Edits = PlanEdits.None,

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Driver;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Game.Watchers;
 using AutoSeller.Core.Localization;
@@ -46,6 +47,44 @@ internal sealed partial class SellController
         return block;
     }
 
+    public StartBlock StartAtSellList()
+    {
+        if (!ReadyForANewRun())
+        {
+            return StartBlock.AlreadyRunning;
+        }
+
+        if (!RetainerClicks.IsReady(RetainerClicks.SellListAddon) || !plugin.Retainers.TryGetOpenRetainer(out var open))
+        {
+            return Refuse(RunMode.OpenSellList, StartBlock.SellListNotOpen, "no retainer's sell list is open");
+        }
+
+        if (plugin.Characters.Current?.IsEnabled(open.RetainerId) != true)
+        {
+            return Refuse(RunMode.OpenSellList, StartBlock.RetainerNotEnabled, $"retainer {open.RetainerId} is not enabled on the Sell page");
+        }
+
+        var block = CheckStart(RunMode.OpenSellList, true);
+        if (block != StartBlock.None)
+        {
+            return Refuse(RunMode.OpenSellList, block, block.ToString());
+        }
+
+        var runId = Guid.NewGuid();
+        if (!plugin.Suppression.Claim(runId))
+        {
+            return Refuse(RunMode.OpenSellList, StartBlock.AutoRetainerNotHeld, "AutoRetainer could not be held back");
+        }
+
+        block = Authorize(runId, RunMode.OpenSellList, open.RetainerId);
+        if (block != StartBlock.None)
+        {
+            plugin.Suppression.Release(runId);
+        }
+
+        return block;
+    }
+
     public StartBlock StartPostprocess(ulong retainerId)
     {
         if (!ReadyForANewRun())
@@ -81,7 +120,7 @@ internal sealed partial class SellController
             Svc.Condition[ConditionFlag.InCombat],
             Svc.Condition[ConditionFlag.OccupiedInCutSceneEvent] || Svc.Condition[ConditionFlag.WatchingCutscene] || Svc.Condition[ConditionFlag.WatchingCutscene78],
             Svc.Condition[ConditionFlag.TradeOpen],
-            mode == RunMode.Standalone ? plugin.AutoRetainer.ProbeNow() : plugin.AutoRetainer.Status,
+            mode.StartedByPlayer() ? plugin.AutoRetainer.ProbeNow() : plugin.AutoRetainer.Status,
             plugin.AutoRetainer.ProtectListReadable(),
             ledger.BlocksWrites,
             plugin.Market.Gates.Allows(MarketGate.ReadListings) && plugin.Market.Gates.Allows(MarketGate.ReadRetainerMarket),
@@ -160,12 +199,6 @@ internal sealed partial class SellController
         }
 
         plugin.Market.Tracker.ClearReuse();
-        var leftOut = PlanStock.LeftOut(input.Stock.AsSpan());
-        if (leftOut > 0)
-        {
-            RunLog.Info($"Run: {leftOut} stack(s) in the saddlebag, the armoury chest or retainer pages are left out; the run lists from the bags and crystals only.");
-        }
-
         if (!active.Journal.TryAppend(authorization!.ToJournalEvent(active.Journal.NextSequence, nowUtc)))
         {
             ledger.Invalidate();
@@ -181,7 +214,7 @@ internal sealed partial class SellController
         RunLog.Info(
             $"Run {authorization.RunId} authorized ({mode}): {active.Retainers.Length} retainer(s) to visit of {active.PlanInputs.Retainers.Length} enabled, {input.Rules.SellList.Length} sell list entr(ies), {input.Rules.CategoryRules.Length} category rule(s), " +
             $"{authorization.ApprovedPrices.Length} approved price(s), {edits.Items.Length} plan edit(s), {active.PlanInputs.Stock.Length} stack(s) in the sources, dry run {authorization.DryRun}, policy {authorization.PolicyVersion}.");
-        if (mode == RunMode.Standalone)
+        if (mode.StartedByPlayer())
         {
             Svc.Chat.Print($"{AsellConstants.LogPrefix} {Loc.Plural(dryRun ? L.Run.ChatStarted : L.Run.ChatStartedLive, active.Retainers.Length)}");
         }
@@ -192,8 +225,8 @@ internal sealed partial class SellController
 
     private static StartBlock Refuse(RunMode mode, StartBlock block, string detail)
     {
-        RunLog.Info($"{(mode == RunMode.Standalone ? "Start" : "AutoRetainer post-process")} refused: {detail}.");
-        if (mode == RunMode.Standalone)
+        RunLog.Info($"{(mode.StartedByPlayer() ? $"Start ({mode})" : "AutoRetainer post-process")} refused: {detail}.");
+        if (mode.StartedByPlayer())
         {
             Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {Loc.T(L.Run.ChatRefused, Describe(block))}");
         }

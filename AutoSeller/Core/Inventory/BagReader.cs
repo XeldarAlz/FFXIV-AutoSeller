@@ -6,15 +6,14 @@ using AutoSeller.Core.Retainers;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
-using AutoSeller.Core.Tasks.Model;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.Game;
 
 namespace AutoSeller.Core.Inventory;
 
-internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots, bool ListableComplete)
+internal readonly record struct BagRead(ImmutableArray<SlotFacts> Slots, int FreeBagSlots, StockCoverage Coverage)
 {
-    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0, false);
+    public static BagRead Empty => new(ImmutableArray<SlotFacts>.Empty, 0, StockCoverage.NothingRead);
 }
 
 internal sealed unsafe class BagReader
@@ -46,8 +45,7 @@ internal sealed unsafe class BagReader
         var slots = ImmutableArray.CreateBuilder<SlotFacts>();
         unloaded.Clear();
         protectedThisRead.Clear();
-        var skipped = 0;
-        var listableSkipped = 0;
+        var skipped = ImmutableArray.CreateBuilder<uint>();
         var protectedSlots = 0;
         var gearsetSlots = 0;
         for (var containerIndex = 0; containerIndex < containers.Length; containerIndex++)
@@ -56,8 +54,7 @@ internal sealed unsafe class BagReader
             var container = manager->GetInventoryContainer((InventoryType)source.Container);
             if (container == null || !container->IsLoaded)
             {
-                skipped++;
-                listableSkipped += RunPlanner.CanListFrom(source.Source) ? 1 : 0;
+                skipped.Add(source.Container);
                 unloaded.Append(unloaded.Length == 0 ? " (not loaded: " : ", ").Append(source.Container);
                 continue;
             }
@@ -96,8 +93,9 @@ internal sealed unsafe class BagReader
         }
 
         var freeBagSlots = (int)manager->GetEmptySlotsInBag();
-        bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {(readRetainer ? openRetainerId : 0)}.");
-        return new BagRead(slots.ToImmutable(), freeBagSlots, listableSkipped == 0);
+        var pagesOf = readRetainer ? openRetainerId : 0;
+        bagLog.Report($"Bags: read {slots.Count} stacks from {containers.Length - skipped.Count} of {containers.Length} containers{unloaded}, {freeBagSlots} free bag slots, {gearsetSlots} in a gear set, {protectedSlots} protected, retainer inventory {pagesOf}.");
+        return new BagRead(slots.ToImmutable(), freeBagSlots, new StockCoverage(skipped.ToImmutable(), pagesOf));
     }
 
     public static long HeldFor(in SaleWrite write)
@@ -114,6 +112,8 @@ internal sealed unsafe class BagReader
                 return held == item ? quantity : 0;
             case WriteKind.Return:
                 return RetainerHeld(item);
+            case WriteKind.Move:
+                return HeldIn(SourceContainers.PlayerInventory, item);
             default:
                 return WriteIntent.Unread;
         }
@@ -121,13 +121,22 @@ internal sealed unsafe class BagReader
 
     public static long RetainerHeld(ItemKey item)
     {
+        return HeldIn(SourceContainers.RetainerInventory, item);
+    }
+
+    public bool InGearSetNow(ItemKey item)
+    {
+        return GearsetGuard.Read(gearsetLog).Contains(item.ItemId, item.IsHq);
+    }
+
+    private static long HeldIn(ImmutableArray<SourceContainer> containers, ItemKey item)
+    {
         var manager = InventoryManager.Instance();
         if (manager == null)
         {
             return WriteIntent.Unread;
         }
 
-        var containers = SourceContainers.RetainerInventory;
         long held = 0;
         for (var containerIndex = 0; containerIndex < containers.Length; containerIndex++)
         {
@@ -148,6 +157,12 @@ internal sealed unsafe class BagReader
         }
 
         return held;
+    }
+
+    public static int FreeBagSlots()
+    {
+        var manager = InventoryManager.Instance();
+        return manager == null ? 0 : (int)manager->GetEmptySlotsInBag();
     }
 
     public static long PlayerGil()

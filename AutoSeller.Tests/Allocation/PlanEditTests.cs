@@ -1,4 +1,5 @@
 using AutoSeller.Core.Allocation.Model;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Shared;
 using static AutoSeller.Tests.Allocation.AllocationFixtures;
@@ -154,10 +155,27 @@ public sealed class PlanEditTests
         var edits = Apply(PlanEdits.None, PlanEdit.Exclude(LotRow, Now), LotTarget(0));
         edits = Apply(edits, PlanEdit.Exclude(OtherLotRow, Now), LotTarget(0));
 
-        var refreshed = edits.Refresh([new PlanEditTarget(OtherLotRow, 0, 0)]);
+        var refreshed = edits.Refresh([new PlanEditTarget(OtherLotRow, 0, 0)], default);
 
         Assert.False(refreshed.IsExcluded(LotRow));
         Assert.True(refreshed.IsExcluded(OtherLotRow));
+    }
+
+    [Fact]
+    public void RefreshKeepsEditsOfRowsFromContainersThatWereNotRead()
+    {
+        var saddlebagRow = LotRow with { Container = 4_000 };
+        var pageRow = LotRow with { RetainerId = 11, Container = 10_000 };
+        var edits = Apply(PlanEdits.None, PlanEdit.Exclude(saddlebagRow, Now), LotTarget(0));
+        edits = Apply(edits, PlanEdit.Exclude(pageRow, Now), LotTarget(0));
+        edits = Apply(edits, PlanEdit.Exclude(LotRow, Now), LotTarget(0));
+
+        var refreshed = edits.Refresh([], new StockCoverage([4_000], 12));
+
+        Assert.True(refreshed.IsExcluded(saddlebagRow));
+        Assert.True(refreshed.IsExcluded(pageRow));
+        Assert.False(refreshed.IsExcluded(LotRow));
+        Assert.False(edits.Refresh([], new StockCoverage([], 11)).IsExcluded(pageRow));
     }
 
     [Fact]
@@ -166,7 +184,7 @@ public sealed class PlanEditTests
         var edits = Apply(PlanEdits.None, PlanEdit.Price(LotRow, 600, Now), LotTarget(500));
         edits = Apply(edits, PlanEdit.Exclude(LotRow, Now), LotTarget(500));
 
-        var refreshed = edits.Refresh([LotTarget(650)]);
+        var refreshed = edits.Refresh([LotTarget(650)], default);
 
         Assert.False(refreshed.TryGetPrice(LotRow, out _));
         Assert.True(refreshed.IsExcluded(LotRow));
@@ -177,7 +195,7 @@ public sealed class PlanEditTests
     {
         var edits = Apply(PlanEdits.None, PlanEdit.Price(LotRow, 600, Now), LotTarget(500));
 
-        Assert.Same(edits, edits.Refresh([LotTarget(500), new PlanEditTarget(OtherLotRow, 0, 0)]));
+        Assert.Same(edits, edits.Refresh([LotTarget(500), new PlanEditTarget(OtherLotRow, 0, 0)], default));
     }
 
     [Fact]
@@ -186,7 +204,7 @@ public sealed class PlanEditTests
         var lot = Lot(Ore, 100, 4);
         var edits = Apply(PlanEdits.None, PlanEdit.Exclude(lot.Row, Now), LotTarget(0));
 
-        var refreshed = edits.Refresh([new PlanEditTarget(lot.Row, 0, 0)]);
+        var refreshed = edits.Refresh([new PlanEditTarget(lot.Row, 0, 0)], default);
         var result = Allocate([lot], [Retainer(Alpha)], refreshed);
 
         Assert.Equal(AllocationReason.Excluded, ReasonOf(result, lot));

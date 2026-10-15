@@ -4,8 +4,10 @@ using AutoSeller.Core.Game.Ops;
 using AutoSeller.Core.Market;
 using AutoSeller.Core.Retainers.Model;
 using AutoSeller.Core.Rules.Model;
+using AutoSeller.Core.Tasks.Model;
 using ECommons.UIHelpers.AddonMasterImplementations;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace AutoSeller.Core.Driver;
@@ -14,11 +16,15 @@ internal static unsafe class RetainerReads
 {
     private const int AskingPriceValue = 5;
     private const int QuantityValue = 8;
+    private const ushort FirstComponentNodeType = 1_000;
 
+    private static readonly string[] retainerInventoryWindows = [.. RetainerClicks.RetainerInventoryAddons, "RetainerGrid0", "RetainerGrid"];
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
+    private static string reportedInventoryWindows = string.Empty;
     private static QuantityBounds reportedBounds;
     private static SellWindowFields reportedFields;
+    private static MenuOpening reportedOpening;
 
     public static string[] RetainerNames()
     {
@@ -35,6 +41,69 @@ internal static unsafe class RetainerReads
         }
 
         return names;
+    }
+
+    public static SellListKind ShownSellListKind()
+    {
+        for (var index = 0; index < retainerInventoryWindows.Length; index++)
+        {
+            if (NpcInteraction.IsAddonReady(retainerInventoryWindows[index]))
+            {
+                return SellListKind.RetainerInventory;
+            }
+        }
+
+        return SellListKind.Inventory;
+    }
+
+    public static void ReportSellListKind()
+    {
+        line.Clear().Append("Sell list: retainer inventory windows shown [");
+        for (var index = 0; index < retainerInventoryWindows.Length; index++)
+        {
+            if (NpcInteraction.IsAddonReady(retainerInventoryWindows[index]))
+            {
+                line.Append(' ').Append(retainerInventoryWindows[index]);
+            }
+        }
+
+        line.Append(" ], so it sells from the ").Append(ShownSellListKind()).Append(" list.");
+        var text = line.ToString();
+        if (string.Equals(text, reportedInventoryWindows, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        reportedInventoryWindows = text;
+        RunLog.Info(text);
+    }
+
+    public static AssistOrigin MenuOrigin()
+    {
+        var inventoryContext = AgentInventoryContext.Instance();
+        var context = AgentContext.Instance();
+        var inventoryMenu = inventoryContext != null && inventoryContext->IsAgentActive();
+        var owner = context == null ? 0u : context->OwnerAddon;
+        var sellListId = NpcInteraction.TryGetReadyAddon(RetainerClicks.SellListAddon, out var sellList) ? sellList->Id : 0u;
+        var list = sellListId == 0 ? null : ListOf(sellList);
+        var opening = new MenuOpening(
+            inventoryMenu,
+            inventoryContext == null ? 0u : inventoryContext->OwnerAddonId,
+            owner,
+            sellListId,
+            list == null ? SellListRows.NoRow : list->HoveredItemIndex,
+            list == null ? SellListRows.NoRow : list->SelectedItemIndex,
+            list == null ? SellListRows.NoRow : list->HeldItemIndex);
+        var origin = inventoryMenu ? AssistOrigin.NewListing
+            : sellListId != 0 && owner == sellListId ? AssistOrigin.AdjustPrice(opening.HoveredRow)
+            : AssistOrigin.Unknown;
+        if (opening != reportedOpening)
+        {
+            reportedOpening = opening;
+            RunLog.Info($"Assist: a context menu opened; the item menu is active {opening.ItemMenu} for addon {opening.ItemMenuOwner}, the menu belongs to addon {opening.Owner}, the sell list is addon {opening.SellList} with row {opening.HoveredRow} hovered, {opening.SelectedRow} selected and {opening.HeldRow} held, so the next sell window is taken as {origin.Opening} (row {origin.Row}).");
+        }
+
+        return origin;
     }
 
     public static string[] ContextMenuEntries()
@@ -103,6 +172,27 @@ internal static unsafe class RetainerReads
         return NpcInteraction.TryGetReadyAddon(RetainerClicks.SellWindowAddon, out var sellWindow) ? FieldsOf(sellWindow) : SellWindowFields.Unreadable;
     }
 
+    private static AtkComponentList* ListOf(AtkUnitBase* addon)
+    {
+        var nodes = addon->UldManager.Nodes;
+        for (var index = 0; index < nodes.Length; index++)
+        {
+            var node = nodes[index].Value;
+            if (node == null || (ushort)node->Type < FirstComponentNodeType)
+            {
+                continue;
+            }
+
+            var component = ((AtkComponentNode*)node)->Component;
+            if (component != null && component->GetComponentType() == ComponentType.List)
+            {
+                return (AtkComponentList*)component;
+            }
+        }
+
+        return null;
+    }
+
     private static SellWindowFields FieldsOf(AtkUnitBase* sellWindow)
     {
         if (sellWindow->AtkValues == null || sellWindow->AtkValuesCount <= QuantityValue)
@@ -156,4 +246,6 @@ internal static unsafe class RetainerReads
         reportedRows = text;
         RunLog.Info(text);
     }
+
+    private readonly record struct MenuOpening(bool ItemMenu, uint ItemMenuOwner, uint Owner, uint SellList, int HoveredRow, int SelectedRow, int HeldRow);
 }

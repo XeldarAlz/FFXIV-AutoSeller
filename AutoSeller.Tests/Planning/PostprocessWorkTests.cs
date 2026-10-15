@@ -59,6 +59,20 @@ public sealed class PostprocessWorkTests
         Assert.Equal(0, PostprocessWork.Count(SellPlanner.Build(input, CancellationToken.None), Alpha));
     }
 
+    [Fact]
+    public void ASaddlebagLotIsNoWorkForAJobThatCannotMoveIt()
+    {
+        var saddlebag = Captured(OreInTheBags with { Container = 4_000, Slot = 1, Source = SlotSource.Saddlebag });
+        var rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, VendorSettings.Off, SellSources.Default | SellSources.Saddlebag, []);
+        var read = SellPlanner.Build(Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], saddlebag) with { Rules = rules }, CancellationToken.None);
+        var unread = SellPlanner.Build(Input([OreRule()], [], saddlebag) with { Rules = rules }, CancellationToken.None);
+
+        Assert.Contains(read.Rows, row => row.Source == SlotSource.Saddlebag && row.IsPlaced);
+        Assert.Contains(unread.Rows, row => row.Source == SlotSource.Saddlebag && !row.IsPlaced);
+        Assert.Equal(0, PostprocessWork.Count(read, Alpha) + PostprocessWork.Count(read, Beta));
+        Assert.Equal(PostprocessWork.MarketToRead, PostprocessWork.Count(unread, Alpha));
+    }
+
     private static SellPlan Build(RetainerSnapshot[] markets, params StockSlot[] stock)
     {
         return SellPlanner.Build(Input([OreRule()], markets, stock), CancellationToken.None);

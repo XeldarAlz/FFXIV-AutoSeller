@@ -139,6 +139,18 @@ public sealed class ReconcileHintTests
         Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, null, WriteIntent.Unread, WriteIntent.Unread));
     }
 
+    [Fact]
+    public void ASaddlebagMoveIsToldByTheBagsAlone()
+    {
+        var intent = Intent(Move(), heldBefore: BagStack);
+
+        Assert.Equal(ReconcileHint.Applied, ReconcileHints.From(intent, null, BagStack + LotQuantity, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NotApplied, ReconcileHints.From(intent, Later(), BagStack, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.Unclear, ReconcileHints.From(intent, null, BagStack + 1, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(intent, null, WriteIntent.Unread, WriteIntent.Unread));
+        Assert.Equal(ReconcileHint.NoFreshRead, ReconcileHints.From(Intent(Move()), null, BagStack, WriteIntent.Unread));
+    }
+
     private static WriteIntent Intent(SaleWrite write, long listingsBefore = WriteIntent.Unread, long heldBefore = WriteIntent.Unread)
     {
         return WriteIntent.Record(write, 2, RunId, Now, WriteId) with { ListingsBefore = listingsBefore, ItemCountBefore = heldBefore };

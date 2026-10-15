@@ -59,6 +59,47 @@ internal static class SourceContainers
 
     public static ImmutableArray<SourceContainer> RetainerInventory => retainerPages;
 
+    public static ImmutableArray<SourceContainer> PlayerInventory => player;
+
+    public static ImmutableArray<uint> CharacterContainers()
+    {
+        var containers = ImmutableArray.CreateBuilder<uint>(player.Length + armoury.Length + saddlebag.Length);
+        ReadOnlySpan<ImmutableArray<SourceContainer>> groups = [player, armoury, saddlebag];
+        for (var groupIndex = 0; groupIndex < groups.Length; groupIndex++)
+        {
+            var group = groups[groupIndex];
+            for (var index = 0; index < group.Length; index++)
+            {
+                containers.Add(group[index].Container);
+            }
+        }
+
+        return containers.MoveToImmutable();
+    }
+
+    public static bool IsRetainerPage(uint container)
+    {
+        return IndexIn(retainerPages, container) >= 0;
+    }
+
+    public static bool TryGetSource(uint container, out SlotSource source)
+    {
+        ReadOnlySpan<ImmutableArray<SourceContainer>> groups = [player, armoury, saddlebag, retainerPages];
+        for (var groupIndex = 0; groupIndex < groups.Length; groupIndex++)
+        {
+            var group = groups[groupIndex];
+            var index = IndexIn(group, container);
+            if (index >= 0)
+            {
+                source = group[index].Source;
+                return true;
+            }
+        }
+
+        source = default;
+        return false;
+    }
+
     public static ImmutableArray<SourceContainer> For(SellSources sources, bool readRetainer)
     {
         var containers = ImmutableArray.CreateBuilder<SourceContainer>(player.Length + armoury.Length + saddlebag.Length + retainerPages.Length);
@@ -79,5 +120,18 @@ internal static class SourceContainers
         }
 
         return containers.ToImmutable();
+    }
+
+    private static int IndexIn(ImmutableArray<SourceContainer> group, uint container)
+    {
+        for (var index = 0; index < group.Length; index++)
+        {
+            if (group[index].Container == container)
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 }

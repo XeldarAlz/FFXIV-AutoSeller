@@ -16,7 +16,13 @@ internal enum DriverOutcome : byte
     Cancelled,
 }
 
-internal sealed partial class RetainerDriver(SellRunSession session, RunDecider decider, Plugin plugin) : AutoCommon
+internal enum DriverPhase : byte
+{
+    Retainers,
+    Saddlebag,
+}
+
+internal sealed partial class RetainerDriver(SellRunSession session, RunDecider decider, Plugin plugin, DriverPhase phase) : AutoCommon
 {
     public const int WatchdogMs = 4 * 60 * 60 * TimeUnits.MillisecondsPerSecond;
     public const int CleanupBoundMs = 30_000;
@@ -54,13 +60,9 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
         {
             await SettleWindows();
         }
-        else if (engaged && stop.Halted && session.Mode == RunMode.Postprocess)
-        {
-            await UnwindToMenu(stop);
-        }
         else if (engaged && stop.Halted)
         {
-            await UnwindToBell(stop);
+            await UnwindAfterHalt(stop);
         }
 
         plugin.Marketbuddy.Release();
@@ -75,9 +77,19 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             return new Stop(boundary, "the run is no longer authorized at its start");
         }
 
+        if (phase == DriverPhase.Saddlebag)
+        {
+            return await MoveFromSaddlebag();
+        }
+
         if (session.Mode == RunMode.Postprocess)
         {
             return await WorkHandedOverRetainer();
+        }
+
+        if (session.Mode == RunMode.OpenSellList)
+        {
+            return await WorkOpenSellList();
         }
 
         var stop = await OpenRetainerList();
@@ -167,12 +179,36 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
     {
         try
         {
+            if (session.Mode == RunMode.OpenSellList)
+            {
+                Diag("Driver: stopped at the open sell list; closing the sell window, the search results and any menu, and leaving the sell list open");
+                await RetainerWindows.CloseOwned(RetainerWindows.AboveSellList, CleanupBoundMs, unloaded);
+                return;
+            }
+
             Diag("Driver: stopped at the retainer; closing the sell window, the search results, the sale history and the sell list");
             await RetainerWindows.CloseOwned(ChainUnwind.Owned, CleanupBoundMs, unloaded);
         }
         catch (Exception exception)
         {
             RunLog.Warning(exception, "Driver: closing the retainer windows failed");
+        }
+    }
+
+    private async Task UnwindAfterHalt(Stop stop)
+    {
+        switch (session.Mode)
+        {
+            case RunMode.Postprocess:
+                await UnwindToMenu(stop);
+                return;
+            case RunMode.OpenSellList:
+                Diag($"Driver: halted ({stop.Reason}); closing the windows above the sell list and leaving it open");
+                await RetainerWindows.CloseOwned(RetainerWindows.AboveSellList, CleanupBoundMs, unloaded);
+                return;
+            default:
+                await UnwindToBell(stop);
+                return;
         }
     }
 
@@ -219,6 +255,12 @@ internal sealed partial class RetainerDriver(SellRunSession session, RunDecider 
             : session.PausedAtBoundary ? DriverOutcome.Paused
             : DriverOutcome.Completed;
         Settled = true;
+        if (phase == DriverPhase.Saddlebag)
+        {
+            ReportMoves(stop);
+            return;
+        }
+
         var visits = session.Visits;
         var tally = session.Tally;
         var summary = $"Driver: {Outcome}, {visits.Visited} of {visits.Count} retainer(s) visited, {visits.Skipped} skipped; {tally.Repriced} repriced, {tally.Listed} listed, {tally.Returned} returned, {tally.Vendored} vendored for {tally.VendoredValue} gil, {tally.Kept} kept, {tally.Skipped} skipped{(session.Authorization.DryRun ? " (dry run)" : string.Empty)}";

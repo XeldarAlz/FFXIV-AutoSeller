@@ -22,6 +22,8 @@ internal enum StartBlock : byte
     AutoRetainerNotHeld,
     ProtectListUnreadable,
     NothingNeedsAVisit,
+    SellListNotOpen,
+    RetainerNotEnabled,
 }
 
 internal readonly record struct StartFacts(
@@ -74,7 +76,7 @@ internal static class StartBlockRule
             return StartBlock.Trading;
         }
 
-        if (facts.Mode == RunMode.Standalone && facts.AutoRetainer.Busy)
+        if (facts.Mode.StartedByPlayer() && facts.AutoRetainer.Busy)
         {
             return StartBlock.AutoRetainerBusy;
         }

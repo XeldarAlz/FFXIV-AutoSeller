@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using AutoSeller.Core.Inventory.Model;
 using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Allocation.Model;
@@ -78,13 +79,13 @@ internal sealed class PlanEdits
         return builder.Count == Items.Length ? this : new PlanEdits(builder.ToImmutable());
     }
 
-    public PlanEdits Refresh(ReadOnlySpan<PlanEditTarget> rows)
+    public PlanEdits Refresh(ReadOnlySpan<PlanEditTarget> rows, in StockCoverage coverage)
     {
         var builder = ImmutableArray.CreateBuilder<PlanEdit>(Items.Length);
         for (var index = 0; index < Items.Length; index++)
         {
             var edit = Items[index];
-            if (TryFindRow(rows, edit.Row, out var target) && Validate(edit, target) == PlanEditRefusal.None)
+            if (!coverage.Covers(edit.Row) || (TryFindRow(rows, edit.Row, out var target) && Validate(edit, target) == PlanEditRefusal.None))
             {
                 builder.Add(edit);
             }
