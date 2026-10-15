@@ -21,14 +21,16 @@ internal static class UnexpectedAddons
             }
         }
 
-        var promptRow = ChainWindows.Contains(visible, ChainWindow.SelectYesno)
-            ? RetainerMenuText.PromptRowOf(NpcInteraction.SelectYesnoText())
-            : ChainStep.NoPrompt;
+        var promptShown = ChainWindows.Contains(visible, ChainWindow.SelectYesno);
+        var promptText = promptShown ? NpcInteraction.SelectYesnoText() : string.Empty;
+        var promptRow = promptShown ? RetainerMenuText.PromptRowOf(promptText) : ChainStep.NoPrompt;
         var view = new ChainView(visible, promptRow);
         if (view != reported)
         {
             reported = view;
-            RunLog.Info($"Retainer windows: open {visible}, prompt row {promptRow}.");
+            RunLog.Info(promptShown
+                ? $"Retainer windows: open {visible}, prompt row {promptRow}, prompt '{promptText}'."
+                : $"Retainer windows: open {visible}, prompt row {promptRow}.");
         }
 
         return view;
