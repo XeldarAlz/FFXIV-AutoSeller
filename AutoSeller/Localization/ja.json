@@ -6,6 +6,7 @@
   "common.dragAdjustHint": "ドラッグで調整 · Ctrl+クリックで入力",
   "common.noMatches": "「{0}」に一致するものはありません。",
   "common.gil": "{0} ギル",
+  "common.sentenceEnd": "。",
   "common.duration.minutes": "{0}分",
   "common.duration.minutesSeconds": "{0}分{1}秒",
   "common.duration.hours": "{0}時間{1}分",

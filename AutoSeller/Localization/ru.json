@@ -6,6 +6,7 @@
   "common.dragAdjustHint": "Тяните для настройки · Ctrl+клик для ввода",
   "common.noMatches": "Ничего не подходит под «{0}».",
   "common.gil": "{0} гил",
+  "common.sentenceEnd": ".",
   "common.duration.minutes": "{0} мин",
   "common.duration.minutesSeconds": "{0} мин {1} с",
   "common.duration.hours": "{0} ч {1} мин",

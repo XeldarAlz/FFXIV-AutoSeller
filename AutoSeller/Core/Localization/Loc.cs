@@ -8,6 +8,7 @@ internal static class Loc
 {
     private static readonly ushort[] NoGlyphs = [0];
     private static readonly Dictionary<string, string> UpperCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string> SentenceCache = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, CompositeFormat> FormatCache = new(StringComparer.Ordinal);
 
     private static string directory = string.Empty;
@@ -45,6 +46,23 @@ internal static class Loc
         var upper = culture.TextInfo.ToUpper(text);
         UpperCache[text] = upper;
         return upper;
+    }
+
+    public static string Sentence(string fragment)
+    {
+        if (fragment.Length == 0)
+        {
+            return fragment;
+        }
+
+        if (SentenceCache.TryGetValue(fragment, out var cached))
+        {
+            return cached;
+        }
+
+        var sentence = string.Concat(culture.TextInfo.ToUpper(fragment[0]).ToString(), fragment[1..], T(L.Common.SentenceEnd));
+        SentenceCache[fragment] = sentence;
+        return sentence;
     }
 
     public static string T(LocString entry) => catalog.TryGet(entry.Key, out var value) ? value : entry.Source;
@@ -96,6 +114,7 @@ internal static class Loc
         current = language;
         culture = ResolveCulture(language.CultureName);
         UpperCache.Clear();
+        SentenceCache.Clear();
         FormatCache.Clear();
         var path = Path.Combine(directory, string.Concat(language.Code, ".json"));
         catalog = ReferenceEquals(language, Languages.English) ? StringCatalog.Empty : StringCatalog.Load(path);

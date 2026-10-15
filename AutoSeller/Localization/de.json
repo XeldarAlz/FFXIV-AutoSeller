@@ -6,6 +6,7 @@
   "common.dragAdjustHint": "Ziehen zum Anpassen · Strg+Klick zum Eingeben",
   "common.noMatches": "Nichts passt zu „{0}“.",
   "common.gil": "{0} Gil",
+  "common.sentenceEnd": ".",
   "common.duration.minutes": "{0} Min.",
   "common.duration.minutesSeconds": "{0} Min. {1} Sek.",
   "common.duration.hours": "{0} Std. {1} Min.",

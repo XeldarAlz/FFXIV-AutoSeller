@@ -6,6 +6,7 @@
   "common.dragAdjustHint": "Ayarlamak için sürükle · yazmak için Ctrl+tık",
   "common.noMatches": "“{0}” ile eşleşen bir şey yok.",
   "common.gil": "{0} gil",
+  "common.sentenceEnd": ".",
   "common.duration.minutes": "{0} dk",
   "common.duration.minutesSeconds": "{0} dk {1} sn",
   "common.duration.hours": "{0} sa {1} dk",

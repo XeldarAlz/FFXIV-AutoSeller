@@ -6,6 +6,7 @@
   "common.dragAdjustHint": "Arrastra para ajustar · Ctrl+clic para escribir",
   "common.noMatches": "Nada coincide con «{0}».",
   "common.gil": "{0} guiles",
+  "common.sentenceEnd": ".",
   "common.duration.minutes": "{0} min",
   "common.duration.minutesSeconds": "{0} min {1} s",
   "common.duration.hours": "{0} h {1} min",
