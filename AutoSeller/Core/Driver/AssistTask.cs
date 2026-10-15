@@ -246,7 +246,7 @@ internal sealed class AssistTask : AutoCommon
         var pressed = false;
         while (!pressed && Environment.TickCount64 < deadline)
         {
-            if (CancelToken.IsCancellationRequested || plugin.Controller.HoldsRetainerWindows || !StillShows(name, item))
+            if (CancelToken.IsCancellationRequested || plugin.Configuration.DryRun || plugin.Controller.HoldsRetainerWindows || !StillShows(name, item))
             {
                 return false;
             }
