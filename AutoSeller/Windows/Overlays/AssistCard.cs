@@ -109,7 +109,7 @@ internal sealed class AssistCard(Plugin plugin, AssistHost host) : AddonOverlay(
         lineCount = 0;
         using (Fonts.PushCaption())
         {
-            Add(TextDraw.Truncate(TextDraw.Upper(string.Concat(Loc.T(L.Assist.CardTitle), TextDraw.Separator, view.ItemName)), (CardWidth - PadX * 2f) * Scale), Styling.TextDim);
+            Add(TextDraw.Truncate(string.Concat(TextDraw.Upper(Loc.T(L.Assist.CardTitle)), TextDraw.Separator, view.ItemName), (CardWidth - PadX * 2f) * Scale), Styling.TextDim);
         }
 
         switch (view.Status)
