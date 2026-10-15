@@ -1,3 +1,5 @@
+using AutoSeller.Core.Driver;
+using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Ipc;
 using AutoSeller.Core.Localization;
@@ -73,6 +75,38 @@ internal sealed partial class SellController
         }
 
         EndNow(active, "stopped by the player");
+    }
+
+    public void StopForAlert()
+    {
+        if (session is not null)
+        {
+            Stop();
+            return;
+        }
+
+        var automation = ClibServices.Automation;
+        if (!automation.Running)
+        {
+            return;
+        }
+
+        RunLog.Info("GM alert: no run is going, so the running Assist or market look task is cancelled.");
+        automation.Stop();
+    }
+
+    public void Shutdown()
+    {
+        var held = HoldsRetainerWindows;
+        var mode = (session ?? lastSession)?.Mode;
+        Interrupt();
+        if (!held || mode == RunMode.Postprocess)
+        {
+            return;
+        }
+
+        var open = RetainerWindows.CloseOwnedNow(mode == RunMode.OpenSellList ? RetainerWindows.AboveSellList : ChainUnwind.Owned);
+        RunLog.Info($"Unloading while the run held the retainer windows; {(open == ChainWindow.None ? "none of its windows was open" : $"{open} closed at once")}.");
     }
 
     public void Interrupt()

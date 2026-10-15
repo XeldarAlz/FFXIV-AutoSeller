@@ -33,6 +33,7 @@ using ECommons.DalamudServices;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using ClibServices = clib.Services.Svc;
 
 namespace AutoSeller;
 
@@ -201,6 +202,7 @@ public sealed class Plugin : IDalamudPlugin
         Controller.Shutdown();
         sellNowButton.Dispose();
         Assist.Dispose();
+        ClibServices.Automation.Stop();
         Postprocess.Dispose();
         Suppression.ReleaseAny();
         TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;

@@ -93,10 +93,6 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         }
     }
 
-    public void StopForAlert() => Stop();
-
-    public void Shutdown() => Interrupt();
-
     private static string Describe(StartBlock block) => block switch
     {
         StartBlock.NotLoggedIn => Loc.T(L.Run.BlockNotLoggedIn),

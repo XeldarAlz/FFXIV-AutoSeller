@@ -10,12 +10,23 @@ using AutoSeller.Core.Tasks;
 
 namespace AutoSeller.Core.Market;
 
-internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
+internal sealed class MarketLookTask : AutoCommon
 {
     private const int SearchBudgetMs = 90_000;
     private const int CloseBudgetMs = 5_000;
     private const int ReferenceBudgetMs = 25_000;
     private const int PollFrames = 1;
+
+    private readonly uint itemId;
+    private readonly Plugin plugin;
+    private bool released;
+
+    public MarketLookTask(uint itemId, Plugin plugin)
+    {
+        this.itemId = itemId;
+        this.plugin = plugin;
+        CancelToken.Register(ReleaseSearch);
+    }
 
     public static string NameOf(string itemName, uint itemId)
     {
@@ -44,8 +55,27 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
         }
         finally
         {
+            ReleaseSearch();
+        }
+    }
+
+    private void ReleaseSearch()
+    {
+        if (released)
+        {
+            return;
+        }
+
+        released = true;
+        try
+        {
+            var tracker = plugin.Market.Tracker;
             tracker.Cancel();
             tracker.ReleaseResultWindow();
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, "Look: releasing the price comparison failed");
         }
     }
 
