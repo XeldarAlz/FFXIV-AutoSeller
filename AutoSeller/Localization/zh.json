@@ -442,7 +442,7 @@
   "log.entries.other": "缓冲区中有 {0} 行",
   "log.empty": "尚无记录。开始运行后，插件执行的每一步都会显示在这里。",
   "log.noMatches": "没有符合当前筛选条件的行。",
-  "log.footer": "每一行也会以 {0} 前缀写入 Dalamud 日志（/xllog）。报告错误时，请点击“复制日志”并将结果粘贴到 issue 中。",
+  "log.footer": "每一行也会以 {0} 前缀写入 Dalamud 日志（/xllog）。报告错误时，请点击“复制日志”并将结果粘贴到问题报告中。",
   "log.searchHint": "搜索消息和来源",
   "log.copyAll": "复制日志",
   "log.copyFiltered.one": "复制 {0} 行",
