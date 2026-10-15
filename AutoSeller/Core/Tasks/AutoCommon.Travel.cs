@@ -62,7 +62,7 @@ public abstract partial class AutoCommon
 
     private enum TeleportPurpose { Shortcut, Recovery, OffMesh }
 
-    protected async Task<bool> TravelTo(uint territoryId, Vector3 destination, float arriveWithin, bool groundStalled = false)
+    protected async Task<bool> TravelTo(uint territoryId, Vector3 destination, float arriveWithin, bool groundStalled = false, bool onFloor = false)
     {
         var zoneName = TerritoryNames.Of(territoryId);
         Diag($"Travel: to {zoneName} ({territoryId}) at {FormatPosition(destination)} within {arriveWithin:F1}m, starting in territory {Svc.ClientState.TerritoryType} ({ConditionTag()})");
@@ -78,7 +78,7 @@ public abstract partial class AutoCommon
                 return false;
             }
 
-            var result = await TravelWithinZone(territoryId, destination, arriveWithin, zoneName, groundStalled);
+            var result = await TravelWithinZone(territoryId, destination, arriveWithin, zoneName, groundStalled, onFloor);
             if (result != ZoneTravelResult.LeftZone)
             {
                 return result == ZoneTravelResult.Arrived;
@@ -134,7 +134,7 @@ public abstract partial class AutoCommon
         return false;
     }
 
-    private async Task<ZoneTravelResult> TravelWithinZone(uint territoryId, Vector3 destination, float arriveWithin, string zoneName, bool groundStalled)
+    private async Task<ZoneTravelResult> TravelWithinZone(uint territoryId, Vector3 destination, float arriveWithin, string zoneName, bool groundStalled, bool onFloor)
     {
         await WaitForNavmeshReady(TravelNavmeshWaitMs, TravelNavmeshPollFrames);
         if (CancelToken.IsCancellationRequested)
@@ -142,7 +142,7 @@ public abstract partial class AutoCommon
             return ZoneTravelResult.Failed;
         }
 
-        var target = SnapToFloor(destination);
+        var target = onFloor ? destination : SnapToFloor(destination);
         if (!Arrived(target, destination, arriveWithin))
         {
             await TryTeleportShortcut(territoryId, target, "travel-shortcut", TeleportPurpose.Shortcut);

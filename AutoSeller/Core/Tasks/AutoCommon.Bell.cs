@@ -1,5 +1,6 @@
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Game.Ops;
+using AutoSeller.Core.Ipc;
 using AutoSeller.Core.Travel;
 using AutoSeller.Core.Travel.Model;
 using Dalamud.Game.ClientState.Conditions;
@@ -20,6 +21,12 @@ public abstract partial class AutoCommon
     private const int BellStepUpStallMs = 2_500;
     private const int InnBellSightMs = 10_000;
     private const float PickedBellArriveWithinMeters = 1.5f;
+    private const float BellFloorReachMeters = 3.5f;
+    private const float BellFloorSnapMeters = 1.5f;
+    private const int BellFloorAngles = 12;
+    private const int MaxBellFloorProbes = 4;
+
+    private static readonly float[] bellFloorRings = [2f, 3f];
 
     private static readonly string RetainerListAddon = ChainWindows.NameOf(ChainWindow.RetainerList);
 
@@ -142,7 +149,7 @@ public abstract partial class AutoCommon
             }
 
             Diag($"{scope}: walking {DistanceTo(floor):F0}m to the floor at {FormatPosition(floor)} beside the summoning bell at {FormatPosition(target)} (walk {walk}/{MaxBellWalks})");
-            var arrived = await TravelTo(Svc.ClientState.TerritoryType, floor, BellWalkArriveWithinMeters);
+            var arrived = await TravelTo(Svc.ClientState.TerritoryType, floor, BellWalkArriveWithinMeters, onFloor: true);
             if (CancelToken.IsCancellationRequested)
             {
                 return BellArrival.Cancelled;
@@ -223,22 +230,65 @@ public abstract partial class AutoCommon
     {
         if (Svc.Objects.LocalPlayer is not { } player)
         {
-            return bell;
-        }
-
-        var route = await ProbeGroundRoute(player.Position, bell);
-        if (route.Kind == GroundRouteKind.Unknown)
-        {
-            return bell;
-        }
-
-        if (route.Kind == GroundRouteKind.Partial && route.ShortfallMeters > BellApproach.InteractReachMeters)
-        {
-            Warn($"{scope}: the ground route ends {route.ShortfallMeters:F0}m short of the summoning bell at {FormatPosition(bell)}");
             return null;
         }
 
-        return route.End;
+        var spots = FloorSpotsBeside(bell, player.Position);
+        if (spots.Length == 0)
+        {
+            Warn($"{scope}: no walkable floor lies within {BellFloorReachMeters:F1}m of the summoning bell at {FormatPosition(bell)}");
+            return null;
+        }
+
+        Vector3? unanswered = null;
+        var probes = Math.Min(spots.Length, MaxBellFloorProbes);
+        for (var index = 0; index < probes; index++)
+        {
+            var spot = spots[index];
+            var route = await ProbeGroundRoute(player.Position, spot);
+            Diag($"{scope}: floor {FormatPosition(spot)}, {Vector3.Distance(spot, bell):F1}m from the summoning bell: route {route.Kind}{(route.Kind == GroundRouteKind.Partial ? $", {route.ShortfallMeters:F1}m short" : string.Empty)}");
+            if (route.Kind == GroundRouteKind.Complete)
+            {
+                return spot;
+            }
+
+            if (route.Kind == GroundRouteKind.Partial && Vector3.Distance(route.End, bell) <= BellFloorReachMeters)
+            {
+                return route.End;
+            }
+
+            unanswered ??= route.Kind == GroundRouteKind.Unknown ? spot : null;
+        }
+
+        if (unanswered is null)
+        {
+            Warn($"{scope}: no ground route reaches the floor within {BellFloorReachMeters:F1}m of the summoning bell at {FormatPosition(bell)}");
+        }
+
+        return unanswered;
+    }
+
+    private static Vector3[] FloorSpotsBeside(Vector3 bell, Vector3 from)
+    {
+        var navmesh = NavmeshIPC.Instance;
+        var spots = new List<Vector3>(bellFloorRings.Length * BellFloorAngles);
+        for (var ring = 0; ring < bellFloorRings.Length; ring++)
+        {
+            for (var angle = 0; angle < BellFloorAngles; angle++)
+            {
+                var radians = MathF.Tau * angle / BellFloorAngles;
+                var around = bell + new Vector3(MathF.Cos(radians), 0f, MathF.Sin(radians)) * bellFloorRings[ring];
+                if (navmesh.NearestPointReachable(around, BellFloorSnapMeters, BellFloorSnapMeters) is { } floor
+                    && Vector3.Distance(floor, bell) <= BellFloorReachMeters
+                    && !spots.Contains(floor))
+                {
+                    spots.Add(floor);
+                }
+            }
+        }
+
+        spots.Sort((left, right) => Vector3.DistanceSquared(left, from).CompareTo(Vector3.DistanceSquared(right, from)));
+        return [.. spots];
     }
 
     private async Task<BellArrival> ReadyAtBell(string scope)
