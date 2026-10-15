@@ -68,6 +68,11 @@ internal sealed class PostprocessHost : IDisposable
 
     private void OnAdditionalTask(string retainerName)
     {
+        if (handshake.SellNowOfferRepeated(retainerName))
+        {
+            RunLog.Info($"AutoRetainer post-process: {retainerName} offered again since Sell now; the Sell now walk is over, so this and later offers follow the Run after ventures switch again.");
+        }
+
         var skip = Decide(retainerName, out var retainerId, out var block, out var work);
         if (skip != PostprocessSkip.None)
         {
