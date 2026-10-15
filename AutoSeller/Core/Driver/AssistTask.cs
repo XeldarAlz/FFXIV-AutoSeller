@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace AutoSeller.Core.Driver;
 
-internal sealed class AssistTask(Plugin plugin, AssistHost host) : AutoCommon
+internal sealed class AssistTask : AutoCommon
 {
     private const int WindowReadMs = 3_000;
     private const int SearchBudgetMs = 45_000;
@@ -21,11 +21,20 @@ internal sealed class AssistTask(Plugin plugin, AssistHost host) : AutoCommon
     private const SellSources HandSources = SellSources.Default | SellSources.Armoury | SellSources.RetainerPages;
 
     private readonly ListingSlot[] listings = new ListingSlot[RetainerSnapshot.SlotCount];
+    private readonly Plugin plugin;
+    private readonly AssistHost host;
+    private bool released;
+
+    public AssistTask(Plugin plugin, AssistHost host)
+    {
+        this.plugin = plugin;
+        this.host = host;
+        CancelToken.Register(ReleaseShared);
+    }
 
     protected override async Task Execute()
     {
         var tracker = plugin.Market.Tracker;
-        plugin.Marketbuddy.Hold();
         try
         {
             var shown = await ReadWindow();
@@ -73,12 +82,31 @@ internal sealed class AssistTask(Plugin plugin, AssistHost host) : AutoCommon
         }
         finally
         {
-            if (!CancelToken.IsCancellationRequested)
-            {
-                tracker.Cancel();
-                tracker.ReleaseResultWindow();
-                plugin.Marketbuddy.Release();
-            }
+            ReleaseShared();
+        }
+    }
+
+    private void ReleaseShared()
+    {
+        if (released)
+        {
+            return;
+        }
+
+        released = true;
+        try
+        {
+            var tracker = plugin.Market.Tracker;
+            tracker.Cancel();
+            tracker.ReleaseResultWindow();
+        }
+        catch (Exception exception)
+        {
+            RunLog.Warning(exception, "Assist: releasing the price comparison failed");
+        }
+        finally
+        {
+            plugin.Marketbuddy.Release();
         }
     }
 

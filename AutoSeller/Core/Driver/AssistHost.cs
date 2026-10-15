@@ -31,6 +31,11 @@ internal sealed class AssistHost : IDisposable
     {
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, RetainerClicks.SellWindowAddon, OnSellWindowSetup);
         Svc.AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, RetainerClicks.SellWindowAddon, OnSellWindowClosing);
+        var automation = ClibServices.Automation;
+        if (ReferenceEquals(automation.CurrentTask, task))
+        {
+            automation.Stop();
+        }
     }
 
     public void Show(AssistStatus status, string itemName, in AssistSuggestion suggestion, in Decision decision, TimeSpan cooldownLeft)
@@ -60,7 +65,10 @@ internal sealed class AssistHost : IDisposable
         }
 
         RunLog.Info("Assist: a sell window was opened by hand; its prices are compared.");
-        TaskStarter.TryStart(() => task = new AssistTask(plugin, this));
+        if (TaskStarter.TryStart(() => task = new AssistTask(plugin, this)))
+        {
+            plugin.Marketbuddy.Hold();
+        }
     }
 
     private void OnSellWindowClosing(AddonEvent type, AddonArgs args)
