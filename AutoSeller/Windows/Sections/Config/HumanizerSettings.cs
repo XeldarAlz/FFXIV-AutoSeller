@@ -14,6 +14,8 @@ internal static class HumanizerSettings
 
     private readonly record struct DelayRow(HumanAction Action, LocString Label, LocString Help, string MinId, string MaxId);
 
+    private readonly record struct RangeState(Configuration Configuration, DelayRow Row);
+
     private static readonly DelayRow[] rows =
     [
         new(HumanAction.MoveOff, L.Humanizer.MoveOff, L.Humanizer.MoveOffHelp, "##asell_human_moveoff_min", "##asell_human_moveoff_max"),
@@ -27,7 +29,8 @@ internal static class HumanizerSettings
         SettingsRow.Draw(Loc.T(L.Humanizer.Enabled),
             Loc.T(L.Humanizer.EnabledHelp),
             SettingsControls.ToggleWidth,
-            () => SettingsControls.DrawToggle(configuration, () => configuration.HumanizerEnabled, value => configuration.HumanizerEnabled = value, "##asell_human_enabled"),
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.HumanizerEnabled, static (configuration, value) => configuration.HumanizerEnabled = value, "##asell_human_enabled"),
             SettingsRow.ToggleHeight);
 
         using var delays = Motion.PushSection("##asell_human_delays", configuration.HumanizerEnabled);
@@ -40,11 +43,10 @@ internal static class HumanizerSettings
         for (var index = 0; index < rows.Length; index++)
         {
             var row = rows[index];
-            SettingsRow.Draw(Loc.T(row.Label), Loc.T(row.Help), controlWidth, () => DrawRange(configuration, row));
+            SettingsRow.Draw(Loc.T(row.Label), Loc.T(row.Help), controlWidth, new RangeState(configuration, row), static state => DrawRange(state.Configuration, state.Row));
         }
     }
 
-    // In unscaled units, as SettingsRow scales the control width itself.
     private static float RangeWidth()
         => RangeStepperWidth * 2f + RangeGap * 2f + TextDraw.Measure(Loc.T(L.Humanizer.RangeTo)).X / ImGuiHelpers.GlobalScale;
 
