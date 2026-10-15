@@ -114,7 +114,7 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(History.Dispose);
             Items = new ItemCatalog();
             GameItems = new GameItems();
-            Market = new MarketServices(Configuration, GameItems);
+            Market = new MarketServices(GameItems);
             completed.Push(Market.Dispose);
             Retainers = new RetainerReader(Market.Gates.Allows(MarketGate.ReadRetainerMarket));
             Characters = new CharacterStore(PluginInterface.ConfigDirectory.FullName, Retainers);

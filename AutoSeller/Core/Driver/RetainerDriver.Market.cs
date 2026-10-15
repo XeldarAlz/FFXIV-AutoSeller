@@ -70,7 +70,7 @@ internal sealed partial class RetainerDriver
     private async Task<SearchResult> Compare(ItemKey item, bool allowReuse)
     {
         var tracker = plugin.Market.Tracker;
-        var state = tracker.Request(item, allowReuse);
+        var state = tracker.Request(item, allowReuse, SearchSendPath.ComparePrices);
         var watch = ChainStep.Closes(ChainWindow.RetainerSell, SearchBudgetMs, SearchWindows);
         chain.Begin(watch, Environment.TickCount64);
         try

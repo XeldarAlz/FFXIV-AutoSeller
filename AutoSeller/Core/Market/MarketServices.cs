@@ -5,9 +5,9 @@ namespace AutoSeller.Core.Market;
 
 internal sealed class MarketServices : IDisposable
 {
-    public MarketServices(Configuration configuration, GameItems gameItems)
+    public MarketServices(GameItems gameItems)
     {
-        Tracker = new ListingRequestTracker(configuration, gameItems);
+        Tracker = new ListingRequestTracker(gameItems);
         Gates = MarketCompatibility.Evaluate(Tracker.HasRequestResultHook, Tracker.HasEndRequestHook);
         Tracker.ReadingAllowed = Gates.Allows(MarketGate.ReadListings);
         Report();

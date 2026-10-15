@@ -85,7 +85,7 @@ internal sealed class MarketLookTask(uint itemId, Plugin plugin) : AutoCommon
 
     private async Task<ListingRequestState> Search(ListingRequestTracker tracker)
     {
-        var state = tracker.Request(new ItemKey(itemId, false), false);
+        var state = tracker.Request(new ItemKey(itemId, false), false, plugin.Configuration.SearchSendPath);
         var deadline = Environment.TickCount64 + SearchBudgetMs;
         while (state.Status == ListingRequestStatus.Waiting && Environment.TickCount64 < deadline)
         {

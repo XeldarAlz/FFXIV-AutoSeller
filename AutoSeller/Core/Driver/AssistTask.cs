@@ -154,17 +154,17 @@ internal sealed class AssistTask : AutoCommon
 
     private async Task<CompetitorSnapshot?> Compare(ListingRequestTracker tracker, ItemKey item)
     {
-        var refusal = tracker.Preflight(item.ItemId);
+        var refusal = tracker.Preflight(item.ItemId, SearchSendPath.ComparePrices);
         if (refusal != SendRefusal.None)
         {
-            RunLog.Info($"Assist: prices for item {item.ItemId} are not compared through {plugin.Configuration.SearchSendPath} ({refusal}).");
+            RunLog.Info($"Assist: prices for item {item.ItemId} are not compared through the sell window ({refusal}).");
             return null;
         }
 
         var allowReuse = true;
         while (!CancelToken.IsCancellationRequested)
         {
-            var state = tracker.Request(item, allowReuse);
+            var state = tracker.Request(item, allowReuse, SearchSendPath.ComparePrices);
             var deadline = Environment.TickCount64 + SearchBudgetMs;
             while (state.Status == ListingRequestStatus.Waiting && Environment.TickCount64 < deadline)
             {
