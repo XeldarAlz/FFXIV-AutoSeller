@@ -32,9 +32,9 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 - `AutoSeller/Core/Execution/`: the sell authorization frozen at Start with its fingerprints and approved prices, the sale guard, the sell window check, the read-back, the value book, the journal events and their replay.
 - `AutoSeller/Core/Ledger/`: the run journal, durable files and checkpoints.
 - `AutoSeller/Core/Sales/`: sale notice and sale history parsing, inferred sales, the sale matcher, stats, hints and the CSV export.
-- `AutoSeller/Core/Driver/`: the retainer window chain, UI pacing and prompt text matching.
-- `AutoSeller/Core/AutoRetainer/`: the AutoRetainer state and the post-process budget.
-- `AutoSeller/Core/Tasks/`: the run controller, the run phases, pause reasons, Start's readiness check and block rules, and the shared movement helpers (teleport, aethernet, walking, landing).
+- `AutoSeller/Core/Driver/`: the retainer driver that walks each retainer's windows and makes every write through the sell window, Assist with its card, the window chain, UI pacing, sell list rows and prompt text matching.
+- `AutoSeller/Core/AutoRetainer/`: the AutoRetainer and Marketbuddy bridges, the post-process host with its handshake, budget and request rule, the protect list health and the suppression ownership.
+- `AutoSeller/Core/Tasks/`: the run controller and its session, the run plan and decisions, the run phases, pause reasons, Start's readiness check and block rules, the inn and bell trips, and the shared movement helpers (teleport, aethernet, walking, landing).
 - `AutoSeller/Core/Shared/`: gil arithmetic, the market limits, item keys and sorted id sets every model shares.
 - `AutoSeller/Core/Travel/` and `AutoSeller/Core/Ipc/`: zone and aetheryte data, and the vnavmesh bridge.
 - `AutoSeller/Core/Game/`: NPC and dialog handling, text input focus, town and world names, and the duty and GM watchers.
