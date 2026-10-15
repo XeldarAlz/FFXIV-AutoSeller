@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "Şimdi sat düğmesi",
   "autoRetainer.sellNowHelp": "AutoRetainer'ın yardımcı listesine, her yardımcıyı Auto Seller'dan geçiren bir düğme ekler.",
   "autoRetainer.sellNowTooltip": "Auto Seller: her yardımcıda şimdi yeniden fiyatla ve ilan ver",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller: şimdi her yardımcıda deneme yap; hiçbir şey yazılmaz",
   "autoRetainer.sellNowBusy": "Auto Seller zaten çalışıyor",
   "autoRetainer.sellNowUnavailable": "AutoRetainer güncel değilken veya yanıt vermezken kapalı",
   "autoRetainer.alts": "AutoRetainer karakterlerini yan karakterlerim say",

@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "Bouton Vendre maintenant",
   "autoRetainer.sellNowHelp": "Ajoute à la liste des servants d'AutoRetainer un bouton qui fait passer chaque servant par Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller : réajuster et mettre en vente chez chaque servant maintenant",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller : essai chez chaque servant maintenant ; rien n'est saisi",
   "autoRetainer.sellNowBusy": "Auto Seller est déjà en cours",
   "autoRetainer.sellNowUnavailable": "Désactivé tant qu'AutoRetainer est obsolète ou ne répond pas",
   "autoRetainer.alts": "Traiter les personnages d'AutoRetainer comme mes personnages secondaires",

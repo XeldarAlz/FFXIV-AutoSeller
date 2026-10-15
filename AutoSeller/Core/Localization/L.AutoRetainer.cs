@@ -12,6 +12,7 @@ internal static partial class L
         public static readonly LocString SellNow = new("autoRetainer.sellNow", "Sell now button");
         public static readonly LocString SellNowHelp = new("autoRetainer.sellNowHelp", "Add a button to AutoRetainer's retainer list that sends every retainer through Auto Seller.");
         public static readonly LocString SellNowTooltip = new("autoRetainer.sellNowTooltip", "Auto Seller: reprice and list on each retainer now");
+        public static readonly LocString SellNowTooltipDryRun = new("autoRetainer.sellNowTooltipDryRun", "Auto Seller: dry run over each retainer now; nothing is typed");
         public static readonly LocString SellNowBusy = new("autoRetainer.sellNowBusy", "Auto Seller is already running");
         public static readonly LocString SellNowUnavailable = new("autoRetainer.sellNowUnavailable", "Off while AutoRetainer is outdated or not answering");
         public static readonly LocString Alts = new("autoRetainer.alts", "Treat AutoRetainer characters as my alts");

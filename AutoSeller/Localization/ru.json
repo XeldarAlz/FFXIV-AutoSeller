@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "Кнопка «Продать сейчас»",
   "autoRetainer.sellNowHelp": "Добавляет в список помощников AutoRetainer кнопку, которая проводит каждого помощника через Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller: сейчас переоценить и выставить у каждого помощника",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller: сейчас пробный прогон у каждого помощника; ничего не вводится",
   "autoRetainer.sellNowBusy": "Auto Seller уже работает",
   "autoRetainer.sellNowUnavailable": "Недоступно, пока AutoRetainer устарел или не отвечает",
   "autoRetainer.alts": "Считать персонажей AutoRetainer моими альтами",

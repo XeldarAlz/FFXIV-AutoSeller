@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "Schaltfläche „Jetzt verkaufen“",
   "autoRetainer.sellNowHelp": "Fügt AutoRetainers Gehilfenliste eine Schaltfläche hinzu, die jeden Gehilfen durch Auto Seller schickt.",
   "autoRetainer.sellNowTooltip": "Auto Seller: jetzt bei jedem Gehilfen neu bepreisen und einstellen",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller: jetzt einen Testlauf über jeden Gehilfen; nichts wird eingetippt",
   "autoRetainer.sellNowBusy": "Auto Seller läuft bereits",
   "autoRetainer.sellNowUnavailable": "Aus, solange AutoRetainer veraltet ist oder nicht antwortet",
   "autoRetainer.alts": "AutoRetainer-Charaktere als meine Zweitcharaktere behandeln",

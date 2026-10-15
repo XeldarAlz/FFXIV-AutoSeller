@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "“立即出售”按钮",
   "autoRetainer.sellNowHelp": "在 AutoRetainer 的雇员列表中添加一个按钮，让每个雇员都经过 Auto Seller。",
   "autoRetainer.sellNowTooltip": "Auto Seller：立即在每个雇员处改价并上架",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller：立即在每个雇员处试运行；不输入任何内容",
   "autoRetainer.sellNowBusy": "Auto Seller 已在运行",
   "autoRetainer.sellNowUnavailable": "AutoRetainer 版本过旧或无响应时不可用",
   "autoRetainer.alts": "把 AutoRetainer 的角色视为我的小号",

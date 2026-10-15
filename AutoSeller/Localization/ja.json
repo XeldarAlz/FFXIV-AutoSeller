@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "「今すぐ販売」ボタン",
   "autoRetainer.sellNowHelp": "AutoRetainer のリテイナー一覧に、全リテイナーを Auto Seller に通すボタンを追加します。",
   "autoRetainer.sellNowTooltip": "Auto Seller：今すぐ各リテイナーで価格改定と出品を行う",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller：今すぐ各リテイナーでテスト実行を行う。何も入力しません",
   "autoRetainer.sellNowBusy": "Auto Seller はすでに実行中です",
   "autoRetainer.sellNowUnavailable": "AutoRetainer が古いか応答しない間は使えません",
   "autoRetainer.alts": "AutoRetainer のキャラクターをサブキャラクターとして扱う",

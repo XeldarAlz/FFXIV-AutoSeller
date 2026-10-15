@@ -50,7 +50,7 @@ internal sealed class SellNowButton : IDisposable
         ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
         {
-            ImGui.SetTooltip(Loc.T(running ? L.AutoRetainer.SellNowBusy : available ? L.AutoRetainer.SellNowTooltip : L.AutoRetainer.SellNowUnavailable));
+            ImGui.SetTooltip(Loc.T(running ? L.AutoRetainer.SellNowBusy : !available ? L.AutoRetainer.SellNowUnavailable : configuration.DryRun ? L.AutoRetainer.SellNowTooltipDryRun : L.AutoRetainer.SellNowTooltip));
         }
     }
 }

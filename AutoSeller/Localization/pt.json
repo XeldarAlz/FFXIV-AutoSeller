@@ -837,6 +837,7 @@
   "autoRetainer.sellNow": "Botão Vender agora",
   "autoRetainer.sellNowHelp": "Adiciona à lista de ajudantes do AutoRetainer um botão que passa cada ajudante pelo Auto Seller.",
   "autoRetainer.sellNowTooltip": "Auto Seller: reajustar e anunciar em cada ajudante agora",
+  "autoRetainer.sellNowTooltipDryRun": "Auto Seller: teste agora com cada ajudante; nada é digitado",
   "autoRetainer.sellNowBusy": "O Auto Seller já está em execução",
   "autoRetainer.sellNowUnavailable": "Desativado enquanto o AutoRetainer estiver desatualizado ou sem resposta",
   "autoRetainer.alts": "Tratar personagens do AutoRetainer como meus personagens secundários",
