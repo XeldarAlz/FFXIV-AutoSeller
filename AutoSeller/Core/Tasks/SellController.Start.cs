@@ -257,12 +257,14 @@ internal sealed partial class SellController
         }
     }
 
-    private static StartBlock Refuse(RunMode mode, StartBlock block, string detail)
+    private StartBlock Refuse(RunMode mode, StartBlock block, string detail)
     {
         RunLog.Info($"{(mode.StartedByPlayer() ? $"Start ({mode})" : "AutoRetainer post-process")} refused: {detail}.");
         if (mode.StartedByPlayer())
         {
-            Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {Loc.T(L.Run.ChatRefused, Describe(block))}");
+            var refusal = Loc.T(L.Run.ChatRefused, Describe(block));
+            LastRefusal = new StartRefusal(refusal, Environment.TickCount64);
+            Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {refusal}");
         }
 
         return block;

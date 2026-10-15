@@ -6,6 +6,8 @@ using AutoSeller.Core.Tasks.Model;
 
 namespace AutoSeller.Core.Tasks;
 
+internal readonly record struct StartRefusal(string Text, long AtMs);
+
 internal sealed partial class SellController(Plugin plugin, RunHistory history)
 {
     private readonly FaultResumeBudget faultBudget = new();
@@ -13,6 +15,8 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
     private bool? onlyRetainersThatNeedIt;
 
     public PauseReason PauseReason { get; private set; } = PauseReason.None;
+
+    public StartRefusal LastRefusal { get; private set; }
 
     public bool Paused => PauseReason != PauseReason.None;
 

@@ -1,7 +1,9 @@
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Tasks;
 using AutoSeller.Core.Tasks.Model;
 using AutoSeller.Windows.Components;
 using AutoSeller.Windows.Sections;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using ECommons.DalamudServices;
 
@@ -11,6 +13,8 @@ internal sealed class SellPage
 {
     private const float SectionGap = 12f;
     private const float TableGap = 16f;
+    private const int RefusalShownMs = 8_000;
+    private const int RefusalFreshMs = 1_000;
 
     private readonly SellHeader header = new();
     private readonly RetainerStrip strip = new();
@@ -19,6 +23,8 @@ internal sealed class SellPage
     private readonly FinishedRunCard finished = new();
     private readonly PlanTable table = new();
     private Guid dismissedRunId;
+    private TransientNotice refusalNotice;
+    private long shownRefusalAtMs;
 
     public void Draw(Plugin plugin)
     {
@@ -36,6 +42,7 @@ internal sealed class SellPage
         }
 
         header.Draw(plugin, plan);
+        DrawRefusal(plugin.Controller.LastRefusal);
         Styling.VSpace(SectionGap);
         if (plan.Retainers.Length == 0)
         {
@@ -81,12 +88,30 @@ internal sealed class SellPage
             Styling.VSpace(SectionGap);
         }
 
-        if (plan.Rows.Length == 0 && plan.HasMarkets)
+        if (!plugin.Configuration.HasRules())
+        {
+            EmptyState.Draw(FontAwesomeIcon.ListUl, Loc.T(L.Run.BlockNoRules));
+        }
+        else if (plan.Rows.Length == 0 && plan.HasMarkets)
         {
             EmptyState.Draw(FontAwesomeIcon.ClipboardList, Loc.T(L.Sell.Empty));
         }
 
         Styling.VSpace(TableGap - SectionGap);
         table.Draw(plugin, plan, run, showRun);
+    }
+
+    private void DrawRefusal(in StartRefusal refusal)
+    {
+        if (refusal.AtMs != shownRefusalAtMs)
+        {
+            shownRefusalAtMs = refusal.AtMs;
+            if (Environment.TickCount64 - refusal.AtMs < RefusalFreshMs)
+            {
+                refusalNotice.Show(refusal.Text, Styling.AccentRose, RefusalShownMs);
+            }
+        }
+
+        refusalNotice.DrawLine(ImGui.GetContentRegionAvail().X);
     }
 }

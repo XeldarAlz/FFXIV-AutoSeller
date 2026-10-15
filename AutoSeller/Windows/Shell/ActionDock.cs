@@ -68,7 +68,7 @@ internal static class ActionDock
             return;
         }
 
-        var readiness = RunReadiness.Evaluate(plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy);
+        var readiness = RunReadiness.Evaluate(configuration.HasRules(), plugin.Ledger.BlocksWrites, plugin.AutoRetainer.Status.Busy);
         var gap = ButtonGap * ImGuiHelpers.GlobalScale;
         var tileWidth = DryRunControl.TileWidth(innerWidth);
         if (StartButton.Draw(Loc.T(L.Dock.StartSub), readiness == Readiness.Ready, RunReadiness.Reason(readiness), innerWidth - tileWidth - gap))
