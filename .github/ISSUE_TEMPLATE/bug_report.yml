@@ -60,25 +60,11 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: input
     id: where
     attributes:
-      label: How did the run start?
-      description: Auto Seller runs at a summoning bell after Start, as an AutoRetainer post-process after a venture, or as Assist when you open a sell window by hand.
-      options:
-        - At a bell (Start, /asell start or an in-game button)
-        - AutoRetainer post-process (after a venture or from its retainer list)
-        - Assist (I opened the sell window myself)
-        - No run (a page, a setting or the undercut watch)
-        - Not sure
-    validations:
-      required: true
-
-  - type: input
-    id: world
-    attributes:
-      label: World and client language
-      description: The world the run was on and your game client's language. Retainer menus and the sell window read differently per language.
+      label: World and client language of the run
+      description: On which world did the run fail, and in which language is your game client? Retainer menus and the sell window read differently per language.
       placeholder: "Gilgamesh (Aether), English client"
 
   - type: input
@@ -87,6 +73,8 @@ body:
       label: AutoRetainer and Marketbuddy versions
       description: Shown in `/xlplugins`. Write "not installed" for either one you do not use.
       placeholder: "AutoRetainer 4.6.2.13, Marketbuddy not installed"
+    validations:
+      required: true
 
   - type: dropdown
     id: dry-run
@@ -104,7 +92,7 @@ body:
     id: stage
     attributes:
       label: Where in the run did it fail?
-      description: The running panel on the Sell page and the Console show the stage a run is in. A run goes to the bell -> reads each retainer's listings -> compares prices -> reprices -> lists -> vendors -> records the sales.
+      description: The running panel on the Sell page and the Console show the stage a run is in. A run goes to the bell -> reads each retainer's listings -> compares prices -> reprices -> lists -> returns -> vendors -> records the sales.
       options:
         - Before Start (the Sell page, the plan, rules, settings, Start refusing to start)
         - Going to the bell (teleport, the inn room, walking to a summoning bell)
@@ -112,6 +100,7 @@ body:
         - Comparing prices (the market board search, Universalis prices, a price that looks wrong)
         - Repricing (the sell window, a price, the floor or step limit, a write marked unconfirmed)
         - Listing (a lot, its quantity or retainer, the sell window, a write marked unconfirmed)
+        - Returning or moving (a listing returned to its retainer, a stack moved from the saddlebag)
         - Vendoring (an item sold to the vendor, the junk rules)
         - AutoRetainer post-process (a retainer not handed back, AutoRetainer waiting or held back)
         - Assist (the suggested price, the card beside the sell window)

@@ -1,3 +1,4 @@
+using AutoSeller.Core.Localization;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using ECommons.Automation;
@@ -148,12 +149,12 @@ internal sealed class GmAlertWatcher : IDisposable
 
         if (configuration.GmAlertToast)
         {
-            RunGuarded(() => Svc.Toasts.ShowNormal($"GM {name} is nearby!"), "toast");
+            RunGuarded(() => Svc.Toasts.ShowNormal(Loc.T(L.Safety.GmNearby, name)), "toast");
         }
 
         if (configuration.GmAlertChat)
         {
-            RunGuarded(() => Svc.Chat.PrintError($"{AsellConstants.LogPrefix} GM {name} is nearby!"), "chat print");
+            RunGuarded(() => Svc.Chat.PrintError($"{AsellConstants.LogPrefix} {Loc.T(L.Safety.GmNearby, name)}"), "chat print");
         }
 
         if (configuration.GmAlertSound)

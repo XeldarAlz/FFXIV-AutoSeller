@@ -18,8 +18,6 @@
 
 ---
 
-> **In development.** This page describes what version 1.0 will do. Until it ships, Start reprices and lists only once you turn the dry run off with the switch beside it, which asks first. With the dry run on, as it is by default, Start goes to a summoning bell, visits each enabled retainer, reads its sale history, compares prices and records on the Sell page, in History and in the Console what it would reprice, list, return, vendor or move from the saddlebag, without typing a price, returning a listing, selling to a vendor or moving a stack, and Assist shows its suggested price on its card without typing it.
-
 ## What it does
 
 Keeping your retainers' listings at a price that sells means visiting a bell, comparing prices and retyping them, retainer by retainer, every time someone undercuts you. Auto Seller reads your bags and your retainers' listings, plans every change across all of them and shows you that plan before anything is clicked. One Start then goes to a summoning bell, reprices what was undercut, lists what your rules allow, vendors what your rules call junk, checks every change and records your sales.
@@ -99,11 +97,12 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 | `/asell start` | Open the Sell page and start a run of the current plan |
 | `/asell stop` | Stop the run |
 | `/asell pause` | Pause or resume the current run (`/asell resume` works too) |
+| `/asell help` | List these commands in the chat |
 | `/asell target` | Log the targeted NPC's BaseId (debug helper) |
 | `/asell look <item id>` | Compare market prices for one item once and write the listings, sale history, reference and floor to the Console (debug helper; it never lists or reprices). With the default send path it needs that item's sell window open at a retainer; with `proxy` it needs a summoning bell or an open market board |
 | `/asell mbstatus` | Write the market checks, the search state, the age of the Universalis reference data and, with a retainer's sell list open, that retainer's listings to the Console (debug helper) |
 | `/asell sendpath compare\|proxy` | Send market searches through the sell window's Compare prices button (`compare`, the default) or the item search proxy (`proxy`); without an argument it says which one is in use (debug helper) |
-| `/asell historypath window\|packet` | Read a retainer's sale history from its Sale History window (`window`, the default) or from the data the game receives for it (`packet`); without an argument it says which one is in use (debug helper) |
+| `/asell historypath window\|packet` | Read a retainer's sale history from its Sale History window (`window`, the default) or from the data the game receives for it (`packet`, which reads the window until its handler is found in game); without an argument it says which one is in use (debug helper) |
 
 ## Known limits
 
@@ -111,8 +110,11 @@ Open `/asell deps` after install to see the helpers and one-click each missing o
 - **No entrusting.** Gil and items are never entrusted to or withdrawn from retainers; AutoRetainer's entrust plans and gil withdrawal already do that.
 - **Sales inform, they do not steer.** The Sales page shows hints such as "sold in under an hour, consider raising"; prices do not change on their own because of them.
 - **Equipped gear is never a source.**
-- **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer and no Discord or toast notification yet.
+- **Selling only.** Desynthesis, Grand Company turn-ins, coffers and venture rewards are left to the plugins that already do them, such as AutoRetainer, Deliveroo and Auto GC Supply.
+- **No direct market writes.** Some repricers write prices straight into the game's memory. Auto Seller never does: every price goes through the sell window, so it can be checked before Confirm and read back after.
+- **No schedule.** A run starts from Start, the in-game buttons or AutoRetainer. There is no timer, and no chat, toast or Discord alert when a listing is undercut yet.
 - **Prices are estimates.** Universalis only updates when someone searches the board, so the undercut watch shows the age of its data, and a run reads the live board before it writes.
+- **Not yet run in game.** No part of 1.0.0.0 has run on a live client yet. The writes (typing the price and quantity in the sell window, the Adjust Price, Return to Retainer and Have Retainer Sell Items menus, saddlebag moves and Marketbuddy's lock), the reads (the Sale History window's layout and prices, sale notice values, gear set membership, which gil a vendor sale lands in, how soon listings fill in) and the AutoRetainer post-process over real ventures follow the game data and other tools so far. Each step logs what it did to the Console. Keep the dry run on for your first runs.
 
 ## Languages
 

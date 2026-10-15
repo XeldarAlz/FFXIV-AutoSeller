@@ -36,5 +36,6 @@ internal static partial class L
         public static readonly LocString GmKill = new("safety.gm.kill", "Kill the game");
         public static readonly LocString GmKillHelp = new("safety.gm.killHelp", "Hard-terminate the game process via /xlkill. The last-resort option; no goodbyes, no cutscene, no logout. You'll get a disconnect.");
         public static readonly LocString NoCommands = new("safety.gm.noCommands", "No commands queued.");
+        public static readonly LocString GmNearby = new("safety.gm.nearby", "GM {0} is nearby!");
     }
 }

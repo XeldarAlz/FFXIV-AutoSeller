@@ -232,9 +232,56 @@ public sealed class PostprocessHandshakeTests
     }
 
     [Fact]
+    public void SellNowEndsOnceARetainerIsOfferedASecondTime()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+
+        Assert.False(handshake.SellNowOfferRepeated(Retainer));
+        Assert.False(handshake.SellNowOfferRepeated(OtherRetainer));
+        Assert.True(handshake.SellNowArmed);
+
+        Assert.True(handshake.SellNowOfferRepeated(Retainer));
+        Assert.False(handshake.SellNowArmed);
+        Assert.False(handshake.SellNowOfferRepeated(OtherRetainer));
+    }
+
+    [Fact]
+    public void AVentureCycleRightAfterTheSellNowWalkFollowsTheSwitchAgain()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+        Assert.False(handshake.SellNowWalkEnded(true, StartMs + 1_000));
+        Assert.False(handshake.SellNowOfferRepeated(Retainer));
+        Assert.False(handshake.SellNowOfferRepeated(OtherRetainer));
+        Assert.False(handshake.SellNowWalkEnded(true, StartMs + 60_000));
+
+        Assert.True(handshake.SellNowOfferRepeated(Retainer));
+        Assert.False(handshake.SellNowArmed);
+        Assert.False(handshake.SellNowWalkEnded(true, StartMs + 61_000));
+    }
+
+    [Fact]
+    public void PressingSellNowAgainForgetsTheRetainersAlreadyOffered()
+    {
+        var handshake = new PostprocessHandshake();
+        handshake.ArmSellNow(StartMs);
+        handshake.SellNowOfferRepeated(Retainer);
+
+        handshake.ArmSellNow(StartMs + 2_000);
+
+        Assert.False(handshake.SellNowOfferRepeated(Retainer));
+        Assert.True(handshake.SellNowArmed);
+    }
+
+    [Fact]
     public void NothingEndsWhenSellNowWasNeverPressed()
     {
-        Assert.False(new PostprocessHandshake().SellNowWalkEnded(false, StartMs + PostprocessHandshake.SellNowTakeUpMs));
+        var handshake = new PostprocessHandshake();
+
+        Assert.False(handshake.SellNowWalkEnded(false, StartMs + PostprocessHandshake.SellNowTakeUpMs));
+        Assert.False(handshake.SellNowOfferRepeated(Retainer));
+        Assert.False(handshake.SellNowOfferRepeated(Retainer));
     }
 
     [Fact]

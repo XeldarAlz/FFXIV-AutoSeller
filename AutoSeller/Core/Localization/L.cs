@@ -12,6 +12,7 @@ internal static partial class L
         public static readonly LocString NoMatches = new("common.noMatches", "Nothing matches “{0}”.");
         public static readonly LocString Gil = new("common.gil", "{0} gil");
         public static readonly LocString DurationMinutes = new("common.duration.minutes", "{0} min");
+        public static readonly LocString DurationMinutesSeconds = new("common.duration.minutesSeconds", "{0} min {1} s");
         public static readonly LocString DurationHours = new("common.duration.hours", "{0} h {1} min");
         public static readonly LocString DurationDays = new("common.duration.days", "{0} d {1} h");
     }
@@ -132,6 +133,7 @@ internal static partial class L
         public static readonly LocPlural ChatStartedLive = new("run.chat.startedLive", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
         public static readonly LocString ChatRefused = new("run.chat.refused", "Start refused: {0}");
         public static readonly LocString ChatFaultRestart = new("run.chat.faultRestart", "The run stopped on an unexpected error; restarting it ({0} of {1}).");
+        public static readonly LocString ChatKeepsMoving = new("run.chat.keepsMoving", "The character keeps moving on its own, so paths are dropped as soon as they start. Turn off the pathfinder's 'cancel path on movement input' setting, and check that no key or auto-run is held.");
     }
 
     internal static class History
@@ -237,7 +239,19 @@ internal static partial class L
 
         public static readonly LocString[] Release1000 =
         [
-            new("changelog.r1000.1", "First release."),
+            new("changelog.r1000.1", "Sell page: one plan across all your retainers' listings that shows what is repriced, listed, returned or vendored, at what price and why, before anything is clicked"),
+            new("changelog.r1000.2", "Rules: a sell list with a floor, ceiling, fixed price, lot size, keep count, listings to keep up and preferred retainer per item, category rules, a never-sell list, and vendor rules that stay off until you turn them on"),
+            new("changelog.r1000.3", "Guarded pricing: Undercut or Match against same-quality listings only, never against your own retainers or your alts, with bait listings ignored, a floor from real sales and the vendor price, a step limit, a cooldown and price-war detection"),
+            new("changelog.r1000.4", "Start walks to a summoning bell or the bell in your inn room and works through every enabled retainer, or only the ones that need it, holding AutoRetainer back for the run"),
+            new("changelog.r1000.5", "Every price is typed in the game's sell window, checked before Confirm and read back after, with a journal entry before each write; anything unclear stops the run and asks you"),
+            new("changelog.r1000.6", "Dry run is on until you switch it off: a run does everything except type a price, and the switch next to Start asks first"),
+            new("changelog.r1000.7", "AutoRetainer: runs after each venture on the retainer it hands over and always hands it back, with a Sell now button, its protect list and your alts"),
+            new("changelog.r1000.8", "Assist fills in the suggested price when you open a sell window yourself and leaves Confirm to you; buttons on the retainer list and the sell list start a run right there"),
+            new("changelog.r1000.9", "Sources: your bags and crystals, and by choice a retainer's own inventory, the saddlebag and the armoury chest, never items in a gear set"),
+            new("changelog.r1000.10", "The undercut watch checks your listings against Universalis on a timer with no game request; the Listings page shows every listing of every character"),
+            new("changelog.r1000.11", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
+            new("changelog.r1000.12", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
+            new("changelog.r1000.13", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
         ];
     }
 
@@ -338,16 +352,19 @@ internal static partial class L
         public static readonly LocString OpenOnLoginHelp = new("settings.general.openOnLoginHelp", "Pop the main window automatically the next time you log in.");
         public static readonly LocString GeneralBehavior = new("settings.general.behavior", "Behavior");
         public static readonly LocString AutoPause = new("settings.general.autoPause", "Auto-pause in content");
-        public static readonly LocString AutoPauseHelp = new("settings.general.autoPauseHelp", "Pause the run while you are inside a duty, trial, raid, or any other instanced content, then resume it once you are back outside. Your run and session stats are kept.");
+        public static readonly LocString AutoPauseHelp = new("settings.general.autoPauseHelp", "Pause the run while you are inside a duty, trial, raid or any other instanced content, and carry on where it stopped once you are back outside.");
         public static readonly LocString PauseTyping = new("settings.general.pauseTyping", "Hold while typing");
         public static readonly LocString PauseTypingHelp = new("settings.general.pauseTypingHelp", "While a text box of the game has focus, like the chat line, a run starts no new move until you close it. A move already under way carries on.");
     }
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Auto Seller window. /asell config | stats | deps | log | changelog | about | start (start the run) | stop (stop the run) | pause (pause or resume the run) | look <item id> (compare market prices once and log the price inputs) | mbstatus (log the market checks, the search state and the open retainer's market) | sendpath compare|proxy (send market searches through the sell window or the item search proxy).");
+        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Auto Seller window. /asell config | stats | sales | deps | log | changelog | about | start (start the run) | stop (stop the run) | pause (pause or resume the run) | help (list these commands in the chat) | target (log the targeted NPC's BaseId) | look <item id> (compare market prices once and log the price inputs) | mbstatus (log the market checks, the search state and the open retainer's market) | sendpath compare|proxy (send market searches through the sell window or the item search proxy) | historypath window|packet (read sale histories from the Sale History window or from the data the game receives for it; packet reads the window until its handler is found in game).");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /asell.");
         public static readonly LocString ConfigReset = new("plugin.configReset", "Your settings could not be read, so Auto Seller started with default settings. The old file is kept as {0}.");
         public static readonly LocString ConfigResetUnsaved = new("plugin.configResetUnsaved", "Your settings could not be read, so Auto Seller started with default settings. The old file could not be kept; the log has the details.");
+        public static readonly LocString TargetTerritory = new("plugin.target.territory", "Territory: {0} ({1})");
+        public static readonly LocString TargetNone = new("plugin.target.none", "No target. Click an NPC or an object first, then run /asell target again.");
+        public static readonly LocString TargetFound = new("plugin.target.found", "Target: BaseId={0}  Name=\"{1}\"");
     }
 }

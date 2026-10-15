@@ -87,7 +87,7 @@ internal static partial class L
 
         public static readonly LocString VendorGroup = new("rules.vendor.group", "Vendoring");
         public static readonly LocString VendorEnabled = new("rules.vendor.enabled", "Vendor junk");
-        public static readonly LocString VendorEnabledHelp = new("rules.vendor.enabledHelp", "Sell junk to the NPC through your retainer. Only normal quality items from your bags that are not gear, not protected and not on the sell list are vendored.");
+        public static readonly LocString VendorEnabledHelp = new("rules.vendor.enabledHelp", "Sell junk to a vendor through your retainer. Only normal quality items from your bags that are not gear, not protected and not on the sell list are vendored.");
         public static readonly LocString JunkThreshold = new("rules.vendor.junkThreshold", "Junk threshold");
         public static readonly LocString JunkThresholdHelp = new("rules.vendor.junkThresholdHelp", "A stack is junk when its reference value, for the whole stack, is below this.");
         public static readonly LocString VendoredValueCap = new("rules.vendor.cap", "Vendored value per run");

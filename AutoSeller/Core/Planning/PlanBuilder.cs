@@ -23,11 +23,9 @@ namespace AutoSeller.Core.Planning;
 
 internal sealed partial class PlanBuilder : IDisposable
 {
-    private const long SettleMs = 250;
     private const long ReplanMs = 60_000;
     private const int FetchThrottleMs = 60_000;
     private const string FetchThrottleKey = "AutoSeller.Plan.Fetch";
-    private const long AfterTheRun = -1;
 
     private readonly Configuration configuration;
     private readonly CharacterStore characters;
@@ -37,14 +35,12 @@ internal sealed partial class PlanBuilder : IDisposable
     private readonly OwnSellersProvider ownSellers;
     private readonly Func<PlanInput?> runInput;
     private readonly PlanHandoff handoff = new();
+    private readonly PlanSchedule schedule = new();
     private readonly DiagnosticLog planLog = new();
-    private PlanKey key;
-    private long changedAtMs;
     private long inputGeneration;
     private int bagsVersion;
     private CancellationTokenSource? planning;
     private SellPlan? latest;
-    private PlanInput? runPlanned;
     private bool planningRunning;
 
     public PlanBuilder(Configuration configuration, CharacterStore characters, BagReader bags, GameItems items, ReferenceService references, OwnSellersProvider ownSellers, Func<PlanInput?> runInput)
@@ -133,50 +129,22 @@ internal sealed partial class PlanBuilder : IDisposable
     private void OnUpdate(IFramework framework)
     {
         AdoptPlanning();
-        if (runInput() is { } frozen)
+        var frozen = runInput();
+        var live = frozen is null ? ReadKey() : default;
+        switch (schedule.Next(frozen, live, Environment.TickCount64))
         {
-            PlanTheRun(frozen);
-            return;
-        }
-
-        runPlanned = null;
-        var next = ReadKey();
-        if (next != key)
-        {
-            var loggedOut = key.LoggedIn && !next.LoggedIn;
-            key = next;
-            if (loggedOut)
-            {
+            case PlanStep.PlanTheRun:
+                RunLog.Info("Plan: the Sell page shows the plan from the run's Start until the run ends.");
+                Schedule(frozen!);
+                return;
+            case PlanStep.PlanNow:
+                StartPlanning();
+                return;
+            case PlanStep.Clear:
                 CancelPlanning();
-                changedAtMs = 0;
                 Volatile.Write(ref latest, null);
                 return;
-            }
-
-            changedAtMs = Environment.TickCount64;
         }
-
-        if (changedAtMs == 0 || Environment.TickCount64 - changedAtMs < SettleMs)
-        {
-            return;
-        }
-
-        changedAtMs = 0;
-        StartPlanning();
-    }
-
-    private void PlanTheRun(PlanInput frozen)
-    {
-        if (ReferenceEquals(frozen, runPlanned))
-        {
-            return;
-        }
-
-        runPlanned = frozen;
-        key = key with { ReplanStep = AfterTheRun };
-        changedAtMs = 0;
-        RunLog.Info("Plan: the Sell page shows the plan from the run's Start until the run ends.");
-        Schedule(frozen);
     }
 
     private PlanKey ReadKey()
@@ -372,14 +340,4 @@ internal sealed partial class PlanBuilder : IDisposable
 
         return entries.ToImmutable();
     }
-
-    private readonly record struct PlanKey(
-        bool LoggedIn,
-        ulong ContentId,
-        uint HomeWorldId,
-        int CharacterRevision,
-        int SettingsRevision,
-        long ReferenceGeneration,
-        int BagsVersion,
-        long ReplanStep);
 }

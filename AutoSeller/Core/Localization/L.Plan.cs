@@ -169,7 +169,7 @@ internal static partial class L
         public static readonly LocPlural TileApprovals = new("plan.tile.approvals", "{0} needs approval", "{0} need approval");
         public static readonly LocPlural TileSearches = new("plan.tile.searches", "{0} search", "{0} searches");
         public static readonly LocString TileValueHelp = new("plan.tile.valueHelp", "The value of every listing the run would put up or reprice, at its new price.");
-        public static readonly LocString TileVendorHelp = new("plan.tile.vendorHelp", "Gil from vendoring junk through your retainers. Vendoring is not part of runs yet.");
+        public static readonly LocString TileVendorHelp = new("plan.tile.vendorHelp", "The gil the run would get by having your retainers sell junk to a vendor, up to the vendored value per run.");
         public static readonly LocString TileTimeHelp = new("plan.tile.timeHelp", "Searches at the pacing floor, the window steps and the switches between retainers, without the walk to the bell.");
 
         public static readonly LocString EmptyLoggedOut = new("plan.empty.loggedOut", "Log in to see the plan.");

@@ -1,4 +1,5 @@
 using AutoSeller.Core.Planning.Model;
+using AutoSeller.Core.Pricing.Model;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Tasks.Model;
 
@@ -18,6 +19,12 @@ internal static class PostprocessWork
             var row = rows[index];
             if (row.Source == SlotSource.Saddlebag)
             {
+                continue;
+            }
+
+            if (row.Kind == RunRowKind.Vendor)
+            {
+                count += row.Decision.Action == SellAction.Vendor ? 1 : 0;
                 continue;
             }
 

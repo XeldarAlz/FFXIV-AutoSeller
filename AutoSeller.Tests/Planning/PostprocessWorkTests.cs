@@ -11,6 +11,10 @@ namespace AutoSeller.Tests.Planning;
 
 public sealed class PostprocessWorkTests
 {
+    private const uint Junk = 7_777;
+
+    private static readonly StockSlot junkSlot = new(new SlotFacts(0, Junk, 10, BagContainer, 9, 0, SlotSource.Bags, false, false, false), new ItemFacts(Junk, 999, 5, 0, 0, false, false, false, false), 0);
+
     [Fact]
     public void ARetainerNeverReadHasItsMarketToRead()
     {
@@ -71,6 +75,31 @@ public sealed class PostprocessWorkTests
         Assert.Contains(unread.Rows, row => row.Source == SlotSource.Saddlebag && !row.IsPlaced);
         Assert.Equal(0, PostprocessWork.Count(read, Alpha) + PostprocessWork.Count(read, Beta));
         Assert.Equal(PostprocessWork.MarketToRead, PostprocessWork.Count(unread, Alpha));
+    }
+
+    [Fact]
+    public void JunkToVendorIsWorkForWhicheverRetainerIsHandedOver()
+    {
+        var plan = SellPlanner.Build(VendoringInput(PlanEdits.None), CancellationToken.None);
+
+        Assert.Equal(1, PostprocessWork.Count(plan, Alpha));
+        Assert.Equal(1, PostprocessWork.Count(plan, Beta));
+    }
+
+    [Fact]
+    public void JunkLeftOutOfTheRunIsNoWork()
+    {
+        var key = PlanRowKey.ForVendor(junkSlot.Slot);
+        var plan = SellPlanner.Build(VendoringInput(PlanEdits.Restore([PlanEdit.Exclude(key, Now)])), CancellationToken.None);
+
+        Assert.Equal(0, PostprocessWork.Count(plan, Alpha));
+        Assert.Equal(0, PostprocessWork.Count(plan, Beta));
+    }
+
+    private static PlanInput VendoringInput(PlanEdits edits)
+    {
+        var rules = RuleBook.Create([OreRule()], [], ItemIdSet.Empty, new VendorSettings(true, ItemIdSet.From([Junk]), VendorSettings.DefaultJunkThreshold), SellSources.Default, []);
+        return Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], junkSlot) with { Rules = rules, Edits = edits };
     }
 
     private static SellPlan Build(RetainerSnapshot[] markets, params StockSlot[] stock)
