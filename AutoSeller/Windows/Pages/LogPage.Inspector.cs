@@ -29,7 +29,10 @@ internal sealed partial class LogPage
     private int inspectedRepeat;
     private float inspectedWidth;
     private float inspectedFontSize;
-    private string inspectedStamp = string.Empty;
+    private string inspectedMeta = string.Empty;
+    private LanguageInfo? inspectedLanguage;
+    private CachedText selectedText;
+    private CachedText showingText;
     private string inspectedText = string.Empty;
 
     private float InspectorHeight()
@@ -78,7 +81,7 @@ internal sealed partial class LogPage
             Styling.WithAlpha(Styling.AccentGlow, 0.08f), Styling.WithAlpha(Styling.AccentGlow, 0.35f));
 
         var (low, high) = SelectionIndices();
-        var label = Loc.Plural(L.Log.Selected, high - low + 1);
+        var label = selectedText.Get(high - low + 1, static count => Loc.Plural(L.Log.Selected, (int)count));
         var labelSize = TextDraw.Measure(label);
         TextDraw.At(label, new Vector2(origin.X + CardPadX * scale, origin.Y + (height - labelSize.Y) * 0.5f), Styling.TextStrong);
 
@@ -113,9 +116,13 @@ internal sealed partial class LogPage
         var line = view[index];
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        if (inspectedSequence != line.Sequence || inspectedRepeat != line.Repeat)
+        if (inspectedSequence != line.Sequence || inspectedRepeat != line.Repeat || !ReferenceEquals(inspectedLanguage, Loc.Current))
         {
-            inspectedStamp = line.AtUtc.ToLocalTime().ToString(StampFormat, CultureInfo.InvariantCulture);
+            var stamp = line.AtUtc.ToLocalTime().ToString(StampFormat, CultureInfo.InvariantCulture);
+            inspectedMeta = line.Repeat > 1
+                ? string.Concat(stamp, " · ", line.Source, " · ", Loc.T(L.Log.Repeated, line.Repeat))
+                : string.Concat(stamp, " · ", line.Source);
+            inspectedLanguage = Loc.Current;
         }
 
         var accent = LevelColor(line.Level);
@@ -138,9 +145,7 @@ internal sealed partial class LogPage
             DrawTag(dl, line.Level, new Vector2(x, headerMidY - tagSize.Y * 0.5f), tagSize);
             x += tagSize.X + HeaderGap * scale;
 
-            var meta = line.Repeat > 1
-                ? string.Concat(inspectedStamp, " · ", line.Source, " · ", Loc.T(L.Log.Repeated, line.Repeat))
-                : string.Concat(inspectedStamp, " · ", line.Source);
+            var meta = inspectedMeta;
             var metaWidth = MathF.Max(1f, origin.X + width - padX - buttonSize * 2f - HeaderGap * scale - x);
             TextDraw.At(TextDraw.Truncate(meta, metaWidth), new Vector2(x, headerMidY - TextDraw.LineHeight() * 0.5f), Styling.TextDim);
         }
@@ -250,7 +255,7 @@ internal sealed partial class LogPage
     private float DrawShowing(Vector2 origin)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var showing = Loc.T(L.Log.Showing, viewCount.ToString("N0", Loc.Culture), bufferedCount.ToString("N0", Loc.Culture));
+        var showing = showingText.Get(((long)viewCount << 32) | (uint)bufferedCount, static counts => Loc.T(L.Log.Showing, ((int)(counts >> 32)).ToString("N0", Loc.Culture), ((int)(counts & uint.MaxValue)).ToString("N0", Loc.Culture)));
         TextDraw.At(showing, origin, Styling.TextDim);
         var end = origin.X + TextDraw.Measure(showing).X;
         if (!builtFilter.IsNarrowed)

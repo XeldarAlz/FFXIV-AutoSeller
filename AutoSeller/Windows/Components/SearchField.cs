@@ -14,8 +14,10 @@ internal static class SearchField
     private const float PadX = 12f;
     private const float IconGap = 8f;
     private const float ClearButtonSize = 22f;
+    private const string ClearSuffix = "_clear";
 
-    // The frame is painted before the input exists, so its focus glow follows the caller's flag from the previous frame.
+    private static readonly Dictionary<string, string> clearIds = new(StringComparer.Ordinal);
+
     public static bool Draw(string id, string hint, ref string text, ref bool focused, float width, float height = DefaultHeight,
         bool requestFocus = false, int maxLength = DefaultMaxLength)
     {
@@ -59,7 +61,7 @@ internal static class SearchField
         if (hasText)
         {
             ImGui.SetCursorScreenPos(new Vector2(end.X - padX * 0.5f - clearSize, origin.Y + (scaledHeight - clearSize) * 0.5f));
-            if (IconButton.Draw(FontAwesomeIcon.Times, string.Concat(id, "_clear"), clearSize, Styling.TextDim))
+            if (IconButton.Draw(FontAwesomeIcon.Times, ClearIdOf(id), clearSize, Styling.TextDim))
             {
                 text = string.Empty;
                 changed = true;
@@ -69,5 +71,16 @@ internal static class SearchField
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, scaledHeight));
         return changed;
+    }
+
+    private static string ClearIdOf(string id)
+    {
+        if (!clearIds.TryGetValue(id, out var clearId))
+        {
+            clearId = string.Concat(id, ClearSuffix);
+            clearIds.Add(id, clearId);
+        }
+
+        return clearId;
     }
 }

@@ -37,9 +37,26 @@ internal sealed partial class AboutPage
     private static readonly Vector2[] BloomOffsets = [new(1.6f, 0f), new(-1.6f, 0f), new(0f, 1.6f), new(0f, -1.6f)];
     private static readonly string version = typeof(AboutPage).Assembly.GetName().Version?.ToString() ?? "?";
 
+    private static CachedText versionText;
+    private static CachedText madeByText;
+
+    private readonly Action drawHero;
+    private readonly Action drawCommunity;
+    private readonly Action drawSupport;
+    private readonly Action drawFooter;
     private long openTick = long.MinValue / 2;
     private float columnX;
     private float columnWidth;
+
+    public AboutPage()
+    {
+        drawHero = DrawHero;
+        drawCommunity = DrawCommunity;
+        drawSupport = DrawSupport;
+        drawFooter = DrawFooter;
+    }
+
+    private static string VersionLabel => versionText.Get(0, static _ => Loc.T(L.About.Version, version));
 
     public void Draw(long shownTick)
     {
@@ -50,13 +67,13 @@ internal sealed partial class AboutPage
         columnX = ImGui.GetCursorScreenPos().X + (available - columnWidth) * 0.5f;
 
         Styling.VSpace(6f);
-        RevealSection(0, DrawHero);
+        RevealSection(0, drawHero);
         Styling.VSpace(SectionGap);
-        RevealSection(1, DrawCommunity);
+        RevealSection(1, drawCommunity);
         Styling.VSpace(SectionGap);
-        RevealSection(2, DrawSupport);
+        RevealSection(2, drawSupport);
         Styling.VSpace(SectionGap);
-        RevealSection(3, DrawFooter);
+        RevealSection(3, drawFooter);
         Styling.VSpace(SectionGap);
     }
 
@@ -166,7 +183,7 @@ internal sealed partial class AboutPage
         width = MathF.Max(width, TextDraw.Measure(Punchline).X);
         using (Fonts.PushCaption())
         {
-            return MathF.Max(width, ChipWidth(FontAwesomeIcon.Tag, Loc.T(L.About.Version, version)));
+            return MathF.Max(width, ChipWidth(FontAwesomeIcon.Tag, VersionLabel));
         }
     }
 
@@ -201,7 +218,7 @@ internal sealed partial class AboutPage
         y += HeroLineGap * scale;
         using (Fonts.PushCaption())
         {
-            StaticChip(FontAwesomeIcon.Tag, Loc.T(L.About.Version, version), Styling.AccentGlow, new Vector2(x, y), chipHeight);
+            StaticChip(FontAwesomeIcon.Tag, VersionLabel, Styling.AccentGlow, new Vector2(x, y), chipHeight);
         }
     }
 
@@ -257,7 +274,7 @@ internal sealed partial class AboutPage
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         using var font = Fonts.PushCaption();
-        var label = Loc.T(L.About.MadeBy, Author);
+        var label = madeByText.Get(0, static _ => Loc.T(L.About.MadeBy, Author));
         var iconSize = TextDraw.IconSize(FontAwesomeIcon.Code);
         var labelSize = TextDraw.Measure(label);
         var gap = FooterGap * scale;
