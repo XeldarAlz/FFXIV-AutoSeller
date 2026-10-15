@@ -190,7 +190,8 @@ internal sealed partial class RetainerDriver
                 {
                     if (list == SellListKind.Inventory && source == SlotSource.Saddlebag)
                     {
-                        Record(RunDecision.LotSkipped(retainer.RetainerId, lot, RunSkip.InSaddlebag), retainer);
+                        Record(RunDecision.LotSkipped(retainer.RetainerId, lot, freeSlots > 0 ? RunSkip.WouldMoveFromSaddlebag : RunSkip.NoFreeSlot), retainer);
+                        freeSlots--;
                     }
 
                     continue;

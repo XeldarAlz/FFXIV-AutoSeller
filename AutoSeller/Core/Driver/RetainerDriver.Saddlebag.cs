@@ -1,8 +1,10 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
 using AutoSeller.Core.Inventory;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Rules.Model;
 using AutoSeller.Core.Shared;
 using AutoSeller.Core.Tasks.Model;
 using System.Threading.Tasks;
@@ -15,10 +17,33 @@ internal sealed partial class RetainerDriver
     private const int SideWindowCloseMs = 5_000;
 
     private readonly List<ItemKey> movedItems = [];
+    private readonly List<SlotFacts> dryRunMoves = [];
     private int movesPlanned;
     private int movesConfirmed;
 
     private async Task<Stop> MoveFromSaddlebag()
+    {
+        var stop = await MoveSaddlebagStacks();
+        if (!stop.Halted && !session.PausedAtBoundary && !CancelToken.IsCancellationRequested)
+        {
+            LeaveUnmovedStacks();
+        }
+
+        return stop;
+    }
+
+    private void LeaveUnmovedStacks()
+    {
+        var before = session.PlanInputs.Stock.Length;
+        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs, CollectionsMarshal.AsSpan(dryRunMoves));
+        var left = before - session.PlanInputs.Stock.Length;
+        if (left > 0)
+        {
+            Diag($"Driver: {left} saddlebag stack(s) stay in the saddlebag, so this run plans without them.");
+        }
+    }
+
+    private async Task<Stop> MoveSaddlebagStacks()
     {
         var moves = SaddlebagMoves.Plan(BuildPlan(), session.PlanInputs.Stock.AsSpan(), session.Retainers.AsSpan(), BagReader.FreeBagSlots());
         movesPlanned = moves.Length;
@@ -130,6 +155,7 @@ internal sealed partial class RetainerDriver
 
         if (session.Authorization.DryRun)
         {
+            dryRunMoves.Add(slot);
             Diag($"Dry run, {retainer.Name}: would move item {slot.ItemId} {QualityLabel.Of(slot.IsHq)} x{slot.Quantity} from saddlebag container {slot.Container} slot {slot.Slot} to the bags.");
             return await UnwindAboveSellList();
         }

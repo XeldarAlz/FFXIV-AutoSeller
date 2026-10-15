@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "Der Inventarplatz hat sich geändert",
   "plan.skip.quantity": "Die Menge liegt außerhalb der Grenzen des Fensters",
   "plan.skip.readBackUnavailable": "Die Angebote oder der Inventarplatz konnten vor der Änderung nicht gelesen werden, daher wurde nichts eingegeben",
-  "plan.skip.inSaddlebag": "Noch in der Satteltasche: ein Lauf legt den Stapel vor der Rufglocke ins Inventar, wenn dort Platz ist",
+  "plan.skip.wouldMoveFromSaddlebag": "Würde zuerst aus der Satteltasche ins Inventar gelegt; ein Testlauf bewegt nichts",
   "plan.skip.refused": "Eine Sicherheitsprüfung hat es abgelehnt; die Konsole enthält die Details",
   "plan.badge.excluded": "Ausgelassen",
   "plan.badge.moved": "Verschoben",

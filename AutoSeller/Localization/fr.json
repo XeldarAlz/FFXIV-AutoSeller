@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "L'emplacement de l'inventaire a changé",
   "plan.skip.quantity": "La quantité est hors des limites de la fenêtre",
   "plan.skip.readBackUnavailable": "Les annonces ou l'emplacement de l'inventaire n'ont pas pu être lus avant le changement, donc rien n'a été saisi",
-  "plan.skip.inSaddlebag": "Encore dans les sacoches : une tournée la déplace dans l'inventaire avant la sonnette s'il y a de la place",
+  "plan.skip.wouldMoveFromSaddlebag": "Serait d'abord déplacé des sacoches vers l'inventaire ; un essai ne déplace rien",
   "plan.skip.refused": "Une vérification de sécurité l'a refusé ; la console contient les détails",
   "plan.badge.excluded": "Exclu",
   "plan.badge.moved": "Déplacé",

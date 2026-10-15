@@ -87,6 +87,7 @@ internal sealed partial class RetainerDriver
     private async Task<Stop> WorkHandedOverRetainer()
     {
         engaged = true;
+        session.PlanInputs = RunPlanner.WithoutSaddlebag(session.PlanInputs, []);
         const int index = 0;
         var visit = await VisitHandedOverRetainer(index);
         if (CancelToken.IsCancellationRequested)
@@ -151,7 +152,8 @@ internal sealed partial class RetainerDriver
 
         RetainerReads.ReportSellListKind();
         var list = RetainerReads.ShownSellListKind();
-        Diag($"Driver: working the open {list} sell list of {retainer.Name}; it stays open at the end.");
+        session.PlanInputs = RunPlanner.ListableFrom(session.PlanInputs, list);
+        Diag($"Driver: working the open {list} sell list of {retainer.Name}, with the {session.PlanInputs.Stock.Length} stack(s) it can list; it stays open at the end.");
         if (list == SellListKind.RetainerInventory)
         {
             RefreshRetainerPages(retainer);

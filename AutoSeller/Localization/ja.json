@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "所持品の枠が変わりました",
   "plan.skip.quantity": "数量がウィンドウの範囲外です",
   "plan.skip.readBackUnavailable": "変更の前に出品または所持品の枠を読み込めなかったため、何も入力していません",
-  "plan.skip.inSaddlebag": "チョコボかばんの中にあります。空きがあれば、実行が呼び鈴の前に所持品へ移します",
+  "plan.skip.wouldMoveFromSaddlebag": "まずチョコボかばんから所持品へ移します。テスト実行では何も移しません",
   "plan.skip.refused": "安全チェックで拒否されました。詳細はコンソールにあります",
   "plan.badge.excluded": "対象外",
   "plan.badge.moved": "移動済み",

@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "Envanter yuvası değişti",
   "plan.skip.quantity": "Miktar pencerenin sınırları dışında",
   "plan.skip.readBackUnavailable": "Değişiklikten önce ilanlar veya envanter yuvası okunamadı, bu yüzden hiçbir şey yazılmadı",
-  "plan.skip.inSaddlebag": "Hâlâ heybede: bir tur, yer varsa onu çandan önce envantere taşır",
+  "plan.skip.wouldMoveFromSaddlebag": "Önce heybeden envantere taşınırdı; deneme turu hiçbir şeyi taşımaz",
   "plan.skip.refused": "Bir güvenlik denetimi bunu reddetti; ayrıntılar konsolda",
   "plan.badge.excluded": "Dışarıda",
   "plan.badge.moved": "Taşındı",

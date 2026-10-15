@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "O espaço do inventário mudou",
   "plan.skip.quantity": "A quantidade está fora dos limites da janela",
   "plan.skip.readBackUnavailable": "Não foi possível ler os anúncios ou o espaço do inventário antes da mudança, então nada foi digitado",
-  "plan.skip.inSaddlebag": "Ainda no alforje: uma rodada o move para o inventário antes do sino quando há espaço",
+  "plan.skip.wouldMoveFromSaddlebag": "Seria movido primeiro do alforje para o inventário; um teste não move nada",
   "plan.skip.refused": "Uma verificação de segurança recusou; o console tem os detalhes",
   "plan.badge.excluded": "Fora",
   "plan.badge.moved": "Movido",

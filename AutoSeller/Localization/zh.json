@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "背包格子已变化",
   "plan.skip.quantity": "数量超出窗口的范围",
   "plan.skip.readBackUnavailable": "变更前无法读取挂单或背包格子，因此没有输入任何内容",
-  "plan.skip.inSaddlebag": "仍在陆行鸟鞍囊中：背包有空位时，运行会在去传唤铃前将其移到背包",
+  "plan.skip.wouldMoveFromSaddlebag": "会先从陆行鸟鞍囊移到背包；试运行不会移动任何物品",
   "plan.skip.refused": "安全检查拒绝了此操作；详情见控制台",
   "plan.badge.excluded": "已排除",
   "plan.badge.moved": "已移动",

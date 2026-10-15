@@ -149,7 +149,7 @@
   "plan.skip.slotChanged": "The bag slot changed",
   "plan.skip.quantity": "The quantity is outside the window's limits",
   "plan.skip.readBackUnavailable": "The listings or the bag slot could not be read before the change, so nothing was typed",
-  "plan.skip.inSaddlebag": "Still in the saddlebag: a run moves it to your bags before the bell when they have room",
+  "plan.skip.wouldMoveFromSaddlebag": "Would be moved from the saddlebag to your bags first; a dry run moves nothing",
   "plan.skip.refused": "A safety check refused it; the Console has the details",
   "plan.badge.excluded": "Left out",
   "plan.badge.moved": "Moved",
