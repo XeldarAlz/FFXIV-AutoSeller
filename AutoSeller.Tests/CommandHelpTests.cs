@@ -10,7 +10,7 @@ public sealed partial class CommandHelpTests
     private const string Command = "/asell ";
     private const string HelpSeparator = " | ";
     private const string CommandsHeading = "## Commands";
-    private const string NextHeading = "## Known limits";
+    private const string NextHeading = "## Languages";
     private const string ReadmeFileName = "README.md";
 
     public static TheoryData<string> Languages()
@@ -51,7 +51,7 @@ public sealed partial class CommandHelpTests
         var readme = File.ReadAllText(Path.Combine(RepositoryFiles.Root, ReadmeFileName));
         var start = readme.IndexOf(CommandsHeading, StringComparison.Ordinal);
         var end = readme.IndexOf(NextHeading, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "The README has no Commands section before Known limits.");
+        Assert.True(start >= 0 && end > start, "The README has no Commands section before Languages.");
 
         var table = readme[start..end];
         var subcommands = new HashSet<string>(StringComparer.Ordinal);
