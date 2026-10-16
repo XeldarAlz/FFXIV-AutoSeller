@@ -1,3 +1,4 @@
+using AutoSeller.Core.Game;
 using AutoSeller.Core.Localization;
 using AutoSeller.Windows.Components;
 using AutoSeller.Windows.Sections;
@@ -19,6 +20,10 @@ internal static class HeaderBar
     private const float CompactBarWidth = 90f;
 
     public const float MinimumWidth = PadX * 2f + IconBox + 12f + ButtonSize * ButtonCount + ButtonGap * (ButtonCount - 1);
+
+    private static string characterName = string.Empty;
+    private static string characterText = string.Empty;
+    private static uint characterWorld;
 
     public static float ButtonsWidth() => (ButtonSize * ButtonCount + ButtonGap * (ButtonCount - 1)) * ImGuiHelpers.GlobalScale;
 
@@ -85,8 +90,36 @@ internal static class HeaderBar
         {
             DrawCompactInfo(plugin, info, x, buttonsLeft - 14f * scale, midY);
         }
+        else
+        {
+            DrawCharacter(plugin, x, buttonsLeft - 14f * scale, midY);
+        }
 
         DrawButtons(window, end, midY, compact);
+    }
+
+    private static void DrawCharacter(Plugin plugin, float left, float right, float midY)
+    {
+        var name = plugin.Characters.Current?.Name ?? string.Empty;
+        var world = plugin.Plan.Latest?.Input.HomeWorldId ?? 0;
+        if (name.Length == 0 || right <= left)
+        {
+            return;
+        }
+
+        if (!string.Equals(characterName, name, StringComparison.Ordinal) || characterWorld != world)
+        {
+            characterName = name;
+            characterWorld = world;
+            characterText = world == 0 ? name : string.Concat(name, TextDraw.Separator, PlaceNames.World(world));
+        }
+
+        using (Fonts.PushCaption())
+        {
+            var shown = TextDraw.Truncate(characterText, right - left);
+            var size = TextDraw.Measure(shown);
+            TextDraw.At(shown, new Vector2(right - size.X, midY - size.Y * 0.5f), Styling.TextDim);
+        }
     }
 
     private static void DrawButtons(AppWindow window, Vector2 end, float midY, bool compact)

@@ -9,7 +9,7 @@ namespace AutoSeller.Windows.Shell;
 
 public sealed class AppWindow : Window, IDisposable
 {
-    public enum Page { Sell, Listings, Sales, Rules, History, Plugins, Log, Settings, Changelog, About }
+    public enum Page { Sell, Sales, Rules, Plugins, Log, Settings, Changelog, About }
 
     private const float PageRevealMs = 260f;
     private const float PageSlide = 12f;
@@ -35,11 +35,9 @@ public sealed class AppWindow : Window, IDisposable
 
     private readonly Plugin plugin;
     private readonly SellPage sellPage = new();
-    private readonly ListingsPage listingsPage = new();
     private readonly SalesPage salesPage = new();
     private readonly RulesPage rulesPage = new();
     private readonly SettingsPage settingsPage = new();
-    private readonly HistoryPage historyPage = new();
     private readonly PluginsPage pluginsPage = new();
     private readonly LogPage logPage = new();
     private readonly ChangelogPage changelogPage = new();
@@ -86,6 +84,12 @@ public sealed class AppWindow : Window, IDisposable
 
         if (compact) ToggleCompact();
         IsOpen = true;
+    }
+
+    public void ShowRuns()
+    {
+        salesPage.ShowRuns();
+        Show(Page.Sales);
     }
 
     public void TogglePage(Page target)
@@ -248,7 +252,7 @@ public sealed class AppWindow : Window, IDisposable
         if (dockHeight <= 0f) return;
         ImGui.SetCursorScreenPos(new Vector2(windowPos.X, windowPos.Y + windowSize.Y - dockHeight));
         var dockSize = new Vector2(windowSize.X, dockHeight);
-        if (page == Page.Sell) ActionDock.Draw(plugin, dockSize, windowRounding);
+        if (page == Page.Sell) ActionDock.Draw(plugin, dockSize, windowRounding, sellPage.Work);
         else if (MiniPlayer.Draw(plugin, dockSize, windowRounding)) Show(Page.Sell);
     }
 
@@ -264,11 +268,9 @@ public sealed class AppWindow : Window, IDisposable
         switch (page)
         {
             case Page.Sell: sellPage.Draw(plugin); break;
-            case Page.Listings: listingsPage.Draw(plugin); break;
             case Page.Sales: salesPage.Draw(plugin); break;
             case Page.Rules: rulesPage.Draw(plugin); break;
             case Page.Settings: settingsPage.Draw(plugin); break;
-            case Page.History: historyPage.Draw(plugin.History); break;
             case Page.Plugins: pluginsPage.Draw(plugin); break;
             case Page.Log: logPage.Draw(); break;
             case Page.Changelog: changelogPage.Draw(plugin.Configuration, pageShownTick); break;

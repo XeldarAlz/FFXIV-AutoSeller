@@ -57,14 +57,14 @@ internal sealed partial class SalesPage
         }
 
         key = next;
-        tabs[(int)Tab.Items] = new Segmented.Item(FontAwesomeIcon.Box, Loc.T(L.Sales.TabItems));
-        tabs[(int)Tab.Retainers] = new Segmented.Item(FontAwesomeIcon.UserTie, Loc.T(L.Sales.TabRetainers));
-        tabs[(int)Tab.Characters] = new Segmented.Item(FontAwesomeIcon.Users, Loc.T(L.Sales.TabCharacters));
-        tabs[(int)Tab.Recent] = new Segmented.Item(FontAwesomeIcon.Receipt, Loc.T(L.Sales.TabRecent));
+        groupLabels[(int)Group.Items] = Loc.T(L.Sales.TabItems);
+        groupLabels[(int)Group.Retainers] = Loc.T(L.Sales.TabRetainers);
+        groupLabels[(int)Group.Characters] = Loc.T(L.Sales.TabCharacters);
+        groupLabels[(int)Group.Recent] = Loc.T(L.Sales.TabRecent);
         var nowUtc = DateTime.UtcNow;
         var sales = plugin.Sales.Merged;
         var stats = SalesStats.Compute(sales.AsSpan(), listings.Snapshots.AsSpan(), nowUtc, TimeZoneInfo.Local);
-        subtitle = string.Concat(Loc.T(L.Sales.Subtitle), TextDraw.Separator, Loc.Plural(L.Sales.Summary, stats.Month.Listings));
+        soldTab = new BoardTab(Loc.T(L.Sales.TabSold), PlanLabels.Count(stats.Month.Listings), Loc.T(L.Sales.SoldStatus, Formatting.Gil(stats.Month.NetGil)), Styling.AccentMintSoft);
         today = Formatting.Gil(stats.Today.NetGil);
         week = Formatting.Gil(stats.Week.NetGil);
         month = Formatting.Gil(stats.Month.NetGil);
@@ -114,7 +114,7 @@ internal sealed partial class SalesPage
             var name = ItemName(game.Name, item.Item.ItemId);
             rows[index] = new RowText
             {
-                Id = RowId(Tab.Items, index),
+                Id = RowId(Group.Items, index),
                 Name = name,
                 Tooltip = name,
                 IconId = game.IconId,
@@ -143,7 +143,7 @@ internal sealed partial class SalesPage
             var character = CharacterName(table, retainer.CharacterContentId);
             rows[index] = new RowText
             {
-                Id = RowId(Tab.Retainers, index),
+                Id = RowId(Group.Retainers, index),
                 Name = name,
                 Caption = character,
                 Tooltip = string.Concat(name, "\n", character),
@@ -163,7 +163,7 @@ internal sealed partial class SalesPage
             var name = CharacterName(table, character.CharacterContentId);
             rows[index] = new RowText
             {
-                Id = RowId(Tab.Characters, index),
+                Id = RowId(Group.Characters, index),
                 Name = name,
                 Tooltip = name,
                 Cells = [PlanLabels.Count(character.SlotsInUse), PlanLabels.Count(character.Totals.Units), Formatting.Gil(character.Totals.NetGil)],
@@ -195,7 +195,7 @@ internal sealed partial class SalesPage
 
             rows[index] = new RowText
             {
-                Id = RowId(Tab.Recent, index),
+                Id = RowId(Group.Recent, index),
                 Name = name,
                 Caption = caption,
                 Tooltip = tooltip.ToString(),
@@ -248,7 +248,7 @@ internal sealed partial class SalesPage
         return table.TryGetCharacter(contentId, out var character) && character.Name.Length > 0 ? character.Name : Loc.T(L.Listings.Unnamed);
     }
 
-    private static string RowId(Tab tab, int index)
+    private static string RowId(Group tab, int index)
     {
         return string.Concat(RowIdPrefix, ((int)tab).ToString(CultureInfo.InvariantCulture), "_", index.ToString(CultureInfo.InvariantCulture));
     }

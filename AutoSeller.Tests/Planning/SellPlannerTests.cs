@@ -445,6 +445,20 @@ public sealed class SellPlannerTests
     }
 
     [Fact]
+    public void SellingVisitsWhereThePickedItemGoesAndUndercuttingVisitsWhereTheListingsAre()
+    {
+        var listings = Build(Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]));
+        var items = Build(Input([OreRule()], [MarketAt(Alpha), MarketAt(Beta)], Captured(OreInTheBags)) with { References = null });
+
+        Assert.Equal<ulong>([Alpha], listings.RetainersFor(RunWork.Reprice, false));
+        Assert.Empty(listings.RetainersFor(RunWork.Sell, false));
+        var lot = Assert.Single(items.Rows);
+        Assert.True(lot.IsPlaced);
+        Assert.Equal<ulong>([lot.RetainerId], items.RetainersFor(RunWork.Sell, false));
+        Assert.Empty(items.RetainersFor(RunWork.Reprice, false));
+    }
+
+    [Fact]
     public void AnExcludedRowGivesItsRetainerNoNeedOfAVisit()
     {
         var input = Input([OreRule()], [MarketAt(Alpha, listedAtReference), MarketAt(Beta)]);

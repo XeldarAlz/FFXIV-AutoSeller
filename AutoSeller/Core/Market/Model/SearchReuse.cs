@@ -123,6 +123,7 @@ internal sealed class SearchReuse
             ExpectedCount = stored.ExpectedCount - removed,
             Listings = ImmutableCollectionsMarshal.AsImmutableArray(kept),
             History = stored.History,
+            ArrivedCheapestFirst = stored.ArrivedCheapestFirst,
         };
     }
 }

@@ -4,9 +4,6 @@ internal static partial class L
 {
     internal static class Sales
     {
-        public static readonly LocString Title = new("sales.title", "Sales");
-        public static readonly LocString Subtitle = new("sales.subtitle", "What your retainers sold, from sale notices in chat, the retainers' sale histories and listings gone between visits.");
-        public static readonly LocPlural Summary = new("sales.summary", "{0} sale in the last 30 days", "{0} sales in the last 30 days");
         public static readonly LocString Loading = new("sales.loading", "Reading the sales of every character…");
         public static readonly LocString Empty = new("sales.empty", "No sales recorded yet. They show up once a sale notice arrives in chat or a run reads a retainer's sale history.");
         public static readonly LocString TileToday = new("sales.tile.today", "Today");
@@ -18,7 +15,6 @@ internal static partial class L
         public static readonly LocString ChartTitle = new("sales.chart.title", "Gil per day, last 30 days");
         public static readonly LocString ChartPeak = new("sales.chart.peak", "Best day {0}");
         public static readonly LocString ChartTooltip = new("sales.chart.tooltip", "{0}: {1}");
-        public static readonly LocString HintsTitle = new("sales.hints.title", "Hints");
         public static readonly LocString HintQuick = new("sales.hints.quick", "{0} sold {1} after it was listed; consider raising its price.");
         public static readonly LocString HintStale = new("sales.hints.stale", "{0} has sat unsold at the lowest price for {1}.");
         public static readonly LocPlural HintsMore = new("sales.hints.more", "and {0} more", "and {0} more");
@@ -26,6 +22,12 @@ internal static partial class L
         public static readonly LocString TabRetainers = new("sales.tab.retainers", "Retainers");
         public static readonly LocString TabCharacters = new("sales.tab.characters", "Characters");
         public static readonly LocString TabRecent = new("sales.tab.recent", "Recent");
+        public static readonly LocString TabSold = new("sales.tab.sold", "Sold");
+        public static readonly LocString TabRuns = new("sales.tab.runs", "Runs");
+        public static readonly LocString SoldStatus = new("sales.soldStatus", "{0} in 30 days");
+        public static readonly LocString RunsStatus = new("sales.runsStatus", "Last run {0}");
+        public static readonly LocString ColumnResult = new("sales.column.result", "Result");
+        public static readonly LocString ColumnDone = new("sales.column.done", "What it did");
         public static readonly LocString ColumnRetainer = new("sales.column.retainer", "Retainer");
         public static readonly LocString ColumnCharacter = new("sales.column.character", "Character");
         public static readonly LocString ColumnSold = new("sales.column.sold", "Sold");

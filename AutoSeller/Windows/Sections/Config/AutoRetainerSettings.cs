@@ -26,8 +26,7 @@ internal static class AutoRetainerSettings
             {
                 if (SettingsControls.Toggle("##asell_autoretainer_postprocess", configuration.AutoRetainerPostprocess, out var value))
                 {
-                    configuration.AutoRetainerPostprocess = value;
-                    configuration.SaveDebounced();
+                    configuration.SetPostprocess(value);
                 }
             }, SettingsRow.ToggleHeight);
 

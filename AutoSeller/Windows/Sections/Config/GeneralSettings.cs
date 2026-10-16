@@ -8,6 +8,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using ECommons.DalamudServices;
+using System.Globalization;
 using System.Numerics;
 
 namespace AutoSeller.Windows.Sections.Config;
@@ -23,12 +24,51 @@ internal static class GeneralSettings
         new(L.Settings.BellPicked, L.Settings.BellPickedDetail),
     ];
 
-    public static void Draw(Configuration configuration)
+    private static string[] retainerToggleIds = [];
+
+    private readonly record struct RetainerToggle(Plugin Plugin, ulong RetainerId, bool Enabled, string Id);
+
+    public static void Draw(Plugin plugin)
     {
+        var configuration = plugin.Configuration;
         DrawLanguageGroup(configuration);
+        DrawRetainersGroup(plugin);
         DrawBellGroup(configuration);
         DrawWindowGroup(configuration);
         DrawBehaviorGroup(configuration);
+    }
+
+    private static void DrawRetainersGroup(Plugin plugin)
+    {
+        using var group = SettingsGroup.Begin(Loc.T(L.Settings.RetainersGroup));
+        var retainers = plugin.Plan.Latest?.Retainers ?? [];
+        if (retainers.IsEmpty)
+        {
+            SettingsRow.Note(Loc.T(L.Plan.EmptyNoRetainers));
+            return;
+        }
+
+        SettingsRow.Note(Loc.T(L.Settings.RetainersHelp));
+        if (retainerToggleIds.Length < retainers.Length)
+        {
+            retainerToggleIds = new string[retainers.Length];
+            for (var index = 0; index < retainers.Length; index++)
+            {
+                retainerToggleIds[index] = string.Concat("##asell_general_retainer_", index.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        for (var index = 0; index < retainers.Length; index++)
+        {
+            var retainer = retainers[index];
+            SettingsRow.Draw(retainer.Name, null, SettingsControls.ToggleWidth, new RetainerToggle(plugin, retainer.RetainerId, retainer.Enabled, retainerToggleIds[index]), static toggle =>
+            {
+                if (SettingsControls.Toggle(toggle.Id, toggle.Enabled, out var value))
+                {
+                    toggle.Plugin.Plan.SetRetainerEnabled(toggle.RetainerId, value);
+                }
+            }, SettingsRow.ToggleHeight);
+        }
     }
 
     private static void DrawBellGroup(Configuration configuration)

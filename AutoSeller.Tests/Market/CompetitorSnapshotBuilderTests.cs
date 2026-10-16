@@ -126,6 +126,8 @@ public sealed class CompetitorSnapshotBuilderTests
         {
             Assert.Equal(order[index], snapshot.Listings[index].ListingId);
         }
+
+        Assert.False(snapshot.ArrivedCheapestFirst);
     }
 
     [Fact]
@@ -163,6 +165,8 @@ public sealed class CompetitorSnapshotBuilderTests
         var snapshot = Built(Rows(CompetitorSnapshot.MaximumListings));
 
         Assert.True(snapshot.IsCapped);
+        Assert.True(snapshot.ArrivedCheapestFirst);
+        Assert.True(snapshot.ShowsTheCheapest);
         Assert.Equal(ListingRequestMachine.MaximumListings, snapshot.Listings.Length);
     }
 

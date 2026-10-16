@@ -54,7 +54,13 @@ public abstract partial class AutoCommon
 
         if (route == BellRoute.WalkToBell && (configuration.BellChoice != BellChoice.InnRoom || situation.InInnRoom))
         {
-            return await WalkToBell(bell, scope);
+            var arrival = await WalkToBell(bell, scope);
+            if (arrival != BellArrival.NotReached || situation.InInnRoom || CancelToken.IsCancellationRequested)
+            {
+                return arrival;
+            }
+
+            Diag($"{scope}: the summoning bell {bell.Distance:F0}m away could not be reached on foot; going to the inn room instead");
         }
 
         return await GoToInnBell(scope);
@@ -145,7 +151,12 @@ public abstract partial class AutoCommon
             await WaitForNavmeshReady(TravelNavmeshWaitMs, TravelNavmeshPollFrames);
             if (await FloorBesideBell(target, scope) is not { } floor)
             {
-                return BellArrival.NotReached;
+                if (SummoningBells.TryFindNearest(out var near) && near.Distance <= BellStepUpMaxMeters && await StepUpToBell(near, scope))
+                {
+                    return await ReadyAtBell(scope);
+                }
+
+                return CancelToken.IsCancellationRequested ? BellArrival.Cancelled : BellArrival.NotReached;
             }
 
             Diag($"{scope}: walking {DistanceTo(floor):F0}m to the floor at {FormatPosition(floor)} beside the summoning bell at {FormatPosition(target)} (walk {walk}/{MaxBellWalks})");

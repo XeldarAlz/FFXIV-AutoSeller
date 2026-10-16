@@ -20,9 +20,13 @@ internal sealed class CharacterStore : IDisposable
     private CheckpointStore<CharacterRecord>? store;
     private CheckpointStore<CharacterRecord>? writeTarget;
     private Task<bool>? write;
+    private Task<LoadedCharacter>? loading;
+    private ulong loadingContentId;
     private long lastRosterMs;
     private long lastDescribeMs;
     private bool described;
+
+    private readonly record struct LoadedCharacter(CheckpointStore<CharacterRecord>? Store, CharacterData Data);
 
     public CharacterStore(string configDirectory, RetainerReader retainers)
     {
@@ -69,11 +73,9 @@ internal sealed class CharacterStore : IDisposable
             return;
         }
 
-        if (Current is null || Current.ContentId != contentId)
+        if ((Current is null || Current.ContentId != contentId) && !TryAdopt(contentId))
         {
-            Flush();
-            retainers.Reset();
-            Load(contentId);
+            return;
         }
 
         DescribeCharacter(Current!, now);
@@ -87,44 +89,79 @@ internal sealed class CharacterStore : IDisposable
         RunLog.Info("Character data flushed on logout.");
         Current = null;
         store = null;
+        loading = null;
         retainers.Reset();
     }
 
-    private void Load(ulong contentId)
+    private bool TryAdopt(ulong contentId)
     {
-        store = new CheckpointStore<CharacterRecord>(directoryPath, CharacterRecord.FileNameFor(contentId));
-        var load = store.Load();
-        if (load.PrimaryDamaged)
+        if (loading is null || loadingContentId != contentId)
         {
-            RunLog.Warning($"The character file {store.FilePath} could not be read ({store.LastError}); {(load.Value is null ? "starting empty" : "using its backup")}.");
+            Flush();
+            retainers.Reset();
+            Current = null;
+            store = null;
+            loadingContentId = contentId;
+            var directory = directoryPath;
+            loading = Task.Run(() => Load(directory, contentId));
+            return false;
         }
 
-        var record = load.Value;
-        var fit = CharacterRecord.FitFor(record, contentId);
-        if (fit is CharacterRecordFit.OtherCharacter or CharacterRecordFit.NewerVersion)
+        if (!loading.IsCompleted)
         {
-            SetAside(store, load.Source, record!, fit);
-            record = null;
+            return false;
         }
 
-        Current = record is null ? new CharacterData(contentId) : CharacterData.FromRecord(record);
+        var loaded = loading.IsCompletedSuccessfully ? loading.Result : StartEmpty(loading.Exception, contentId);
+        loading = null;
+        store = loaded.Store;
+        Current = loaded.Data;
         schedule.Loaded(Current.Revision);
         lastRosterMs = 0;
         lastDescribeMs = 0;
         described = false;
-        RunLog.Info($"Character data loaded from {load.Source}: {Current.Retainers.Count} retainers, {Current.Snapshots.Count} snapshots, {Current.RepriceCount} reprice records, {Current.Approvals.Count} approvals.");
+        return true;
     }
 
-    private void SetAside(CheckpointStore<CharacterRecord> target, CheckpointSource source, CharacterRecord record, CharacterRecordFit fit)
+    private static LoadedCharacter Load(string directoryPath, ulong contentId)
+    {
+        var target = new CheckpointStore<CharacterRecord>(directoryPath, CharacterRecord.FileNameFor(contentId));
+        var load = target.Load();
+        if (load.PrimaryDamaged)
+        {
+            RunLog.Warning($"The character file {target.FilePath} could not be read ({target.LastError}); {(load.Value is null ? "starting empty" : "using its backup")}.");
+        }
+
+        var record = load.Value;
+        var fit = CharacterRecord.FitFor(record, contentId);
+        var kept = target;
+        if (fit is CharacterRecordFit.OtherCharacter or CharacterRecordFit.NewerVersion)
+        {
+            kept = SetAside(target, load.Source, record!, fit) ? target : null;
+            record = null;
+        }
+
+        var data = record is null ? new CharacterData(contentId) : CharacterData.FromRecord(record);
+        RunLog.Info($"Character data loaded from {load.Source}: {data.Retainers.Count} retainers, {data.Snapshots.Count} snapshots, {data.RepriceCount} reprice records, {data.Approvals.Count} approvals.");
+        return new LoadedCharacter(kept, data);
+    }
+
+    private static LoadedCharacter StartEmpty(Exception? exception, ulong contentId)
+    {
+        RunLog.Error(exception?.GetBaseException() ?? new InvalidOperationException("the load was cancelled"), $"Loading the character file of {contentId} failed; this character starts empty and nothing is saved over the file this session");
+        return new LoadedCharacter(null, new CharacterData(contentId));
+    }
+
+    private static bool SetAside(CheckpointStore<CharacterRecord> target, CheckpointSource source, CharacterRecord record, CharacterRecordFit fit)
     {
         if (target.TryKeepCopy(source, CharacterRecord.SetAsideSuffix(record.Version, DateTime.UtcNow), out var copyPath))
         {
             RunLog.Warning($"The character file {target.FilePath} does not fit ({fit}: character {record.ContentId}, version {record.Version}); it was copied to {copyPath} and this character starts empty.");
-            return;
+            return true;
         }
 
-        store = null;
         RunLog.Error($"The character file {target.FilePath} does not fit ({fit}: character {record.ContentId}, version {record.Version}) and could not be copied aside ({target.LastError}); this character starts empty and nothing is saved over the file this session.");
+        return false;
     }
 
     private void DescribeCharacter(CharacterData data, long now)

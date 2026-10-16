@@ -487,7 +487,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
         issuingRequest = true;
         try
         {
-            new AddonMaster.RetainerSell(sellWindow).ComparePrices();
+            SellWindowCallbacks.ComparePrices(sellWindow);
         }
         finally
         {
@@ -578,7 +578,7 @@ internal sealed unsafe class ListingRequestTracker : IDisposable
 
         machine.OnCaptured();
         var endedBy = machine.EndSeen ? "end of search" : machine.StartSeen ? "announced count" : "quiet window";
-        RunLog.Info($"Market: item {machine.ItemId} on world {capturedWorldId}: {count} listing(s), announced {machine.ExpectedCount}, {snapshot!.History.Length} sale(s) of history, generation {capturedGeneration}, completed by {endedBy}.");
+        RunLog.Info($"Market: item {machine.ItemId} on world {capturedWorldId}: {count} listing(s), announced {machine.ExpectedCount}, {snapshot!.History.Length} sale(s) of history, generation {capturedGeneration}, completed by {endedBy}, cheapest first {snapshot.ArrivedCheapestFirst}.");
     }
 
     private bool TryBuildSnapshot(out SnapshotRefusal snapshotRefusal)

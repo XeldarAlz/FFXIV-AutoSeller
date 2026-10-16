@@ -21,11 +21,9 @@ internal static partial class L
     internal static class Shell
     {
         public static readonly LocString NavSell = new("shell.nav.sell", "Sell");
-        public static readonly LocString NavListings = new("shell.nav.listings", "Listings");
         public static readonly LocString NavSales = new("shell.nav.sales", "Sales");
         public static readonly LocString NavRules = new("shell.nav.rules", "Rules");
         public static readonly LocString NavSettings = new("shell.nav.settings", "Settings");
-        public static readonly LocString NavHistory = new("shell.nav.history", "History");
         public static readonly LocString NavPlugins = new("shell.nav.plugins", "Plugins");
         public static readonly LocString NavLog = new("shell.nav.log", "Console");
         public static readonly LocString NavChangelog = new("shell.nav.changelog", "Changelog");
@@ -43,24 +41,9 @@ internal static partial class L
 
     internal static class Sell
     {
-        public static readonly LocString Title = new("sell.title", "Sell");
-        public static readonly LocString Subtitle = new("sell.subtitle", "Your retainers' listings and the plan for the next run.");
-        public static readonly LocString Empty = new("sell.empty", "Nothing planned yet. Your retainers' listings and the next run's plan will show up here.");
-        public static readonly LocString ViewItems = new("sell.view.items", "Your items");
-        public static readonly LocString ViewPlan = new("sell.view.plan", "Plan");
-        public static readonly LocString ItemsWorth = new("sell.items.worth", "Could sell for");
-        public static readonly LocString ItemsWorthSub = new("sell.items.worthSub", "everything you carry");
         public static readonly LocString ItemsWorthHelp = new("sell.items.worthHelp", "What your items would fetch at today's prices: on the market board just under the cheapest seller, or at the NPC price for items that can only go to a vendor. Market prices come from Universalis and change all the time.");
-        public static readonly LocString ItemsChosen = new("sell.items.chosen", "Ticked to sell");
-        public static readonly LocPlural ItemsChosenCount = new("sell.items.chosenCount", "{0} item", "{0} items");
-        public static readonly LocString ItemsIntro = new("sell.items.intro", "Tick Market board or NPC on what you want sold, then press Sell. A ticked item lists all of it unless you set an amount, at the best price (just under the cheapest seller) unless you type your own, on any retainer unless you pick one.");
         public static readonly LocString ItemsSearchHint = new("sell.items.searchHint", "Find an item");
-        public static readonly LocString ItemsEmpty = new("sell.items.empty", "Nothing you carry can be sold. Turn on the saddlebag or the armoury chest above to see what they hold.");
         public static readonly LocString ItemsNoMatch = new("sell.items.noMatch", "No item matches your search.");
-        public static readonly LocString ItemsMarket = new("sell.items.market", "Market board");
-        public static readonly LocString ItemsMarketHelp = new("sell.items.marketHelp", "List it on the market board and keep it the cheapest; its options open below. Click again to stop selling it.");
-        public static readonly LocString ItemsVendor = new("sell.items.vendor", "NPC");
-        public static readonly LocString ItemsVendorHelp = new("sell.items.vendorHelp", "Sell it to a vendor through your retainer at the NPC price. Click again to stop.");
         public static readonly LocString ItemsCannotList = new("sell.items.cannotList", "It cannot go on the market board: it is untradable, collectable, spiritbound, in a gear set, protected by AutoRetainer or on your never-sell list.");
         public static readonly LocString ItemsCannotVendor = new("sell.items.cannotVendor", "Only normal quality items in your bags that are not gear and have an NPC price can go to a vendor.");
         public static readonly LocString ItemsQuantity = new("sell.items.quantity", "×{0}");
@@ -71,7 +54,6 @@ internal static partial class L
         public static readonly LocString ItemsBelowFloor = new("sell.items.belowFloor", "Below the lowest allowed price of {0}, so it stays in your bags");
         public static readonly LocString ItemsJunkOn = new("sell.items.junkOn", "Vendor junk is on: every normal quality stack worth under {0} on the market board is also sold to the NPC, ticked here or not.");
         public static readonly LocString ItemsJunkTurnOff = new("sell.items.junkTurnOff", "Turn off");
-        public static readonly LocString ItemsEach = new("sell.items.each", "{0} each");
         public static readonly LocString ItemsAmount = new("sell.items.amount", "Sell");
         public static readonly LocString ItemsAmountOf = new("sell.items.amountOf", "of {0}");
         public static readonly LocString ItemsAmountHelp = new("sell.items.amountHelp", "How many to sell. Leave it empty to sell all of them; the rest stays in your bags.");
@@ -79,6 +61,79 @@ internal static partial class L
         public static readonly LocString ItemsRetainer = new("sell.items.retainer", "Retainer");
         public static readonly LocString ItemsRetainerHelp = new("sell.items.retainerHelp", "The retainer that lists it first while it has a free slot. With Any retainer the run chooses.");
         public static readonly LocString ItemsAnyRetainer = new("sell.items.anyRetainer", "Any retainer");
+        public static readonly LocString AutopilotTitle = new("sell.autopilot.title", "Autopilot");
+        public static readonly LocString AutopilotBody = new("sell.autopilot.body", "Keeps your listings the cheapest and sells what you picked, on its own, only while you are idle.");
+        public static readonly LocString AutopilotEveryHour = new("sell.autopilot.everyHour", "Every hour");
+        public static readonly LocString AutopilotEveryTwoHours = new("sell.autopilot.everyTwoHours", "Every 2 hours");
+        public static readonly LocString AutopilotEveryFourHours = new("sell.autopilot.everyFourHours", "Every 4 hours");
+        public static readonly LocString AutopilotAfterVentures = new("sell.autopilot.afterVentures", "After each venture (AutoRetainer)");
+        public static readonly LocString AutopilotStatusOff = new("sell.autopilot.statusOff", "Off. Nothing runs until you press Run now.");
+        public static readonly LocString AutopilotStatusVentures = new("sell.autopilot.statusVentures", "Runs each time AutoRetainer brings a retainer back from a venture.");
+        public static readonly LocString AutopilotStatusVenturesMissing = new("sell.autopilot.statusVenturesMissing", "Needs AutoRetainer, which is not installed. Pick a time instead.");
+        public static readonly LocString AutopilotStatusRunning = new("sell.autopilot.statusRunning", "A run is working now. The next one comes {0} after it ends.");
+        public static readonly LocString AutopilotStatusNext = new("sell.autopilot.statusNext", "Next run at {0}, once you have stood still for {1}.");
+        public static readonly LocString AutopilotStatusDue = new("sell.autopilot.statusDue", "Due now. It starts once you have stood still for {0}, out of combat and duties.");
+        public static readonly LocString AutopilotStatusBlocked = new("sell.autopilot.statusBlocked", "Waiting: {0}.");
+        public static readonly LocString AutopilotStatusNothing = new("sell.autopilot.statusNothing", "Nothing to do right now. It checks again at {0}.");
+        public static readonly LocString AutopilotStatusStarting = new("sell.autopilot.statusStarting", "Starting a run now.");
+        public static readonly LocString AutopilotLastRun = new("sell.autopilot.lastRun", "Last run at {0}: {1} repriced, {2} listed, {3} sold to an NPC.");
+        public static readonly LocString AutopilotToggleHelp = new("sell.autopilot.toggleHelp", "Turn Autopilot on or off");
+        public static readonly LocString AutopilotChatStarting = new("sell.autopilot.chatStarting", "Autopilot is taking your character to a summoning bell. Move to take back control.");
+        public static readonly LocString AutopilotChatStopped = new("sell.autopilot.chatStopped", "Autopilot stopped because you moved. It tries again at the next run time.");
+        public static readonly LocString ColumnItem = new("sell.column.item", "Item");
+        public static readonly LocString ColumnWhere = new("sell.column.where", "Where");
+        public static readonly LocString ColumnRetainer = new("sell.column.retainer", "Retainer");
+        public static readonly LocString ColumnYourPrice = new("sell.column.yourPrice", "Your price");
+        public static readonly LocString ColumnLowest = new("sell.column.lowest", "Lowest seller");
+        public static readonly LocString ColumnMarket = new("sell.column.market", "Market each");
+        public static readonly LocString ColumnNpc = new("sell.column.npc", "NPC each");
+        public static readonly LocString ColumnPricing = new("sell.column.pricing", "Pricing");
+        public static readonly LocString ColumnStatus = new("sell.column.status", "Status");
+        public static readonly LocString NoteWillList = new("sell.note.willList", "Will be listed");
+        public static readonly LocString NoteSoldToNpc = new("sell.note.soldToNpc", "Sold to an NPC");
+        public static readonly LocString NoteWillUndercut = new("sell.note.willUndercut", "Someone sells at {0}, so yours goes to {1}");
+        public static readonly LocString NoteCheapest = new("sell.note.cheapest", "You are the cheapest, nothing to do");
+        public static readonly LocString NoteWaitsOk = new("sell.note.waitsOk", "Going to {0} waits for your OK");
+        public static readonly LocString NoteYourPrice = new("sell.note.yourPrice", "Your price: {0}");
+        public static readonly LocString NoteLeftAlone = new("sell.note.leftAlone", "Left as it is");
+        public static readonly LocString NoteListOn = new("sell.note.listOn", "Will be listed on {0} at {1} each");
+        public static readonly LocString NoteListOnCheck = new("sell.note.listOnCheck", "Will be listed on {0} after a price check");
+        public static readonly LocString DetailPrice = new("sell.detail.price", "Price each");
+        public static readonly LocString DetailPriceHelp = new("sell.detail.priceHelp", "Type the price this listing should have, or clear it to go back to just under the cheapest seller. It never goes below {0}.");
+        public static readonly LocString DetailNpc = new("sell.detail.npc", "A retainer sells it to an NPC for {0} each.");
+        public static readonly LocString DetailKeep = new("sell.detail.keep", "Click Market board or NPC to sell it.");
+        public static readonly LocString StatusWaiting = new("sell.status.waiting", "Waiting");
+        public static readonly LocString ListWorth = new("sell.list.worth", "Your bags are worth about {0}");
+        public static readonly LocString ListingsTitle = new("sell.listings.title", "Your listings");
+        public static readonly LocPlural ListingsNeedsOk = new("sell.listings.needsOk", "{0} needs your OK", "{0} need your OK");
+        public static readonly LocPlural ListingsWillChange = new("sell.listings.willChange", "{0} will be undercut", "{0} will be undercut");
+        public static readonly LocPlural ListingsCheapest = new("sell.listings.cheapest", "{0} is already the cheapest", "{0} are already the cheapest");
+        public static readonly LocPlural ListingsLeftAlone = new("sell.listings.leftAlone", "{0} is left as it is", "{0} are left as they are");
+        public static readonly LocString ListingsAllSet = new("sell.listings.allSet", "Nothing to change right now.");
+        public static readonly LocString ListingsNone = new("sell.listings.none", "Nothing is listed right now.");
+        public static readonly LocString ListingsThisCharacter = new("sell.listings.thisCharacter", "This character");
+        public static readonly LocString SellTitle = new("sell.sellItems.title", "Sell items");
+        public static readonly LocString SellEmpty = new("sell.sellItems.empty", "Nothing you carry can be sold right now. Settings, Sources can add the saddlebag and the armoury chest.");
+        public static readonly LocPlural BagsPicked = new("sell.bags.picked", "{0} picked to sell", "{0} picked to sell");
+        public static readonly LocString BagsPickHint = new("sell.bags.pickHint", "Pick what to sell");
+        public static readonly LocString ButtonMarket = new("sell.button.market", "Market board");
+        public static readonly LocString ButtonMarketHelp = new("sell.button.marketHelp", "Sell it on the market board, just under the cheapest seller and never below its floor. Click again to stop.");
+        public static readonly LocString ButtonNpc = new("sell.button.npc", "NPC");
+        public static readonly LocString ButtonNpcHelp = new("sell.button.npcHelp", "A retainer sells it to an NPC at the NPC price. Click again to stop.");
+        public static readonly LocString ButtonUndercutHelp = new("sell.button.undercutHelp", "Keep this listing just under the cheapest seller, never below its floor.");
+        public static readonly LocString ButtonMyPrice = new("sell.button.myPrice", "My price");
+        public static readonly LocString ButtonMyPriceHelp = new("sell.button.myPriceHelp", "Set your own price for this listing below the row. Click again to go back to undercutting.");
+        public static readonly LocString ButtonAuto = new("sell.button.auto", "Auto");
+        public static readonly LocString ButtonOff = new("sell.button.off", "Off");
+        public static readonly LocString ButtonOffHelp = new("sell.button.offHelp", "Leave this listing at its price. Runs do not touch it.");
+        public static readonly LocString RetainersTitle = new("sell.retainers.title", "Retainers");
+        public static readonly LocString RetainersOff = new("sell.retainers.off", "off");
+        public static readonly LocString RetainersOnHelp = new("sell.retainers.onHelp", "{0} takes part in runs. Click to leave this retainer out.");
+        public static readonly LocString RetainersOffHelp = new("sell.retainers.offHelp", "{0} is left out of runs, so its listings are left alone and its free slots are not used. Click to bring it back.");
+        public static readonly LocString NoteNoSlotRetainerOff = new("sell.note.noSlotRetainerOff", "No free listing slot: {0} is switched off");
+        public static readonly LocString MarketOff = new("sell.market.off", "Undercutting is off, so a run leaves your listings alone.");
+        public static readonly LocString MarketTurnOn = new("sell.market.turnOn", "Turn on");
+        public static readonly LocString MarketNotManaged = new("sell.market.notManaged", "Turn on undercutting to look after this listing.");
     }
 
     internal static class Dock
@@ -90,14 +145,21 @@ internal static partial class L
         public static readonly LocString ReasonInstall = new("dock.reason.install", "install the required plugins");
         public static readonly LocString ReasonLoggedOut = new("dock.reason.loggedOut", "log in first");
         public static readonly LocString ReasonJournal = new("dock.reason.journal", "answer the card on the Sell page first");
-        public static readonly LocString StateRunning = new("dock.state.running", "running");
-        public static readonly LocString StatePaused = new("dock.state.paused", "paused");
-        public static readonly LocString Sell = new("dock.sell", "SELL");
-        public static readonly LocString SellSub = new("dock.sellSub", "list and sell what you ticked");
-        public static readonly LocString Undercut = new("dock.undercut", "UNDERCUT");
-        public static readonly LocString UndercutSub = new("dock.undercutSub", "reprice your listings");
-        public static readonly LocString ReasonNothingTicked = new("dock.reason.nothingTicked", "tick an item under Your items first");
-        public static readonly LocString ReasonNothingToUndercut = new("dock.reason.nothingToUndercut", "turn on Undercut all my listings in Settings, Pricing");
+        public static readonly LocString SellNow = new("dock.sellNow", "SELL NOW");
+        public static readonly LocString UndercutNow = new("dock.undercutNow", "UNDERCUT NOW");
+        public static readonly LocPlural RunSell = new("dock.runSell", "sell {0} item", "sell {0} items");
+        public static readonly LocPlural RunUndercut = new("dock.runUndercut", "undercut {0} listing", "undercut {0} listings");
+        public static readonly LocPlural RunCheck = new("dock.runCheck", "keep {0} listing the cheapest", "keep {0} listings the cheapest");
+        public static readonly LocString RunRead = new("dock.runRead", "read and undercut your listings");
+        public static readonly LocString ReasonNothingToSell = new("dock.reason.nothingToSell", "pick an item with Market board or NPC first");
+        public static readonly LocString ReasonNothingToUndercut = new("dock.reason.nothingToUndercut", "no listing is due for a check, or undercutting is off");
+        public static readonly LocString PlanUndercut = new("dock.plan.undercut", "Undercut {0} on {1}: {2} → {3}");
+        public static readonly LocString PlanWaitsOk = new("dock.plan.waitsOk", "{0} on {1} waits for your OK");
+        public static readonly LocString PlanList = new("dock.plan.list", "List {0} on {1} at {2} each");
+        public static readonly LocString PlanListCheck = new("dock.plan.listCheck", "List {0} on {1} after a price check");
+        public static readonly LocString PlanCannotList = new("dock.plan.cannotList", "Cannot list {0}: {1}");
+        public static readonly LocString PlanVendor = new("dock.plan.vendor", "Sell {0} to an NPC for {1}");
+        public static readonly LocPlural PlanCheck = new("dock.plan.check", "Check that {0} more listing is still the cheapest", "Check that {0} more listings are still the cheapest");
     }
 
     internal static class Run
@@ -147,14 +209,14 @@ internal static partial class L
         public static readonly LocString BlockProtectListUnreadable = new("run.block.protectListUnreadable", "AutoRetainer cannot read its protect list for this character, so nothing is sold until it can. This happens when AutoRetainer has no data for the character; the Console has the details.");
         public static readonly LocString BlockUnresolvedJournal = new("run.block.unresolvedJournal", "A listing change from an earlier run is not settled yet; answer the question on the Sell page first.");
         public static readonly LocString BlockGatesClosed = new("run.block.gatesClosed", "The market checks failed when the plugin loaded, so prices cannot be read this session. The Console has the details.");
-        public static readonly LocString BlockNoRules = new("run.block.noRules", "Tick an item to sell under Your items on the Sell page, or turn on Undercut all my listings in Settings, Pricing.");
+        public static readonly LocString BlockNoRules = new("run.block.noRules", "Tick an item to sell under In your bags on the Sell page, or turn on Undercut all my listings in Settings, Pricing.");
         public static readonly LocString BlockNoRetainers = new("run.block.noRetainers", "No retainer is enabled. Open a summoning bell once so Auto Seller can read your retainers.");
         public static readonly LocString BlockAuthorization = new("run.block.authorization", "The run could not be authorized. The Console has the details.");
         public static readonly LocString BlockSellListNotOpen = new("run.block.sellListNotOpen", "Open a retainer's sell list first.");
         public static readonly LocString BlockRetainerNotEnabled = new("run.block.retainerNotEnabled", "This retainer is not enabled on the Sell page.");
         public static readonly LocString BlockSetup = new("run.block.setup", "Install vnavmesh from the Plugins page first; a run walks to the summoning bell with it.");
         public static readonly LocString BlockNothingNeeded = new("run.block.nothingNeeded", "No enabled retainer needs a visit: none has an undercut listing, a lot to list or a listing to return. Turn off Only retainers that need it on the Sell page to visit them all.");
-        public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room, or pick the bell runs use in Settings, General, and press Start again");
+        public static readonly LocString NeedsBellNotReached = new("run.needs.bellNotReached", "no summoning bell could be reached; stand at one or in your inn room, or pick the bell runs use in Settings, General, and press Run now again");
         public static readonly LocString NeedsWindowsStuck = new("run.needs.windowsStuck", "a retainer window did not open or close in time");
         public static readonly LocString NeedsUnexpectedWindow = new("run.needs.unexpectedWindow", "a window the plugin did not open is in the way");
         public static readonly LocString NeedsGilLimit = new("run.needs.gilLimit", "a retainer is close to its gil limit");
@@ -162,9 +224,9 @@ internal static partial class L
         public static readonly LocString FailedFault = new("run.failed.fault", "an unexpected error; the Console has the details");
         public static readonly LocString FailedOtherCharacter = new("run.failed.otherCharacter", "another character is logged in than the one the run started for");
         public static readonly LocString FailedMenuText = new("run.failed.menuText", "the retainer menu text could not be read from the game data");
-        public static readonly LocString FailedSettingsChanged = new("run.failed.settingsChanged", "the rules, the pricing settings, the plan edits or the limits per run changed after Start; start again to use them");
+        public static readonly LocString FailedSettingsChanged = new("run.failed.settingsChanged", "the rules, the pricing settings, the plan edits or the limits per run changed after the run started; start again to use them");
         public static readonly LocString FailedLeftHomeWorld = new("run.failed.leftHomeWorld", "the character left its home world");
-        public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after Start; start again for the new day");
+        public static readonly LocString FailedDayChanged = new("run.failed.dayChanged", "the game day changed after the run started; start again for the new day");
         public static readonly LocString FailedGuard = new("run.failed.guard", "a safety check refused the run's next step; the Console has the details");
         public static readonly LocString FailedJournal = new("run.failed.journal", "the journal could not be written, so nothing more is typed; the Console has the details");
         public static readonly LocPlural ChatStarted = new("run.chat.started", "Run started for {0} retainer: listings are repriced and lots listed within your floors and caps.", "Run started for {0} retainers: listings are repriced and lots listed within your floors and caps.");
@@ -175,7 +237,6 @@ internal static partial class L
 
     internal static class History
     {
-        public static readonly LocString Title = new("history.title", "History");
         public static readonly LocString Empty = new("history.empty", "Your finished runs will show up here.");
         public static readonly LocString NoRuns = new("history.noRuns", "No runs yet.");
         public static readonly LocString JustNow = new("history.time.justNow", "just now");
@@ -271,22 +332,23 @@ internal static partial class L
 
         public static readonly LocString[] Release1000 =
         [
-            new("changelog.r1000.1", "Sell page: one plan across all your retainers' listings that shows what is repriced, listed, returned or vendored, at what price and why, before anything is clicked"),
+            new("changelog.r1000.1", "Sell page: your listings on every retainer and everything you carry in one list, with one-click buttons on every row and the new price and why before anything is clicked"),
             new("changelog.r1000.2", "Rules: a sell list with a floor, ceiling, fixed price, lot size, keep count, listings to keep up and preferred retainer per item, category rules, a never-sell list, and vendor rules that stay off until you turn them on"),
             new("changelog.r1000.3", "Guarded pricing: Undercut or Match against same-quality listings only, never against your own retainers or your alts, with bait listings ignored, a floor from real sales and the vendor price, a step limit, a cooldown and price-war detection"),
-            new("changelog.r1000.4", "Sell and Undercut walk to a summoning bell, your inn room or a bell you pick, and visit only the retainers that need it, holding AutoRetainer back for the run"),
+            new("changelog.r1000.4", "Run now walks to a summoning bell, your inn room or a bell you pick and holds AutoRetainer back for the run"),
             new("changelog.r1000.5", "Every price is typed in the game's sell window, checked before Confirm and read back after, with a journal entry before each write; anything unclear stops the run and asks you"),
             new("changelog.r1000.6", "AutoRetainer: runs after each venture on the retainer it hands over and always hands it back, with a Sell now button, its protect list and your alts"),
             new("changelog.r1000.7", "Assist fills in the suggested price when you open a sell window yourself and leaves Confirm to you; buttons on the retainer list and the sell list start a run right there"),
             new("changelog.r1000.8", "Sources: your bags and crystals, and by choice a retainer's own inventory, the saddlebag and the armoury chest, never items in a gear set"),
-            new("changelog.r1000.9", "The undercut watch checks your listings against Universalis on a timer with no game request; the Listings page shows every listing of every character"),
+            new("changelog.r1000.9", "The undercut watch checks your listings against Universalis on a timer with no game request; the Sell page shows every listing of every character"),
             new("changelog.r1000.10", "Sales: a ledger built from sale notices, the retainers' sale histories and listings gone between visits, with daily totals, a 30-day chart, hints and a CSV export without names"),
             new("changelog.r1000.11", "Returns a listing that sat below its floor for three days and vendors junk through a retainer, each only when you turn it on"),
-            new("changelog.r1000.12", "Pause, resume and stop, auto-pause in duties, a History of every run, the Console, a humanizer and a GM alert"),
-            new("changelog.r1000.13", "Your items on the Sell page: everything you carry with its best price and what it could all sell for; tick Market board or NPC, set how many, the price and the retainer if you like, and press Sell"),
+            new("changelog.r1000.12", "Pause, resume and stop, auto-pause in duties, every run on the Sales page, the Console, a humanizer and a GM alert"),
+            new("changelog.r1000.13", "Items you carry show their best price and what they could all sell for; click Market board or NPC on one, and set how many, the price and the retainer if you like"),
             new("changelog.r1000.14", "Every listing your retainers have up is undercut out of the box, never below its floor; turn it off in Settings, Pricing"),
             new("changelog.r1000.15", "Pick the bell runs use in Settings, General: the nearest one, your inn room, or the one you stand at"),
             new("changelog.r1000.16", "Opening a retainer's sell list yourself reads its listings into the plan, no run needed"),
+            new("changelog.r1000.17", "Autopilot: Auto Seller goes to the bell on its own every hour, 2 hours or 4 hours while you are idle, or after each AutoRetainer venture, and stops when you move"),
         ];
     }
 
@@ -392,7 +454,9 @@ internal static partial class L
         public static readonly LocString PauseTypingHelp = new("settings.general.pauseTypingHelp", "While a text box of the game has focus, like the chat line, a run starts no new move until you close it. A move already under way carries on.");
         public static readonly LocString BellGroup = new("settings.bell.group", "Summoning bell");
         public static readonly LocString BellChoice = new("settings.bell.choice", "Bell for runs");
-        public static readonly LocString BellChoiceHelp = new("settings.bell.choiceHelp", "Where Start goes to work your retainers. If you already stand at a bell, that bell is used.");
+        public static readonly LocString BellChoiceHelp = new("settings.bell.choiceHelp", "Where a run goes to work your retainers. If you already stand at a bell, that bell is used.");
+        public static readonly LocString RetainersGroup = new("settings.retainers.group", "Retainers");
+        public static readonly LocString RetainersHelp = new("settings.retainers.help", "Runs and Autopilot visit the retainers that are on. A retainer that is off keeps its listings and is skipped.");
         public static readonly LocString BellNearest = new("settings.bell.nearest", "Nearest bell");
         public static readonly LocString BellNearestDetail = new("settings.bell.nearestDetail", "A bell within 50 m, otherwise the bell in your inn room");
         public static readonly LocString BellInn = new("settings.bell.inn", "My inn room");

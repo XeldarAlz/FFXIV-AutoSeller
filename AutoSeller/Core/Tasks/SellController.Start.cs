@@ -168,6 +168,7 @@ internal sealed partial class SellController
         var edits = input.Edits;
         var onlyNeeded = mode == RunMode.Standalone && (work != RunWork.All || OnlyRetainersThatNeedIt);
         ImmutableArray<ulong> retainerIds = mode != RunMode.Standalone ? [onlyRetainerId]
+            : work != RunWork.All ? SellPlanner.Build(input, CancellationToken.None).RetainersFor(work, OnlyRetainersThatNeedIt)
             : onlyNeeded ? SellPlanner.Build(input, CancellationToken.None).RetainersToVisit(true)
             : input.EnabledRetainerIds();
         if (onlyNeeded && retainerIds.IsEmpty)

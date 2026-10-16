@@ -74,15 +74,15 @@ internal static class Dropdown
 
     // A set bit in disabledMask greys out the option at that index and keeps it from being picked.
     public static bool Draw(string id, ReadOnlySpan<string> labels, ref int selected, float width,
-        float panelWidth = 0f, bool searchable = false, string? searchHint = null, uint disabledMask = 0)
-        => DrawCore(id, labels, default, ref selected, width, panelWidth, searchable, searchHint, disabledMask);
+        float panelWidth = 0f, bool searchable = false, string? searchHint = null, uint disabledMask = 0, bool opensUp = false)
+        => DrawCore(id, labels, default, ref selected, width, panelWidth, searchable, searchHint, disabledMask, opensUp);
 
     public static bool DrawDetailed(string id, ReadOnlySpan<string> labels, ReadOnlySpan<string> details,
         ref int selected, float width, float panelWidth = 0f)
-        => DrawCore(id, labels, details, ref selected, width, panelWidth, false, null, 0);
+        => DrawCore(id, labels, details, ref selected, width, panelWidth, false, null, 0, false);
 
     private static bool DrawCore(string id, ReadOnlySpan<string> labels, ReadOnlySpan<string> details,
-        ref int selected, float width, float panelWidth, bool searchable, string? searchHint, uint disabledMask)
+        ref int selected, float width, float panelWidth, bool searchable, string? searchHint, uint disabledMask, bool opensUp)
     {
         if (labels.Length == 0)
         {
@@ -108,7 +108,7 @@ internal static class Dropdown
             open = true;
         }
 
-        return open && DrawPanel(state, labels, details, ref selected, origin, size, panelWidth, searchable, searchHint, disabledMask);
+        return open && DrawPanel(state, labels, details, ref selected, origin, size, panelWidth, searchable, searchHint, disabledMask, opensUp);
     }
 
     private static State StateFor(string id)
@@ -182,7 +182,7 @@ internal static class Dropdown
 
     private static bool DrawPanel(State state, ReadOnlySpan<string> labels, ReadOnlySpan<string> details,
         ref int selected, Vector2 triggerOrigin, Vector2 triggerSize, float panelWidth, bool searchable, string? searchHint,
-        uint disabledMask)
+        uint disabledMask, bool opensUp)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var pad = PanelPad * scale;
@@ -197,7 +197,7 @@ internal static class Dropdown
         var reveal = Motion.Reveal(state.OpenedTick, RevealMs);
         var height = MathF.Max(1f, contentHeight * (PanelCollapsed + (1f - PanelCollapsed) * reveal));
 
-        ImGui.SetNextWindowPos(PanelPosition(triggerOrigin, triggerSize, width, contentHeight, height, scale));
+        ImGui.SetNextWindowPos(PanelPosition(triggerOrigin, triggerSize, width, contentHeight, height, scale, opensUp));
         ImGui.SetNextWindowSize(new Vector2(width, height));
 
         using var style = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero)
@@ -231,7 +231,7 @@ internal static class Dropdown
     }
 
     private static Vector2 PanelPosition(Vector2 triggerOrigin, Vector2 triggerSize, float width,
-        float contentHeight, float height, float scale)
+        float contentHeight, float height, float scale, bool opensUp)
     {
         var viewport = ImGui.GetMainViewport();
         var margin = ViewportMargin * scale;
@@ -244,7 +244,7 @@ internal static class Dropdown
         var below = triggerOrigin.Y + triggerSize.Y + gap;
         var overflowsBelow = below + contentHeight > viewport.WorkPos.Y + viewport.WorkSize.Y - margin;
         var fitsAbove = triggerOrigin.Y - gap - contentHeight > viewport.WorkPos.Y + margin;
-        return new Vector2(x, overflowsBelow && fitsAbove ? triggerOrigin.Y - gap - height : below);
+        return new Vector2(x, (opensUp || overflowsBelow) && fitsAbove ? triggerOrigin.Y - gap - height : below);
     }
 
     private static void PaintPanel(float scale)

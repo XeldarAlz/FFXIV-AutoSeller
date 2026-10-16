@@ -5,45 +5,14 @@ internal static partial class L
     internal static class Plan
     {
         public static readonly LocPlural Retainers = new("plan.retainers", "{0} retainer", "{0} retainers");
-        public static readonly LocString ListingsInUse = new("plan.listingsInUse", "{0} of {1} listings in use");
         public static readonly LocString PricesAge = new("plan.pricesAge", "Prices {0}");
         public static readonly LocString PricesNone = new("plan.pricesNone", "No prices yet");
         public static readonly LocString PricesFetching = new("plan.pricesFetching", "Fetching prices…");
-        public static readonly LocPlural WatchUndercut = new("plan.watchUndercut", "{0} undercut", "{0} undercut");
-        public static readonly LocString WatchHelp = new("plan.watchHelp", "The undercut watch checks your listings against Universalis every {0} minutes, with no game request.");
-        public static readonly LocString OnlyNeededHelp = new("plan.onlyNeededHelp", "Click to choose for the next run. On, the run visits only the retainers with an undercut listing, a lot to list or a listing to return. Settings, Assist and watch, hold the default.");
-        public static readonly LocString OnlyNeededCount = new("plan.onlyNeededCount", "{0} of {1}");
-        public static readonly LocString WatchOffHelp = new("plan.watchOffHelp", "The undercut watch is off, so listings are checked against Universalis only when the plan refreshes. Turn it on under Settings, Assist and watch.");
         public static readonly LocString RefreshHelp = new("plan.refreshHelp", "Read your bags again and fetch fresh Universalis prices for every item in the plan.");
         public static readonly LocString RefreshStarted = new("plan.refreshStarted", "Fetching fresh prices");
         public static readonly LocString RefreshCooling = new("plan.refreshCooling", "Refresh again in {0} s");
         public static readonly LocString RefreshNothing = new("plan.refreshNothing", "Nothing to price yet");
         public static readonly LocString RefreshNoWorld = new("plan.refreshNoWorld", "Prices are fetched for your home world once you are logged in");
-
-        public static readonly LocString StripListed = new("plan.strip.listed", "{0} of {1} listed");
-        public static readonly LocString StripVisited = new("plan.strip.visited", "Visited {0}");
-        public static readonly LocString StripNotVisited = new("plan.strip.notVisited", "Not visited yet");
-        public static readonly LocString StripNoMarket = new("plan.strip.noMarket", "No market");
-        public static readonly LocString StripGilNearCap = new("plan.strip.gilNearCap", "This retainer's gil is close to 999,999,999. Gil past the cap is lost, so no new listing goes to it.");
-        public static readonly LocString StripToggleHelp = new("plan.strip.toggleHelp", "Include this retainer in runs. A retainer left out keeps its listings and is not visited.");
-        public static readonly LocString StripLocked = new("plan.strip.locked", "Stop the run to change this.");
-
-        public static readonly LocString ColumnItem = new("plan.column.item", "Item");
-        public static readonly LocString ColumnSource = new("plan.column.source", "Source");
-        public static readonly LocString ColumnQuantity = new("plan.column.quantity", "Qty");
-        public static readonly LocString ColumnCurrent = new("plan.column.current", "Current");
-        public static readonly LocString ColumnSuggested = new("plan.column.suggested", "Suggested");
-        public static readonly LocString ColumnReference = new("plan.column.reference", "Reference");
-        public static readonly LocString ColumnAction = new("plan.column.action", "Action");
-        public static readonly LocString ColumnCurrentHelp = new("plan.column.currentHelp", "The listing's price at the last bell visit.");
-        public static readonly LocString ColumnSuggestedHelp = new("plan.column.suggestedHelp", "The price the run would set. Before the run it is an estimate from Universalis; the run compares prices at the board before it decides.");
-        public static readonly LocString ColumnReferenceHelp = new("plan.column.referenceHelp", "The average price of recent sales of this quality on your world, or on your data center when your world has none.");
-        public static readonly LocString GroupUnplaced = new("plan.group.unplaced", "Not placed");
-        public static readonly LocString GroupVendor = new("plan.group.vendor", "To the vendor, through a retainer");
-        public static readonly LocPlural GroupRows = new("plan.group.rows", "{0} row", "{0} rows");
-        public static readonly LocString GroupChanges = new("plan.group.changes", "{0} to change");
-        public static readonly LocString GroupNothing = new("plan.group.nothing", "Nothing to do here");
-        public static readonly LocString GroupNotVisited = new("plan.group.notVisited", "Open this retainer's sell list at a bell, or press Undercut, to read its listings");
 
         public static readonly LocString SourceBags = new("plan.source.bags", "Bags");
         public static readonly LocString SourceCrystals = new("plan.source.crystals", "Crystals");
@@ -73,7 +42,6 @@ internal static partial class L
         public static readonly LocString DoneUnknownReason = new("plan.done.unknownReason", "Not confirmed; answer the question on the Sell page");
         public static readonly LocString DoneCancelledReason = new("plan.done.cancelledReason", "Cancelled before Confirm; nothing was changed");
         public static readonly LocString DonePromptRefusedReason = new("plan.done.promptRefusedReason", "The retainer's gil limit question was answered No; nothing was changed");
-        public static readonly LocString DoneHelp = new("plan.done.help", "Decided by the run at the board.");
 
         public static readonly LocString ReasonAlreadyLowest = new("plan.reason.alreadyLowest", "Already lowest");
         public static readonly LocString ReasonUndercut = new("plan.reason.undercut", "Undercuts the lowest seller");
@@ -120,23 +88,10 @@ internal static partial class L
         public static readonly LocString RefusedVendorRules = new("plan.refused.vendorRules", "The vendoring rules no longer allow it");
         public static readonly LocString RefusedSettingsChanged = new("plan.refused.settingsChanged", "Settings changed during the run");
 
-        public static readonly LocString BadgeExcluded = new("plan.badge.excluded", "Left out");
-        public static readonly LocString BadgeMoved = new("plan.badge.moved", "Moved");
         public static readonly LocString BadgePriceSet = new("plan.badge.priceSet", "Your price");
         public static readonly LocString BadgeApproved = new("plan.badge.approved", "Approved");
         public static readonly LocString BadgeUndercut = new("plan.badge.undercut", "Undercut {0}");
 
-        public static readonly LocString MenuButton = new("plan.menu.button", "Edit this row");
-        public static readonly LocString MenuExclude = new("plan.menu.exclude", "Leave out of the run");
-        public static readonly LocString MenuInclude = new("plan.menu.include", "Put back in the run");
-        public static readonly LocString MenuMoveTo = new("plan.menu.moveTo", "Move to {0}");
-        public static readonly LocString MenuPlaceByValue = new("plan.menu.placeByValue", "Let the plan place it");
-        public static readonly LocString MenuSetPrice = new("plan.menu.setPrice", "Set a price");
-        public static readonly LocString MenuClearPrice = new("plan.menu.clearPrice", "Clear your price");
-        public static readonly LocString MenuWithdraw = new("plan.menu.withdraw", "Withdraw the approval");
-        public static readonly LocString MenuPriceHint = new("plan.menu.priceHint", "Price per unit");
-        public static readonly LocString MenuFloor = new("plan.menu.floor", "At least {0}");
-        public static readonly LocString MenuApply = new("plan.menu.apply", "Set");
         public static readonly LocString EditBelowFloor = new("plan.edit.belowFloor", "That is below this row's floor of {0}.");
         public static readonly LocString EditOutOfRange = new("plan.edit.outOfRange", "Enter a price from 1 to 999,999,999 gil.");
         public static readonly LocString EditLocked = new("plan.edit.locked", "Stop the run to edit the plan.");
@@ -146,40 +101,22 @@ internal static partial class L
 
         public static readonly LocString TipFloor = new("plan.tip.floor", "Floor: {0}");
         public static readonly LocString TipCompetitor = new("plan.tip.competitor", "Lowest other seller: {0}");
-        public static readonly LocString TipUndercut = new("plan.tip.undercut", "Universalis shows another seller at {0} ({1})");
         public static readonly LocString TipProposed = new("plan.tip.proposed", "Proposed: {0}");
         public static readonly LocString TipReference = new("plan.tip.reference", "Reference: {0} from {1}");
         public static readonly LocString TipSourceWorld = new("plan.tip.sourceWorld", "your world");
         public static readonly LocString TipSourceDataCenter = new("plan.tip.sourceDataCenter", "your data center");
         public static readonly LocString TipSourceHistory = new("plan.tip.sourceHistory", "the board's sale history");
-        public static readonly LocString TipEdit = new("plan.tip.edit", "Right-click to edit this row.");
-
-        public static readonly LocString TileChanges = new("plan.tile.changes", "Listings to change");
-        public static readonly LocString TileNew = new("plan.tile.new", "New listings");
-        public static readonly LocString TileValue = new("plan.tile.value", "Listed value");
-        public static readonly LocString TileVendor = new("plan.tile.vendor", "Vendor gil");
-        public static readonly LocString TileTime = new("plan.tile.time", "Run time");
-        public static readonly LocPlural TileApprovals = new("plan.tile.approvals", "{0} needs approval", "{0} need approval");
-        public static readonly LocPlural TileSearches = new("plan.tile.searches", "{0} search", "{0} searches");
-        public static readonly LocString TileValueHelp = new("plan.tile.valueHelp", "The value of every listing the run would put up or reprice, at its new price.");
-        public static readonly LocString TileVendorHelp = new("plan.tile.vendorHelp", "The gil the run would get by having your retainers sell junk to a vendor, up to the vendored value per run.");
-        public static readonly LocString TileTimeHelp = new("plan.tile.timeHelp", "Searches at the pacing floor, the window steps and the switches between retainers, without the walk to the bell.");
 
         public static readonly LocString EmptyLoggedOut = new("plan.empty.loggedOut", "Log in to see the plan.");
         public static readonly LocString EmptyNoRetainers = new("plan.empty.noRetainers", "Open a summoning bell once so Auto Seller can read your retainers.");
-        public static readonly LocString EmptyFirstVisit = new("plan.empty.firstVisit", "Open each retainer's sell list at a bell, or press Undercut, to read your listings.");
         public static readonly LocString EmptyPlanning = new("plan.empty.planning", "Planning…");
 
         public static readonly LocString RunRetainer = new("plan.run.retainer", "Retainer {0} of {1}");
         public static readonly LocString RunCompetitor = new("plan.run.competitor", "Lowest seller {0}");
         public static readonly LocString RunDeciding = new("plan.run.deciding", "Deciding…");
-        public static readonly LocString RunTileRetainers = new("plan.run.tileRetainers", "Retainers");
-        public static readonly LocString RunTileKept = new("plan.run.tileKept", "Kept or skipped");
-        public static readonly LocString RunTileElapsed = new("plan.run.tileElapsed", "Elapsed");
 
         public static readonly LocString FinishedTitle = new("plan.finished.title", "Last run");
         public static readonly LocString FinishedDismiss = new("plan.finished.dismiss", "Dismiss");
-        public static readonly LocString FinishedDismissHelp = new("plan.finished.dismissHelp", "Hide this card and the run's results in the table. History keeps every run.");
         public static readonly LocString NeedsTitle = new("plan.needs.title", "The run needs you");
         public static readonly LocString FailedTitle = new("plan.failed.title", "The run failed");
     }

@@ -25,6 +25,55 @@ public sealed class PriceDecisionTests
     }
 
     [Fact]
+    public void AFullSearchThatArrivedCheapestFirstIsUndercut()
+    {
+        var decision = PriceDecision.Decide(Existing(1_050, Capped(true)));
+
+        Assert.Equal(SellAction.RepriceDown, decision.Action);
+        Assert.Equal(PriceDecision.Undercut(1_000, new PricingSettings()), decision.Price);
+        Assert.Equal(1_000u, decision.Evidence.CompetitorPrice);
+    }
+
+    [Fact]
+    public void AFullSearchOutOfPriceOrderIsNotTrusted()
+    {
+        var decision = PriceDecision.Decide(Existing(1_050, Capped(false)));
+
+        Assert.Equal(SellAction.Keep, decision.Action);
+        Assert.Equal(DecisionReason.UnknownCompetition, decision.Reason);
+    }
+
+    [Fact]
+    public void AFullSearchWithoutTheSameQualityKeepsTheListing()
+    {
+        var decision = PriceDecision.Decide(Existing(1_050, Capped(true, isHq: true), Reference(900)));
+
+        Assert.Equal(SellAction.Keep, decision.Action);
+        Assert.Equal(DecisionReason.UnknownCompetition, decision.Reason);
+    }
+
+    private static CompetitorSnapshot Capped(bool cheapestFirst, bool isHq = false)
+    {
+        var listings = new CompetitorListing[CompetitorSnapshot.MaximumListings];
+        for (var index = 0; index < listings.Length; index++)
+        {
+            listings[index] = Competitor(1_000 + (uint)index, isHq);
+        }
+
+        return new CompetitorSnapshot
+        {
+            ItemId = ItemId,
+            WorldId = WorldId,
+            Generation = Generation,
+            CapturedAtUtc = Now,
+            ExpectedCount = listings.Length,
+            Listings = [.. listings],
+            History = [],
+            ArrivedCheapestFirst = cheapestFirst,
+        };
+    }
+
+    [Fact]
     public void ListingWithinTheRaiseGapOfTheNextSellerIsAlreadyLowest()
     {
         var decision = Decide(Existing(950, Snapshot(Competitors(1_000, 1_040)), FreshReference));

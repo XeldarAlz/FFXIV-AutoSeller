@@ -176,6 +176,26 @@ internal sealed class SellPlan
         return needed.ToImmutable();
     }
 
+    public ImmutableArray<ulong> RetainersFor(RunWork work, bool onlyThoseThatNeedIt)
+    {
+        var enabled = Input.EnabledRetainerIds();
+        var chosen = ImmutableArray.CreateBuilder<ulong>(enabled.Length);
+        for (var index = 0; index < enabled.Length; index++)
+        {
+            if (HasWorkFor(enabled[index], work, onlyThoseThatNeedIt))
+            {
+                chosen.Add(enabled[index]);
+            }
+        }
+
+        if (chosen.Count == 0 && !enabled.IsEmpty && (work & RunWork.Vendor) != 0 && HasVendoring())
+        {
+            chosen.Add(enabled[0]);
+        }
+
+        return chosen.ToImmutable();
+    }
+
     public bool TryGetRetainer(ulong retainerId, out PlanRetainerSummary retainer)
     {
         for (var index = 0; index < Retainers.Length; index++)
@@ -197,6 +217,32 @@ internal sealed class SellPlan
         {
             var row = Rows[index];
             if (row.Kind == RunRowKind.Vendor && !row.Has(PlanRowEdits.Excluded) && row.Decision.Action == SellAction.Vendor)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasWorkFor(ulong retainerId, RunWork work, bool onlyThoseThatNeedIt)
+    {
+        var reprices = (work & RunWork.Reprice) != 0;
+        var lists = (work & RunWork.List) != 0;
+        for (var index = 0; index < Rows.Length; index++)
+        {
+            var row = Rows[index];
+            if (row.RetainerId != retainerId || row.Has(PlanRowEdits.Excluded))
+            {
+                continue;
+            }
+
+            if (reprices && row.IsListing && (row.Decision.Action == SellAction.Return || (onlyThoseThatNeedIt ? row.IsUndercut : row.Searches)))
+            {
+                return true;
+            }
+
+            if (lists && row.Kind == RunRowKind.Lot && row.IsPlaced)
             {
                 return true;
             }

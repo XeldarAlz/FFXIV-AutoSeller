@@ -76,6 +76,7 @@ public sealed class Plugin : IDalamudPlugin
     internal SalesLedger Sales { get; }
     internal SaleHistoryReader SaleHistory { get; }
     internal UndercutWatchService UndercutWatch { get; }
+    internal AutopilotHost Autopilot { get; }
     internal AssistHost Assist { get; }
 
     private readonly DutyWatcher dutyWatcher;
@@ -154,6 +155,8 @@ public sealed class Plugin : IDalamudPlugin
             completed.Push(gmAlertWatcher.Dispose);
             sellListWatcher = new SellListWatcher(RetainerMarket, () => Controller.Running || Controller.Settling);
             completed.Push(sellListWatcher.Dispose);
+            Autopilot = new AutopilotHost(this);
+            completed.Push(Autopilot.Dispose);
 
             InitializeLocalization();
             Fonts.Initialize(PluginInterface.UiBuilder, PluginDirectory);
@@ -202,6 +205,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Autopilot.Dispose();
         Controller.Shutdown();
         sellNowButton.Dispose();
         Assist.Dispose();
@@ -236,6 +240,7 @@ public sealed class Plugin : IDalamudPlugin
 
         dutyWatcher.Dispose();
         gmAlertWatcher.Dispose();
+        sellListWatcher.Dispose();
         Marketbuddy.Dispose();
         AutoRetainer.Dispose();
 
@@ -257,7 +262,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void ToggleDependenciesUi() => appWindow.TogglePage(AppWindow.Page.Plugins);
 
-    public void ToggleHistoryUi() => appWindow.TogglePage(AppWindow.Page.History);
+    public void ToggleHistoryUi() => appWindow.ShowRuns();
 
     public void ToggleSalesUi() => appWindow.TogglePage(AppWindow.Page.Sales);
 

@@ -93,7 +93,7 @@ internal sealed class MarketLookTask : AutoCommon
 
     private static void WriteSnapshot(CompetitorSnapshot snapshot, in OwnSellers sellers, string name)
     {
-        RunLog.Info($"Look: {name} ({snapshot.ItemId}) on world {snapshot.WorldId}: generation {snapshot.Generation}, {snapshot.Listings.Length} listing(s), announced {snapshot.ExpectedCount}, complete {snapshot.IsComplete}, capped {snapshot.IsCapped}, {snapshot.History.Length} sale(s) of history, captured at {RunLog.Time(snapshot.CapturedAtUtc)}.");
+        RunLog.Info($"Look: {name} ({snapshot.ItemId}) on world {snapshot.WorldId}: generation {snapshot.Generation}, {snapshot.Listings.Length} listing(s), announced {snapshot.ExpectedCount}, complete {snapshot.IsComplete}, capped {snapshot.IsCapped}, cheapest first {snapshot.ArrivedCheapestFirst}, {snapshot.History.Length} sale(s) of history, captured at {RunLog.Time(snapshot.CapturedAtUtc)}.");
         var listings = snapshot.Listings;
         for (var index = 0; index < listings.Length; index++)
         {

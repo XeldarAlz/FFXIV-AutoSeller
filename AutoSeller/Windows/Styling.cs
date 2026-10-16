@@ -43,6 +43,9 @@ internal static class Styling
     public static readonly Vector4 TextDim       = new(0.612f, 0.592f, 0.682f, 1.00f);
     public static readonly Vector4 TextMuted     = new(0.447f, 0.427f, 0.522f, 1.00f);
 
+    private static readonly float InkLuminance = Luminance(InkOnGlow);
+    private static readonly float LightTextLuminance = Luminance(TextStrong);
+
     public static readonly Vector4 Hairline  = new(1f, 1f, 1f, 0.055f);
     public static readonly Vector4 Highlight = new(1f, 1f, 1f, 0.075f);
 
@@ -79,7 +82,13 @@ internal static class Styling
         => Vector4.Lerp(baseColor, accent, amount) with { W = baseColor.W };
 
     // Only the blush pink brand crosses 0.65; amber, mint and rose keep white text like the sibling plugins.
-    public static Vector4 ForegroundOn(Vector4 fill) => Luminance(fill) > 0.65f ? InkOnGlow : TextStrong;
+    public static Vector4 ForegroundOn(Vector4 fill)
+    {
+        var luminance = Luminance(fill);
+        return Contrast(luminance, InkLuminance) >= Contrast(luminance, LightTextLuminance) ? InkOnGlow : TextStrong;
+    }
+
+    private static float Contrast(float first, float second) => (MathF.Max(first, second) + 0.05f) / (MathF.Min(first, second) + 0.05f);
 
     // WCAG relative luminance of an sRGB color.
     private static float Luminance(Vector4 color) => 0.2126f * Linear(color.X) + 0.7152f * Linear(color.Y) + 0.0722f * Linear(color.Z);

@@ -26,9 +26,6 @@ internal sealed partial class RulesPage
         Retainer,
     }
 
-    private const float SellCardHeight = 100f;
-    private const float SellCardGap = 6f;
-    private const float SellHeaderHeight = 46f;
     private const float FieldGap = 8f;
     private const float QualityWidth = 124f;
     private const float MinimumFieldWidth = 64f;
@@ -51,7 +48,6 @@ internal sealed partial class RulesPage
         (L.Rules.PreferredRetainer, L.Rules.PreferredRetainerHelp),
     ];
 
-    private readonly ItemSearch sellSearch = new("##asell_rules_sell_search", CatalogItemFlags.Marketable);
     private readonly Dictionary<ItemRule, RuleBuffers> ruleBuffers = [];
     private readonly string[] qualityLabels = new string[3];
     private readonly Dictionary<uint, string> idCaptions = [];
@@ -61,7 +57,6 @@ internal sealed partial class RulesPage
     private CharacterData? retainerLabelsOwner;
     private int retainerLabelsRevision = -1;
     private LanguageInfo? retainerLabelsLanguage;
-    private ItemRule? removeRule;
 
     private sealed class RuleBuffers
     {
@@ -70,129 +65,6 @@ internal sealed partial class RulesPage
         public readonly GilField.Buffer FixedPrice = new();
         public readonly GilField.Buffer LotSize = new();
         public readonly GilField.Buffer KeepCount = new();
-    }
-
-    private void DrawSellList(Plugin plugin)
-    {
-        var configuration = plugin.Configuration;
-        var catalog = plugin.Items;
-        var picked = sellSearch.Draw(catalog, Loc.T(L.Rules.SellSearchHint), ImGui.GetContentRegionAvail().X);
-        if (picked != ItemSearch.NoPick)
-        {
-            AddSellRule(configuration, catalog.At(picked));
-        }
-
-        Styling.VSpace(SectionGap);
-        var sellList = configuration.SellList;
-        if (sellList.Count == 0)
-        {
-            EmptyState.Draw(Loc.T(L.Rules.SellEmpty));
-            return;
-        }
-
-        EnsureQualityLabels();
-        EnsureRetainerLabels(plugin.Characters.Current);
-        for (var index = 0; index < sellList.Count; index++)
-        {
-            DrawSellCard(configuration, catalog, sellList[index], index);
-        }
-
-        if (removeRule is not null)
-        {
-            sellList.Remove(removeRule);
-            ruleBuffers.Remove(removeRule);
-            removeRule = null;
-            configuration.RulesChanged();
-        }
-
-        Styling.VSpace(SectionGap);
-        SettingsGroup.Footnote(Loc.T(L.Rules.SellFootnote));
-    }
-
-    private void AddSellRule(Configuration configuration, CatalogItem item)
-    {
-        if (RuleListEdits.AddSellRule(configuration.SellList, item.Id, item.CanBeHighQuality, out _) == SellListAdd.Added)
-        {
-            configuration.RulesChanged();
-            ShowNotice(Loc.T(L.Rules.Added, item.Name), Styling.AccentMintSoft);
-            return;
-        }
-
-        ShowNotice(Loc.T(L.Rules.AlreadyOnList, item.Name), Styling.AccentAmberSoft);
-    }
-
-    private void DrawSellCard(Configuration configuration, ItemCatalog catalog, ItemRule rule, int index)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var width = ImGui.GetContentRegionAvail().X;
-        var size = new Vector2(width, SellCardHeight * scale);
-        if (!ImGui.IsRectVisible(size))
-        {
-            ImGui.Dummy(size);
-            Styling.VSpace(SellCardGap);
-            return;
-        }
-
-        var origin = ImGui.GetCursorScreenPos();
-        var end = origin + size;
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = Hit.HoveringRect(origin, end);
-        var fill = Styling.WithAlpha(hovered ? Styling.Surface2 : Styling.Surface1, hovered ? 0.7f : 0.45f);
-        Paint.Fill(drawList, origin, end, rule.Paused ? Styling.Tint(fill, Styling.TextMuted, 0.08f) : fill, 8f * scale);
-
-        ImGui.PushID(index);
-        var name = NameOf(catalog, rule.ItemId, out var iconId, out var canBeHq);
-        var headerHeight = SellHeaderHeight * scale;
-        var controlsWidth = DrawSellCardControls(configuration, rule, canBeHq, origin, width, headerHeight);
-        var caption = rule.Paused ? Loc.T(L.Rules.Paused) : IdCaption(rule.ItemId);
-        DrawItemIdentity(drawList, name, iconId, caption, origin, headerHeight, width - controlsWidth, rule.Qualities == QualityFilter.High);
-        DrawSellFields(configuration, rule, new Vector2(origin.X, origin.Y + headerHeight), width, size.Y - headerHeight);
-        ImGui.PopID();
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(size);
-        Styling.VSpace(SellCardGap);
-    }
-
-    private float DrawSellCardControls(Configuration configuration, ItemRule rule, bool canBeHq, Vector2 origin, float width, float height)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var gap = FieldGap * scale;
-        var buttonSize = ImGui.GetFrameHeight();
-        var midY = origin.Y + height * 0.5f;
-        var x = origin.X + width - RowPadX * scale - buttonSize;
-        ImGui.SetCursorScreenPos(new Vector2(x, midY - buttonSize * 0.5f));
-        if (IconButton.Draw(FontAwesomeIcon.Times, "##asell_rule_remove", buttonSize, Styling.AccentRose, Loc.T(L.Rules.RemoveSellRule)))
-        {
-            removeRule = rule;
-        }
-
-        var toggleSize = ToggleSwitch.Size();
-        x -= gap + toggleSize.X;
-        ImGui.SetCursorScreenPos(new Vector2(x, midY - toggleSize.Y * 0.5f));
-        var active = !rule.Paused;
-        if (ToggleSwitch.Draw("##asell_rule_active", ref active))
-        {
-            rule.Paused = !active;
-            configuration.RulesChanged();
-        }
-
-        if (Hit.HoveringRect(new Vector2(x, midY - toggleSize.Y * 0.5f), new Vector2(x + toggleSize.X, midY + toggleSize.Y * 0.5f)))
-        {
-            Tooltip.Show(Loc.T(L.Rules.ActiveHelp));
-        }
-
-        x -= gap + QualityWidth * scale;
-        ImGui.SetCursorScreenPos(new Vector2(x, midY - ImGui.GetFrameHeight() * 0.5f));
-        var selected = Array.IndexOf(qualityChoices, rule.Qualities);
-        var mask = canBeHq ? 0u : 1u << HighOnlyIndex;
-        if (Dropdown.Draw("##asell_rule_quality", qualityLabels, ref selected, QualityWidth, 0f, false, null, mask))
-        {
-            rule.Qualities = qualityChoices[selected];
-            configuration.RulesChanged();
-        }
-
-        return origin.X + width - x + gap;
     }
 
     private void DrawSellFields(Configuration configuration, ItemRule rule, Vector2 origin, float width, float height)

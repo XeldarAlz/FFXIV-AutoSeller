@@ -12,7 +12,6 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 {
     private readonly FaultResumeBudget faultBudget = new();
     private readonly PostprocessTally postprocessTally = new();
-    private bool? onlyRetainersThatNeedIt;
 
     public PauseReason PauseReason { get; private set; } = PauseReason.None;
 
@@ -26,7 +25,7 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
 
     public PlanInput? RunInput => session?.Input;
 
-    public bool OnlyRetainersThatNeedIt => onlyRetainersThatNeedIt ?? plugin.Configuration.OnlyRetainersThatNeedIt;
+    public bool OnlyRetainersThatNeedIt => plugin.Configuration.OnlyRetainersThatNeedIt;
 
     public bool PostprocessVendoringLeft => plugin.Market.Gates.Allows(MarketGate.ItemMenus) && postprocessTally.VendoringLeft(plugin.Configuration.BuildRunCaps());
 
@@ -80,12 +79,6 @@ internal sealed partial class SellController(Plugin plugin, RunHistory history)
         }
 
         Pause(PauseReason.Manual);
-    }
-
-    public void SetOnlyRetainersThatNeedIt(bool only)
-    {
-        onlyRetainersThatNeedIt = only == plugin.Configuration.OnlyRetainersThatNeedIt ? null : only;
-        RunLog.Info($"Run option: the next run visits {(only ? "only the retainers that need it" : "every enabled retainer")}.");
     }
 
     public void EndPostprocessVisit(string reason)

@@ -1,18 +1,9 @@
 using AutoSeller.Core.External;
 using AutoSeller.Core.Localization;
+using AutoSeller.Core.Tasks.Model;
 using ECommons.DalamudServices;
 
 namespace AutoSeller.Core.Tasks;
-
-internal enum Readiness : byte
-{
-    Ready,
-    SetupNeeded,
-    LoggedOut,
-    NoRules,
-    JournalBlocks,
-    AutoRetainerBusy,
-}
 
 internal static class RunReadiness
 {

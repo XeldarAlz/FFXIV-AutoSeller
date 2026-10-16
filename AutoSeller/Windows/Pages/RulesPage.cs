@@ -13,35 +13,31 @@ internal sealed partial class RulesPage
 {
     private enum Tab : byte
     {
-        SellList,
+        Items,
         Categories,
-        NeverSell,
-        Vendor,
         Blocked,
     }
 
-    private readonly record struct TabEntry(FontAwesomeIcon Icon, LocString Label);
-
     private const float ToolbarGap = 8f;
     private const float SectionGap = 12f;
+    private const float BodyPadding = 16f;
     private const float ItemRowHeight = 44f;
     private const float ItemRowGap = 4f;
-    private const float ItemIconSize = 28f;
-    private const float RowPadX = 10f;
+    private const float ItemIconSize = 30f;
+    private const float RowPadX = 14f;
+    private const float ToolbarButtonSize = 36f;
+    private const float FooterNoticeShare = 0.45f;
+    private const string ItemsTabId = "##asell_rules_tab_items";
+    private const string CategoriesTabId = "##asell_rules_tab_categories";
+    private const string BlockedTabId = "##asell_rules_tab_blocked";
+    private const string BodyId = "##asell_rules_body";
+    private const string ImportId = "##asell_rules_import";
+    private const string ExportId = "##asell_rules_export";
+    private const string AddCategoryId = "##asell_rules_add_category";
 
-    private static readonly TabEntry[] tabEntries =
-    [
-        new(FontAwesomeIcon.Tags, L.Rules.TabSellList),
-        new(FontAwesomeIcon.LayerGroup, L.Rules.TabCategories),
-        new(FontAwesomeIcon.Ban, L.Rules.TabNeverSell),
-        new(FontAwesomeIcon.Coins, L.Rules.TabVendor),
-        new(FontAwesomeIcon.Lock, L.Rules.TabBlocked),
-    ];
-
-    private readonly Segmented.Item[] tabItems = new Segmented.Item[tabEntries.Length];
     private readonly Dictionary<uint, string> fallbackNames = [];
-    private LanguageInfo? tabItemsLanguage;
-    private int activeTab;
+    private LanguageInfo? fallbackLanguage;
+    private Tab tab;
     private bool blockedShown;
     private int lastDrawnFrame = -2;
     private TransientNotice notice;
@@ -49,103 +45,154 @@ internal sealed partial class RulesPage
     public void Draw(Plugin plugin)
     {
         plugin.Items.EnsureLoading();
-        PageHeader.Draw(Loc.T(L.Rules.Title), Loc.T(L.Rules.Subtitle));
-        DrawToolbar(plugin);
-        notice.DrawLine(ImGui.GetContentRegionAvail().X);
-        DrawImportConfirm(plugin.Configuration);
-        Styling.VSpace(SectionGap);
+        if (!ReferenceEquals(fallbackLanguage, Loc.Current))
+        {
+            fallbackLanguage = Loc.Current;
+            fallbackNames.Clear();
+        }
 
-        using var reveal = Motion.PushSwitch("##asell_rules_tab", activeTab);
-        var tab = (Tab)activeTab;
         var frame = ImGui.GetFrameCount();
         var reopened = frame - lastDrawnFrame > 1;
         lastDrawnFrame = frame;
         TrackBlockedTab(plugin, tab == Tab.Blocked, reopened);
+        RefreshItems(plugin);
+        var configuration = plugin.Configuration;
+        var board = Board.Begin();
+        DrawHeader(plugin, board.Header());
+        if (pendingImport is not null)
+        {
+            DrawImportConfirm(configuration, board.Band(Board.NoticeHeight));
+        }
+
         switch (tab)
         {
-            case Tab.SellList:
-                DrawSellList(plugin);
+            case Tab.Items:
+                DrawItemColumns(board.Band(Board.ColumnsHeight));
+                DrawFooter(board.Footer(), Loc.T(L.Rules.SellFootnote));
+                using (var body = board.Body(BodyId))
+                {
+                    if (body)
+                    {
+                        DrawItems(plugin);
+                    }
+                }
+
                 break;
             case Tab.Categories:
-                DrawCategories(plugin);
+                DrawFooter(board.Footer(), Loc.T(L.Rules.CategoriesFootnote));
+                using (var body = board.Body(BodyId, BodyPadding))
+                {
+                    if (body)
+                    {
+                        DrawCategories(plugin);
+                        Styling.VSpace(SectionGap);
+                        DrawVendor(plugin);
+                    }
+                }
+
                 break;
-            case Tab.NeverSell:
-                DrawNeverSell(plugin);
-                break;
-            case Tab.Vendor:
-                DrawVendor(plugin);
-                break;
-            case Tab.Blocked:
-                DrawBlocked(plugin);
+            default:
+                DrawBlockedIntro(plugin.BlockedScanner, board.Band(Board.NoticeHeight));
+                DrawFooter(board.Footer(), Loc.T(L.Rules.SellFootnote));
+                using (var body = board.Body(BodyId, BodyPadding))
+                {
+                    if (body)
+                    {
+                        DrawBlocked(plugin);
+                    }
+                }
+
                 break;
         }
+
+        board.End();
     }
 
-    private void DrawToolbar(Plugin plugin)
+    private void DrawHeader(Plugin plugin, in BoardBand header)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var top = Board.TabTop(header);
+        var x = Board.TabsLeft(header);
+        x = DrawTab(ItemsTabId, ItemsTab(), Tab.Items, x, top);
+        x = DrawTab(CategoriesTabId, CategoriesTab(), Tab.Categories, x, top);
+        x = DrawTab(BlockedTabId, BlockedTab(plugin), Tab.Blocked, x, top);
+
+        var size = ToolbarButtonSize * scale;
         var gap = ToolbarGap * scale;
-        var importLabel = Loc.T(L.Rules.Import);
-        var exportLabel = Loc.T(L.Rules.Export);
-        var importWidth = PillButton.Width(importLabel, FontAwesomeIcon.FileImport);
-        var exportWidth = PillButton.Width(exportLabel, FontAwesomeIcon.FileExport);
-        var tabsWidth = MathF.Max(1f, width - importWidth - exportWidth - gap * 3f);
-        var tabHeight = Layout.ActionPillHeight;
-
-        EnsureTabItems();
-        ImGui.SetCursorScreenPos(origin);
-        Segmented.Draw("##asell_rules_tabs", tabItems, ref activeTab, true, tabHeight, MathF.Min(tabsWidth, Segmented.PreferredWidth(tabItems)));
-
-        var x = origin.X + width - exportWidth;
-        ImGui.SetCursorScreenPos(new Vector2(x, origin.Y));
-        if (PillButton.Draw("##asell_rules_export", exportLabel, Styling.TextSecondary, PillButton.Emphasis.Ghost, FontAwesomeIcon.FileExport,
-                height: tabHeight, tooltip: Loc.T(L.Rules.ExportHelp)))
+        var buttonX = header.Right - size;
+        ImGui.SetCursorScreenPos(new Vector2(buttonX, header.MidY - size * 0.5f));
+        if (IconButton.Draw(FontAwesomeIcon.FileExport, ExportId, size, Styling.TextSecondary, Loc.T(L.Rules.ExportHelp)))
         {
             Export(plugin.Configuration);
         }
 
-        x -= gap + importWidth;
-        ImGui.SetCursorScreenPos(new Vector2(x, origin.Y));
-        if (PillButton.Draw("##asell_rules_import", importLabel, Styling.AccentGlow, PillButton.Emphasis.Tinted, FontAwesomeIcon.FileImport,
-                height: tabHeight, tooltip: Loc.T(L.Rules.ImportHelp)))
+        buttonX -= gap + size;
+        ImGui.SetCursorScreenPos(new Vector2(buttonX, header.MidY - size * 0.5f));
+        if (IconButton.Draw(FontAwesomeIcon.FileImport, ImportId, size, Styling.TextSecondary, Loc.T(L.Rules.ImportHelp)))
         {
             ReadImport();
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, tabHeight * scale));
-    }
-
-    private void EnsureTabItems()
-    {
-        if (ReferenceEquals(tabItemsLanguage, Loc.Current))
+        if (tab != Tab.Categories)
         {
             return;
         }
 
-        tabItemsLanguage = Loc.Current;
-        fallbackNames.Clear();
-        for (var index = 0; index < tabEntries.Length; index++)
+        var label = Loc.T(L.Rules.AddCategoryRule);
+        var addWidth = PillButton.Width(label, FontAwesomeIcon.Plus);
+        var addX = buttonX - gap * 2f - addWidth;
+        if (addX < x)
         {
-            tabItems[index] = new Segmented.Item(tabEntries[index].Icon, Loc.T(tabEntries[index].Label));
+            return;
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(addX, header.MidY - Layout.ActionPillHeight * scale * 0.5f));
+        if (PillButton.Draw(AddCategoryId, label, Styling.AccentGlow, PillButton.Emphasis.Tinted, FontAwesomeIcon.Plus, true, Layout.ActionPillHeight))
+        {
+            Core.Rules.Model.RuleListEdits.AddCategoryRule(plugin.Configuration.CategoryRules);
+            plugin.Configuration.RulesChanged();
+        }
+    }
+
+    private float DrawTab(string id, in BoardTab boardTab, Tab target, float x, float top)
+    {
+        var width = Board.TabWidth(boardTab);
+        if (Board.Tab(id, boardTab, tab == target, new Vector2(x, top), width))
+        {
+            tab = target;
+        }
+
+        return x + width + Board.TabGap * ImGuiHelpers.GlobalScale;
+    }
+
+    private void DrawFooter(in BoardBand footer, string footnote)
+    {
+        using (Fonts.PushCaption())
+        {
+            var width = footer.Right - footer.Left;
+            var noticeWidth = notice.DrawRight(footer.Right, footer.MidY, width * FooterNoticeShare);
+            var text = TextDraw.Truncate(footnote, MathF.Max(0f, width - noticeWidth - ToolbarGap * ImGuiHelpers.GlobalScale));
+            TextDraw.At(text, new Vector2(footer.Left, footer.MidY - ImGui.GetTextLineHeight() * 0.5f), Styling.TextDim);
+            if (!ReferenceEquals(text, footnote) && Hit.HoveringRect(footer.Min, footer.Max))
+            {
+                Tooltip.Show(footnote);
+            }
         }
     }
 
     private void ShowNotice(string text, Vector4 color) => notice.Show(text, color);
 
-    private string NameOf(ItemCatalog catalog, uint itemId, out uint iconId, out bool canBeHq)
+    private string NameOf(ItemCatalog catalog, uint itemId, out uint iconId, out CatalogItemFlags flags)
     {
         if (catalog.TryGet(itemId, out var item))
         {
             iconId = item.IconId;
-            canBeHq = item.CanBeHighQuality;
+            flags = item.Flags;
             return item.Name;
         }
 
         iconId = 0;
-        canBeHq = false;
+        flags = CatalogItemFlags.None;
         if (!fallbackNames.TryGetValue(itemId, out var name))
         {
             name = Loc.T(L.Rules.ItemFallback, itemId.ToString(CultureInfo.InvariantCulture));
@@ -155,14 +202,14 @@ internal sealed partial class RulesPage
         return name;
     }
 
-    private static void DrawItemIdentity(ImDrawListPtr drawList, string name, uint iconId, string? caption, Vector2 origin, float height, float maxWidth, bool highQuality = false)
+    private static void DrawItemIdentity(ImDrawListPtr drawList, string name, uint iconId, string? caption, Vector2 origin, float height, float maxWidth, bool highQuality = false, Vector4? captionColor = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var iconSize = ItemIconSize * scale;
         var padX = RowPadX * scale;
         var midY = origin.Y + height * 0.5f;
         ItemIcon.Draw(drawList, iconId, new Vector2(origin.X + padX, midY - iconSize * 0.5f), iconSize, highQuality);
-        var textX = origin.X + padX * 2f + iconSize;
+        var textX = origin.X + padX + iconSize + padX * 0.85f;
         var textWidth = MathF.Max(1f, maxWidth - (textX - origin.X));
         var nameHeight = ImGui.GetTextLineHeight();
         if (caption is null)
@@ -176,7 +223,7 @@ internal sealed partial class RulesPage
         TextDraw.At(TextDraw.Truncate(name, textWidth), new Vector2(textX, top), Styling.TextStrong);
         using (Fonts.PushCaption())
         {
-            TextDraw.At(TextDraw.Truncate(caption, textWidth), new Vector2(textX, top + nameHeight), Styling.TextMuted);
+            TextDraw.At(TextDraw.Truncate(caption, textWidth), new Vector2(textX, top + nameHeight), captionColor ?? Styling.TextMuted);
         }
     }
 }

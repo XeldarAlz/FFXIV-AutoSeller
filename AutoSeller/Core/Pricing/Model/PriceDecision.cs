@@ -16,6 +16,11 @@ internal static class PriceDecision
         {
             Span<CompetitorListing> buffer = stackalloc CompetitorListing[competition.Listings.Length];
             var sane = BaitFilter.Filter(competition.Listings.AsSpan(), input.Item, input.OwnSellers, reference, settings.BaitRatioPercent, buffer);
+            if (competition.IsCapped && sane.IsEmpty)
+            {
+                return Keep(input.CurrentListing?.UnitPrice ?? 0, 0, DecisionReason.UnknownCompetition, EvidenceFor(competition, sane, reference, floor));
+            }
+
             return DecideAgainst(input, sane, reference, floor);
         }
 
@@ -30,8 +35,7 @@ internal static class PriceDecision
     public static bool IsCurrent(CompetitorSnapshot competition, ItemKey item, DateTime nowUtc)
     {
         return competition.ItemId == item.ItemId
-            && competition.IsComplete
-            && !competition.IsCapped
+            && competition.ShowsTheCheapest
             && SearchReuse.IsFreshForReuse(competition.CapturedAtUtc, nowUtc);
     }
 

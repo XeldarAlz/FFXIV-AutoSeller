@@ -1,19 +1,39 @@
 using System.Collections.Immutable;
-using System.Globalization;
 using AutoSeller.Core.Listings;
 using AutoSeller.Core.Listings.Model;
 using AutoSeller.Core.Localization;
 using AutoSeller.Windows.Components;
-using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using System.Numerics;
 
-namespace AutoSeller.Windows.Pages;
+namespace AutoSeller.Windows.Sections;
 
-internal sealed partial class ListingsPage
+internal sealed partial class AllListings
 {
+    public void DrawColumns(in BoardBand band)
+    {
+        var height = band.Max.Y - band.Min.Y;
+        columns = ColumnsFor(band.Min.X, band.Max.X - band.Min.X - ImGui.GetStyle().ScrollbarSize);
+        var scale = ImGuiHelpers.GlobalScale;
+        ColumnHeader.Draw(L.Listings.ColumnItem, columns.Icon, band.Min.Y, columns.NameRight - columns.Icon, height, false, null);
+        ColumnHeader.Draw(L.Listings.ColumnQuantity, columns.QuantityRight, band.Min.Y, QuantityWidth * scale, height, true, null);
+        ColumnHeader.Draw(L.Listings.ColumnPrice, columns.PriceRight, band.Min.Y, PriceWidth * scale, height, true, null);
+        if (columns.ShowCompetitor)
+        {
+            ColumnHeader.Draw(L.Listings.ColumnCompetitor, columns.CompetitorRight, band.Min.Y, PriceWidth * scale, height, true, L.Listings.CompetitorHelp);
+        }
+
+        ColumnHeader.Draw(L.Listings.ColumnValue, columns.ValueRight, band.Min.Y, PriceWidth * scale, height, true, null);
+        if (columns.ShowRepriced)
+        {
+            ColumnHeader.Draw(L.Listings.ColumnLastReprice, columns.RepricedRight, band.Min.Y, RepricedWidth * scale, height, true, L.Listings.LastRepriceHelp);
+        }
+
+        ColumnHeader.Draw(L.Listings.ColumnListed, columns.ListedRight, band.Min.Y, ListedWidth * scale, height, true, L.Listings.ListedHelp);
+        ColumnHeader.Draw(L.Listings.ColumnState, columns.State, band.Min.Y, StateWidth * scale, height, false, null);
+    }
+
     private void RefreshView(ListingsView view)
     {
         var next = new ViewKey(view.Revision, Loc.Current, Environment.TickCount64 / TextRefreshMs);
@@ -26,7 +46,7 @@ internal sealed partial class ListingsPage
         viewKey = next;
         var table = view.Table;
         var rows = table.Rows;
-        subtitle = rows.Length == 0 ? Loc.T(L.Listings.Subtitle) : string.Concat(Loc.T(L.Listings.Subtitle), TextDraw.Separator, Loc.Plural(L.Listings.Summary, rows.Length));
+        summary = rows.Length == 0 ? Loc.T(L.Listings.Subtitle) : string.Concat(Loc.Plural(L.Listings.Summary, rows.Length), TextDraw.Separator, Loc.T(L.Listings.Subtitle));
         if (texts.Length != rows.Length)
         {
             texts = new RowText[rows.Length];
@@ -44,74 +64,22 @@ internal sealed partial class ListingsPage
             return;
         }
 
-        sortItems[0] = new Segmented.Item(FontAwesomeIcon.Coins, Loc.T(L.Listings.SortValue));
-        sortItems[1] = new Segmented.Item(FontAwesomeIcon.Clock, Loc.T(L.Listings.SortAge));
         BuildCharacterChoices(table);
-        BuildRetainerChoices(table);
-        BuildChips(table);
         queryKey = default;
     }
 
     private void BuildCharacterChoices(ListingTable table)
     {
-        var selected = characterChoice > 0 && characterChoice < characterIds.Length ? characterIds[characterChoice] : ListingFilter.Everyone;
         var characters = table.Characters;
         characterLabels = new string[characters.Length + 1];
         characterIds = new ulong[characters.Length + 1];
         characterLabels[0] = Loc.T(L.Listings.AllCharacters);
-        characterChoice = 0;
+        characterIds[0] = ListingFilter.Everyone;
         for (var index = 0; index < characters.Length; index++)
         {
             var name = characters[index].Name;
             characterLabels[index + 1] = name.Length > 0 ? name : Loc.T(L.Listings.Unnamed);
             characterIds[index + 1] = characters[index].ContentId;
-            if (characters[index].ContentId == selected)
-            {
-                characterChoice = index + 1;
-            }
-        }
-    }
-
-    private void BuildRetainerChoices(ListingTable table)
-    {
-        var selected = retainerChoice > 0 && retainerChoice < retainerIds.Length ? retainerIds[retainerChoice] : ListingFilter.Everyone;
-        var character = characterChoice > 0 && characterChoice < characterIds.Length ? characterIds[characterChoice] : ListingFilter.Everyone;
-        var retainers = table.Retainers;
-        var labels = new List<string>(retainers.Length + 1) { Loc.T(L.Listings.AllRetainers) };
-        var ids = new List<ulong>(retainers.Length + 1) { ListingFilter.Everyone };
-        retainerChoice = 0;
-        for (var index = 0; index < retainers.Length; index++)
-        {
-            var retainer = retainers[index];
-            if (character != ListingFilter.Everyone && retainer.ContentId != character)
-            {
-                continue;
-            }
-
-            if (retainer.RetainerId == selected)
-            {
-                retainerChoice = labels.Count;
-            }
-
-            labels.Add(retainer.Name);
-            ids.Add(retainer.RetainerId);
-        }
-
-        retainerLabels = [.. labels];
-        retainerIds = [.. ids];
-    }
-
-    private void BuildChips(ListingTable table)
-    {
-        var rows = table.Rows.AsSpan();
-        chipLabels = new string[states.Length + 1];
-        chipCounts = new string[states.Length + 1];
-        chipLabels[0] = Loc.T(L.Listings.StateAll);
-        chipCounts[0] = PlanLabels.Count(rows.Length);
-        for (var index = 0; index < states.Length; index++)
-        {
-            chipLabels[index + 1] = StateLabel(states[index]);
-            chipCounts[index + 1] = PlanLabels.Count(ListingQuery.CountIn(rows, states[index]));
         }
     }
 
@@ -123,8 +91,8 @@ internal sealed partial class ListingsPage
         var characterName = character.Name.Length > 0 ? character.Name : Loc.T(L.Listings.Unnamed);
         var text = new RowText
         {
-            Id = string.Concat(RowIdPrefix, index.ToString(CultureInfo.InvariantCulture)),
-            Name = name.Length > 0 ? name : Loc.T(L.Rules.ItemFallback, row.Item.ItemId.ToString(CultureInfo.InvariantCulture)),
+            Id = RowId(index),
+            Name = name.Length > 0 ? name : Loc.T(L.Rules.ItemFallback, row.Item.ItemId.ToString(System.Globalization.CultureInfo.InvariantCulture)),
             Caption = string.Concat(characterName, TextDraw.Separator, table.RetainerName(row.RetainerId)),
             Quantity = PlanLabels.Count(row.Quantity),
             Price = PlanLabels.Gil(row.UnitPrice),
@@ -157,19 +125,15 @@ internal sealed partial class ListingsPage
 
     private void RefreshQuery(ListingsView view)
     {
-        var next = new QueryKey(view.Revision, characterChoice, retainerChoice, stateChoice, sortChoice, search);
+        var next = new QueryKey(view.Revision, characterChoice, search);
         if (next == queryKey)
         {
             return;
         }
 
         queryKey = next;
-        var filter = new ListingFilter(
-            characterChoice > 0 && characterChoice < characterIds.Length ? characterIds[characterChoice] : ListingFilter.Everyone,
-            retainerChoice > 0 && retainerChoice < retainerIds.Length ? retainerIds[retainerChoice] : ListingFilter.Everyone,
-            stateChoice > 0 ? states[stateChoice - 1] : null,
-            search.Trim(),
-            sortChoice == 1 ? ListingSort.Age : ListingSort.Value);
+        var character = characterChoice < characterIds.Length ? characterIds[characterChoice] : ListingFilter.Everyone;
+        var filter = new ListingFilter(character, ListingFilter.Everyone, null, search.Trim(), ListingSort.Value);
         shown = ListingQuery.Apply(view.Table.Rows, view.ItemNames, filter, order);
     }
 
@@ -177,35 +141,37 @@ internal sealed partial class ListingsPage
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
-        var columns = ColumnsFor(ImGui.GetCursorScreenPos().X, width);
-        DrawColumnHeader(columns);
         var top = ImGui.GetCursorScreenPos();
-        var stride = (RowHeight + RowGap) * scale;
+        var stride = RowHeight * scale;
         var windowTop = ImGui.GetWindowPos().Y;
         var first = Math.Clamp((int)MathF.Floor((windowTop - top.Y) / stride), 0, shown);
         var last = Math.Clamp((int)MathF.Ceiling((windowTop + ImGui.GetWindowHeight() - top.Y) / stride), first, shown);
         for (var position = first; position < last; position++)
         {
             var index = order[position];
-            DrawRow(rows[index], texts[index], new Vector2(columns.Left, top.Y + position * stride), columns);
+            DrawRow(rows[index], texts[index], new Vector2(top.X, top.Y + position * stride), top.X + width, columns);
         }
 
         ImGui.SetCursorScreenPos(top);
-        ImGui.Dummy(new Vector2(width, MathF.Max(0f, shown * stride - RowGap * scale)));
+        ImGui.Dummy(new Vector2(width, shown * stride));
     }
 
-    private static void DrawRow(in ListingRow row, RowText text, Vector2 min, in Columns columns)
+    private static void DrawRow(in ListingRow row, RowText text, Vector2 min, float right, in Columns columns)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var max = new Vector2(columns.Right, min.Y + RowHeight * scale);
+        var max = new Vector2(right, min.Y + RowHeight * scale);
         var drawList = ImGui.GetWindowDrawList();
         var hovered = Hit.HoveringRect(min, max);
         var hover = Motion.Hover(Motion.Key(text.Id), hovered);
-        Paint.Fill(drawList, min, max, Vector4.Lerp(Styling.WithAlpha(Styling.Surface1, 0.45f), Styling.WithAlpha(Styling.Surface2, 0.75f), hover), 8f * scale);
+        if (hover > 0.01f)
+        {
+            Paint.Fill(drawList, min, max, Styling.WithAlpha(Styling.Surface2, HoverTint * hover), 0f);
+        }
+
+        drawList.AddLine(new Vector2(min.X, max.Y - 0.5f), new Vector2(max.X, max.Y - 0.5f), Paint.Col(Styling.WithAlpha(Styling.BorderDim, LineAlpha)));
         var midY = (min.Y + max.Y) * 0.5f;
         var iconSize = IconSize * scale;
         ItemIcon.Draw(drawList, text.IconId, new Vector2(columns.Icon, midY - iconSize * 0.5f), iconSize, text.HighQuality);
-
         NameCell.Draw(drawList, text.Name, ref text.NameFit, text.Caption, ref text.CaptionFit, text.HighQuality, columns.Name, columns.NameRight, midY);
         var lineY = midY - ImGui.GetTextLineHeight() * 0.5f;
         TextDraw.Right(text.Quantity, columns.QuantityRight, lineY, Styling.TextSecondary);
@@ -231,31 +197,6 @@ internal sealed partial class ListingsPage
         {
             Tooltip.Show(text.Tooltip);
         }
-    }
-
-    private static void DrawColumnHeader(in Columns columns)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var height = ColumnHeaderHeight * scale;
-        ColumnHeader.Draw(L.Listings.ColumnItem, columns.Icon, origin.Y, columns.NameRight - columns.Icon, height, false, null);
-        ColumnHeader.Draw(L.Listings.ColumnQuantity, columns.QuantityRight, origin.Y, QuantityWidth * scale, height, true, null);
-        ColumnHeader.Draw(L.Listings.ColumnPrice, columns.PriceRight, origin.Y, PriceWidth * scale, height, true, null);
-        if (columns.ShowCompetitor)
-        {
-            ColumnHeader.Draw(L.Listings.ColumnCompetitor, columns.CompetitorRight, origin.Y, PriceWidth * scale, height, true, L.Listings.CompetitorHelp);
-        }
-
-        ColumnHeader.Draw(L.Listings.ColumnValue, columns.ValueRight, origin.Y, PriceWidth * scale, height, true, null);
-        if (columns.ShowRepriced)
-        {
-            ColumnHeader.Draw(L.Listings.ColumnLastReprice, columns.RepricedRight, origin.Y, RepricedWidth * scale, height, true, L.Listings.LastRepriceHelp);
-        }
-
-        ColumnHeader.Draw(L.Listings.ColumnListed, columns.ListedRight, origin.Y, ListedWidth * scale, height, true, L.Listings.ListedHelp);
-        ColumnHeader.Draw(L.Listings.ColumnState, columns.State, origin.Y, StateWidth * scale, height, false, null);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(columns.Right - columns.Left, height));
     }
 
     private static Columns ColumnsFor(float left, float width)

@@ -4,16 +4,10 @@ internal static partial class L
 {
     internal static class Listings
     {
-        public static readonly LocString Title = new("listings.title", "Listings");
         public static readonly LocString Subtitle = new("listings.subtitle", "Every listing of every character, from each retainer's last visit.");
         public static readonly LocPlural Summary = new("listings.summary", "{0} listing", "{0} listings");
-        public static readonly LocString SearchHint = new("listings.searchHint", "Search items");
         public static readonly LocString AllCharacters = new("listings.allCharacters", "All characters");
-        public static readonly LocString AllRetainers = new("listings.allRetainers", "All retainers");
         public static readonly LocString Unnamed = new("listings.unnamed", "Unnamed character");
-        public static readonly LocString SortValue = new("listings.sortValue", "Value");
-        public static readonly LocString SortAge = new("listings.sortAge", "Age");
-        public static readonly LocString StateAll = new("listings.stateAll", "All");
         public static readonly LocString StateLowest = new("listings.state.lowest", "Lowest");
         public static readonly LocString StateUndercut = new("listings.state.undercut", "Undercut");
         public static readonly LocString StateBelowFloor = new("listings.state.belowFloor", "Below floor");

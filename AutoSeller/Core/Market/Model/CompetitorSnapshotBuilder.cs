@@ -61,7 +61,21 @@ internal static class CompetitorSnapshotBuilder
             ExpectedCount = capture.AnnouncedCount,
             Listings = ImmutableCollectionsMarshal.AsImmutableArray(listings),
             History = ListableSales(capture.History),
+            ArrivedCheapestFirst = IsCheapestFirst(capture.Listings),
         };
+        return true;
+    }
+
+    private static bool IsCheapestFirst(ReadOnlySpan<ObservedListing> listings)
+    {
+        for (var index = 1; index < listings.Length; index++)
+        {
+            if (listings[index].UnitPrice < listings[index - 1].UnitPrice)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

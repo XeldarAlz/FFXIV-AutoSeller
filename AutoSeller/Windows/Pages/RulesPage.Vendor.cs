@@ -26,10 +26,6 @@ internal sealed partial class RulesPage
                 static state => state.Page.DrawVendoredValueCap(state.Configuration));
         }
 
-        Styling.SectionLabel(Loc.T(L.Rules.VendorList));
-        Styling.VSpace(6f);
-        DrawVendorList(configuration, plugin.Items);
-        Styling.VSpace(SectionGap);
         SettingsGroup.Footnote(Loc.T(L.Rules.VendorFootnote));
     }
 

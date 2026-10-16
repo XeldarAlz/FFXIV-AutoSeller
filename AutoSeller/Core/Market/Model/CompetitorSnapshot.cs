@@ -20,7 +20,11 @@ internal sealed class CompetitorSnapshot
 
     public required ImmutableArray<MarketSale> History { get; init; }
 
+    public bool ArrivedCheapestFirst { get; init; }
+
     public bool IsComplete => ExpectedCount >= 0 && Listings.Length == ExpectedCount;
 
     public bool IsCapped => Listings.Length >= MaximumListings;
+
+    public bool ShowsTheCheapest => IsCapped ? ArrivedCheapestFirst : IsComplete;
 }

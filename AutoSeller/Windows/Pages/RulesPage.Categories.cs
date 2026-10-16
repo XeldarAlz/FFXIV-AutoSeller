@@ -36,14 +36,6 @@ internal sealed partial class RulesPage
     private void DrawCategories(Plugin plugin)
     {
         var configuration = plugin.Configuration;
-        var label = Loc.T(L.Rules.AddCategoryRule);
-        if (PillButton.Draw("##asell_rules_add_category", label, Styling.AccentGlow, PillButton.Emphasis.Tinted, FontAwesomeIcon.Plus, height: Layout.ActionPillHeight))
-        {
-            RuleListEdits.AddCategoryRule(configuration.CategoryRules);
-            configuration.RulesChanged();
-        }
-
-        Styling.VSpace(SectionGap);
         var categoryRules = configuration.CategoryRules;
         if (categoryRules.Count == 0)
         {
@@ -66,8 +58,6 @@ internal sealed partial class RulesPage
             removeCategoryRule = null;
             configuration.RulesChanged();
         }
-
-        SettingsGroup.Footnote(Loc.T(L.Rules.CategoriesFootnote));
     }
 
     private static void DrawCategoryRule(in CategoryRow row)

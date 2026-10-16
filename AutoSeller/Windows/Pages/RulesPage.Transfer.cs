@@ -9,6 +9,8 @@ namespace AutoSeller.Windows.Pages;
 
 internal sealed partial class RulesPage
 {
+    private const float ConfirmTint = 0.10f;
+
     private RulesDocument? pendingImport;
     private string pendingImportSummary = string.Empty;
 
@@ -37,30 +39,24 @@ internal sealed partial class RulesPage
             Loc.Plural(L.Rules.ImportVendorItems, document.VendorList.Count));
     }
 
-    private void DrawImportConfirm(Configuration configuration)
+    private void DrawImportConfirm(Configuration configuration, in BoardBand band)
     {
-        if (pendingImport is null)
-        {
-            return;
-        }
-
         var scale = ImGuiHelpers.GlobalScale;
-        Styling.VSpace(8f);
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var drawList = ImGui.GetWindowDrawList();
+        Paint.Fill(drawList, band.Min, band.Max, Styling.WithAlpha(Styling.AccentRose, ConfirmTint), 0f);
         var gap = ToolbarGap * scale;
         var replace = Loc.T(L.Rules.ImportReplace);
         var cancel = Loc.T(L.Rules.ImportCancel);
-        var buttonHeight = Layout.ActionPillHeight * scale;
-        var x = origin.X + width - PillButton.Width(cancel);
-        ImGui.SetCursorScreenPos(new Vector2(x, origin.Y));
+        var buttonY = band.MidY - Layout.ActionPillHeight * scale * 0.5f;
+        var x = band.Right - PillButton.Width(cancel);
+        ImGui.SetCursorScreenPos(new Vector2(x, buttonY));
         if (PillButton.Draw("##asell_rules_import_cancel", cancel, Styling.AccentGlow, PillButton.Emphasis.Ghost, height: Layout.ActionPillHeight))
         {
             pendingImport = null;
         }
 
         x -= gap + PillButton.Width(replace);
-        ImGui.SetCursorScreenPos(new Vector2(x, origin.Y));
+        ImGui.SetCursorScreenPos(new Vector2(x, buttonY));
         if (PillButton.Draw("##asell_rules_import_replace", replace, Styling.AccentRose, PillButton.Emphasis.Filled, height: Layout.ActionPillHeight)
             && pendingImport is not null)
         {
@@ -71,16 +67,13 @@ internal sealed partial class RulesPage
             ShowNotice(Loc.T(L.Rules.Imported), Styling.AccentMintSoft);
         }
 
-        var shown = TextDraw.Truncate(pendingImportSummary, x - gap - origin.X);
-        var size = TextDraw.Measure(shown);
-        TextDraw.At(shown, new Vector2(origin.X, origin.Y + (buttonHeight - size.Y) * 0.5f), Styling.TextSecondary);
-        if (!ReferenceEquals(shown, pendingImportSummary) && Hit.HoveringRect(origin, origin + new Vector2(x - gap - origin.X, buttonHeight)))
+        var right = x - gap;
+        var shown = TextDraw.Truncate(pendingImportSummary, MathF.Max(0f, right - band.Left));
+        TextDraw.At(shown, new Vector2(band.Left, band.MidY - ImGui.GetTextLineHeight() * 0.5f), Styling.TextStrong);
+        if (!ReferenceEquals(shown, pendingImportSummary) && Hit.HoveringRect(band.Min, new Vector2(right, band.Max.Y)))
         {
             Tooltip.Show(pendingImportSummary);
         }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, buttonHeight));
     }
 
     private static LocString ImportProblemText(RulesImportProblem problem) => problem switch

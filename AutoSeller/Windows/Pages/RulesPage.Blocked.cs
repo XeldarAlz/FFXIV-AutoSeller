@@ -2,6 +2,7 @@ using AutoSeller.Core.Localization;
 using AutoSeller.Core.Rules;
 using AutoSeller.Core.Rules.Model;
 using AutoSeller.Windows.Components;
+using AutoSeller.Windows.Sections;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -18,6 +19,9 @@ internal sealed partial class RulesPage
     private int blockedTextRevision = -1;
     private LanguageInfo? blockedTextLanguage;
     private int blockedRulesRevision = -1;
+    private int blockedTabRevision = -1;
+    private LanguageInfo? blockedTabLanguage;
+    private BoardTab blockedTab;
 
     private void TrackBlockedTab(Plugin plugin, bool shown, bool reopened)
     {
@@ -32,12 +36,24 @@ internal sealed partial class RulesPage
         blockedShown = shown;
     }
 
+    private BoardTab BlockedTab(Plugin plugin)
+    {
+        var scan = plugin.BlockedScanner.Latest;
+        if (scan.Revision != blockedTabRevision || !ReferenceEquals(blockedTabLanguage, Loc.Current))
+        {
+            blockedTabRevision = scan.Revision;
+            blockedTabLanguage = Loc.Current;
+            var count = scan.Revision == 0 ? PlanLabels.NoValue : PlanLabels.Count(scan.Rows.Length);
+            blockedTab = new BoardTab(Loc.T(L.Rules.TabBlocked), count, Loc.T(L.Rules.BlockedStatus), Styling.TextDim);
+        }
+
+        return blockedTab;
+    }
+
     private void DrawBlocked(Plugin plugin)
     {
         var scanner = plugin.BlockedScanner;
         var scan = scanner.Latest;
-        DrawBlockedHeader(scanner);
-        Styling.VSpace(SectionGap);
         if (scan.Revision == 0 || scan.ContentId != scanner.CurrentContentId)
         {
             EmptyState.Draw(Loc.T(L.Rules.BlockedReading));
@@ -63,28 +79,12 @@ internal sealed partial class RulesPage
         }
     }
 
-    private static void DrawBlockedHeader(BlockedScanner scanner)
+    private static void DrawBlockedIntro(BlockedScanner scanner, in BoardBand band)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var label = Loc.T(L.Rules.BlockedRefresh);
-        var buttonWidth = PillButton.Width(label, FontAwesomeIcon.SyncAlt);
-        var height = Layout.ActionPillHeight * scale;
-        var intro = Loc.T(L.Rules.BlockedIntro);
-        var textWidth = MathF.Max(1f, width - buttonWidth - ToolbarGap * scale * 2f);
-        var textSize = TextDraw.MeasureWrapped(intro, textWidth);
-        TextDraw.Wrapped(intro, new Vector2(origin.X, origin.Y + MathF.Max(0f, (height - textSize.Y) * 0.5f)), textWidth, Styling.TextDim);
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + width - buttonWidth, origin.Y));
-        if (PillButton.Draw("##asell_rules_blocked_refresh", label, Styling.AccentGlow, PillButton.Emphasis.Tinted, FontAwesomeIcon.SyncAlt,
-                enabled: !scanner.Pending, height: Layout.ActionPillHeight))
+        if (Board.Notice(band, "##asell_rules_blocked_refresh", FontAwesomeIcon.InfoCircle, Loc.T(L.Rules.BlockedIntro), Styling.AccentBlue, Styling.AccentBlueSoft, Loc.T(L.Rules.BlockedRefresh), PillButton.Emphasis.Tinted))
         {
             scanner.Request();
         }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, MathF.Max(height, textSize.Y)));
     }
 
     private void DrawBlockedRow(in BlockedRow row, int index)

@@ -43,15 +43,14 @@ internal static unsafe class PriceWriter
             return false;
         }
 
-        var master = new AddonMaster.RetainerSell(sellWindow);
-        var confirm = master.ConfirmButton;
+        var confirm = new AddonMaster.RetainerSell(sellWindow).ConfirmButton;
         if (confirm == null || !confirm->IsEnabled || !confirm->AtkResNode->IsVisible())
         {
             return false;
         }
 
         RunLog.Info("Price: pressing Confirm on the sell window.");
-        master.Confirm();
+        SellWindowCallbacks.Confirm(sellWindow);
         return true;
     }
 

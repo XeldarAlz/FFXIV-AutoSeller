@@ -224,15 +224,14 @@ internal static unsafe class RetainerClicks
             return false;
         }
 
-        var master = new AddonMaster.RetainerSell(sellWindow);
-        var cancel = master.CancelButton;
+        var cancel = new AddonMaster.RetainerSell(sellWindow).CancelButton;
         if (cancel == null || !cancel->IsEnabled)
         {
             return false;
         }
 
         RunLog.Info("Retainer: pressing Cancel on the sell window.");
-        master.Cancel();
+        SellWindowCallbacks.Cancel(sellWindow);
         return true;
     }
 

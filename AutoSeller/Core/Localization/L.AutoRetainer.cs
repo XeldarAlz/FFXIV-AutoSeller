@@ -19,7 +19,7 @@ internal static partial class L
         public static readonly LocString Footnote = new("autoRetainer.footnote", "These need AutoRetainer installed and up to date. Items AutoRetainer protects are never sold or vendored, whatever these switches say.");
         public static readonly LocString StatusGroup = new("autoRetainer.statusGroup", "Right now");
         public static readonly LocString State = new("autoRetainer.state", "AutoRetainer");
-        public static readonly LocString StateHelp = new("autoRetainer.stateHelp", "Whether AutoRetainer answers. Outdated means Auto Seller runs only from Start and does not hold AutoRetainer back.");
+        public static readonly LocString StateHelp = new("autoRetainer.stateHelp", "Whether AutoRetainer answers. Outdated means Auto Seller runs only from Run now and the Autopilot timer and does not hold AutoRetainer back.");
         public static readonly LocString AltsKnown = new("autoRetainer.altsKnown", "Alts known");
         public static readonly LocString AltsKnownHelp = new("autoRetainer.altsKnownHelp", "Your other characters that AutoRetainer knows, and their retainers, read again each time the plan is built.");
         public static readonly LocPlural AltCharacters = new("autoRetainer.altCharacters", "{0} character", "{0} characters");

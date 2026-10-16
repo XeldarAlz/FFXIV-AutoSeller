@@ -110,7 +110,7 @@ internal sealed class SettingsPage
         switch (activeTab)
         {
             case Tab.General:
-                GeneralSettings.Draw(configuration);
+                GeneralSettings.Draw(plugin);
                 break;
             case Tab.Pricing:
                 PriceSettings.Draw(configuration);

@@ -9,9 +9,11 @@ namespace AutoSeller;
 public sealed partial class Configuration : IPluginConfiguration
 {
     // 1: the first version of these settings. A later layout change bumps it and adds its step to Migrate.
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     private const int SaleHistoryWindowOffVersion = 3;
+
+    private const int AutopilotVersion = 4;
 
     [JsonIgnore]
     private bool savePending;
@@ -52,9 +54,10 @@ public sealed partial class Configuration : IPluginConfiguration
         changed |= RepairMarketSettings();
         changed |= RepairSaleSettings();
         changed |= RepairBellSettings();
+        changed |= RepairAutopilotSettings();
         if (Version >= CurrentVersion)
         {
-            return changed;
+            return SyncAutopilot() || changed;
         }
 
         if (Version < SaleHistoryWindowOffVersion)
@@ -62,6 +65,12 @@ public sealed partial class Configuration : IPluginConfiguration
             ReadSaleHistory = false;
         }
 
+        if (Version < AutopilotVersion)
+        {
+            TurnPostprocessIntoAutopilot();
+        }
+
+        SyncAutopilot();
         Version = CurrentVersion;
         return true;
     }

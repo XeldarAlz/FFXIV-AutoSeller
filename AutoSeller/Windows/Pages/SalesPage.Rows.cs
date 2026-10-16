@@ -1,6 +1,7 @@
 using AutoSeller.Core.Localization;
 using AutoSeller.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using System.Numerics;
 
@@ -8,10 +9,10 @@ namespace AutoSeller.Windows.Pages;
 
 internal sealed partial class SalesPage
 {
-    private const float RowHeight = 46f;
-    private const float RowGap = 4f;
-    private const float ColumnHeaderHeight = 24f;
-    private const float RowPadX = 12f;
+    private const float RowHeight = 48f;
+    private const float RowPadX = 14f;
+    private const float HoverTint = 0.35f;
+    private const float LineAlpha = 0.35f;
     private const float IconSize = 28f;
     private const float CellGap = 10f;
     private const float CountWidth = 64f;
@@ -52,50 +53,61 @@ internal sealed partial class SalesPage
 
     private readonly record struct Columns(float Left, float Icon, float Name, float NameRight, float Record, float Right);
 
-    private void DrawTab(Tab tab)
+    private Columns DrawColumns(Group group, in BoardBand band)
     {
-        switch (tab)
+        var (_, columns, nameHeader, withIcons, withRecord) = TableFor(group);
+        var width = band.Max.X - band.Min.X - ImGui.GetStyle().ScrollbarSize;
+        var layout = Arrange(columns, band.Min.X, width, withIcons, withRecord);
+        var height = band.Max.Y - band.Min.Y;
+        ColumnHeader.Draw(nameHeader, layout.Icon, band.Min.Y, layout.NameRight - layout.Icon, height, false, null);
+        for (var index = 0; index < columns.Length; index++)
         {
-            case Tab.Items:
-                DrawTable(itemRows, itemColumns, L.Listings.ColumnItem, true, false);
-                break;
-            case Tab.Retainers:
-                DrawTable(retainerRows, retainerColumns, L.Sales.ColumnRetainer, false, false);
-                break;
-            case Tab.Characters:
-                DrawTable(characterRows, retainerColumns, L.Sales.ColumnCharacter, false, false);
-                break;
-            default:
-                DrawTable(recentRows, recentColumns, L.Listings.ColumnItem, true, true);
-                break;
+            if (columnShown[index])
+            {
+                ColumnHeader.Draw(columns[index].Header, columnRights[index], band.Min.Y, columns[index].Width * ImGuiHelpers.GlobalScale, height, true, columns[index].Help);
+            }
         }
+
+        if (withRecord)
+        {
+            ColumnHeader.Draw(L.Sales.ColumnRecord, layout.Record, band.Min.Y, RecordWidth * ImGuiHelpers.GlobalScale, height, false, null);
+        }
+
+        return layout;
     }
 
-    private void DrawTable(RowText[] rows, Column[] columns, LocString nameHeader, bool withIcons, bool withRecord)
+    private void DrawRows(Group group, in Columns layout)
     {
+        var (rows, columns, _, withIcons, withRecord) = TableFor(group);
         if (rows.Length == 0)
         {
-            EmptyState.Draw(Loc.T(L.Sales.NoRows));
+            Board.Empty(FontAwesomeIcon.Receipt, Loc.T(L.Sales.NoRows));
             return;
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        var width = ImGui.GetContentRegionAvail().X;
-        var layout = Arrange(columns, ImGui.GetCursorScreenPos().X, width, withIcons, withRecord);
-        DrawHeader(columns, layout, nameHeader, withRecord);
         var top = ImGui.GetCursorScreenPos();
-        var stride = (RowHeight + RowGap) * scale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var stride = RowHeight * scale;
         var windowTop = ImGui.GetWindowPos().Y;
         var first = Math.Clamp((int)MathF.Floor((windowTop - top.Y) / stride), 0, rows.Length);
         var last = Math.Clamp((int)MathF.Ceiling((windowTop + ImGui.GetWindowHeight() - top.Y) / stride), first, rows.Length);
         for (var index = first; index < last; index++)
         {
-            DrawRow(rows[index], columns, new Vector2(layout.Left, top.Y + index * stride), layout, withIcons, withRecord);
+            DrawRow(rows[index], columns, new Vector2(top.X, top.Y + index * stride), top.X + width, layout, withIcons, withRecord);
         }
 
         ImGui.SetCursorScreenPos(top);
-        ImGui.Dummy(new Vector2(width, MathF.Max(0f, rows.Length * stride - RowGap * scale)));
+        ImGui.Dummy(new Vector2(width, rows.Length * stride));
     }
+
+    private (RowText[] Rows, Column[] Columns, LocString NameHeader, bool WithIcons, bool WithRecord) TableFor(Group group) => group switch
+    {
+        Group.Items => (itemRows, itemColumns, L.Listings.ColumnItem, true, false),
+        Group.Retainers => (retainerRows, retainerColumns, L.Sales.ColumnRetainer, false, false),
+        Group.Characters => (characterRows, retainerColumns, L.Sales.ColumnCharacter, false, false),
+        _ => (recentRows, recentColumns, L.Listings.ColumnItem, true, true),
+    };
 
     private Columns Arrange(Column[] columns, float left, float width, bool withIcons, bool withRecord)
     {
@@ -134,37 +146,19 @@ internal sealed partial class SalesPage
         return new Columns(left, icon, name, edge, record, right);
     }
 
-    private void DrawHeader(Column[] columns, in Columns layout, LocString nameHeader, bool withRecord)
+    private void DrawRow(RowText text, Column[] columns, Vector2 min, float right, in Columns layout, bool withIcons, bool withRecord)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var height = ColumnHeaderHeight * scale;
-        ColumnHeader.Draw(nameHeader, layout.Icon, origin.Y, layout.NameRight - layout.Icon, height, false, null);
-        for (var index = 0; index < columns.Length; index++)
-        {
-            if (columnShown[index])
-            {
-                ColumnHeader.Draw(columns[index].Header, columnRights[index], origin.Y, columns[index].Width * scale, height, true, columns[index].Help);
-            }
-        }
-
-        if (withRecord)
-        {
-            ColumnHeader.Draw(L.Sales.ColumnRecord, layout.Record, origin.Y, RecordWidth * scale, height, false, null);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(layout.Right - layout.Left, height));
-    }
-
-    private void DrawRow(RowText text, Column[] columns, Vector2 min, in Columns layout, bool withIcons, bool withRecord)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var max = new Vector2(layout.Right, min.Y + RowHeight * scale);
+        var max = new Vector2(right, min.Y + RowHeight * scale);
         var drawList = ImGui.GetWindowDrawList();
         var hovered = Hit.HoveringRect(min, max);
         var hover = Motion.Hover(Motion.Key(text.Id), hovered);
-        Paint.Fill(drawList, min, max, Vector4.Lerp(Styling.WithAlpha(Styling.Surface1, 0.45f), Styling.WithAlpha(Styling.Surface2, 0.75f), hover), 8f * scale);
+        if (hover > 0.01f)
+        {
+            Paint.Fill(drawList, min, max, Styling.WithAlpha(Styling.Surface2, HoverTint * hover), 0f);
+        }
+
+        drawList.AddLine(new Vector2(min.X, max.Y - 0.5f), new Vector2(max.X, max.Y - 0.5f), Paint.Col(Styling.WithAlpha(Styling.BorderDim, LineAlpha)));
         var midY = (min.Y + max.Y) * 0.5f;
         if (withIcons)
         {

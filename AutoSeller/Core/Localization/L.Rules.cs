@@ -4,16 +4,20 @@ internal static partial class L
 {
     internal static class Rules
     {
-        public static readonly LocString Title = new("rules.title", "Rules");
-        public static readonly LocString Subtitle = new("rules.subtitle", "What may be sold, what never is, and what goes to the vendor. Nothing is sold until a rule allows it.");
-        public static readonly LocString TabSellList = new("rules.tab.sellList", "Sell list");
+        public static readonly LocString TabItems = new("rules.tab.items", "Items");
+        public static readonly LocString ItemsStatus = new("rules.items.status", "{0} market · {1} NPC · {2} never");
+        public static readonly LocString ItemsNever = new("rules.items.never", "Never sell");
+        public static readonly LocString ItemsNeverNote = new("rules.items.neverNote", "Never sold, even when a rule matches it");
+        public static readonly LocString ItemsRemove = new("rules.items.remove", "Remove");
+        public static readonly LocString ItemsActive = new("rules.items.active", "Active");
+        public static readonly LocString ColumnInBags = new("rules.column.inBags", "In bags");
+        public static readonly LocString ColumnSellOn = new("rules.column.sellOn", "Sell on");
+        public static readonly LocPlural CategoriesOn = new("rules.categories.on", "{0} rule on", "{0} rules on");
+        public static readonly LocString CategoriesJunkOn = new("rules.categories.junkOn", "junk to NPC on");
+        public static readonly LocString BlockedStatus = new("rules.blocked.status", "Why matched items wait");
         public static readonly LocString TabCategories = new("rules.tab.categories", "Categories");
-        public static readonly LocString TabNeverSell = new("rules.tab.neverSell", "Never sell");
-        public static readonly LocString TabVendor = new("rules.tab.vendor", "Vendor");
         public static readonly LocString TabBlocked = new("rules.tab.blocked", "Blocked");
-        public static readonly LocString Import = new("rules.import", "Import");
         public static readonly LocString ImportHelp = new("rules.importHelp", "Read rules exported from Auto Seller from the clipboard. You confirm before they replace yours.");
-        public static readonly LocString Export = new("rules.export", "Export");
         public static readonly LocString ExportHelp = new("rules.exportHelp", "Copy every rule to the clipboard as JSON. Preferred retainers are left out.");
         public static readonly LocString ExportCopied = new("rules.exportCopied", "Rules copied to the clipboard.");
         public static readonly LocString ImportSummary = new("rules.importSummary", "Replace your rules with {0}, {1}, {2} and {3}?");
@@ -59,7 +63,6 @@ internal static partial class L
         public static readonly LocString QualityHigh = new("rules.sell.qualityHigh", "HQ only");
         public static readonly LocString ActiveHelp = new("rules.sell.activeHelp", "Turn off to pause this rule. A paused rule lists nothing new.");
         public static readonly LocString Paused = new("rules.sell.paused", "Paused");
-        public static readonly LocString RemoveSellRule = new("rules.sell.remove", "Remove from the sell list");
         public static readonly LocString NoneHint = new("rules.sell.noneHint", "None");
         public static readonly LocString WholeStackHint = new("rules.sell.wholeStackHint", "Stack");
         public static readonly LocString CeilingBelowFloor = new("rules.sell.ceilingBelowFloor", "The ceiling cannot be below the floor.");
@@ -80,11 +83,6 @@ internal static partial class L
         public static readonly LocString CategoryAdd = new("rules.cat.add", "Add a category");
         public static readonly LocString CategoryFallback = new("rules.cat.fallback", "Category {0}");
 
-        public static readonly LocString NeverSellSearchHint = new("rules.never.searchHint", "Add an item you never want sold");
-        public static readonly LocString NeverSellEmpty = new("rules.never.empty", "Items on this list are never listed or vendored, even when a rule matches them.");
-        public static readonly LocString RemoveNeverSell = new("rules.never.remove", "Remove from the never-sell list");
-        public static readonly LocString NeverSellFootnote = new("rules.never.footnote", "The never-sell list wins over the sell list, the category rules and the vendor rules.");
-
         public static readonly LocString VendorGroup = new("rules.vendor.group", "Vendoring");
         public static readonly LocString VendorEnabled = new("rules.vendor.enabled", "Vendor junk");
         public static readonly LocString VendorEnabledHelp = new("rules.vendor.enabledHelp", "Sell junk to a vendor through your retainer. Only normal quality items from your bags that are not gear, not protected and not on the sell list are vendored.");
@@ -92,10 +90,6 @@ internal static partial class L
         public static readonly LocString JunkThresholdHelp = new("rules.vendor.junkThresholdHelp", "A stack is junk when its reference value, for the whole stack, is below this.");
         public static readonly LocString VendoredValueCap = new("rules.vendor.cap", "Vendored value per run");
         public static readonly LocString VendoredValueCapHelp = new("rules.vendor.capHelp", "A run stops vendoring once the vendor price of what it sold would pass this.");
-        public static readonly LocString VendorList = new("rules.vendor.list", "Always vendor");
-        public static readonly LocString VendorSearchHint = new("rules.vendor.searchHint", "Add an item to always vendor");
-        public static readonly LocString VendorListEmpty = new("rules.vendor.listEmpty", "Items on this list are sold to a vendor through your retainer, whether Vendor junk is on or not.");
-        public static readonly LocString RemoveVendorItem = new("rules.vendor.remove", "Remove from the vendor list");
         public static readonly LocString VendorFootnote = new("rules.vendor.footnote", "Junk is only vendored once you turn Vendor junk on. High quality items, gear and items AutoRetainer protects are never vendored.");
 
         public static readonly LocString BlockedIntro = new("rules.blocked.intro", "Items in your bags that a rule matches but that will not be listed, and why.");
