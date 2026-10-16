@@ -525,6 +525,7 @@
   "changelog.r1000.15": "Pick the bell runs use in Settings, General: the nearest one, your inn room, or the one you stand at",
   "changelog.r1000.16": "Opening a retainer's sell list yourself reads its listings into the plan, no run needed",
   "changelog.r1000.17": "Autopilot: Auto Seller goes to the bell on its own every hour, 2 hours or 4 hours while you are idle, or after each AutoRetainer venture, and stops when you move",
+  "changelog.r1010.1": "Undercut: two identical listings on one retainer are told apart by their market slot, so neither is skipped as not found when the sell list shows them in another order",
   "about.support.title": "Made with love and care",
   "about.support.body": "This plugin is a one-person project, built in my free time because I love this game and its community. Keeping it updated takes a lot of those hours. If it has helped you, supporting me on Patreon or buying me a coffee means I can keep giving it that time. Thank you for being here.",
   "about.support.button": "Support on Patreon",

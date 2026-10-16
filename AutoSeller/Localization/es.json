@@ -525,6 +525,7 @@
   "changelog.r1000.15": "Elige la campana de las rondas en Ajustes, General: la más cercana, tu habitación de la posada o la que tienes al lado",
   "changelog.r1000.16": "Abrir tú mismo la lista de venta de un empleado lee sus anuncios en el plan, sin necesidad de una ronda",
   "changelog.r1000.17": "Piloto automático: Auto Seller va solo a la campana cada hora, cada 2 o cada 4 horas mientras estás inactivo, o tras cada misión de AutoRetainer, y se detiene si te mueves",
+  "changelog.r1010.1": "Rebajar: dos anuncios idénticos de un mismo empleado se distinguen por su casilla del mercado, así que ninguno se omite como no encontrado cuando la lista de venta los muestra en otro orden",
   "about.support.title": "Hecho con amor y cariño",
   "about.support.body": "Este plugin es un proyecto de una sola persona, hecho en mi tiempo libre porque me encantan este juego y su comunidad. Mantenerlo al día me lleva muchas de esas horas. Si te ha ayudado, apoyarme en Patreon o invitarme a un café me permite seguir dedicándole ese tiempo. Gracias por estar aquí.",
   "about.support.button": "Apoyar en Patreon",

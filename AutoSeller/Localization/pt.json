@@ -525,6 +525,7 @@
   "changelog.r1000.15": "Escolha o sino das rodadas em Configurações, Geral: o mais próximo, seu quarto da estalagem ou aquele onde você está",
   "changelog.r1000.16": "Abrir você mesmo a lista de venda de um ajudante lê os anúncios dele no plano, sem precisar de rodada",
   "changelog.r1000.17": "Piloto automático: o Auto Seller vai sozinho ao sino a cada hora, a cada 2 ou 4 horas enquanto você está parado, ou após cada missão do AutoRetainer, e para quando você se move",
+  "changelog.r1010.1": "Cobrir: dois anúncios idênticos de um mesmo ajudante são distinguidos pelo seu espaço no mercado, por isso nenhum é ignorado como não encontrado quando a lista de venda os mostra em outra ordem",
   "about.support.title": "Feito com amor e carinho",
   "about.support.body": "Este plugin é um projeto de uma pessoa só, feito no meu tempo livre porque eu amo este jogo e a sua comunidade. Mantê-lo atualizado leva muitas dessas horas. Se ele te ajudou, apoiar no Patreon ou me pagar um café permite que eu continue dedicando esse tempo a ele. Obrigado por estar aqui.",
   "about.support.button": "Apoiar no Patreon",
