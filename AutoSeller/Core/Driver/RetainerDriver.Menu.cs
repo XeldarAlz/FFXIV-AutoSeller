@@ -95,7 +95,7 @@ internal sealed partial class RetainerDriver
             pending.Outcome with { Guard = verdict.Rejection },
             pending.Write,
             retainer,
-            new MenuChoice(() => RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon) && SellListRows.ShowsAt(RetainerReads.SellList(), row, listing, name), () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning));
+            new MenuChoice(() => RetainerClicks.IsReady(RetainerClicks.ContextMenuAddon) && SellListRows.ShowsAt(RetainerReads.SellList(), market.Slots.AsSpan(), row, listing, name), () => RetainerClicks.ChooseReturnToRetainer(entry), RunState.Returning));
     }
 
     private async Task<Stop> WorkVendoring(int retainerIndex, RunRetainer retainer)

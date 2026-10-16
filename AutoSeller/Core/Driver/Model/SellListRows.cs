@@ -4,9 +4,11 @@ using AutoSeller.Core.Shared;
 
 namespace AutoSeller.Core.Driver.Model;
 
-internal readonly record struct SellListRow(string Name, uint Quantity, uint UnitPrice)
+internal readonly record struct SellListRow(string Name, uint Quantity, uint UnitPrice, int Slot = SellListRows.NoSlot)
 {
     public bool IsHq => HighQualityGlyph.IsShownIn(Name);
+
+    public bool HasSlot => Slot != SellListRows.NoSlot;
 }
 
 internal static class SellListRows
@@ -17,6 +19,7 @@ internal static class SellListRows
     public const int QuantityOffset = 2;
     public const int PriceOffset = 3;
     public const int NoRow = -1;
+    public const int NoSlot = -1;
 
     public static int ValueIndex(int row, int offset)
     {
@@ -55,6 +58,12 @@ internal static class SellListRows
             return position;
         }
 
+        if (SlotsMatch(rows, listings))
+        {
+            var row = RowAtSlot(rows, listing.Slot);
+            return row != NoRow && Shows(rows[row], listing, itemName) ? row : NoRow;
+        }
+
         if (position < rows.Length && Shows(rows[position], listing, itemName))
         {
             return position;
@@ -84,17 +93,82 @@ internal static class SellListRows
         return rows.IsEmpty ? NoRow : RowFor(rows, listings, listing, itemName);
     }
 
-    public static bool ShowsAt(ReadOnlySpan<SellListRow> rows, int row, in ListingSlot listing, string itemName)
+    public static bool ShowsAt(ReadOnlySpan<SellListRow> rows, ReadOnlySpan<ListingSlot> listings, int row, in ListingSlot listing, string itemName)
     {
-        return row >= 0 && row < rows.Length && Shows(rows[row], listing, itemName);
+        if (row < 0 || row >= rows.Length || !Shows(rows[row], listing, itemName))
+        {
+            return false;
+        }
+
+        return !SlotsMatch(rows, listings) || rows[row].Slot == listing.Slot;
     }
 
     public static bool Shows(in SellListRow row, in ListingSlot listing, string itemName)
     {
+        return ShowsLot(row, listing) && ItemNameMatch.Matches(row.Name, itemName);
+    }
+
+    public static bool SlotsMatch(ReadOnlySpan<SellListRow> rows, ReadOnlySpan<ListingSlot> listings)
+    {
+        if (rows.IsEmpty || rows.Length != listings.Length)
+        {
+            return false;
+        }
+
+        var seen = 0u;
+        for (var index = 0; index < rows.Length; index++)
+        {
+            var row = rows[index];
+            if (!row.HasSlot || row.Slot >= RetainerSnapshot.SlotCount)
+            {
+                return false;
+            }
+
+            var bit = 1u << row.Slot;
+            if ((seen & bit) != 0 || !TryFindSlot(listings, row.Slot, out var listing) || !ShowsLot(row, listing))
+            {
+                return false;
+            }
+
+            seen |= bit;
+        }
+
+        return true;
+    }
+
+    private static bool ShowsLot(in SellListRow row, in ListingSlot listing)
+    {
         return row.IsHq == listing.IsHq
             && row.Quantity == listing.Quantity
-            && row.UnitPrice == listing.UnitPrice
-            && ItemNameMatch.Matches(row.Name, itemName);
+            && row.UnitPrice == listing.UnitPrice;
+    }
+
+    private static int RowAtSlot(ReadOnlySpan<SellListRow> rows, int slot)
+    {
+        for (var index = 0; index < rows.Length; index++)
+        {
+            if (rows[index].Slot == slot)
+            {
+                return index;
+            }
+        }
+
+        return NoRow;
+    }
+
+    private static bool TryFindSlot(ReadOnlySpan<ListingSlot> listings, int slot, out ListingSlot listing)
+    {
+        for (var index = 0; index < listings.Length; index++)
+        {
+            if (listings[index].Slot == slot)
+            {
+                listing = listings[index];
+                return true;
+            }
+        }
+
+        listing = default;
+        return false;
     }
 
     private static int PositionOf(ReadOnlySpan<ListingSlot> listings, in ListingSlot listing)

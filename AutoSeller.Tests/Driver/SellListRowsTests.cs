@@ -14,9 +14,13 @@ public sealed class SellListRowsTests
     private static readonly ListingSlot second = OreListing(slot: 5, unitPrice: 1_000);
     private static readonly ListingSlot[] listings = [first, second];
 
+    private static readonly ListingSlot twin = OreListing(slot: 6, unitPrice: 17_771);
+    private static readonly ListingSlot otherTwin = OreListing(slot: 7, unitPrice: 17_771);
+    private static readonly ListingSlot[] twinListings = [twin, otherTwin, second];
+
     [Theory]
     [InlineData("1,234", 1_234u)]
-    [InlineData("1.234", 1_234u)]
+    [InlineData("1.234", 1_234u)]
     [InlineData("999999999", 999_999_999u)]
     [InlineData("1000000000", 0u)]
     [InlineData("99999999999999999999", 0u)]
@@ -61,6 +65,43 @@ public sealed class SellListRowsTests
     }
 
     [Fact]
+    public void TwoRowsThatBothShowTheListingAreToldApartByTheirSlots()
+    {
+        SellListRow[] rows = [SlotRow(OreName, second), SlotRow(OreName, otherTwin), SlotRow(OreName, twin)];
+
+        Assert.Equal(2, SellListRows.RowFor(rows, twinListings, twin, OreName));
+        Assert.Equal(1, SellListRows.RowFor(rows, twinListings, otherTwin, OreName));
+        Assert.Equal(0, SellListRows.RowFor(rows, twinListings, second, OreName));
+    }
+
+    [Fact]
+    public void ASlotIsTrustedOnlyWhenEveryRowLinesUpWithTheSnapshot()
+    {
+        SellListRow[] rowIndexes = [Row(OreName, second) with { Slot = 0 }, Row(OreName, twin) with { Slot = 1 }, Row(OreName, otherTwin) with { Slot = 2 }];
+        SellListRow[] repeated = [SlotRow(OreName, second), SlotRow(OreName, twin), SlotRow(OreName, twin)];
+        SellListRow[] changed = [SlotRow(OreName, second), SlotRow(OreName, twin), SlotRow(OreName, otherTwin) with { UnitPrice = 17_000 }];
+        SellListRow[] fewer = [SlotRow(OreName, second), SlotRow(OreName, twin)];
+
+        Assert.False(SellListRows.SlotsMatch(rowIndexes, twinListings));
+        Assert.False(SellListRows.SlotsMatch(repeated, twinListings));
+        Assert.False(SellListRows.SlotsMatch(changed, twinListings));
+        Assert.False(SellListRows.SlotsMatch(fewer, twinListings));
+        Assert.False(SellListRows.SlotsMatch([], []));
+        Assert.True(SellListRows.SlotsMatch([SlotRow(OreName, twin), SlotRow(OreName, otherTwin), SlotRow(OreName, second)], twinListings));
+        Assert.Equal(0, SellListRows.RowFor(rowIndexes, twinListings, second, OreName));
+        Assert.Equal(SellListRows.NoRow, SellListRows.RowFor(rowIndexes, twinListings, twin, OreName));
+    }
+
+    [Fact]
+    public void ARowAtTheListingsSlotThatShowsAnotherItemHidesTheListing()
+    {
+        SellListRow[] rows = [SlotRow(OreName, second), SlotRow(OtherName, twin), SlotRow(OreName, otherTwin)];
+
+        Assert.Equal(SellListRows.NoRow, SellListRows.RowFor(rows, twinListings, twin, OreName));
+        Assert.Equal(2, SellListRows.RowFor(rows, twinListings, otherTwin, OreName));
+    }
+
+    [Fact]
     public void UnreadRowsFallBackToTheListingsPosition()
     {
         Assert.Equal(1, SellListRows.RowFor([], listings, second, OreName));
@@ -82,11 +123,21 @@ public sealed class SellListRowsTests
         SellListRow[] rows = [Row(OreName, first), Row(OreName, second)];
         SellListRow[] moved = [Row(OreName, second), Row(OreName, first)];
 
-        Assert.True(SellListRows.ShowsAt(rows, 1, second, OreName));
-        Assert.False(SellListRows.ShowsAt(moved, 1, second, OreName));
-        Assert.False(SellListRows.ShowsAt([], 1, second, OreName));
-        Assert.False(SellListRows.ShowsAt(rows, SellListRows.NoRow, second, OreName));
-        Assert.False(SellListRows.ShowsAt(rows, 2, second, OreName));
+        Assert.True(SellListRows.ShowsAt(rows, listings, 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt(moved, listings, 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt([], listings, 1, second, OreName));
+        Assert.False(SellListRows.ShowsAt(rows, listings, SellListRows.NoRow, second, OreName));
+        Assert.False(SellListRows.ShowsAt(rows, listings, 2, second, OreName));
+    }
+
+    [Fact]
+    public void ARowStillShowsItsListingOnlyAtTheSameSlot()
+    {
+        SellListRow[] rows = [SlotRow(OreName, second), SlotRow(OreName, twin), SlotRow(OreName, otherTwin)];
+        SellListRow[] swapped = [SlotRow(OreName, second), SlotRow(OreName, otherTwin), SlotRow(OreName, twin)];
+
+        Assert.True(SellListRows.ShowsAt(rows, twinListings, 1, twin, OreName));
+        Assert.False(SellListRows.ShowsAt(swapped, twinListings, 1, twin, OreName));
     }
 
     [Fact]
@@ -115,8 +166,20 @@ public sealed class SellListRowsTests
         Assert.False(new SellListRow(OreName, 1, 5_000).IsHq);
     }
 
+    [Fact]
+    public void ARowReadWithoutTheAgentHasNoSlot()
+    {
+        Assert.False(new SellListRow(OreName, 1, 5_000).HasSlot);
+        Assert.True(SlotRow(OreName, twin).HasSlot);
+    }
+
     private static SellListRow Row(string name, in ListingSlot listing)
     {
         return new SellListRow(name, listing.Quantity, listing.UnitPrice);
+    }
+
+    private static SellListRow SlotRow(string name, in ListingSlot listing)
+    {
+        return new SellListRow(name, listing.Quantity, listing.UnitPrice, listing.Slot);
     }
 }

@@ -21,6 +21,7 @@ internal static unsafe class RetainerReads
     private static readonly string[] retainerInventoryWindows = [.. RetainerClicks.RetainerInventoryAddons, "RetainerGrid0", "RetainerGrid"];
     private static readonly StringBuilder line = new();
     private static string reportedRows = string.Empty;
+    private static string reportedAgentEntries = string.Empty;
     private static string reportedInventoryWindows = string.Empty;
     private static QuantityBounds reportedBounds;
     private static SellWindowFields reportedFields;
@@ -151,8 +152,52 @@ internal static unsafe class RetainerReads
             rows.Add(new SellListRow(name, (uint)Math.Max(0, quantity), price));
         }
 
+        AttachSlots(rows);
         ReportRows(rows, valueCount);
         return rows.ToArray();
+    }
+
+    private static void AttachSlots(List<SellListRow> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var agent = AgentRetainer.Instance();
+        if (agent == null)
+        {
+            ReportAgentEntries(rows.Count, 0, "no retainer agent");
+            return;
+        }
+
+        var entries = agent->SellListEntries;
+        var count = agent->SellListEntryCount;
+        if (count != rows.Count || count > entries.Length)
+        {
+            ReportAgentEntries(rows.Count, count, "a different count");
+            return;
+        }
+
+        Span<int> slots = stackalloc int[RetainerSnapshot.SlotCount];
+        for (var index = 0; index < count; index++)
+        {
+            ref var entry = ref entries[index];
+            var row = rows[index];
+            var unitPrice = SellListRows.ParsePrice(entry.UnitPriceText.ToString());
+            if (entry.Quantity != row.Quantity || unitPrice != row.UnitPrice)
+            {
+                ReportAgentEntries(rows.Count, count, $"entry {index} holds item {entry.ItemId} x{entry.Quantity} at {unitPrice} while row {index} shows x{row.Quantity} at {row.UnitPrice}");
+                return;
+            }
+
+            slots[index] = entry.InventorySlot;
+        }
+
+        for (var index = 0; index < count; index++)
+        {
+            rows[index] = rows[index] with { Slot = slots[index] };
+        }
     }
 
     public static SellWindowShown SellWindow()
@@ -234,7 +279,13 @@ internal static unsafe class RetainerReads
         for (var index = 0; index < rows.Count; index++)
         {
             var row = rows[index];
-            line.Append(" [").Append(index).Append(": '").Append(row.Name).Append("' x").Append(row.Quantity).Append(" at ").Append(row.UnitPrice).Append(']');
+            line.Append(" [").Append(index).Append(": '").Append(row.Name).Append("' x").Append(row.Quantity).Append(" at ").Append(row.UnitPrice);
+            if (row.HasSlot)
+            {
+                line.Append(" in slot ").Append(row.Slot);
+            }
+
+            line.Append(']');
         }
 
         var text = line.ToString();
@@ -245,6 +296,18 @@ internal static unsafe class RetainerReads
 
         reportedRows = text;
         RunLog.Info(text);
+    }
+
+    private static void ReportAgentEntries(int rowCount, int entryCount, string reason)
+    {
+        var text = $"Sell list: the retainer agent's {entryCount} entr(ies) do not line up with the {rowCount} row(s) shown ({reason}); the rows are matched by their text alone.";
+        if (string.Equals(text, reportedAgentEntries, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        reportedAgentEntries = text;
+        RunLog.Warning(text);
     }
 
     private readonly record struct MenuOpening(bool ItemMenu, uint ItemMenuOwner, uint Owner, uint SellList, int HoveredRow, int SelectedRow, int HeldRow);
