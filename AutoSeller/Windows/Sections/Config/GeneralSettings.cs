@@ -152,6 +152,13 @@ internal static class GeneralSettings
             configuration,
             static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.AutoShowOnLogin, static (configuration, value) => configuration.AutoShowOnLogin = value, "##asell_general_autoshow"),
             SettingsRow.ToggleHeight);
+
+        SettingsRow.Draw(Loc.T(L.Settings.DragAnywhere),
+            Loc.T(L.Settings.DragAnywhereHelp),
+            SettingsControls.ToggleWidth,
+            configuration,
+            static configuration => SettingsControls.DrawToggle(configuration, static configuration => configuration.DragWindowFromAnywhere, static (configuration, value) => configuration.DragWindowFromAnywhere = value, "##asell_general_draganywhere"),
+            SettingsRow.ToggleHeight);
     }
 
     private static void DrawBehaviorGroup(Configuration configuration)
