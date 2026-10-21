@@ -330,6 +330,12 @@ internal static partial class L
         public static readonly LocString New = new("changelog.new", "New");
         public static readonly LocPlural Changes = new("changelog.changes", "{0} change", "{0} changes");
 
+        public static readonly LocString[] Release1020 =
+        [
+            new("changelog.r1020.1", "Fixed long sessions ending in a crash or a Run now button that stops working; moving around no longer sets up new game hooks each time"),
+            new("changelog.r1020.2", "Summoning bell: a step up to the bell that stops getting closer now gives up after 3 seconds instead of 10"),
+        ];
+
         public static readonly LocString[] Release1010 =
         [
             new("changelog.r1010.1", "Undercut: two identical listings on one retainer are told apart by their market slot, so neither is skipped as not found when the sell list shows them in another order"),

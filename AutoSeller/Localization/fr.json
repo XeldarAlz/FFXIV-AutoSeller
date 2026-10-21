@@ -526,6 +526,8 @@
   "changelog.r1000.16": "Ouvrir vous-même la liste de vente d'un servant lit ses annonces dans le plan, sans tournée",
   "changelog.r1000.17": "Pilote automatique : Auto Seller se rend seul à la sonnette toutes les heures, toutes les 2 ou 4 heures pendant que vous êtes inactif, ou après chaque tâche d'AutoRetainer, et s'arrête si vous bougez",
   "changelog.r1010.1": "Sous-enchérir : deux annonces identiques d'un même servant sont distinguées par leur emplacement du marché, aucune n'est donc ignorée comme introuvable quand la liste de vente les affiche dans un autre ordre",
+  "changelog.r1020.1": "Correction : les longues sessions finissaient par un plantage ou un bouton Lancer maintenant qui ne répondait plus ; les déplacements n'installent plus de nouveaux hooks dans le jeu à chaque fois",
+  "changelog.r1020.2": "Sonnette d'appel : un pas vers la sonnette qui ne s'en rapproche plus abandonne désormais après 3 secondes au lieu de 10",
   "about.support.title": "Fait avec amour et soin",
   "about.support.body": "Ce plugin est un projet mené par une seule personne, pendant mon temps libre, parce que j'aime ce jeu et sa communauté. Le maintenir à jour me prend beaucoup de ces heures. S'il vous a aidé, me soutenir sur Patreon ou m'offrir un café me permet de continuer à lui consacrer ce temps. Merci d'être là.",
   "about.support.button": "Soutenir sur Patreon",

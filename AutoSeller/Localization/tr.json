@@ -526,6 +526,8 @@
   "changelog.r1000.16": "Bir yardımcının satış listesini kendiniz açtığınızda ilanları tur gerekmeden plana okunur",
   "changelog.r1000.17": "Otopilot: Auto Seller siz boştayken her saat, 2 ya da 4 saatte bir veya her AutoRetainer görevinden sonra çana kendisi gider ve hareket ettiğinizde durur",
   "changelog.r1010.1": "Altına inme: aynı yardımcının iki özdeş ilanı pazar yuvalarına göre ayırt edilir, böylece satış listesi onları farklı sırada gösterdiğinde hiçbiri bulunamadı diye atlanmaz",
+  "changelog.r1020.1": "Düzeltildi: uzun oturumlar çökmeyle ya da çalışmayı bırakan bir Şimdi çalıştır düğmesiyle bitiyordu; hareket artık her seferinde oyuna yeni kanca kurmuyor",
+  "changelog.r1020.2": "Çağırma çanı: çana yaklaşmayı bırakan son adım artık 10 yerine 3 saniye sonra vazgeçiyor",
   "about.support.title": "Sevgi ve özenle yapıldı",
   "about.support.body": "Bu eklenti, bu oyunu ve topluluğunu sevdiğim için boş zamanlarımda tek başıma geliştirdiğim bir proje. Onu güncel tutmak o saatlerin çoğunu alıyor. Size yardımcı olduysa, Patreon'da destek olmanız ya da bana bir kahve ısmarlamanız ona bu zamanı ayırmaya devam etmemi sağlar. Burada olduğunuz için teşekkürler.",
   "about.support.button": "Patreon'da destekle",

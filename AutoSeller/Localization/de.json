@@ -526,6 +526,8 @@
   "changelog.r1000.16": "Öffnest du selbst die Verkaufsliste eines Gehilfen, werden seine Angebote in den Plan gelesen, ganz ohne Lauf",
   "changelog.r1000.17": "Autopilot: Auto Seller geht jede Stunde, alle 2 oder 4 Stunden von selbst zur Glocke, während du untätig bist, oder nach jeder AutoRetainer-Unternehmung, und hält an, wenn du dich bewegst",
   "changelog.r1010.1": "Unterbieten: Zwei gleiche Angebote eines Gehilfen werden an ihrem Marktplatz unterschieden, sodass keines als nicht gefunden übersprungen wird, wenn die Verkaufsliste sie in anderer Reihenfolge zeigt",
+  "changelog.r1020.1": "Behoben: Lange Sitzungen endeten mit einem Absturz oder einem Jetzt ausführen, das nicht mehr reagiert; Bewegungen richten nicht mehr jedes Mal neue Spiel-Hooks ein",
+  "changelog.r1020.2": "Rufglocke: Ein Schritt zur Glocke, der nicht mehr näher kommt, gibt jetzt nach 3 statt 10 Sekunden auf",
   "about.support.title": "Mit Liebe und Sorgfalt gemacht",
   "about.support.body": "Dieses Plugin ist ein Ein-Personen-Projekt, entstanden in meiner Freizeit, weil ich dieses Spiel und seine Community liebe. Es aktuell zu halten, kostet viele dieser Stunden. Wenn es dir geholfen hat, sorgt deine Unterstützung auf Patreon oder ein spendierter Kaffee dafür, dass ich ihm diese Zeit weiter schenken kann. Danke, dass du hier bist.",
   "about.support.button": "Auf Patreon unterstützen",

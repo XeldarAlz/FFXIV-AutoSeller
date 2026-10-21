@@ -526,6 +526,8 @@
   "changelog.r1000.16": "Abrir você mesmo a lista de venda de um ajudante lê os anúncios dele no plano, sem precisar de rodada",
   "changelog.r1000.17": "Piloto automático: o Auto Seller vai sozinho ao sino a cada hora, a cada 2 ou 4 horas enquanto você está parado, ou após cada missão do AutoRetainer, e para quando você se move",
   "changelog.r1010.1": "Cobrir: dois anúncios idênticos de um mesmo ajudante são distinguidos pelo seu espaço no mercado, por isso nenhum é ignorado como não encontrado quando a lista de venda os mostra em outra ordem",
+  "changelog.r1020.1": "Corrigido: sessões longas terminavam em um travamento ou em um botão Executar agora que parava de funcionar; mover-se não instala mais hooks novos no jogo a cada vez",
+  "changelog.r1020.2": "Sino de chamada: um passo até o sino que para de se aproximar agora desiste após 3 segundos em vez de 10",
   "about.support.title": "Feito com amor e carinho",
   "about.support.body": "Este plugin é um projeto de uma pessoa só, feito no meu tempo livre porque eu amo este jogo e a sua comunidade. Mantê-lo atualizado leva muitas dessas horas. Se ele te ajudou, apoiar no Patreon ou me pagar um café permite que eu continue dedicando esse tempo a ele. Obrigado por estar aqui.",
   "about.support.button": "Apoiar no Patreon",
