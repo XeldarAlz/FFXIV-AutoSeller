@@ -1,6 +1,7 @@
 using AutoSeller.Core.Driver;
 using AutoSeller.Core.Driver.Model;
 using AutoSeller.Core.Execution.Model;
+using AutoSeller.Core.Game;
 using AutoSeller.Core.Ipc;
 using AutoSeller.Core.Localization;
 using AutoSeller.Core.Stats;
@@ -283,6 +284,25 @@ internal sealed partial class SellController
         }
 
         Settle(active);
+        SendPostRunCommands(active);
+    }
+
+    // Only a full run sends them: a sell list run leaves the player at the open list, and a post-process is AutoRetainer's.
+    private void SendPostRunCommands(SellRunSession active)
+    {
+        var commands = plugin.Configuration.PostRunCommands;
+        if (string.IsNullOrWhiteSpace(commands) || active.Mode != RunMode.Standalone)
+        {
+            return;
+        }
+
+        if (active.State != RunState.Completed || active.StopRequested || active.PauseRequested)
+        {
+            RunLog.Info($"Post-run commands skipped: the run ended {active.State}, not with every retainer and item done on its own.");
+            return;
+        }
+
+        ChatCommands.Dispatch(commands);
     }
 
     private void PauseAfterFault(SellRunSession active)

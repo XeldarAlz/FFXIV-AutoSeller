@@ -481,6 +481,10 @@ internal static partial class L
         public static readonly LocString BellPick = new("settings.bell.pick", "Use the bell I'm standing at");
         public static readonly LocString BellPickHelp = new("settings.bell.pickHelp", "Saves the summoning bell next to you, so every run goes there, teleporting first when it is far. Bells in cities work best.");
         public static readonly LocString BellPickNoBell = new("settings.bell.pickNoBell", "Stand next to a summoning bell first.");
+        public static readonly LocString PostRunGroup = new("settings.postRun.group", "Chat commands");
+        public static readonly LocString PostRunLabel = new("settings.postRun.label", "Run when the run finishes");
+        public static readonly LocString PostRunHelp = new("settings.postRun.help", "One command per line, each starting with a slash. They run when a run ends on its own, never after Stop or a failure.");
+        public static readonly LocString PostRunCaption = new("settings.postRun.caption", "Lines that do not start with a slash are skipped, so nothing is ever said in chat. Try /li home to head home or /ays m to hand off to AutoRetainer.");
     }
 
     internal static class Plugin

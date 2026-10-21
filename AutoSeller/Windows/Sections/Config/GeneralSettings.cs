@@ -36,6 +36,7 @@ internal static class GeneralSettings
         DrawBellGroup(configuration);
         DrawWindowGroup(configuration);
         DrawBehaviorGroup(configuration);
+        PostRunSettings.Draw(configuration);
     }
 
     private static void DrawRetainersGroup(Plugin plugin)
