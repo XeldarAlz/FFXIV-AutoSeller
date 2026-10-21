@@ -18,7 +18,6 @@ public abstract partial class AutoCommon
     private const float BellStepUpMaxMeters = 12f;
     private const float BellStepUpStopMeters = 3f;
     private const int BellStepUpWatchdogMs = 10_000;
-    private const int BellStepUpStallMs = 2_500;
     private const int InnBellSightMs = 10_000;
     private const float PickedBellArriveWithinMeters = 1.5f;
     private const float BellFloorReachMeters = 3.5f;
@@ -215,7 +214,8 @@ public abstract partial class AutoCommon
         var label = $"{scope}-step-up";
         Diag($"{scope}: the summoning bell stands {bell.Distance:F1}m away at {FormatPosition(bell.Position)}; stepping straight up to it");
         var operation = new MoveOp(move => move.StepStraightWithoutMesh(spot, BellWithinStepUpStop));
-        await RunCancellable(operation, BellStepUpWatchdogMs, label, StuckDetector.IdleStallAbort(BellStepUpStallMs));
+        // The step runs as a vnavmesh path, which the idle check reads as progress for as long as it runs.
+        await RunCancellable(operation, BellStepUpWatchdogMs, label, StuckDetector.MoveStallAbort(label));
         if (operation.Fault is { } fault)
         {
             Diag($"{label}: faulted: {fault.Message}");
